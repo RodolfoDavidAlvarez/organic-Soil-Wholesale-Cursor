@@ -2,8 +2,8 @@ import pandas as pd
 import csv
 
 def analyze_product_photos():
-    # Read the CSV file
-    df = pd.read_csv('Product photos, texture.csv')
+    # Read the CSV file, skipping the first row which contains the problematic header
+    df = pd.read_csv('Product photos, texture.csv', skiprows=1)
     
     # Check for missing URLs
     missing_texture = df[df['Product Texture Photo URL'].isna()]
