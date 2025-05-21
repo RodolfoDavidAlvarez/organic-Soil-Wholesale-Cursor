@@ -1,0 +1,15 @@
+run command: 
+cd OrganicSoilWholesale && npm run dev
+
+
+SIZE CATEGORIES
+PALLET OF BOXES
+-Pallet of 144 unites/ 36 boxes (4units per box)
+-Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e
+PALLET OF BAGS
+-50 bags (1cf Bags)
+-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d
+BULK 
+Compost and blends -> 22-24 tons per truckload
+if is potting soil -. 90CY - 110 Cys 
+photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195

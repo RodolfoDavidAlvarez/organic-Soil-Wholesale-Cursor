@@ -1,0 +1,68 @@
+**Project Description: SSWWholesale.com**
+
+**Overview:**
+SSWWholesale.com is a new website initiative by Soil Seed and Water designed specifically to showcase and facilitate bulk purchasing of soil and organic amendment products. The website will be public-facing, displaying all available products along with detailed information. While product browsing is open to everyone, bulk purchasing requires onboarding.
+
+**Key Features:**
+- Public catalog of all products with detailed descriptions and media
+- Firebase-hosted images for clean, fast access
+- Account creation and onboarding for bulk buyers
+- Secure login for authenticated access to pricing/order portal
+
+**Hosting Stack:**
+- Firebase (Authentication, Hosting, Storage)
+- React or other modern frontend framework
+
+---
+
+**Step-by-Step Process:**
+
+**Stage 1: Public Home Page Development**
+1. Upload all product photos to Firebase Storage in `ssw/` folder.
+2. Retrieve public URLs for each image.
+3. Design a responsive home page to:
+   - Display product name
+   - Show product image (via public URL)
+   - Brief description + link to full product page (if needed)
+4. Ensure site does **not** require login to view product catalog.
+
+**Stage 2: Onboarding for Bulk Buyers**
+1. Create an onboarding form capturing:
+   - Name, Company Name
+   - Email, Phone
+   - Shipping Address
+   - Business Type
+2. Store user data securely in Firestore.
+3. Generate account access after submission.
+
+**Stage 3: Account Creation & Authentication**
+1. Enable Firebase Authentication (email/password)
+2. Connect login/signup to onboarding flow
+3. Redirect authenticated users to order dashboard
+
+**Stage 4: Bulk Order Placement Portal**
+1. Authenticated users can:
+   - Browse product catalog with pricing
+   - Add items to a quote/order
+   - Submit order for review
+
+**Firebase Configuration:**
+```js
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCU-VyuuD71KP-dhQOBjzit5WIQOVPBl_8",
+  authDomain: "whysoilmatters-1c40b.firebaseapp.com",
+  projectId: "whysoilmatters-1c40b",
+  storageBucket: "whysoilmatters-1c40b.firebasestorage.app",
+  messagingSenderId: "22444263895",
+  appId: "1:22444263895:web:8f2f763809bcdb0bb26392",
+  measurementId: "G-X8KF3FJZ61"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+```
+
+Next steps: Once photos are uploaded to the `ssw/` folder in Storage, begin displaying them dynamically on the homepage layout.

@@ -1,0 +1,145 @@
+Framework for Website-Based Trucking Cost and Product Pricing Calculator
+
+Business Context
+
+Locations:
+
+Vicksburg, AZ (West of Phoenix)
+
+Phoenix, AZ (Headquarters)
+
+Congress/Park, AZ (North of Phoenix)
+
+Products:
+
+Compost, soils, dairy compost, worm castings, potting soils, soil amendments
+
+Sold in truckloads: 24 tons or 90-120 cubic yards
+
+Price range: $15/ton to $700/ton depending on product
+
+Trucking cost: usually $500 and up per delivery
+
+Goal
+To build a website that:
+
+Allows user to input their address.
+
+Enables user to select the desired products (bulk, potting soil, soil amendments, etc.).
+
+Automatically calculates:
+
+Product cost based on type and quantity
+
+Distance from nearest distribution site
+
+Trucking cost
+
+Total cost including delivery
+
+Key Components Needed
+
+User Input Module
+
+Input fields for: Full address or zip code
+
+Product selection dropdown or catalog (bulk, potting soil, worm castings, etc.)
+
+Quantity selector (e.g., tons, cubic yards)
+
+Distance Calculation
+
+Use Google Maps API or Distance Matrix API
+
+Determine distance from nearest shipping point (Vicksburg, Phoenix, Congress)
+
+Calculate road miles, not straight-line distance
+
+Trucking Cost Formula & Delivery Radius Framework
+
+Base trucking rate: $500 for the first 50 miles
+
+Per-mile rate: $3.00/mile after 50 miles
+
+Max profitable delivery radius:
+
+Up to 300 miles for most bulk loads
+
+Beyond 300 miles, per-mile cost often exceeds value of lower-priced products
+
+Products with higher margins (e.g., $300–$700/ton range) may justify delivery up to 500 miles
+
+Cutoff threshold: No automated quotes beyond 500 miles; switch to manual quote request for custom freight
+
+Example Costing:
+
+100-mile delivery: $500 + (50 miles x $3) = $650
+
+300-mile delivery: $500 + (250 miles x $3) = $1,250
+
+500-mile delivery: $500 + (450 miles x $3) = $1,850
+
+Product Selection & Base Pricing
+
+Database of products with base price per ton or per cubic yard
+
+Add product-specific delivery constraints if any
+
+Quote Generator Logic
+
+Nearest location finder logic
+
+Fetch driving distance via API
+
+Apply trucking formula
+
+Apply product cost (multiplied by amount needed)
+
+Sum to give user total estimate
+
+Backend Technologies
+
+Google Maps API / Distance Matrix API
+
+Database (e.g., Firebase, PostgreSQL)
+
+Framework: Node.js, Python Flask, or Next.js (preferred for frontend/backend integration)
+
+Frontend Design
+
+Clean UI with:
+
+Input for address
+
+Product selector with quantities
+
+Quote/result panel showing breakdown of costs
+
+Optional feature to save quote or email it
+
+Future Enhancements
+
+Add live trucking schedules or availability
+
+Calculate emissions saved via bulk delivery
+
+Apply volume discounts or delivery thresholds
+
+Login feature to manage multiple quotes
+
+Expand to more distribution points
+
+Initial Deliverables Needed
+
+List of all product types and base costs per unit
+
+Delivery pricing table (base rate, mileage rate, regional surcharges)
+
+Coordinates or zip codes of current delivery hubs
+
+Truckload capacity rules for each product
+
+Estimated margins or flexibility for quote rounding
+
+This document will guide the setup of automated quote generation for the website based on user-selected products and entered address. It includes real distance-based delivery cost logic and delivery feasibility limits (300–500 miles) based on product profitability.
+
