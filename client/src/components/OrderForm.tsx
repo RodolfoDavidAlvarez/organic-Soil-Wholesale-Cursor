@@ -1163,6 +1163,7 @@ export const OrderForm: React.FC<OrderFormProps> = () => {
         {/* Product Selection Flow */}
         {isAddingProduct ? (
           <div className="space-y-6">
+            {orderPhase === "category" && renderCategorySelection()}
             {orderPhase === "product" && renderProductGallery()}
             {orderPhase === "size" && selectedProductId && renderSizeCategorySelection()}
             {orderPhase === "quantity" && renderQuantitySelection()}
