@@ -1,0 +1,55 @@
+run command: 
+cd OrganicSoilWholesale && npm run dev
+
+
+SIZE CATEGORIES
+PALLET OF BOXES
+-Pallet of 144 unites/ 36 boxes (4units per box)
+-Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e
+PALLET OF BAGS
+-50 bags (1cf Bags)
+-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d
+Truckload BULK 
+Compost and blends -> 22-24 tons per truckload
+if is potting soil -. 90CY - 110 Cys 
+photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195
+
+-Full Truckload example, 22 pallets of 2.2CY totes
+photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FTruckload%20of%20totes.png?alt=media&token=436d5a5d-a7aa-4aca-8318-e8bc98eab972
+-Single 2.2 CY Tote 
+photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e
+-Bulk In Cubic Yard for pickup only
+Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f
+-Example photos to showcase when user selects a combination of pallets of totes, bags and boxes (A truckload is 22 spots (unless we are taking about BULK))
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FMixed%20Truckload%20Example.png?alt=media&token=40184615-8b7c-471e-b14b-5698c98cd757
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FMixed%20Trucload%20Example%202.png?alt=media&token=812c748e-1d7b-4bd4-baae-d4b61b291aab
+
+
+## Plant Locations and capacity
+Phoenix Location
+Address: 1634 N 19th Ave, Phoenix AZ 85009
+
+Special Instructions: 
+Coordinates: 33°28'04.6"N 112°06'03.4"W
+
+The area is a bit remote, so please make sure you have as much information as possible.
+
+Capacity: All products and size categories
+
+Parker Address 
+
+Ship from address: 18980 Stanton Rd, Congress, AZ 85332
+Special Instructions: 
+Coordinates: 34°10'42.1"N 112°47'18.2"W
+Google link: https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA
+The area is a bit remote, so please make sure you have as much information as possible.
+
+Capacity: All products and size categories
+
+Vicksburg Arizona
+Coordinates: 33°42'13.9"N 113°46'39.8"W
+Capacity: Only dairy compost bulk in truckload and cubic yards for pickup
+
+
+To replace:
+Worm castings photo: https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=87c65006-3a11-44ec-adeb-6f4896d544e3
