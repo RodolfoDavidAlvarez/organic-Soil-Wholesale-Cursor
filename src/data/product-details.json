@@ -1,0 +1,32 @@
+{
+  "productDetails": [
+    {
+      "productId": "dans-gold",
+      "story": "One of the two founders, Dan Nowell, started composting as a one-man operation in 2007 with a Tractor and a Windrower at Parker Dairy Farm. He learned to make an exceptional product the hard way and spent many days talking with both crop and dairy farmers alike to educate himself on what farmers need.",
+      "originStory": "Dan's Gold was born from the passionate endeavors of one of the co-founders, Dan Nowell. Starting as a one-man operation in 2007 at Parker Dairy Farm, Dan invested years in learning the art of composting from both crop and dairy farmers.",
+      "keyFeatures": [
+        "Organic Material: Made from composted dairy manure, a valuable organic material",
+        "Enhanced Soil Health: Enriches the soil with essential nutrients and improves its structure",
+        "Reduction in Salt and Odors: Offers a more pleasant gardening experience",
+        "Certified Quality: Accredited by CCOF, OMRI, and the US Compost Council",
+        "Versatility: Ideal for different industries, including golf courses, vineyards, and home gardens"
+      ],
+      "gardenerUsageInstructions": "Mix equal parts Dan's Gold with existing soil or planting soil when planting. Top dress plants, windrows, and trees with 1\"-2\" of Dan's Gold.",
+      "recommendedUses": "As an organic soil amendment, to mix with existing soil or potting soil"
+    },
+    {
+      "productId": "mikeys-worm-poop",
+      "story": "When the founders of Soil, Seed, and Water, LLC heard countless farmers and gardeners raving about the wonders of worm castings as an organic fertilizer, they knew they had to explore this phenomenon further.",
+      "originStory": "The story of Mikey's Worm Poop began with the curiosity and vision of the founders of Soil, Seed, and Water, LLC. Inspired by the rave reviews of worm castings among farmers and gardeners, they embarked on a research journey across the US and Canada.",
+      "keyFeatures": [
+        "Boosts soil health",
+        "Promotes moisture retention",
+        "Supports vibrant plant growth",
+        "Certified organic",
+        "Eco-friendly way to nourish plants naturally"
+      ],
+      "gardenerUsageInstructions": "As an Organic Amendment - When planting in containers, dig holes and mix equal parts Mikey's Worm Poop with existing soil or potting mix to backfill the plant.",
+      "recommendedUses": "As an organic soil amendment, to mix with existing soil or potting soil"
+    }
+  ]
+}

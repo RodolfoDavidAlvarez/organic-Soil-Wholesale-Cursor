@@ -1,0 +1,32 @@
+{
+  "productAudiences": [
+    {
+      "productId": "dans-gold",
+      "targetAudiences": [
+        "Landscaping Professionals",
+        "Nursery Operators",
+        "Home Gardeners",
+        "Organic Farmers",
+        "Bad Conditions - Drought-resilient Agriculture",
+        "Floriculture",
+        "Fruit Growers",
+        "Vegetable Cultivators",
+        "Cannabis Cultivators",
+        "Garden Installation Organization"
+      ]
+    },
+    {
+      "productId": "mikeys-worm-poop",
+      "targetAudiences": [
+        "Landscaping Professionals",
+        "Nursery Operators",
+        "Home Gardeners",
+        "Organic Farmers",
+        "Bad Conditions - Drought-resilient Agriculture",
+        "Floriculture",
+        "Fruit Growers",
+        "Vegetable Cultivators"
+      ]
+    }
+  ]
+}

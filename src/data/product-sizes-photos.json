@@ -1,0 +1,50 @@
+{
+  "productSizesPhotos": [
+    {
+      "productId": "dans-gold",
+      "sizes": [
+        {
+          "name": "1CF Bag",
+          "unit": "unit"
+        },
+        {
+          "name": "4 LB",
+          "unit": "Unit"
+        },
+        {
+          "name": "9 LB Bag",
+          "unit": "Unit"
+        }
+      ],
+      "photos": {
+        "bagPhoto": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FDansGold9lbs%20(1).jpg?alt=media&token=b0f2e6d8-0290-4044-835a-6f103dde1825",
+        "texturePhoto": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570"
+      }
+    },
+    {
+      "productId": "mikeys-worm-poop",
+      "sizes": [
+        {
+          "name": "1CF Bag",
+          "unit": "unit"
+        },
+        {
+          "name": "9 LB Bag",
+          "unit": "Unit"
+        },
+        {
+          "name": "Tote",
+          "unit": "2.2 CY"
+        },
+        {
+          "name": "4 LB",
+          "unit": "Unit"
+        }
+      ],
+      "photos": {
+        "bagPhoto": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FMikeys%20Worm%20Poop9lbs.jpg?alt=media&token=51ec4f5e-8802-4be3-a9ee-2bc7ebdf55f1",
+        "texturePhoto": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=87c65006-3a11-44ec-adeb-6f4896d544e3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "products": [
+    {
+      "id": "dans-gold",
+      "productName": "DAIRY COMPOST",
+      "brandName": "Dan's Gold",
+      "productCategory": "Amendment",
+      "briefOverview": "A premium COMPOST amendment derived from dairy manure, Dan's Gold enriches soil by improving fertility and structure. Ideal for sustainable farming, it transforms gardens and agricultural lands into thriving ecosystems.",
+      "certifications": ["OMRI", "US Compost Council"],
+      "safetyPrecautions": "Wash hands thoroughly after handling. Avoid ingestion and contact with eyes. Keep out of reach of children.",
+      "limitedWarranty": "Seller does not warranty, implied, or inferred, concerning the use of this product, other than instructed on the label. Buyer assumes all risk of use and/or handling of this material when such use and/or handling is contrary to label instructions.",
+      "websiteUrl": "https://soilseedwater.com/product/dans-gold"
+    },
+    {
+      "id": "mikeys-worm-poop",
+      "productName": "WORM CASTINGS",
+      "brandName": "Mikey's Worm Poop",
+      "productCategory": "Amendment",
+      "briefOverview": "Mikey's Worm Poop is an all-natural vermicompost offering a unique and organic solution to soil enhancement. This product has been developed after extensive research and trials, utilizing the very best of worm castings.",
+      "certifications": ["OMRI", "US Compost Council"],
+      "safetyPrecautions": "Wash hands thoroughly after handling. Avoid ingestion and contact with eyes. Keep out of reach of children.",
+      "limitedWarranty": "Seller does not warranty, implied, or inferred, concerning the use of this product, other than instructed on the label. Buyer assumes all risk of use and/or handling of this material when such use and/or handling is contrary to label instructions.",
+      "websiteUrl": "https://soilseedwater.com/product/mikeys-worm-poop-order"
+    }
+  ]
+}
