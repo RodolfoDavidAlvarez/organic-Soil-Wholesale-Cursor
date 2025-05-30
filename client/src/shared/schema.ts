@@ -29,6 +29,7 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
+  type: text("type"),  // Added type field to match the JSON data
   price: integer("price").notNull(),
   stockQuantity: integer("stock_quantity").notNull(),
   imageUrl: text("image_url"),

@@ -10,7 +10,8 @@ const mergeProductData = () => {
       id: productInfo.indexOf(product) + 1,
       name: product["Product Name"] as string,
       description: product["Brief Overview"] as string,
-      category: product["Type"] as string,
+      category: product["Type"] as string, // Original category field (for backward compatibility)
+      type: product["Type"] as string,     // Added specific type field for category grouping
       price: 0,
       stockQuantity: 0,
       imageUrl: photoData?.["9lb Bag Photo URL"] || "",
