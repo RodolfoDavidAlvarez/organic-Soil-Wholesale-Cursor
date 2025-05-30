@@ -1,0 +1,12 @@
+{
+  "productIngredients": [
+    {
+      "productId": "dans-gold",
+      "ingredients": ["Organic Dairy Compost"]
+    },
+    {
+      "productId": "mikeys-worm-poop",
+      "ingredients": ["Worm Castings"]
+    }
+  ]
+}
