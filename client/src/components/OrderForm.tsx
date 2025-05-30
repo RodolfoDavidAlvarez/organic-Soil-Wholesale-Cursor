@@ -266,7 +266,14 @@ export const OrderForm: React.FC = () => {
               >
                 <div className="flex p-3 items-center gap-3">
                   <div className="w-16 h-16 bg-neutral-100 rounded-md relative overflow-hidden flex-shrink-0">
-                    {product.imageUrl && (
+                    {product.additionalImages?.[0] ? (
+                      <img 
+                        src={product.additionalImages[0]} 
+                        alt={`${product.productType} texture`} 
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : product.imageUrl && (
                       <img 
                         src={product.imageUrl} 
                         alt={product.productType} 
@@ -275,8 +282,8 @@ export const OrderForm: React.FC = () => {
                       />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm mb-1">{product.productType}</h4>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm mb-1 truncate">{product.productType}</h4>
                     <p className="text-xs text-gray-500 line-clamp-2 mb-2">{product.description}</p>
                     <Badge variant="outline" className="text-xs text-primary border-primary">
                       {product.category}
@@ -311,14 +318,121 @@ export const OrderForm: React.FC = () => {
 
                     return (
                       <div key={product.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                        <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                          {productData?.imageUrl && (
-                            <img
-                              src={productData.imageUrl}
-                              alt={productData.productType}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
+                        <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
+                          {/* Show the appropriate size category image with product texture */}
+                          {product.sizeOption === "boxes" && (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e" 
+                                alt="Pallet of boxes" 
+                                className="w-full h-full object-cover brightness-90"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
+                                {productData?.additionalImages?.[0] && (
+                                  <img 
+                                    src={productData.additionalImages[0]} 
+                                    alt="Product texture" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {product.sizeOption === "bags" && (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d" 
+                                alt="Pallet of bags" 
+                                className="w-full h-full object-cover brightness-90"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
+                                {productData?.additionalImages?.[0] && (
+                                  <img 
+                                    src={productData.additionalImages[0]} 
+                                    alt="Product texture" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {product.sizeOption === "totes" && (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e" 
+                                alt="2.2 CY Tote" 
+                                className="w-full h-full object-cover brightness-90"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
+                                {productData?.additionalImages?.[0] && (
+                                  <img 
+                                    src={productData.additionalImages[0]} 
+                                    alt="Product texture" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {product.sizeOption === "bulk" && (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195"
+                                alt="Bulk delivery"
+                                className="w-full h-full object-cover brightness-90"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
+                                {productData?.additionalImages?.[0] && (
+                                  <img 
+                                    src={productData.additionalImages[0]} 
+                                    alt="Product texture" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {product.sizeOption === "bulk-pickup" && (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f"
+                                alt="Bulk pickup"
+                                className="w-full h-full object-cover brightness-90"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
+                                {productData?.additionalImages?.[0] && (
+                                  <img 
+                                    src={productData.additionalImages[0]} 
+                                    alt="Product texture" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Fallback if we don't have a specific image */}
+                          {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(product.sizeOption) && (
+                            productData?.additionalImages?.[0] ? (
+                              <img
+                                src={productData.additionalImages[0]}
+                                alt={`${productData.productType} texture`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : productData?.imageUrl && (
+                              <img
+                                src={productData.imageUrl}
+                                alt={productData.productType}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            )
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -366,7 +480,9 @@ export const OrderForm: React.FC = () => {
             <div className="mt-4">
               <Card className="border border-green-200 bg-green-50">
                 <div className="p-4">
-                  <h3 className="font-medium text-green-800 mb-2">Select Packaging Option</h3>
+                  <h3 className="font-medium text-green-800 mb-2">
+                    Select Packaging Option for {productsData.find(p => p.id === selectedProductId)?.productType}
+                  </h3>
                   <div className="space-y-2">
                     {PRODUCT_CATEGORIES.map(category => {
                       // Check if this category is compatible with the selected product
@@ -386,11 +502,65 @@ export const OrderForm: React.FC = () => {
                           variant="outline"
                           className="flex items-center justify-between w-full p-3 h-auto text-left bg-white hover:bg-gray-50"
                         >
-                          <div className="flex items-center gap-2">
-                            <category.icon className="h-4 w-4 text-green-600" />
-                            <div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-white rounded border border-gray-100 overflow-hidden flex-shrink-0 relative">
+                              {/* Show appropriate category image */}
+                              {category.value === "boxes" && (
+                                <div className="relative w-full h-full">
+                                  <img 
+                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e" 
+                                    alt="Pallet of boxes" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-tl overflow-hidden border border-gray-200">
+                                    <img 
+                                      src={productsData.find(p => p.id === selectedProductId)?.imageUrl} 
+                                      alt="9lb bag" 
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {category.value === "bags" && (
+                                <div className="relative w-full h-full">
+                                  <img 
+                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d" 
+                                    alt="Pallet of bags" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              {category.value === "totes" && (
+                                <img 
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e" 
+                                  alt="2.2 CY Tote" 
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                              {category.value === "bulk" && (
+                                <img 
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195" 
+                                  alt="Bulk delivery" 
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                              {category.value === "bulk-pickup" && (
+                                <img 
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f" 
+                                  alt="Bulk pickup" 
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                              {/* If no image available, show the icon */}
+                              {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(category.value) && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <category.icon className="h-6 w-6 text-green-600" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm">{category.label}</p>
-                              <p className="text-xs text-gray-500">{category.description}</p>
+                              <p className="text-xs text-gray-500 line-clamp-2">{category.description}</p>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-400" />

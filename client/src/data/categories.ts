@@ -13,19 +13,19 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     value: "boxes",
     label: "Pallet of Boxes",
     icon: Box,
-    description: "144 units per pallet (36 boxes with 4 units per box)",
+    description: "Pallet of 144 units/ 36 boxes (4 units per box)",
   },
   {
     value: "bags",
     label: "Pallet of Bags",
     icon: ShoppingBag,
-    description: "50 bags per pallet (1CF bags)",
+    description: "50 bags (1CF Bags)",
   },
   {
     value: "totes",
     label: "2.2 CY Tote",
     icon: Package,
-    description: "Single 2.2 CY tote (supersack)",
+    description: "Single 2.2 CY Tote (supersack)",
   },
   {
     value: "bulk",
@@ -37,12 +37,6 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     value: "bulk-pickup",
     label: "Bulk Pickup",
     icon: Warehouse,
-    description: "Cubic yard pickup (available only at Vicksburg for Dairy Compost & Worm Castings)",
-  },
-  {
-    value: "truckload-totes",
-    label: "Truckload of Totes",
-    icon: Package,
-    description: "22 totes per truckload, eligible for truckload discount",
+    description: "Cubic yard pickup (Available only at Vicksburg location)",
   },
 ];
