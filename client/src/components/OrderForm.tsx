@@ -437,14 +437,14 @@ export const OrderForm: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
-                            <p className="font-medium text-sm truncate">{productData?.productType}</p>
+                            <p className="font-medium text-sm truncate max-w-[180px]">{productData?.productType}</p>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeProduct(product.id)}>
                               <Trash2 className="h-3.5 w-3.5 text-red-500" />
                             </Button>
                           </div>
                           <div className="flex items-center text-xs text-gray-500 gap-1 mb-2">
-                            {categoryInfo?.icon && <categoryInfo.icon className="h-3 w-3" />}
-                            <span>{categoryInfo?.label}</span>
+                            {categoryInfo?.icon && <categoryInfo.icon className="h-3 w-3 flex-shrink-0" />}
+                            <span className="truncate">{categoryInfo?.label}</span>
                           </div>
                           <div className="flex items-center">
                             <Label htmlFor={`quantity-${product.id}`} className="text-xs mr-2">Qty:</Label>
@@ -480,7 +480,7 @@ export const OrderForm: React.FC = () => {
             <div className="mt-4">
               <Card className="border border-green-200 bg-green-50">
                 <div className="p-4">
-                  <h3 className="font-medium text-green-800 mb-2">
+                  <h3 className="font-medium text-green-800 mb-2 line-clamp-1">
                     Select Packaging Option for {productsData.find(p => p.id === selectedProductId)?.productType}
                   </h3>
                   <div className="space-y-2">
@@ -500,9 +500,9 @@ export const OrderForm: React.FC = () => {
                           key={category.value}
                           onClick={() => handleCategorySelect(category.value)}
                           variant="outline"
-                          className="flex items-center justify-between w-full p-3 h-auto text-left bg-white hover:bg-gray-50"
+                          className="flex items-center justify-between w-full p-3 h-auto text-left bg-white hover:bg-gray-50 overflow-hidden"
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-start gap-3 w-full max-w-full">
                             <div className="w-12 h-12 bg-white rounded border border-gray-100 overflow-hidden flex-shrink-0 relative">
                               {/* Show appropriate category image */}
                               {category.value === "boxes" && (
@@ -558,9 +558,9 @@ export const OrderForm: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm">{category.label}</p>
-                              <p className="text-xs text-gray-500 line-clamp-2">{category.description}</p>
+                            <div className="flex-1 min-w-0 overflow-hidden mr-2">
+                              <p className="font-medium text-sm truncate">{category.label}</p>
+                              <p className="text-xs text-gray-500 line-clamp-1">{category.description}</p>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-400" />
