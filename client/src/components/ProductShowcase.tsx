@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { productsData } from "@/data/productData";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+
+// Define the main product categories
+const PRODUCT_CATEGORIES = [
+  { value: "all", label: "All Categories" },
+  { value: "Amendment", label: "Amendment" },
+  { value: "Mulch", label: "Mulch" },
+  { value: "Potting Soil", label: "Potting Soil" },
+  { value: "Concentrated Amendment", label: "Concentrated Amendment" },
+];
 
 interface Product {
   id: number;
@@ -42,6 +52,7 @@ interface ProductShowcaseProps {
   products: Product[];
   loading?: boolean;
   onProductSelect?: (product: Product) => void;
+  initialCategory?: string;
 }
 
 // Helper function to get the display name for products (copied from Home/ProductDetail)
@@ -49,17 +60,24 @@ const getProductDisplayName = (product: Product): string => {
   return product.productType || product.name;
 };
 
-export default function ProductShowcase({ products, loading = false, onProductSelect }: ProductShowcaseProps) {
+export default function ProductShowcase({ products, loading = false, onProductSelect, initialCategory = "all" }: ProductShowcaseProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [, navigate] = useLocation();
   const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
 
-  // Filter products based on search term
+  // Update selected category when initialCategory changes
+  useEffect(() => {
+    setSelectedCategory(initialCategory);
+  }, [initialCategory]);
+
+  // Filter products based on search term and category
   const filteredProducts = products.filter(
     (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (selectedCategory === "all" || product.category === selectedCategory) &&
+      (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Handle product click
@@ -100,27 +118,34 @@ export default function ProductShowcase({ products, loading = false, onProductSe
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-        <div>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            <span className="relative inline-block">
-              <span className="relative z-10">Our Products</span>
-              <span className="absolute bottom-0 left-0 w-full h-3 bg-accent/30 -rotate-1 z-0"></span>
-            </span>
-          </h2>
-          <p className="text-foreground/70 mt-2 max-w-xl">Explore our premium range of organic soil products for your growing needs</p>
-        </div>
-        <div className="relative w-full md:w-auto flex-1 md:max-w-md">
-          <Input
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 pr-4 py-6 border border-neutral-200 hover:border-primary focus:border-primary rounded-xl w-full transition-all duration-200 shadow-sm"
-          />
-          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5">
-            <Search className="h-full w-full" />
+    <div className="container mx-auto px-4 py-8">
+      {/* Search and Filter Section */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
+        </div>
+        <div className="w-full md:w-64">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRODUCT_CATEGORIES.map((category) => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -134,7 +159,10 @@ export default function ProductShowcase({ products, loading = false, onProductSe
             Try adjusting your search criteria or browse our full catalog of premium soil products.
           </p>
           <Button
-            onClick={() => setSearchTerm("")}
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedCategory("all");
+            }}
             variant="outline"
             className="bg-white border-primary text-primary hover:bg-primary hover:text-white transition-colors duration-300"
           >
