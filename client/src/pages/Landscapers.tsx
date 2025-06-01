@@ -410,61 +410,376 @@ const Landscapers = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products.map((product) => (
-              <Card
-                key={product.id}
-                className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-                onClick={() => setLocation(`/products/${product.id}`)}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                    <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                      View Details
-                    </div>
-                  </div>
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
-                    }}
-                  />
+          {/* For Landscaping Section */}
+          <div className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb"
+                alt="Landscaping"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Landscaping</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Premium soil solutions designed for professional landscapers, ensuring beautiful and sustainable outdoor spaces.
+                  </p>
                 </div>
+              </div>
+            </div>
 
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">{product.title}</h3>
-                  <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-
-                  {/* Benefits */}
-                  <div className="flex flex-wrap gap-1 mb-6">
-                    {product.benefits.slice(0, 3).map((benefit, idx) => (
-                      <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
-                        {benefit}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  {/* Bulk Options */}
-                  <div className="space-y-2 mb-4">
-                    {product.bulkOptions.map((option, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                        <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
-                        <span>{option}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products
+                .filter(
+                  (product) =>
+                    product.title.includes("MULCH") ||
+                    product.title.includes("OVERSEED") ||
+                    product.title.includes("TREE AND SHRUB") ||
+                    product.title.includes("NATURAL MINERAL") ||
+                    product.title.includes("DROUGHT RESILIENCE")
+                )
+                .map((product) => (
+                  <Card
+                    key={product.id}
+                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
+                    onClick={() => setLocation(`/products/${product.id}`)}
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
+                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                          View Details
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                      <img
+                        src={product.image}
+                        alt={product.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+                        }}
+                      />
+                    </div>
 
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
-                    View Details & Pricing
-                  </Button>
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
+                          {product.title.includes("DAIRY")
+                            ? "Dan's Gold"
+                            : product.title.includes("WORM")
+                              ? "Mikey's Worm Poop"
+                              : product.title.includes("GOLF")
+                                ? "Tee Top Divot Repair Blend"
+                                : product.title.includes("OVERSEED")
+                                  ? "Turf Daddy Blend"
+                                  : product.title.includes("TREE")
+                                    ? "Artemis Root Boost Blend"
+                                    : product.title.includes("NATURAL MINERAL")
+                                      ? "Zeolite"
+                                      : product.title.includes("SULFUR")
+                                        ? "SKMicrosource"
+                                        : product.title.includes("DROUGHT")
+                                          ? "Desert Defender"
+                                          : product.title.includes("POTTING")
+                                            ? "Ready Go Garden"
+                                            : product.title.includes("CANNABIS")
+                                              ? "CannaBag"
+                                              : product.title.includes("SUCCULENT")
+                                                ? "Succulent Success"
+                                                : product.title.includes("TROPICAL")
+                                                  ? "Tropic Treasure"
+                                                  : product.title.includes("FLOWERING")
+                                                    ? "Flower Flourish"
+                                                    : product.title.includes("CONCENTRATED")
+                                                      ? "SuperBooster"
+                                                      : product.title.includes("MEDIUM DARK MULCH")
+                                                        ? "Nature Blanket"
+                                                        : product.title.includes("ALL-IN-ONE")
+                                                          ? "Premium Nature's Blanket"
+                                                          : "Dan's Gold"}
+                        </Badge>
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
+                        {product.title}
+                      </h3>
+                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
+
+                      {/* Benefits */}
+                      <div className="flex flex-wrap gap-1 mb-6">
+                        {product.benefits.slice(0, 3).map((benefit, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
+                            {benefit}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Bulk Options */}
+                      <div className="space-y-2 mb-4">
+                        {product.bulkOptions.map((option, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            <span>{option}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
+                        View Details & Pricing
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+            </div>
+          </div>
+
+          {/* For Floriculture Section */}
+          <div className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
+                alt="Floriculture"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Floriculture</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Specialized soil solutions for nurseries, flower growers, and ornamental plant enthusiasts.
+                  </p>
                 </div>
-              </Card>
-            ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products
+                .filter(
+                  (product) =>
+                    product.title.includes("POTTING SOIL") ||
+                    product.title.includes("SUCCULENT") ||
+                    product.title.includes("TROPICAL") ||
+                    product.title.includes("FLOWERING")
+                )
+                .map((product) => (
+                  <Card
+                    key={product.id}
+                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
+                    onClick={() => setLocation(`/products/${product.id}`)}
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
+                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                          View Details
+                        </div>
+                      </div>
+                      <img
+                        src={product.image}
+                        alt={product.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+                        }}
+                      />
+                    </div>
+
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
+                          {product.title.includes("DAIRY")
+                            ? "Dan's Gold"
+                            : product.title.includes("WORM")
+                              ? "Mikey's Worm Poop"
+                              : product.title.includes("GOLF")
+                                ? "Tee Top Divot Repair Blend"
+                                : product.title.includes("OVERSEED")
+                                  ? "Turf Daddy Blend"
+                                  : product.title.includes("TREE")
+                                    ? "Artemis Root Boost Blend"
+                                    : product.title.includes("NATURAL MINERAL")
+                                      ? "Zeolite"
+                                      : product.title.includes("SULFUR")
+                                        ? "SKMicrosource"
+                                        : product.title.includes("DROUGHT")
+                                          ? "Desert Defender"
+                                          : product.title.includes("POTTING")
+                                            ? "Ready Go Garden"
+                                            : product.title.includes("CANNABIS")
+                                              ? "CannaBag"
+                                              : product.title.includes("SUCCULENT")
+                                                ? "Succulent Success"
+                                                : product.title.includes("TROPICAL")
+                                                  ? "Tropic Treasure"
+                                                  : product.title.includes("FLOWERING")
+                                                    ? "Flower Flourish"
+                                                    : product.title.includes("CONCENTRATED")
+                                                      ? "SuperBooster"
+                                                      : product.title.includes("MEDIUM DARK MULCH")
+                                                        ? "Nature Blanket"
+                                                        : product.title.includes("ALL-IN-ONE")
+                                                          ? "Premium Nature's Blanket"
+                                                          : "Dan's Gold"}
+                        </Badge>
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
+                        {product.title}
+                      </h3>
+                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
+
+                      {/* Benefits */}
+                      <div className="flex flex-wrap gap-1 mb-6">
+                        {product.benefits.slice(0, 3).map((benefit, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
+                            {benefit}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Bulk Options */}
+                      <div className="space-y-2 mb-4">
+                        {product.bulkOptions.map((option, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            <span>{option}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
+                        View Details & Pricing
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+            </div>
+          </div>
+
+          {/* For Agriculture Section */}
+          <div className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
+                alt="Agriculture"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Agriculture</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Advanced soil amendments and fertilizers for commercial farming, vineyards, and specialty crops.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products
+                .filter(
+                  (product) =>
+                    product.title.includes("VINEYARD") ||
+                    product.title.includes("AVOCADO") ||
+                    product.title.includes("POME") ||
+                    product.title.includes("CONCENTRATED") ||
+                    product.title.includes("DAIRY COMPOST") ||
+                    product.title.includes("WORM CASTINGS")
+                )
+                .map((product) => (
+                  <Card
+                    key={product.id}
+                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
+                    onClick={() => setLocation(`/products/${product.id}`)}
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
+                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                          View Details
+                        </div>
+                      </div>
+                      <img
+                        src={product.image}
+                        alt={product.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+                        }}
+                      />
+                    </div>
+
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
+                          {product.title.includes("DAIRY")
+                            ? "Dan's Gold"
+                            : product.title.includes("WORM")
+                              ? "Mikey's Worm Poop"
+                              : product.title.includes("GOLF")
+                                ? "Tee Top Divot Repair Blend"
+                                : product.title.includes("OVERSEED")
+                                  ? "Turf Daddy Blend"
+                                  : product.title.includes("TREE")
+                                    ? "Artemis Root Boost Blend"
+                                    : product.title.includes("NATURAL MINERAL")
+                                      ? "Zeolite"
+                                      : product.title.includes("SULFUR")
+                                        ? "SKMicrosource"
+                                        : product.title.includes("DROUGHT")
+                                          ? "Desert Defender"
+                                          : product.title.includes("POTTING")
+                                            ? "Ready Go Garden"
+                                            : product.title.includes("CANNABIS")
+                                              ? "CannaBag"
+                                              : product.title.includes("SUCCULENT")
+                                                ? "Succulent Success"
+                                                : product.title.includes("TROPICAL")
+                                                  ? "Tropic Treasure"
+                                                  : product.title.includes("FLOWERING")
+                                                    ? "Flower Flourish"
+                                                    : product.title.includes("CONCENTRATED")
+                                                      ? "SuperBooster"
+                                                      : product.title.includes("MEDIUM DARK MULCH")
+                                                        ? "Nature Blanket"
+                                                        : product.title.includes("ALL-IN-ONE")
+                                                          ? "Premium Nature's Blanket"
+                                                          : "Dan's Gold"}
+                        </Badge>
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
+                        {product.title}
+                      </h3>
+                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
+
+                      {/* Benefits */}
+                      <div className="flex flex-wrap gap-1 mb-6">
+                        {product.benefits.slice(0, 3).map((benefit, idx) => (
+                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
+                            {benefit}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Bulk Options */}
+                      <div className="space-y-2 mb-4">
+                        {product.bulkOptions.map((option, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            <span>{option}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
+                        View Details & Pricing
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+            </div>
           </div>
         </div>
 
