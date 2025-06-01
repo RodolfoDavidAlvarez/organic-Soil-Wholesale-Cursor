@@ -85,23 +85,23 @@ const Home = () => {
   // Carousel images
   const carouselImages = [
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FShowcase%20photos%2FRaw%20Golden%20Looking%20Mulch%20Commercial%20Application%20look.jpeg?alt=media&token=2e512497-e7a0-49b9-a566-85406662e769",
-      alt: "Raw Golden Looking Mulch Commercial Application",
+      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
+      alt: "Commercial Application",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FShowcase%20photos%2FFull%20Truckload%20(Mixed%20Pallets%20and%20Totes).jpeg?alt=media&token=c946dc07-80a0-4050-b490-e97f7485d19f",
-      alt: "Full Truckload Mixed Pallets and Totes",
+      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FPark%202%20application.jpeg?alt=media&token=3d6bb609-f245-49c1-ac4d-7e711e60783e",
+      alt: "Park Application",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FShowcase%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=a7848c69-e01f-49df-a448-9f49222021f3",
-      alt: "Dark Mulch Truckload Delivery",
+      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54",
+      alt: "Residential Planter Cover",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FShowcase%20photos%2FDARK%20MULCH%20Outside%20of%20office%20application.jpeg?alt=media&token=9e8b9c0e-2db7-4e06-8911-d83c5003b07e",
-      alt: "Dark Mulch Office Application",
+      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
+      alt: "Residential Garden Beds",
       type: "image",
     },
     {
@@ -411,36 +411,36 @@ const Home = () => {
   // Featured products data
   const featuredProducts = [
     {
-      id: 1,
+      id: 1, // Dan's Gold Dairy Compost
       name: "Dairy Compost",
       imageUrl:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       description: "ALL NATURAL DAIRY COMPOST",
-      category: "Compost",
+      category: "Amendment",
     },
     {
-      id: 2,
+      id: 2, // Mikey's Worm Poop
       name: "Worm Castings",
       imageUrl:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8",
       description: "ALL NATURAL VERMICOMPOST",
-      category: "Vermicompost",
+      category: "Amendment",
     },
     {
-      id: 3,
+      id: 25, // SuperBooster
       name: "Organic Concentrated Blend",
       imageUrl:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
       description: "ORGANIC CONCENTRATED AMENDMENT",
-      category: "Soil Amendment",
+      category: "Concentrated Amendment",
     },
     {
-      id: 4,
+      id: 3, // Amazonian Dark Earth
       name: "Biochar",
       imageUrl:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
       description: "BIOCHAR MINERAL",
-      category: "Soil Amendment",
+      category: "Amendment",
     },
   ];
 
@@ -524,7 +524,7 @@ const Home = () => {
                       className="group cursor-pointer"
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
-                      onClick={() => navigate(`/products/${product.id}`)}
+                      onClick={() => handleProductSelect(product)}
                     >
                       <div className="relative aspect-square overflow-hidden rounded-2xl bg-neutral-50">
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
