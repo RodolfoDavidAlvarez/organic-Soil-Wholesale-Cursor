@@ -5,9 +5,29 @@ import { useLocation } from "wouter";
 import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield, X } from "lucide-react";
 import { useState } from "react";
 
+interface Product {
+  id: number;
+  title: string;
+  description: string;
+  benefits: string[];
+  image: string;
+  texture?: string;
+  bulkOptions: string[];
+}
+
 const Landscapers = () => {
   const [, setLocation] = useLocation();
   const [showGallery, setShowGallery] = useState(false);
+  const [texturePreview, setTexturePreview] = useState<string | null>(null);
+
+  const handleTextureClick = (e: React.MouseEvent, texturePath: string) => {
+    e.stopPropagation();
+    setTexturePreview(texturePath);
+  };
+
+  const closeTexturePreview = () => {
+    setTexturePreview(null);
+  };
 
   const scrollToProducts = () => {
     const productsSection = document.getElementById("products-section");
@@ -31,7 +51,7 @@ const Landscapers = () => {
     },
   ];
 
-  const products = [
+  const products: Product[] = [
     {
       id: 1,
       title: "DAIRY COMPOST",
@@ -65,8 +85,8 @@ const Landscapers = () => {
       title: "OVERSEED AND AERATION BLEND",
       description: "Advanced blend for overseeding and aeration, designed to improve soil quality and promote healthy turf growth.",
       benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      image: "/Users/rodolfoalvarez/Downloads/Grass.jpeg",
+      texture: "/Users/rodolfoalvarez/Downloads/Grass.jpeg",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
@@ -191,6 +211,22 @@ const Landscapers = () => {
 
   return (
     <>
+      {texturePreview && (
+        <div 
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" 
+          onClick={closeTexturePreview}
+        >
+          <div className="relative bg-white rounded-xl overflow-hidden max-w-3xl max-h-[80vh]">
+            <img src={texturePreview} alt="Product Texture" className="max-w-full max-h-[80vh] object-contain" />
+            <button 
+              className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1 rounded-full"
+              onClick={closeTexturePreview}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
         {/* Hero Section */}
         <div className="bg-green-800 text-white py-16 relative overflow-hidden">
@@ -414,7 +450,7 @@ const Landscapers = () => {
           <div className="mb-20">
             <div className="relative rounded-2xl overflow-hidden mb-10">
               <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb"
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Lanscaping%20section%20introduction%20image.jpeg?alt=media&token=7405742b-2696-4f11-920f-d294a63ae6e2"
                 alt="Landscaping"
                 className="w-full h-[400px] object-cover"
               />
