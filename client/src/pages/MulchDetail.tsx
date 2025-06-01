@@ -5,61 +5,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { getProductByIndex } from "@/data/productData";
+import { getMulchProducts } from "@/data/productData";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
-// Size category images and labels from adminInputs.txt
+// Size category images and labels
 const SIZE_CATEGORIES = [
   {
-    name: "Pallet of Boxes",
-    description: "144 units / 36 boxes",
+    name: "2CF Bag",
+    description: "2 cubic feet bag",
     image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89",
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d",
+  },
+  {
+    name: "Pallet of Boxes",
+    description: "144 units / 36 boxes (4 units per box)",
+    image:
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4c53-bd67-426f7224772e",
   },
   {
     name: "Pallet of Bags",
     description: "50 bags (1cf Bags)",
     image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d",
   },
   {
-    name: "Bulk",
-    description: "22-24 tons per truckload",
+    name: "Bulk Delivery",
+    description: "Compost and blends: 22-24 tons per truckload\nPotting soil: 90-110 CYs",
     image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
-  },
-  {
-    name: "Buy in Cubic Yard",
-    description: "Bulk pickup only",
-    image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc",
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195",
   },
 ];
 
-const ProductDetail = () => {
+const MulchDetail = () => {
   const [, params] = useRoute("/products/:id");
   const [, navigate] = useLocation();
   const productId = params && (params as any).id ? parseInt((params as any).id) : undefined;
-  const [product, setProduct] = useState<any | null>(null);
+  const [mulchProducts, setMulchProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
   useEffect(() => {
-    const loadProductData = async () => {
-      if (typeof productId !== "number" || isNaN(productId)) {
-        setError(true);
-        setIsLoading(false);
-        return;
-      }
+    const loadMulchData = async () => {
       try {
-        // Subtract 1 from productId since our getProductByIndex is 0-based
-        const foundProduct = await getProductByIndex(productId - 1);
-        if (foundProduct) {
-          setProduct(foundProduct);
-        } else {
-          setError(true);
+        const products = await getMulchProducts();
+        setMulchProducts(products);
+        if (products.length > 0) {
+          setSelectedVariant(products[0]);
         }
       } catch (err) {
         setError(true);
@@ -67,10 +62,15 @@ const ProductDetail = () => {
         setIsLoading(false);
       }
     };
-    loadProductData();
-  }, [productId]);
+    loadMulchData();
+  }, []);
 
-  const allImages: string[] = [...(product?.additionalImages || []), ...(product?.imageUrl ? [product.imageUrl] : [])];
+  const allImages: string[] = selectedVariant
+    ? [
+        ...(selectedVariant.additionalImages || []),
+        ...(selectedVariant["Product Texture Photo URL"] ? [selectedVariant["Product Texture Photo URL"]] : []),
+      ]
+    : [];
 
   // Navigation handlers
   const handleNextImage = () => {
@@ -124,13 +124,13 @@ const ProductDetail = () => {
               </div>
             </div>
           </div>
-        ) : product ? (
+        ) : (
           <div className="flex flex-col lg:flex-row">
             {/* Product Images */}
             <div className="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
               <div className="bg-neutral-50 p-4 rounded-xl">
                 <div className="relative w-full h-[400px] rounded-lg overflow-hidden cursor-pointer" onClick={() => setIsGalleryOpen(true)}>
-                  <img src={allImages[currentImageIndex]} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={allImages[currentImageIndex]} alt={selectedVariant?.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="grid grid-cols-4 gap-2 mt-4">
                   {allImages.map((image, index) => (
@@ -139,7 +139,7 @@ const ProductDetail = () => {
                       className={`relative h-20 rounded-md overflow-hidden cursor-pointer ${currentImageIndex === index ? "ring-2 ring-primary" : ""}`}
                       onClick={() => handleThumbnailClick(index)}
                     >
-                      <img src={image} alt={`${product.name} - Image ${index + 1}`} className="w-full h-full object-cover" />
+                      <img src={image} alt={`${selectedVariant?.name} - Image ${index + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -149,15 +149,42 @@ const ProductDetail = () => {
             <div className="lg:w-1/2">
               <div className="mb-4">
                 <Badge variant="outline" className="text-primary border-primary">
-                  {product.category}
+                  Mulch
                 </Badge>
               </div>
-              <h1 className="text-3xl font-bold mb-2">{product.productType || product.name}</h1>
-              <p className="text-lg text-neutral-600 mb-6">{product.description}</p>
+              <h1 className="text-3xl font-bold mb-2">Nature Blanket Mulch</h1>
+              <p className="text-lg text-neutral-600 mb-6">Premium mulch enhanced with dairy compost for optimal soil health and plant growth.</p>
+
+              {/* Mulch Variants */}
+              <div className="mb-8">
+                <h3 className="text-sm font-medium mb-3">Available Variants</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {mulchProducts.map((variant) => (
+                    <Card
+                      key={variant.id}
+                      className={`p-4 cursor-pointer transition-all duration-200 ${
+                        selectedVariant?.id === variant.id ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-primary/50"
+                      }`}
+                      onClick={() => setSelectedVariant(variant)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold">{variant.name}</h4>
+                          <p className="text-sm text-neutral-600">{variant.productType}</p>
+                        </div>
+                        <div className="flex items-center">
+                          {selectedVariant?.id === variant.id && <CheckCircle className="h-5 w-5 text-primary mr-2" />}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
               {/* Available Sizes */}
               <div className="mb-8">
                 <h3 className="text-sm font-medium mb-3">Available Sizes</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {SIZE_CATEGORIES.map((cat) => (
                     <div key={cat.name} className="rounded-lg border overflow-hidden">
                       <img src={cat.image} alt={cat.name} className="w-full h-32 object-cover" />
@@ -169,6 +196,7 @@ const ProductDetail = () => {
                   ))}
                 </div>
               </div>
+
               {/* Product Details Tabs */}
               <div className="mt-12">
                 <Tabs defaultValue="details" className="w-full">
@@ -189,40 +217,41 @@ const ProductDetail = () => {
                   <TabsContent value="details" className="mt-6">
                     <div className="prose max-w-none">
                       <h4>Our Story</h4>
-                      <p>{product.story}</p>
+                      <p>{selectedVariant?.story}</p>
                       <h4 className="mt-4">Target Audience</h4>
-                      <p>{product.targetAudience}</p>
+                      <p>{selectedVariant?.targetAudience}</p>
                       <h4 className="mt-4">Recommended Uses</h4>
-                      <p>{product.recommendedUses}</p>
+                      <p>{selectedVariant?.recommendedUses}</p>
                     </div>
                   </TabsContent>
                   <TabsContent value="usage" className="mt-6">
                     <div className="prose max-w-none">
                       <h4>Usage Instructions</h4>
-                      <p>{product.usage}</p>
+                      <p>{selectedVariant?.usage}</p>
                     </div>
                   </TabsContent>
                   <TabsContent value="ingredients" className="mt-6">
                     <div className="prose max-w-none">
                       <h4>Ingredients</h4>
-                      <p>{product.ingredients}</p>
+                      <p>{selectedVariant?.ingredients}</p>
                     </div>
                   </TabsContent>
                   <TabsContent value="certifications" className="mt-6">
                     <div className="prose max-w-none">
                       <h4>Certifications</h4>
-                      <p>{product.certifications}</p>
+                      <p>{selectedVariant?.certifications}</p>
                     </div>
                   </TabsContent>
                 </Tabs>
               </div>
+
               {/* Order Button */}
               <Button className="w-full bg-primary hover:bg-primary/90 text-white mt-8" size="lg" onClick={() => navigate("/order")}>
                 Order Now - Arizona Delivery Available
               </Button>
             </div>
           </div>
-        ) : null}
+        )}
       </div>
       {/* Image Gallery Modal */}
       {isGalleryOpen && (
@@ -238,7 +267,7 @@ const ProductDetail = () => {
                 <X className="h-4 w-4" />
               </Button>
               <div className="relative aspect-[4/3] w-full">
-                <img src={allImages[currentImageIndex]} alt={product?.name} className="w-full h-full object-contain" />
+                <img src={allImages[currentImageIndex]} alt={selectedVariant?.name} className="w-full h-full object-contain" />
               </div>
               <Button
                 variant="ghost"
@@ -264,4 +293,4 @@ const ProductDetail = () => {
   );
 };
 
-export default ProductDetail;
+export default MulchDetail;

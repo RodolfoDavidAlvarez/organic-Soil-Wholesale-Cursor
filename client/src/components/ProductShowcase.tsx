@@ -85,7 +85,12 @@ export default function ProductShowcase({ products, loading = false, onProductSe
     if (onProductSelect) {
       onProductSelect(product);
     } else {
-      navigate(`/products/${product.id}`);
+      // Route mulch products to the MulchDetail page
+      if (product.category === "Mulch") {
+        navigate(`/products/mulch/${product.id}`);
+      } else {
+        navigate(`/products/${product.id}`);
+      }
     }
   };
 
@@ -185,7 +190,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                   </div>
                 </div>
                 <img
-                  src={product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
+                  src={product.additionalImages?.[0] || product["Product Texture Photo URL"] || DEFAULT_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"

@@ -2,10 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield } from "lucide-react";
+import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield, X } from "lucide-react";
+import { useState } from "react";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
+  const [showGallery, setShowGallery] = useState(false);
+
+  const scrollToProducts = () => {
+    const productsSection = document.getElementById("products-section");
+    productsSection?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const testimonials = [
     {
@@ -27,122 +34,158 @@ const Landscapers = () => {
   const products = [
     {
       id: 1,
-      title: "Dan's Gold",
+      title: "DAIRY COMPOST",
       description:
         "Premium organic dairy compost, perfect for enriching soil and promoting healthy plant growth. Rich in essential nutrients and beneficial microorganisms.",
       benefits: ["Improves soil structure", "Enhances water retention", "Provides slow-release nutrients", "Supports beneficial soil life"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Pallet of 144 units", "Bulk delivery available", "20% truckload discount"],
     },
     {
       id: 2,
-      title: "Mikey's Worm Poop",
+      title: "WORM CASTINGS",
       description: "Premium vermicompost, nature's most potent soil amendment. Packed with beneficial microbes and plant-available nutrients.",
       benefits: ["100% organic", "Rich in beneficial microbes", "Improves soil structure", "Enhances plant immunity"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=87c65006-3a11-44ec-adeb-6f4896d544e3",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 3,
-      title: "Tee Top Divot Repair Blend",
+      title: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
       description: "Specialized blend for repairing divots on golf courses and sports fields. Perfect for maintaining pristine playing surfaces.",
       benefits: ["Quick turf healing", "Natural composition", "Easy application", "Long-lasting results"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 4,
-      title: "Turf Daddy Blend",
+      title: "OVERSEED AND AERATION BLEND",
       description: "Advanced blend for overseeding and aeration, designed to improve soil quality and promote healthy turf growth.",
       benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 5,
-      title: "Artemis Root Boost Blend",
+      title: "TREE AND SHRUB PLANTING AMENDMENT",
       description: "Specialized amendment for trees and shrubs, promoting strong root development and healthy growth.",
       benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 6,
-      title: "Zeolite",
+      title: "NATURAL MINERAL SOIL CONDITIONER",
       description:
         "Natural mineral amendment that improves soil structure and nutrient retention. Perfect for water conservation and long-term soil improvement.",
       benefits: ["Enhances nutrient retention", "Improves soil aeration", "Reduces water requirements", "Long-lasting soil amendment"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FZeolite10lbs.jpg?alt=media&token=c76272a4-4abb-483b-95f7-24dae8efce72",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 7,
-      title: "SKMicrosource",
+      title: "SULFUR-POTASSIUM NUTRITION BOOST",
       description: "Premium sulfur-potassium nutrition boost for enhanced plant growth and soil vitality.",
       benefits: ["Balanced nutrition", "Improves soil health", "Enhances plant growth", "Supports microbial activity"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 8,
-      title: "Desert Defender",
+      title: "DROUGHT RESILIENCE SOIL AMENDMENT",
       description: "Specialized blend for drought resilience, helping plants thrive in challenging conditions.",
       benefits: ["Drought resistance", "Water retention", "Soil improvement", "Plant protection"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 9,
-      title: "PlugBoost",
-      description: "Premium seed starter mix for optimal germination and early plant development.",
-      benefits: ["Enhanced germination", "Strong root development", "Nutrient-rich", "Easy to use"],
+      title: "PREMIUM POTTING SOIL",
+      description: "Premium potting soil blend for container gardening and raised beds.",
+      benefits: ["Perfect for containers", "Rich in nutrients", "Excellent drainage", "Ready to use"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 10,
-      title: "PropaGrow",
-      description: "Specialized propagation mix for optimal root development and plant growth.",
-      benefits: ["Rapid root development", "Enhanced growth", "Nutrient-rich", "Versatile application"],
+      title: "CANNABIS POTTING SOIL",
+      description: "Specialized potting soil for cannabis cultivation, optimized for maximum growth and yield.",
+      benefits: ["Cannabis-optimized", "Rich in nutrients", "Excellent drainage", "Ready to use"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 11,
-      title: "PlantPal",
-      description: "Comprehensive nursery mix for all stages of plant growth, from seedlings to mature plants.",
-      benefits: ["Complete nutrition", "Versatile use", "Consistent quality", "Easy application"],
+      title: "SUCCULENT INTERIOR POTTING MIX",
+      description: "Specialized mix for succulents and cacti, providing optimal drainage and aeration.",
+      benefits: ["Perfect for succulents", "Excellent drainage", "Aeration", "Ready to use"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 12,
-      title: "Clay Cure",
-      description: "Specialized blend for improving clay soil structure and drainage.",
-      benefits: ["Improves drainage", "Enhances soil structure", "Reduces compaction", "Promotes root growth"],
+      title: "TROPICAL PLANT INTERIOR POTTING MIX",
+      description: "Specialized mix for tropical plants, providing optimal moisture retention and aeration.",
+      benefits: ["Perfect for tropicals", "Moisture retention", "Aeration", "Ready to use"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 13,
-      title: "Silky Silt Saver",
-      description: "Advanced blend for improving silt soil performance and moisture retention.",
-      benefits: ["Enhanced moisture retention", "Improved soil structure", "Better nutrient availability", "Drought resilience"],
+      title: "CONCENTRATED AMENDMENT FOR FRUITS AND VEGETABLES",
+      description: "Advanced soil amendment for maximum plant growth and vitality.",
+      benefits: ["Maximum growth", "Enhanced vitality", "Rich in nutrients", "Quick results"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
+    },
+  ];
+
+  const mulchApplications = [
+    {
+      id: 1,
+      title: "Commercial Park Applications",
+      description: "Professional mulch application for parks and public spaces, providing both aesthetic appeal and soil protection.",
+      images: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FPark%202%20application.jpeg?alt=media&token=3d6bb609-f245-49c1-ac4d-7e711e60783e",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FParks.%20appliationjpeg.jpeg?alt=media&token=049de967-4c24-412a-8fc4-86ddf7defef7",
+      ],
+      benefits: ["Professional finish", "Long-lasting results", "Erosion control", "Water conservation"],
+    },
+    {
+      id: 2,
+      title: "Residential Landscaping",
+      description: "Premium mulch solutions for residential properties, enhancing curb appeal and garden health.",
+      images: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Open%20area%20with%20Raw%20Mulch.jpeg?alt=media&token=9938ef5d-604b-43c7-96f3-c65ff9c71f6d",
+      ],
+      benefits: ["Enhanced aesthetics", "Soil protection", "Weed suppression", "Moisture retention"],
+    },
+    {
+      id: 3,
+      title: "Bulk Delivery Solutions",
+      description: "Efficient bulk mulch delivery for large-scale landscaping projects.",
+      images: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulk%20Applied%20in%20outside%20of%20office%20showcase.jpeg?alt=media&token=557e9170-9316-438b-abe8-48f8987144c7",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FRaw%20Golden%20Looking%20Mulch%20Commercial%20Application%20look.jpeg?alt=media&token=11ad38f6-0678-40c6-a3bc-7656785e8456",
+      ],
+      benefits: ["Cost-effective", "Project efficiency", "Consistent quality", "Timely delivery"],
     },
   ];
 
@@ -158,32 +201,124 @@ const Landscapers = () => {
           </div>
 
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center justify-center gap-2 mb-6 bg-green-700 px-4 py-2 rounded-full">
-                <Award className="h-5 w-5" />
-                <span className="text-lg font-semibold">Arizona's #1 Premium Soil Supplier</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="text-center lg:text-left">
+                <div className="inline-flex items-center justify-center gap-2 mb-6 bg-green-700 px-4 py-2 rounded-full">
+                  <Award className="h-5 w-5" />
+                  <span className="text-lg font-semibold">Arizona's #1 Premium Soil Supplier</span>
+                </div>
+                <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">Best-in-Class Soil Products for Professional Landscapers</h1>
+                <p className="text-xl text-green-100 mb-10">
+                  Elevate your landscaping projects with our premium, desert-optimized soil solutions. Engineered for Arizona's unique climate, our
+                  products deliver superior results, water efficiency, and unmatched plant performance.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                  <Button
+                    size="lg"
+                    className="bg-white text-green-800 hover:bg-green-50 text-lg px-8 py-6 shadow-lg"
+                    onClick={() => setLocation("/order")}
+                  >
+                    Get Your Professional Quote
+                  </Button>
+                  <Badge className="bg-green-700 text-white px-4 py-2 text-base font-medium">Exclusive 20% truckload discount for landscapers</Badge>
+                </div>
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">Best-in-Class Soil Products for Professional Landscapers</h1>
-              <p className="text-xl text-green-100 mb-10">
-                Elevate your landscaping projects with our premium, desert-optimized soil solutions. Engineered for Arizona's unique climate, our
-                products deliver superior results, water efficiency, and unmatched plant performance.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  className="bg-white text-green-800 hover:bg-green-50 text-lg px-8 py-6 shadow-lg"
-                  onClick={() => setLocation("/order")}
-                >
-                  Get Your Professional Quote
-                </Button>
-                <Badge className="bg-green-700 text-white px-4 py-2 text-base font-medium">Exclusive 20% truckload discount for landscapers</Badge>
+
+              {/* Mulch Applications Showcase in Hero */}
+              <div className="relative">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl">
+                      <img
+                        src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb"
+                        alt="Commercial Park Application"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                        <span className="text-white font-semibold">Commercial Parks</span>
+                      </div>
+                    </div>
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl">
+                      <img
+                        src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
+                        alt="Residential Application"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                        <span className="text-white font-semibold">Residential Projects</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4 mt-8">
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl">
+                      <img
+                        src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9"
+                        alt="Bulk Delivery"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                        <span className="text-white font-semibold">Bulk Delivery</span>
+                      </div>
+                    </div>
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl">
+                      <img
+                        src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
+                        alt="Garden Beds"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                        <span className="text-white font-semibold">Garden Beds</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 text-center">
+                  <p className="text-lg text-green-100 mb-4">Premium Mulch Solutions for Every Project</p>
+                  <Button
+                    onClick={scrollToProducts}
+                    className="bg-white text-green-800 hover:bg-green-50 px-6 py-3 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl"
+                  >
+                    View All Products
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Side Gallery Button */}
+        <button
+          onClick={() => setShowGallery(true)}
+          className="fixed right-4 top-1/2 transform -translate-y-1/2 bg-green-600 text-white p-3 rounded-l-lg shadow-lg hover:bg-green-700 transition-all duration-300 z-50"
+        >
+          <span className="writing-mode-vertical">View All Photos</span>
+        </button>
+
+        {/* Side Gallery */}
+        {showGallery && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
+            <div className="w-full max-w-2xl bg-white h-full overflow-y-auto p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Mulch Application Gallery</h2>
+                <button onClick={() => setShowGallery(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {mulchApplications
+                  .flatMap((app) => app.images)
+                  .map((image, index) => (
+                    <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-lg">
+                      <img src={image} alt={`Mulch Application ${index + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Products Section with improved UI - Moved up */}
-        <div className="container mx-auto px-4 py-16">
+        <div id="products-section" className="container mx-auto px-4 py-16">
           <div className="text-center mb-10">
             <Badge className="bg-green-700 text-white mb-4">Premium Soil Solutions</Badge>
             <h2 className="text-3xl font-bold mb-4">Professional-Grade Products for Superior Results</h2>

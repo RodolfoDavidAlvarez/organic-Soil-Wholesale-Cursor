@@ -5,19 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { 
-  Package, 
-  CheckCircle2, 
-  ChevronRight, 
-  Trash2, 
-  Users, 
-  Info, 
-  TruckIcon, 
+import {
+  Package,
+  CheckCircle2,
+  ChevronRight,
+  Trash2,
+  Users,
+  Info,
+  TruckIcon,
   Warehouse,
   AlertCircle,
   InfoIcon,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from "lucide-react";
 import { productsData } from "../data/productData";
 import { PRODUCT_CATEGORIES, ProductCategory } from "../data/categories";
@@ -25,7 +25,7 @@ import { generateCustomerEmail, generateAdminEmail, generateOrderMarkdown } from
 
 // Group products by "Type" field (Amendment, Potting, Specialty) from product information
 const productsByCategory: Record<string, typeof productsData> = {};
-productsData.forEach(product => {
+productsData.forEach((product) => {
   const productType = product.type || "Other"; // Use the Type field from product information JSON
   if (!productsByCategory[productType]) {
     productsByCategory[productType] = [];
@@ -35,16 +35,16 @@ productsData.forEach(product => {
 
 // Create category map for display with proper naming and ordering
 const DISPLAY_CATEGORIES = Object.keys(productsByCategory)
-  .filter(category => category !== "Discarded product") // Filter out any discarded products
+  .filter((category) => category !== "Discarded product") // Filter out any discarded products
   .sort((a, b) => {
     // Custom sorting to ensure important categories come first
-    const order = { "Amendment": 1, "Potting": 2, "Specialty": 3, "Other": 4 };
+    const order = { Amendment: 1, Potting: 2, Specialty: 3, Other: 4 };
     return (order[a] || 999) - (order[b] || 999);
   })
-  .map(category => ({
-    id: category.toLowerCase().replace(/\s/g, '-'),
+  .map((category) => ({
+    id: category.toLowerCase().replace(/\s/g, "-"),
     name: category,
-    products: productsByCategory[category]
+    products: productsByCategory[category],
   }));
 
 interface ProductSelection {
@@ -67,8 +67,8 @@ export const OrderForm: React.FC = () => {
   // Add CSS styles for the highlight effect
   useEffect(() => {
     // Create a style element
-    const styleEl = document.createElement('style');
-    
+    const styleEl = document.createElement("style");
+
     // Define the highlight animation
     const css = `
       @keyframes highlight-pulse {
@@ -81,10 +81,10 @@ export const OrderForm: React.FC = () => {
         border-color: #16a34a !important;
       }
     `;
-    
+
     styleEl.textContent = css;
     document.head.appendChild(styleEl);
-    
+
     // Clean up on component unmount
     return () => {
       document.head.removeChild(styleEl);
@@ -104,13 +104,13 @@ export const OrderForm: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedSizeCategory, setSelectedSizeCategory] = useState<string | null>(null);
-  
+
   // Refs for scrolling
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const productSectionRef = useRef<HTMLDivElement>(null);
   const sizeSectionRef = useRef<HTMLDivElement>(null);
   const orderSummaryRef = useRef<HTMLDivElement>(null);
-  
+
   // Function to register a category ref
   const registerCategoryRef = (id: string, element: HTMLDivElement | null) => {
     categoryRefs.current[id] = element;
@@ -119,11 +119,11 @@ export const OrderForm: React.FC = () => {
   // Effect for scrolling when selection changes
   useEffect(() => {
     if (expandedCategory && categoryRefs.current[expandedCategory]) {
-      categoryRefs.current[expandedCategory]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      
+      categoryRefs.current[expandedCategory]?.scrollIntoView({ behavior: "smooth", block: "start" });
+
       // After a category is expanded, focus on the product section
       setTimeout(() => {
-        productSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        productSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
   }, [expandedCategory]);
@@ -131,7 +131,7 @@ export const OrderForm: React.FC = () => {
   useEffect(() => {
     if (selectedProductId && sizeSectionRef.current) {
       setTimeout(() => {
-        sizeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        sizeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
   }, [selectedProductId]);
@@ -161,46 +161,45 @@ export const OrderForm: React.FC = () => {
       toast.error("Please select a product first");
       return;
     }
-    
+
     // Check for bulk pickup - only Dairy Compost and Worm Castings
-    const product = productsData.find(p => p.id === selectedProductId);
+    const product = productsData.find((p) => p.id === selectedProductId);
     if (!product) {
       toast.error("Product not found");
       return;
     }
-    
-    if (category === "bulk-pickup" && 
-        !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType)) {
+
+    if (category === "bulk-pickup" && !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType)) {
       toast.error("Only Dairy Compost and Worm Castings are available for bulk pickup");
       return;
     }
-    
+
     const newProduct: ProductSelection = {
       id: Date.now().toString(),
       productId: selectedProductId,
       sizeOption: category,
-      quantity: 1
+      quantity: 1,
     };
-    
+
     setProducts([...products, newProduct]);
     setSelectedProductId(null);
     setSelectedSizeCategory(null);
-    
+
     // First briefly highlight the order summary
     setTimeout(() => {
       if (orderSummaryRef.current) {
-        orderSummaryRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
+        orderSummaryRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
         // Add and remove highlight class for animation effect
-        orderSummaryRef.current.classList.add('highlight-order');
+        orderSummaryRef.current.classList.add("highlight-order");
         setTimeout(() => {
-          orderSummaryRef.current?.classList.remove('highlight-order');
+          orderSummaryRef.current?.classList.remove("highlight-order");
         }, 1500);
       }
-      
+
       // Then scroll back to the top of the page
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }, 1000);
     }, 100);
   };
@@ -213,27 +212,27 @@ export const OrderForm: React.FC = () => {
 
   const handleDeliveryOptionsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate that if bulk delivery was selected, delivery type must be delivery
-    const hasBulkDelivery = products.some(p => p.sizeOption === "bulk");
+    const hasBulkDelivery = products.some((p) => p.sizeOption === "bulk");
     if (hasBulkDelivery && businessInfo.deliveryType !== "delivery") {
       toast.error("Bulk orders require delivery. Please select delivery option.");
       return;
     }
-    
+
     // Validate pickup location restrictions
     if (businessInfo.deliveryType === "pickup" && businessInfo.pickupLocation === "vicksburg") {
-      const invalidProducts = products.filter(p => {
-        const product = productsData.find(pd => pd.id === p.productId);
+      const invalidProducts = products.filter((p) => {
+        const product = productsData.find((pd) => pd.id === p.productId);
         return !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product?.productType || "");
       });
-      
+
       if (invalidProducts.length > 0) {
         toast.error("Only Dairy Compost and Worm Castings are available for pickup at Vicksburg");
         return;
       }
     }
-    
+
     setStep(4);
   };
 
@@ -259,7 +258,7 @@ export const OrderForm: React.FC = () => {
           productDescription: productData?.description || "",
           productImageUrl: productData?.imageUrl || "",
           categoryName: categoryInfo?.label || "Standard",
-          categoryDescription: categoryInfo?.description || ""
+          categoryDescription: categoryInfo?.description || "",
         };
       });
 
@@ -336,29 +335,30 @@ export const OrderForm: React.FC = () => {
   };
 
   // Category Card Component
-  const CategoryCard = ({ category }: { category: { id: string, name: string, products: typeof productsData } }) => {
+  const CategoryCard = ({ category }: { category: { id: string; name: string; products: typeof productsData } }) => {
     // Select one featured product from this category
     const featuredProduct = category.products[0];
     const isExpanded = expandedCategory === category.id;
-    
+
     // Create a friendly display name for the category
     const getCategoryDisplayName = (categoryName: string): string => {
-      switch(categoryName) {
-        case "Amendment": return "Soil Amendments";
-        case "Potting": return "Potting Soils";
-        case "Specialty": return "Specialty Blends";
-        default: return categoryName;
+      switch (categoryName) {
+        case "Amendment":
+          return "Soil Amendments";
+        case "Potting":
+          return "Potting Soils";
+        case "Specialty":
+          return "Specialty Blends";
+        default:
+          return categoryName;
       }
     };
-    
+
     const categoryDisplayName = getCategoryDisplayName(category.name);
-    
+
     return (
-      <div 
-        ref={(el) => registerCategoryRef(category.id, el)}
-        className={`mb-6 rounded-lg ${isExpanded ? 'ring-2 ring-green-500' : ''}`}
-      >
-        <Card 
+      <div ref={(el) => registerCategoryRef(category.id, el)} className={`mb-6 rounded-lg ${isExpanded ? "ring-2 ring-green-500" : ""}`}>
+        <Card
           className={`overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md ${
             isExpanded ? "border-green-500" : "border-gray-200"
           }`}
@@ -367,50 +367,38 @@ export const OrderForm: React.FC = () => {
           <div className="flex p-4 items-center gap-4">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-neutral-100 rounded-md relative overflow-hidden flex-shrink-0">
               {featuredProduct.additionalImages?.[0] ? (
-                <img 
-                  src={featuredProduct.additionalImages[0]} 
-                  alt={`${featuredProduct.productType} texture`} 
+                <img
+                  src={featuredProduct.additionalImages[0]}
+                  alt={`${featuredProduct.productType} texture`}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
-              ) : featuredProduct.imageUrl && (
-                <img 
-                  src={featuredProduct.imageUrl} 
-                  alt={featuredProduct.productType} 
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+              ) : (
+                featuredProduct.imageUrl && (
+                  <img src={featuredProduct.imageUrl} alt={featuredProduct.productType} className="w-full h-full object-cover" loading="lazy" />
+                )
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-base sm:text-lg mb-1">{categoryDisplayName}</h4>
-                {isExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-green-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                )}
+                {isExpanded ? <ChevronUp className="h-5 w-5 text-green-600" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
               </div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-2">
-                {category.products.length} products available
-              </p>
+              <p className="text-xs sm:text-sm text-gray-500 mb-2">{category.products.length} products available</p>
               <Badge variant="outline" className="text-xs text-primary border-primary">
                 {categoryDisplayName}
               </Badge>
             </div>
           </div>
         </Card>
-        
+
         {isExpanded && (
-          <div 
-            className="mt-4 space-y-4"
-            ref={productSectionRef}
-          >
+          <div className="mt-4 space-y-4" ref={productSectionRef}>
             <div className="p-3 bg-green-50 border border-green-100 rounded-md">
               <h5 className="font-medium text-green-800 mb-1">Step 2: Select a {categoryDisplayName} Product</h5>
               <p className="text-xs text-green-700">Choose from our premium {categoryDisplayName.toLowerCase()} below</p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {category.products.map((product) => (
                 <Card
@@ -423,19 +411,16 @@ export const OrderForm: React.FC = () => {
                   <div className="flex p-3 items-center gap-3">
                     <div className="w-16 h-16 bg-neutral-100 rounded-md relative overflow-hidden flex-shrink-0">
                       {product.additionalImages?.[0] ? (
-                        <img 
-                          src={product.additionalImages[0]} 
-                          alt={`${product.productType} texture`} 
+                        <img
+                          src={product.additionalImages[0]}
+                          alt={`${product.productType} texture`}
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                      ) : product.imageUrl && (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.productType} 
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
+                      ) : (
+                        product.imageUrl && (
+                          <img src={product.imageUrl} alt={product.productType} className="w-full h-full object-cover" loading="lazy" />
+                        )
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -501,7 +486,7 @@ export const OrderForm: React.FC = () => {
                 <h3 className="font-medium">Your Order</h3>
                 <p className="text-xs text-gray-500 mt-1">Select products and packaging options</p>
               </div>
-              
+
               <div className="p-4">
                 {products.length === 0 ? (
                   <div className="py-8 text-center text-gray-500">
@@ -521,126 +506,112 @@ export const OrderForm: React.FC = () => {
                             {/* Show the appropriate size category image with product texture */}
                             {product.sizeOption === "boxes" && (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e" 
-                                  alt="Pallet of boxes" 
+                                <img
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89"
+                                  alt="Pallet of boxes"
                                   className="w-full h-full object-cover brightness-90"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
                                   {productData?.additionalImages?.[0] && (
-                                    <img 
-                                      src={productData.additionalImages[0]} 
-                                      alt="Product texture" 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                               </div>
                             )}
                             {product.sizeOption === "bags" && (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d" 
-                                  alt="Pallet of bags" 
+                                <img
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440"
+                                  alt="Pallet of bags"
                                   className="w-full h-full object-cover brightness-90"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
                                   {productData?.additionalImages?.[0] && (
-                                    <img 
-                                      src={productData.additionalImages[0]} 
-                                      alt="Product texture" 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                               </div>
                             )}
                             {product.sizeOption === "totes" && (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e" 
-                                  alt="2.2 CY Tote" 
-                                  className="w-full h-full object-cover brightness-90"
+                                <img
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a"
+                                  alt="2.2 CY Tote"
+                                  className="w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
                                   {productData?.additionalImages?.[0] && (
-                                    <img 
-                                      src={productData.additionalImages[0]} 
-                                      alt="Product texture" 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                               </div>
                             )}
                             {product.sizeOption === "bulk" && (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195"
+                                <img
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a"
                                   alt="Bulk delivery"
                                   className="w-full h-full object-cover brightness-90"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
                                   {productData?.additionalImages?.[0] && (
-                                    <img 
-                                      src={productData.additionalImages[0]} 
-                                      alt="Product texture" 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                               </div>
                             )}
                             {product.sizeOption === "bulk-pickup" && (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f"
+                                <img
+                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc"
                                   alt="Bulk pickup"
                                   className="w-full h-full object-cover brightness-90"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
                                   {productData?.additionalImages?.[0] && (
-                                    <img 
-                                      src={productData.additionalImages[0]} 
-                                      alt="Product texture" 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                               </div>
                             )}
-                            
+
                             {/* Fallback if we don't have a specific image */}
-                            {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(product.sizeOption) && (
-                              productData?.additionalImages?.[0] ? (
+                            {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(product.sizeOption) &&
+                              (productData?.additionalImages?.[0] ? (
                                 <img
                                   src={productData.additionalImages[0]}
                                   alt={`${productData.productType} texture`}
                                   className="w-full h-full object-cover"
                                   loading="lazy"
                                 />
-                              ) : productData?.imageUrl && (
-                                <img
-                                  src={productData.imageUrl}
-                                  alt={productData.productType}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              )
-                            )}
+                              ) : (
+                                productData?.imageUrl && (
+                                  <img
+                                    src={productData.imageUrl}
+                                    alt={productData.productType}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                )
+                              ))}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
                               <p className="font-medium text-sm truncate max-w-[150px] md:max-w-[180px]">{productData?.productType}</p>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => {
-                                e.stopPropagation();
-                                removeProduct(product.id);
-                              }}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeProduct(product.id);
+                                }}
+                              >
                                 <Trash2 className="h-3.5 w-3.5 text-red-500" />
                               </Button>
                             </div>
@@ -649,7 +620,9 @@ export const OrderForm: React.FC = () => {
                               <span className="truncate">{categoryInfo?.label}</span>
                             </div>
                             <div className="flex items-center">
-                              <Label htmlFor={`quantity-${product.id}`} className="text-xs mr-2">Qty:</Label>
+                              <Label htmlFor={`quantity-${product.id}`} className="text-xs mr-2">
+                                Qty:
+                              </Label>
                               <Input
                                 id={`quantity-${product.id}`}
                                 type="number"
@@ -667,39 +640,35 @@ export const OrderForm: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="p-4 border-t">
-                <Button 
-                  onClick={() => setStep(2)} 
-                  disabled={products.length === 0} 
-                  className="bg-green-600 hover:bg-green-700 w-full"
-                >
+                <Button onClick={() => setStep(2)} disabled={products.length === 0} className="bg-green-600 hover:bg-green-700 w-full">
                   Continue to Contact Info
                 </Button>
               </div>
             </Card>
-            
+
             {selectedProductId && (
               <div ref={sizeSectionRef}>
                 <Card className="border border-green-200 bg-green-50">
                   <div className="p-4">
                     <h3 className="font-medium text-green-800 mb-2 line-clamp-1">
-                      Step 3: Select Packaging Option for {productsData.find(p => p.id === selectedProductId)?.productType}
+                      Step 3: Select Packaging Option for {productsData.find((p) => p.id === selectedProductId)?.productType}
                     </h3>
                     <div className="space-y-2">
-                      {PRODUCT_CATEGORIES.map(category => {
+                      {PRODUCT_CATEGORIES.map((category) => {
                         // Check if this category is compatible with the selected product
-                        const product = productsData.find(p => p.id === selectedProductId);
+                        const product = productsData.find((p) => p.id === selectedProductId);
                         let isCompatible = true;
-                        
+
                         if (category.value === "bulk-pickup" && product) {
                           isCompatible = ["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType);
                         }
-                        
+
                         if (!isCompatible) return null;
-                        
+
                         return (
-                          <Button 
+                          <Button
                             key={category.value}
                             onClick={() => handleSizeCategorySelect(category.value)}
                             variant="outline"
@@ -710,15 +679,15 @@ export const OrderForm: React.FC = () => {
                                 {/* Show appropriate category image */}
                                 {category.value === "boxes" && (
                                   <div className="relative w-full h-full">
-                                    <img 
-                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e" 
-                                      alt="Pallet of boxes" 
+                                    <img
+                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89"
+                                      alt="Pallet of boxes"
                                       className="w-full h-full object-cover"
                                     />
                                     <div className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-tl overflow-hidden border border-gray-200">
-                                      <img 
-                                        src={productsData.find(p => p.id === selectedProductId)?.imageUrl} 
-                                        alt="9lb bag" 
+                                      <img
+                                        src={productsData.find((p) => p.id === selectedProductId)?.imageUrl}
+                                        alt="9lb bag"
                                         className="w-full h-full object-cover"
                                       />
                                     </div>
@@ -726,31 +695,31 @@ export const OrderForm: React.FC = () => {
                                 )}
                                 {category.value === "bags" && (
                                   <div className="relative w-full h-full">
-                                    <img 
-                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d" 
-                                      alt="Pallet of bags" 
+                                    <img
+                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440"
+                                      alt="Pallet of bags"
                                       className="w-full h-full object-cover"
                                     />
                                   </div>
                                 )}
                                 {category.value === "totes" && (
-                                  <img 
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e" 
-                                    alt="2.2 CY Tote" 
+                                  <img
+                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a"
+                                    alt="2.2 CY Tote"
                                     className="w-full h-full object-cover"
                                   />
                                 )}
                                 {category.value === "bulk" && (
-                                  <img 
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195" 
-                                    alt="Bulk delivery" 
+                                  <img
+                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a"
+                                    alt="Bulk delivery"
                                     className="w-full h-full object-cover"
                                   />
                                 )}
                                 {category.value === "bulk-pickup" && (
-                                  <img 
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f" 
-                                    alt="Bulk pickup" 
+                                  <img
+                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc"
+                                    alt="Bulk pickup"
                                     className="w-full h-full object-cover"
                                   />
                                 )}
@@ -842,8 +811,8 @@ export const OrderForm: React.FC = () => {
 
   const renderDeliveryOptions = () => {
     // Check if user has bulk products which require delivery
-    const hasBulkDelivery = products.some(p => p.sizeOption === "bulk");
-    
+    const hasBulkDelivery = products.some((p) => p.sizeOption === "bulk");
+
     return (
       <form onSubmit={handleDeliveryOptionsSubmit} className="space-y-6">
         <div className="text-center mb-8">
@@ -877,7 +846,7 @@ export const OrderForm: React.FC = () => {
                     Pickup
                   </Button>
                 </div>
-                
+
                 {hasBulkDelivery && businessInfo.deliveryType !== "delivery" && (
                   <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -896,9 +865,7 @@ export const OrderForm: React.FC = () => {
                     required
                     placeholder="Enter your delivery address"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Please provide a complete address including street, city, state, and zip code
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Please provide a complete address including street, city, state, and zip code</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -915,7 +882,7 @@ export const OrderForm: React.FC = () => {
                     <option value="parker">Parker</option>
                     <option value="vicksburg">Vicksburg (Bulk Only: Dairy Compost, Worm Castings)</option>
                   </select>
-                  
+
                   {businessInfo.pickupLocation === "vicksburg" && (
                     <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700 flex items-center gap-2">
                       <Info className="h-4 w-4 flex-shrink-0" />
@@ -972,10 +939,14 @@ export const OrderForm: React.FC = () => {
               )}
               {businessInfo.deliveryType === "pickup" && (
                 <p>
-                  <strong>Pickup Location:</strong> {businessInfo.pickupLocation === "phoenix" ? "Phoenix" : 
-                    businessInfo.pickupLocation === "parker" ? "Parker" : 
-                    businessInfo.pickupLocation === "vicksburg" ? "Vicksburg" : 
-                    businessInfo.pickupLocation}
+                  <strong>Pickup Location:</strong>{" "}
+                  {businessInfo.pickupLocation === "phoenix"
+                    ? "Phoenix"
+                    : businessInfo.pickupLocation === "parker"
+                      ? "Parker"
+                      : businessInfo.pickupLocation === "vicksburg"
+                        ? "Vicksburg"
+                        : businessInfo.pickupLocation}
                 </p>
               )}
             </Card>
@@ -987,7 +958,7 @@ export const OrderForm: React.FC = () => {
               <Package className="h-5 w-5 text-green-600" />
               Product Details
             </h3>
-            
+
             <Card className="p-4 space-y-4">
               <div className="bg-green-50 border border-green-100 p-3 rounded-md text-sm text-green-800">
                 <div className="flex items-center gap-2 mb-1">
@@ -996,16 +967,14 @@ export const OrderForm: React.FC = () => {
                 </div>
                 <p>Orders of 22 or more pallets of the same category qualify for a 20% discount.</p>
               </div>
-              
+
               {products.map((product) => {
                 const productData = productsData.find((p) => p.id === product.productId);
                 const categoryInfo = PRODUCT_CATEGORIES.find((c) => c.value === product.sizeOption);
 
                 return (
                   <div key={product.id} className="flex flex-col sm:flex-row items-start gap-4 border-b pb-4 last:border-0 last:pb-0">
-                    {productData && (
-                      <img src={productData.imageUrl} alt={productData.productType} className="w-16 h-16 object-cover rounded-md" />
-                    )}
+                    {productData && <img src={productData.imageUrl} alt={productData.productType} className="w-16 h-16 object-cover rounded-md" />}
                     <div className="flex-1">
                       <p className="font-medium text-green-800 mb-2">{productData?.productType}</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -1016,16 +985,14 @@ export const OrderForm: React.FC = () => {
                           <strong>Quantity:</strong> {product.quantity}
                         </p>
                       </div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {categoryInfo?.description}
-                      </div>
+                      <div className="mt-1 text-xs text-gray-500">{categoryInfo?.description}</div>
                     </div>
                   </div>
                 );
               })}
             </Card>
           </div>
-          
+
           {/* Estimated Lead Times */}
           <div className="space-y-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -1038,9 +1005,7 @@ export const OrderForm: React.FC = () => {
                 <li>Full truckload orders: 2-5 business days</li>
                 <li>Bulk delivery orders: 3-7 business days</li>
               </ul>
-              <p className="text-sm text-gray-500 mt-3">
-                A team member will contact you within one business day to confirm exact timing.
-              </p>
+              <p className="text-sm text-gray-500 mt-3">A team member will contact you within one business day to confirm exact timing.</p>
             </Card>
           </div>
         </div>
@@ -1104,24 +1069,16 @@ export const OrderForm: React.FC = () => {
             { step: 3, title: "Delivery Options" },
             { step: 4, title: "Review Order" },
           ].map((s) => (
-            <div 
-              key={s.step} 
-              className={`flex flex-col items-center ${
-                s.step === step ? "text-green-600" : 
-                s.step < step ? "text-gray-600" : "text-gray-400"
-              }`}
+            <div
+              key={s.step}
+              className={`flex flex-col items-center ${s.step === step ? "text-green-600" : s.step < step ? "text-gray-600" : "text-gray-400"}`}
             >
-              <div 
+              <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                  s.step === step ? "bg-green-600 text-white" : 
-                  s.step < step ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                  s.step === step ? "bg-green-600 text-white" : s.step < step ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
                 }`}
               >
-                {s.step < step ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : (
-                  s.step
-                )}
+                {s.step < step ? <CheckCircle2 className="h-5 w-5" /> : s.step}
               </div>
               <span className="text-xs mt-1">{s.title}</span>
             </div>
@@ -1129,14 +1086,11 @@ export const OrderForm: React.FC = () => {
         </div>
         <div className="relative max-w-3xl mx-auto">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gray-200 mt-4 mx-4">
-            <div 
-              className="h-full bg-green-600 transition-all duration-300" 
-              style={{ width: `${((step - 1) / 3) * 100}%` }}
-            />
+            <div className="h-full bg-green-600 transition-all duration-300" style={{ width: `${((step - 1) / 3) * 100}%` }} />
           </div>
         </div>
       </div>
-      
+
       {step === 1 && renderProductSelection()}
       {step === 2 && renderContactInfo()}
       {step === 3 && renderDeliveryOptions()}
