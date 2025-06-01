@@ -157,14 +157,9 @@ const Home = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
-  const [customerZip, setCustomerZip] = useState<string>("");
-  const [customerAddress, setCustomerAddress] = useState<string>("");
   const [quotePrice, setQuotePrice] = useState<number | null>(null);
   const [truckingCost, setTruckingCost] = useState<number | null>(null);
   const [showQuote, setShowQuote] = useState<boolean>(false);
-  const [isDeliverable, setIsDeliverable] = useState<boolean | null>(null);
-  const [distanceToClosestLocation, setDistanceToClosestLocation] = useState<number | null>(null);
-  const [closestLocation, setClosestLocation] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
 
@@ -182,7 +177,7 @@ const Home = () => {
       name: "Pallet of Boxes",
       description: "144 units / 36 boxes (4 units per box)",
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4c53-bd67-426f7224772e",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89",
       icon: <Box className="h-6 w-6" />,
     },
     {
@@ -190,7 +185,7 @@ const Home = () => {
       name: "Pallet of Bags",
       description: "50 bags (1cf Bags)",
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
       icon: <Package className="h-6 w-6" />,
     },
     {
@@ -198,7 +193,15 @@ const Home = () => {
       name: "Bulk Delivery",
       description: "Compost and blends: 22-24 tons per truckload\nPotting soil: 90-110 CYs",
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
+      icon: <Container className="h-6 w-6" />,
+    },
+    {
+      id: "cubic-yard",
+      name: "Buy in Cubic Yard",
+      description: "Bulk pickup only",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc",
       icon: <Container className="h-6 w-6" />,
     },
   ];
@@ -327,111 +330,38 @@ const Home = () => {
   // Handle selection of a product
   const handleProductSelect = (product: Product) => {
     // Navigate to product detail page
-    navigate(`/products/${product.id}`);
-  };
-
-  // Handle ZIP code change
-  const handleZipChange = (value: string) => {
-    setCustomerZip(value);
-    // Simple validation for US zip codes
-    if (value.length === 5 && !isNaN(parseInt(value))) {
-      // Calculate distance and check if deliverable
-      calculateDeliverability(value);
+    if (product.category === "Mulch") {
+      navigate(`/products/mulch/${product.id}`);
     } else {
-      setIsDeliverable(null);
-      setDistanceToClosestLocation(null);
-      setClosestLocation(null);
+      navigate(`/products/${product.id}`);
     }
-  };
-
-  // Handle ZIP code validation
-  const handleZipValidation = () => {
-    calculateDeliverability(customerZip);
-  };
-
-  // Calculate deliverability based on zip code
-  const calculateDeliverability = (zip: string) => {
-    // For demo purposes we'll use AZ zip codes starting with 85 as deliverable
-    const isArizona = zip.startsWith("85");
-
-    // Simulate calculating distance to nearest location
-    // In a real app, you would use Google Maps Distance Matrix API
-    let distance = 0;
-    let nearestLocation = "";
-
-    if (isArizona) {
-      // Simulate distances based on zip code
-      const zipNum = parseInt(zip.substring(2, 5));
-
-      // Distance to Vicksburg
-      const distToVicksburg = Math.abs(zipNum - 348) * 2 + 30;
-
-      // Distance to Congress
-      const distToCongress = Math.abs(zipNum - 332) * 2 + 40;
-
-      // Distance to Phoenix
-      const distToPhoenix = Math.abs(zipNum - 1) * 2 + 10;
-
-      // Find closest location
-      const distances = [
-        { loc: "Vicksburg", dist: distToVicksburg },
-        { loc: "Congress", dist: distToCongress },
-        { loc: "Phoenix", dist: distToPhoenix },
-      ];
-
-      distances.sort((a, b) => a.dist - b.dist);
-      distance = distances[0].dist;
-      nearestLocation = distances[0].loc;
-
-      // Check if within deliverable range (max 500 miles for demo)
-      setIsDeliverable(distance <= 500);
-    } else {
-      // Outside Arizona - use higher distance
-      distance = 600; // Beyond deliverable range
-      nearestLocation = "Phoenix";
-      setIsDeliverable(false);
-    }
-
-    setDistanceToClosestLocation(distance);
-    setClosestLocation(nearestLocation);
   };
 
   // Calculate trucking cost based on distance
   const calculateTruckingCost = () => {
-    if (distanceToClosestLocation === null) return null;
+    if (!selectedProduct || !selectedSize) return;
 
-    // Apply trucking cost formula from the framework
-    // Base trucking rate: $500 for the first 50 miles
-    // Per-mile rate: $3.00/mile after 50 miles
+    // For demo purposes, we'll use a simple calculation
+    const baseCost = 100;
+    const costPerMile = 2;
+    const distance = 50; // Demo distance
 
-    let cost = 500; // Base rate
-
-    if (distanceToClosestLocation > 50) {
-      cost += (distanceToClosestLocation - 50) * 3;
-    }
-
-    return Math.round(cost);
+    const totalCost = baseCost + distance * costPerMile;
+    setTruckingCost(totalCost);
   };
 
-  // Calculate a product quote with trucking
+  // Calculate quote
   const calculateQuote = () => {
-    if (!selectedProduct || !selectedSize || quantity <= 0) return;
+    if (!selectedProduct || !selectedSize) return;
 
-    // Calculate product cost
-    let basePrice = selectedProduct.price || 0;
+    const sizeOption = selectedProduct.sizeOptions?.find((size) => size.name === selectedSize);
 
-    // Adjust price based on size
-    const sizeMultiplier = selectedSize.includes("Tote") ? 10 : selectedSize.includes("Bulk") ? 20 : 1;
+    if (!sizeOption) return;
 
-    // Calculate trucking cost
-    const shipping = calculateTruckingCost() || 0;
-    setTruckingCost(shipping);
+    const productCost = sizeOption.price * quantity;
+    const deliveryCost = truckingCost || 0;
 
-    // Calculate quote (product price + shipping)
-    const productCost = basePrice * sizeMultiplier * quantity;
-    const totalCost = productCost + (isDeliverable ? shipping : 0);
-
-    setQuotePrice(totalCost);
+    setQuotePrice(productCost + deliveryCost);
     setShowQuote(true);
   };
 
@@ -484,7 +414,7 @@ const Home = () => {
       id: 1,
       name: "Dairy Compost",
       imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=217ce928-c092-4f45-b424-7acdd9905570",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       description: "ALL NATURAL DAIRY COMPOST",
       category: "Compost",
     },
@@ -492,7 +422,7 @@ const Home = () => {
       id: 2,
       name: "Worm Castings",
       imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=87c65006-3a11-44ec-adeb-6f4896d544e3",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8",
       description: "ALL NATURAL VERMICOMPOST",
       category: "Vermicompost",
     },
@@ -500,7 +430,7 @@ const Home = () => {
       id: 3,
       name: "Organic Concentrated Blend",
       imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=11f5d2d1-d9fa-4aac-bba2-3e5360adbfe9",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
       description: "ORGANIC CONCENTRATED AMENDMENT",
       category: "Soil Amendment",
     },
@@ -508,7 +438,7 @@ const Home = () => {
       id: 4,
       name: "Biochar",
       imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=7cecfc15-eb1f-4a2a-b229-a2d594fb4b90",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
       description: "BIOCHAR MINERAL",
       category: "Soil Amendment",
     },
@@ -533,104 +463,6 @@ const Home = () => {
                 <p className="text-2xl md:text-3xl text-muted-foreground flex items-center gap-4">
                   in wholesale <Truck className="h-10 w-10 md:h-14 md:w-14 text-primary/90" />
                 </p>
-              </motion.div>
-
-              {/* Availability Checker */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300 border border-primary/10"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-6 w-6 text-primary"
-                    >
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                  </div>
-                  <h2 className="text-lg font-bold text-primary">Check Your Availability</h2>
-                </div>
-                <div className="relative w-full h-40 mb-4 rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80')] bg-cover opacity-30"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="bg-white/90 backdrop-blur-sm p-4 rounded-full mb-2 inline-block">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-8 w-8 text-primary"
-                        >
-                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                          <circle cx="12" cy="10" r="3" />
-                        </svg>
-                      </div>
-                      <p className="text-primary font-medium">Enter your ZIP code to check delivery availability</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="w-full">
-                  <div className="flex gap-2 w-full">
-                    <Input
-                      placeholder="Enter ZIP code"
-                      className="flex-1 h-10 text-sm border-primary/20 focus:border-primary"
-                      value={customerZip}
-                      onChange={(e) => handleZipChange(e.target.value)}
-                      maxLength={5}
-                    />
-                  </div>
-                  {customerZip.length === 5 && (
-                    <div className="mt-4 flex flex-col items-center gap-2">
-                      {isDeliverable === true && (
-                        <>
-                          <p className="text-green-600 flex items-center mb-1 bg-green-50 px-4 py-2 rounded-full">
-                            <CheckCircle className="h-5 w-5 mr-2" />
-                            Delivery available in your area
-                          </p>
-                          <Link href={`/order?zip=${customerZip}`}>
-                            <Button className="w-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                              Start Order Now
-                            </Button>
-                          </Link>
-                        </>
-                      )}
-                      {isDeliverable === false && (
-                        <>
-                          <p className="text-red-600 flex items-center mb-1 bg-red-50 px-4 py-2 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            Delivery not available in your area
-                          </p>
-                          <Link href="/special-request">
-                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                              Submit a Special Request
-                            </Button>
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
               </motion.div>
 
               {/* Size Categories Carousel */}

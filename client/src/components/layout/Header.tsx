@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Package, X, ChevronDown } from "lucide-react";
+import { Menu, Package, X, ChevronDown, Leaf, Sprout, Flower, Droplet } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Define the main product categories
+// Define the main product categories with icons
 const PRODUCT_CATEGORIES = [
-  { value: "Amendment", label: "Amendment" },
-  { value: "Mulch", label: "Mulch" },
-  { value: "Potting Soil", label: "Potting Soil" },
-  { value: "Concentrated Amendment", label: "Concentrated Amendment" },
+  { value: "Amendment", label: "Amendment", icon: Leaf },
+  { value: "Mulch", label: "Mulch", icon: Sprout },
+  { value: "Potting Soil", label: "Potting Soil", icon: Flower },
+  { value: "Concentrated Amendment", label: "Concentrated Amendment", icon: Droplet },
 ];
 
 const Header = () => {
@@ -69,10 +69,10 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {/* Products Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <div className="relative group">
+              <Link href="/products">
                 <div
-                  className={`relative font-medium transition-colors duration-200 cursor-pointer group flex items-center gap-1 ${
+                  className={`relative font-medium transition-colors duration-200 cursor-pointer flex items-center gap-1 ${
                     isActive("/products") ? "text-primary" : "text-foreground hover:text-primary"
                   }`}
                 >
@@ -84,15 +84,31 @@ const Header = () => {
                     }`}
                   ></span>
                 </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                {PRODUCT_CATEGORIES.map((category) => (
-                  <DropdownMenuItem key={category.value} onClick={() => handleCategorySelect(category.value)} className="cursor-pointer">
-                    {category.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="absolute inset-0" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-56 p-2 bg-white/95 backdrop-blur-sm border border-neutral-200/50 shadow-lg rounded-xl"
+                >
+                  {PRODUCT_CATEGORIES.map((category) => {
+                    const Icon = category.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={category.value}
+                        onClick={() => handleCategorySelect(category.value)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm cursor-pointer rounded-lg hover:bg-primary/5 hover:text-primary transition-colors duration-200"
+                      >
+                        <Icon className="h-4 w-4 text-primary" />
+                        <span>{category.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {/* Other Navigation Links */}
             {navLinks.slice(1).map((link) => (

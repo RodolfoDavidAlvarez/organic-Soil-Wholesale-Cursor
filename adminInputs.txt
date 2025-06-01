@@ -1,28 +1,41 @@
 run command: 
-cd OrganicSoilWholesale && npm run dev
+npm run dev
+
+TEXTURE DEFAULT PHOTOS
+Default photo for all Amendment:
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341
+Default for concentrated Amendment
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78
+Default for potting soil:
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0
+INIDIVIDUAL PRODUCT PHOTOS
+SkM Product Texture
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FSKM%20Product%20Texture%20look.JPG?alt=media&token=5e745b06-6907-41bf-93e5-b5050c10782a
+Worm Castings
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8
+Biochar
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8
 
 
 SIZE CATEGORIES
-PALLET OF BOXES
+PALLET OF 9 lb Bags (In boxes)
 -Pallet of 144 unites/ 36 boxes (4units per box)
--Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4a53-bd67-426f7224772e
+-Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89
+
 PALLET OF BAGS
 -50 bags (1cf Bags)
--photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d
+-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440
+
 Truckload BULK 
 Compost and blends -> 22-24 tons per truckload
 if is potting soil -. 90CY - 110 Cys 
-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195
+Photo: https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a
 
--Full Truckload example, 22 pallets of 2.2CY totes
-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FTruckload%20of%20totes.png?alt=media&token=436d5a5d-a7aa-4aca-8318-e8bc98eab972
--Single 2.2 CY Tote 
-photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dd8560dc-e9b2-4cc2-a0bf-e6f4fccc630e
 -Bulk In Cubic Yard for pickup only
-Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=9d2cb829-c265-426e-9147-4d79835f6e0f
--Example photos to showcase when user selects a combination of pallets of totes, bags and boxes (A truckload is 22 spots (unless we are taking about BULK))
-https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FMixed%20Truckload%20Example.png?alt=media&token=40184615-8b7c-471e-b14b-5698c98cd757
-https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FMixed%20Trucload%20Example%202.png?alt=media&token=812c748e-1d7b-4bd4-baae-d4b61b291aab
+Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc
+
+Pallet of Single 2.2 CY Tote (supersack)
+Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a
 
 
 ## Plant Locations and capacity
@@ -49,7 +62,3 @@ Capacity: All products and size categories
 Vicksburg Arizona
 Coordinates: 33°42'13.9"N 113°46'39.8"W
 Capacity: Only dairy compost bulk in truckload and cubic yards for pickup
-
-
-To replace:
-Worm castings photo: https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=87c65006-3a11-44ec-adeb-6f4896d544e3
