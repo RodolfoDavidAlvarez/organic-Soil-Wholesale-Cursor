@@ -33,7 +33,10 @@ const mergeProductData = (products: any[]) => {
       safetyPrecautions: product["Safety Precautions"] as string,
       warranty: product["Limited Warranty"] as string,
       isWholesaleOnly: false,
-      additionalImages: product["Product Texture Photo URL"] ? [product["Product Texture Photo URL"]] : [],
+      additionalImages: [
+        ...(product["additionalImages"] || []),
+        ...(product["Product Texture Photo URL"] ? [product["Product Texture Photo URL"]] : []),
+      ],
     };
   });
 };
