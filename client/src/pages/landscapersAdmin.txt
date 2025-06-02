@@ -1,0 +1,85 @@
+I will use this document to organize and align everything that we need to do
+
+TASKS
+- LETS REMOVE ALL OF THE PRODUCTS EXCEPT THE FOLLOWING 
+-IVE ADDED PHOTOS LIKE GRASS ECT, KEEP THOSE PHOTOS
+- ADD VIEW PRODUCT LINKS IN EACH PRODUCT ITEM TO NAVIGATE TO THE RIGHT PRODUCT DETAIL
+- KEEP THE MULCH APPLICATION 
+- SHOW THE BRAND NAME AS THE TITLE AND THE WHICH IS THE BRAND NAME AND SHOW THE PRODUCT NAME SUBTLE
+
+LANDSCAPERS PAGE 
+--------------
+HERO SECTION - Completed
+
+for lanscaping section:  Show the following products
+
+1. Mulch
+2. Turf
+3. TREE AND SHRUB PLANTING AMENDMENT
+4. PALM AND DATE TREE PLANT FOOD BLEND
+
+
+
+{
+    "Product name": "Turf Daddy Blend",
+    "Brand name": "OVERSEED TOPDRESS BLEND FOR GRASS",
+    "Ingredients": "Zeolite,Worm Castings,Organic Dairy Compost",
+    "Target audience": "Landscaping Professionals,Golf Courses,Nursery Operators",
+    "Recommended Uses": "To overseed and aerate existing lawns, improves grass turf growth",
+    "Gardener Usage Instructions": "Broadcast Turf Daddy evenly over existing lawns at a rate of 1/4\"-1/2\" thick. Water thoroughly after application and continue to water as needed to maintain soil moisture.",
+    "Size Categories": "1CF Bag (unit),Tote (2.2 CY),9 LB Bag (Unit),Bulk (Tons)",
+    "Certifications": "OMRI,US Compost Council",
+    "Product Category": "Amendment",
+    "Brief Overview": "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
+    "Key Features/benefits": "Tailored for turf health, it encourages strong root development and improves soil structure. Enhances water retention and nutrient uptake, resulting in greener, denser lawns. Perfect for residential and commercial landscapes.",
+    "Website URL": "",
+    "9lb Bag Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTurf%20Daddy1CF.jpg?alt=media&token=2ed11d15-24e4-4bf4-83cb-e060afcee16e",
+    "Product Texture Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+    "additionalImages": [
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7"
+    ]
+  },
+  {
+    "Product name": "Oasis Blend",
+    "Brand name": "PALM AND DATE TREE PLANT FOOD BLEND",
+    "Ingredients": "Worm Castings,Magnesium Sulfate,Organic Dairy Compost",
+    "Target audience": "Landscaping Professionals,Organic Farmers,Fruit Growers,Date Tree,Ornamental Plans,Palm Tree",
+    "Recommended Uses": "As a palm and date tree plant food blend, it can be mixed with existing soil. It is excellent for commercial and organic farmers, landscapers, gardeners, and nurseries.",
+    "Gardener Usage Instructions": "Mix 1 part Oasis with 4 parts existing soil for new plantings of palm and date trees. For established trees, top-dress with 1/2\" layer and gently work into the soil surface. Water thoroughly after application.",
+    "Size Categories": "1CF Bag (unit),Tote (2.2 CY),9 LB Bag (Unit)",
+    "Certifications": "OMRI,US Compost Council",
+    "Product Category": "Amendment",
+    "Brief Overview": "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
+    "Key Features/benefits": "Specifically formulated to retain moisture and improve soil aeration. It encourages robust plant growth, even in challenging conditions. Ideal for drought-prone areas, ensuring plants remain hydrated and healthy.",
+    "Website URL": "",
+    "9lb Bag Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97",
+    "Product Texture Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+    "additionalImages": [
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7"
+    ]
+  },
+
+
+{
+    "Product name": "Tee Top Divot Repair Blend",
+    "Brand name": "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
+    "Ingredients": "Zeolite,Worm Castings",
+    "Target audience": "Landscaping Professionals,Golf Courses",
+    "Recommended Uses": "To repair divots on golf course tees, can be mixed with existing turf",
+    "Gardener Usage Instructions": "Fill divots on golf course tees with Tee Top Divot Repair, ensuring the material is level with the surrounding surface. Water lightly after application.",
+    "Size Categories": "1CF Bag (unit),Tote (2.2 CY),9 LB Bag (Unit)",
+    "Certifications": "OMRI,US Compost Council",
+    "Product Category": "Amendment",
+    "Brief Overview": "Perfect for golf courses, this blend repairs divots and maintains pristine playing surfaces, combining Zeolite and worm castings for optimal soil health and grass recovery.",
+    "Key Features/benefits": "Maintain pristine golf courses with our Divot Repair Blend, specially formulated for quick turf healing and regrowth. It's natural, organic, and ensures a beautiful play area without the use of any harsh or odorous materials.",
+    "Website URL": "",
+    "9lb Bag Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414",
+    "Product Texture Photo URL": "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+    "additionalImages": [
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tee%20Top%20Divot%20Repair.jpeg?alt=media&token=1ba764aa-272b-4866-936d-425144b66686"
+    ]
+  },
+
+use the following document for reference:
+/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/client/src/data/json/Amendment Products.json
+/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/client/src/data/json/Mulch Products.json
