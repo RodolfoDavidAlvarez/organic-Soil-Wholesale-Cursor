@@ -8,9 +8,10 @@ interface ProductCarouselProps {
   thumbnailImages: string[];
   productName: string;
   productId?: string;
+  brandName?: string;
 }
 
-const ProductCarousel = ({ mainImage, thumbnailImages, productName, productId }: ProductCarouselProps) => {
+const ProductCarousel = ({ mainImage, thumbnailImages, productName, productId, brandName }: ProductCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const allImages = [mainImage, ...thumbnailImages];
   const [, setLocation] = useLocation();
