@@ -421,37 +421,19 @@ const Landscapers = () => {
               <div className="w-full lg:w-1/2 flex flex-col justify-center">
                 <div className="mb-8">
                   <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">
-                    Best-in-Class Soil Products for Professional Landscapers
+                    Products Designed for Landscapers
                   </h1>
                   <p className="text-lg text-green-100 mb-4 max-w-xl animate-fade-in delay-100">
-                    Elevate your landscaping projects with our premium, desert-optimized soil solutions. Engineered for Arizona's unique climate.
+                    Elevate your landscaping projects with our premium soil solutions. Engineered for Arizona's unique climate.
                   </p>
-                  {/* Benefit Highlights */}
-                  <div className="flex flex-wrap gap-4 mb-6 animate-fade-in delay-200">
-                    <div className="flex items-center gap-2 bg-green-900/40 px-3 py-2 rounded-lg">
-                      <Leaf className="h-5 w-5 text-green-300" />
-                      <span className="text-green-100 text-sm">Desert-Optimized Formulas</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-green-900/40 px-3 py-2 rounded-lg">
-                      <Truck className="h-5 w-5 text-green-300" />
-                      <span className="text-green-100 text-sm">Fast Bulk Delivery</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-green-900/40 px-3 py-2 rounded-lg">
-                      <Star className="h-5 w-5 text-green-300" />
-                      <span className="text-green-100 text-sm">Consistent, Pro Results</span>
-                    </div>
-                  </div>
                   <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300">
                     <Button
                       size="lg"
                       className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4 shadow-lg rounded-full font-semibold transition-all duration-200"
                       onClick={() => setLocation("/order")}
                     >
-                      Get Your Professional
+                      Shop Now
                     </Button>
-                    <Badge className="bg-green-700 text-white px-4 py-2 text-base font-medium rounded-full">
-                      Exclusive 20% truckload discount for landscapers
-                    </Badge>
                   </div>
                   {/* Trusted by row */}
                   <div className="flex items-center gap-6 mt-4 mb-2 animate-fade-in delay-400">
@@ -517,39 +499,41 @@ const Landscapers = () => {
           </div>
         </div>
 
-        {/* Products Section with improved UI - Moved up */}
-        <div id="products-section" className="container mx-auto px-4 py-16">
-          <div className="text-center mb-10">
-            <Badge className="bg-green-700 text-white mb-4">Premium Soil Solutions</Badge>
-            <h2 className="text-3xl font-bold mb-4">Professional-Grade Products for Superior Results</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our premium soil formulations are the result of years of research and field testing in Arizona's challenging climate. Each product is
-              engineered for maximum performance and efficiency.
-            </p>
-          </div>
-
+        {/* Products Section - Moved up and cleaned up */}
+        <div id="products-section" className="container mx-auto px-4 py-10">
           {/* For Landscaping Section */}
-          <div id="landscaping-section" className="mb-20">
+          <div id="landscaping-section" className="mb-16">
             <div className="relative rounded-2xl overflow-hidden mb-10">
               <img
                 src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Lanscaping%20section%20introduction%20image.jpeg?alt=media&token=7405742b-2696-4f11-920f-d294a63ae6e2"
                 alt="Landscaping"
                 className="w-full h-[400px] object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Landscaping</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="p-8 text-center">
+                  <h3 className="text-4xl font-bold text-white mb-4 shadow-text">Products for Landscaping</h3>
+                  <p className="text-xl text-white/90 max-w-xl shadow-text">
                     Premium soil solutions designed for professional landscapers, ensuring beautiful and sustainable outdoor spaces.
                   </p>
                 </div>
               </div>
             </div>
+            
+            <style jsx>{`
+              .shadow-text {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+              }
+            `}</style>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {landscapingProducts.map((product) => (
                 <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <ProductCarousel mainImage={product.mainImage} thumbnailImages={product.thumbnailImages} productName={product.name} />
+                  <ProductCarousel 
+                    mainImage={product.mainImage} 
+                    thumbnailImages={product.thumbnailImages} 
+                    productName={product.name} 
+                    productId={product.id}
+                  />
                   <div className="p-6">
                     <h4 className="text-xl font-semibold mb-2">{product.name}</h4>
                     <p className="text-gray-600">{product.description}</p>

@@ -1,16 +1,19 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface ProductCarouselProps {
   mainImage: string;
   thumbnailImages: string[];
   productName: string;
+  productId?: string;
 }
 
-const ProductCarousel = ({ mainImage, thumbnailImages, productName }: ProductCarouselProps) => {
+const ProductCarousel = ({ mainImage, thumbnailImages, productName, productId }: ProductCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const allImages = [mainImage, ...thumbnailImages];
+  const [, setLocation] = useLocation();
 
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % allImages.length);
@@ -20,10 +23,17 @@ const ProductCarousel = ({ mainImage, thumbnailImages, productName }: ProductCar
     setCurrentIndex((prevIndex) => (prevIndex - 1 + allImages.length) % allImages.length);
   };
 
+  const goToProduct = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (productId) {
+      setLocation(`/products/${productId}`);
+    }
+  };
+
   return (
     <div className="relative w-full">
       {/* Main Image */}
-      <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-4">
+      <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-4 group">
         <img src={allImages[currentIndex]} alt={`${productName} - Image ${currentIndex + 1}`} className="w-full h-full object-cover" />
         {/* Navigation Buttons */}
         <Button
@@ -42,6 +52,20 @@ const ProductCarousel = ({ mainImage, thumbnailImages, productName }: ProductCar
         >
           <ChevronRight className="h-6 w-6" />
         </Button>
+
+        {/* View Product Link */}
+        {productId && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <Button 
+              variant="secondary" 
+              className="bg-white/80 hover:bg-white text-green-700 font-medium shadow-lg flex items-center gap-1"
+              onClick={goToProduct}
+            >
+              <ExternalLink className="h-4 w-4" />
+              View Product
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Thumbnails */}
