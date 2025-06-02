@@ -4,10 +4,90 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield, X } from "lucide-react";
 import { useState } from "react";
+import React from "react";
+import ProductCarousel from "@/components/ProductCarousel";
+
+// Create a component for the product card
+const ProductCard: React.FC<{
+  product: Product;
+  onTextureClick: (e: React.MouseEvent, texturePath: string) => void;
+}> = ({ product, onTextureClick }) => {
+  const [, setLocation] = useLocation();
+
+  return (
+    <Card
+      key={product.id}
+      className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
+      onClick={() => setLocation(`/products/${product.id}`)}
+    >
+      <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
+          <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+            View Details
+          </div>
+        </div>
+        {product.texture && (
+          <div className="absolute top-2 right-2 z-20" onClick={(e) => onTextureClick(e, product.texture!)}>
+            <div className="bg-white p-1 rounded-full shadow-md cursor-pointer hover:bg-green-50">
+              <Badge variant="outline" className="border-green-500 text-green-600 text-xs">
+                View Texture
+              </Badge>
+            </div>
+          </div>
+        )}
+        <img
+          src={product.image}
+          alt={product.title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+          }}
+        />
+      </div>
+
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
+            {product.title}
+          </Badge>
+        </div>
+        <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">{product.brand}</h3>
+        <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
+
+        {/* Benefits */}
+        <div className="flex flex-wrap gap-1 mb-6">
+          {product.benefits.slice(0, 3).map((benefit, idx) => (
+            <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
+              {benefit}
+            </Badge>
+          ))}
+        </div>
+
+        {/* Bulk Options */}
+        <div className="space-y-2 mb-4">
+          {product.bulkOptions.map((option, idx) => (
+            <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+              <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
+              <span>{option}</span>
+            </div>
+          ))}
+        </div>
+
+        <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
+          View Details & Pricing
+        </Button>
+      </div>
+    </Card>
+  );
+};
 
 interface Product {
   id: number;
   title: string;
+  brand: string;
   description: string;
   benefits: string[];
   image: string;
@@ -55,6 +135,7 @@ const Landscapers = () => {
     {
       id: 1,
       title: "DAIRY COMPOST",
+      brand: "Dan's Gold",
       description:
         "Premium organic dairy compost, perfect for enriching soil and promoting healthy plant growth. Rich in essential nutrients and beneficial microorganisms.",
       benefits: ["Improves soil structure", "Enhances water retention", "Provides slow-release nutrients", "Supports beneficial soil life"],
@@ -65,6 +146,7 @@ const Landscapers = () => {
     {
       id: 2,
       title: "WORM CASTINGS",
+      brand: "Mikey's Worm Poop",
       description: "Premium vermicompost, nature's most potent soil amendment. Packed with beneficial microbes and plant-available nutrients.",
       benefits: ["100% organic", "Rich in beneficial microbes", "Improves soil structure", "Enhances plant immunity"],
       image:
@@ -74,6 +156,7 @@ const Landscapers = () => {
     {
       id: 3,
       title: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
+      brand: "Tee Top Divot Repair Blend",
       description: "Specialized blend for repairing divots on golf courses and sports fields. Perfect for maintaining pristine playing surfaces.",
       benefits: ["Quick turf healing", "Natural composition", "Easy application", "Long-lasting results"],
       image:
@@ -82,7 +165,8 @@ const Landscapers = () => {
     },
     {
       id: 4,
-      title: "OVERSEED AND AERATION BLEND",
+      title: "OVERSEED TOPDRESS BLEND",
+      brand: "Turf Daddy Blend",
       description: "Advanced blend for overseeding and aeration, designed to improve soil quality and promote healthy turf growth.",
       benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
       image: "/Users/rodolfoalvarez/Downloads/Grass.jpeg",
@@ -92,6 +176,7 @@ const Landscapers = () => {
     {
       id: 5,
       title: "TREE AND SHRUB PLANTING AMENDMENT",
+      brand: "Artemis Root Boost Blend",
       description: "Specialized amendment for trees and shrubs, promoting strong root development and healthy growth.",
       benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
       image:
@@ -101,6 +186,7 @@ const Landscapers = () => {
     {
       id: 6,
       title: "NATURAL MINERAL SOIL CONDITIONER",
+      brand: "Zeolite",
       description:
         "Natural mineral amendment that improves soil structure and nutrient retention. Perfect for water conservation and long-term soil improvement.",
       benefits: ["Enhances nutrient retention", "Improves soil aeration", "Reduces water requirements", "Long-lasting soil amendment"],
@@ -111,6 +197,7 @@ const Landscapers = () => {
     {
       id: 7,
       title: "SULFUR-POTASSIUM NUTRITION BOOST",
+      brand: "SKMicrosource",
       description: "Premium sulfur-potassium nutrition boost for enhanced plant growth and soil vitality.",
       benefits: ["Balanced nutrition", "Improves soil health", "Enhances plant growth", "Supports microbial activity"],
       image:
@@ -120,6 +207,7 @@ const Landscapers = () => {
     {
       id: 8,
       title: "DROUGHT RESILIENCE SOIL AMENDMENT",
+      brand: "Desert Defender",
       description: "Specialized blend for drought resilience, helping plants thrive in challenging conditions.",
       benefits: ["Drought resistance", "Water retention", "Soil improvement", "Plant protection"],
       image:
@@ -128,47 +216,72 @@ const Landscapers = () => {
     },
     {
       id: 9,
-      title: "PREMIUM POTTING SOIL",
-      description: "Premium potting soil blend for container gardening and raised beds.",
-      benefits: ["Perfect for containers", "Rich in nutrients", "Excellent drainage", "Ready to use"],
+      title: "BIOCHAR MINERAL",
+      brand: "Amazonian Dark Earth",
+      description: "Premium biochar mineral blend for enhanced soil health and plant growth.",
+      benefits: ["Improves soil structure", "Enhances nutrient retention", "Promotes microbial activity", "Long-lasting amendment"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 10,
-      title: "CANNABIS POTTING SOIL",
-      description: "Specialized potting soil for cannabis cultivation, optimized for maximum growth and yield.",
-      benefits: ["Cannabis-optimized", "Rich in nutrients", "Excellent drainage", "Ready to use"],
+      title: "VINEYARD BLEND",
+      brand: "Bacchus Blend",
+      description: "Specialized blend for vineyards, promoting healthy vine growth and optimal grape production.",
+      benefits: ["Vineyard-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 11,
-      title: "SUCCULENT INTERIOR POTTING MIX",
-      description: "Specialized mix for succulents and cacti, providing optimal drainage and aeration.",
-      benefits: ["Perfect for succulents", "Excellent drainage", "Aeration", "Ready to use"],
+      title: "AVOCADO AND CITRUS TREE PLANT FOOD BLEND",
+      brand: "Seriokai's Secret Blend",
+      description: "Specialized blend for avocado and citrus trees, promoting healthy growth and optimal fruit production.",
+      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 12,
-      title: "TROPICAL PLANT INTERIOR POTTING MIX",
-      description: "Specialized mix for tropical plants, providing optimal moisture retention and aeration.",
-      benefits: ["Perfect for tropicals", "Moisture retention", "Aeration", "Ready to use"],
+      title: "POME AND STONE FRUIT TREE PLANT FOOD BLEND",
+      brand: "Pomona Blend",
+      description: "Specialized blend for pome and stone fruit trees, promoting healthy growth and optimal fruit production.",
+      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 13,
-      title: "CONCENTRATED AMENDMENT FOR FRUITS AND VEGETABLES",
-      description: "Advanced soil amendment for maximum plant growth and vitality.",
-      benefits: ["Maximum growth", "Enhanced vitality", "Rich in nutrients", "Quick results"],
+      title: "MYCORRHIZAL ROOT ENHANCER",
+      brand: "Stoned Ape's Blend",
+      description: "Premium mycorrhizal root enhancer for improved plant health and growth.",
+      benefits: ["Enhances root development", "Improves nutrient uptake", "Supports plant health", "Long-lasting benefits"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
+    },
+    {
+      id: 14,
+      title: "PALM AND DATE TREE PLANT FOOD BLEND",
+      brand: "Oasis Blend",
+      description: "Specialized blend for palm and date trees, promoting healthy growth and optimal fruit production.",
+      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
+    },
+    {
+      id: 15,
+      title: "SILT SOIL DROUGHT BLEND FOR ENHANCED MOISTURE RETENTION",
+      brand: "Silky Silt Saver",
+      description: "Specialized blend for silt soils, improving moisture retention and soil health.",
+      benefits: ["Enhances moisture retention", "Improves soil structure", "Supports plant health", "Drought resistance"],
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
   ];
@@ -209,19 +322,75 @@ const Landscapers = () => {
     },
   ];
 
+  const landscapingProducts = [
+    {
+      id: "turf-daddy",
+      name: "Turf Daddy Blend",
+      mainImage:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
+      thumbnailImages: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTurf%20Daddy1CF.jpg?alt=media&token=2ed11d15-24e4-4bf4-83cb-e060afcee16e",
+      ],
+      description:
+        "Premium blend for overseeding and aeration, perfect for maintaining lush, healthy lawns. Contains Zeolite, Worm Castings, and Organic Dairy Compost for optimal turf growth.",
+    },
+    {
+      id: "artemis",
+      name: "Artemis Root Boost Blend",
+      mainImage:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
+      thumbnailImages: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FArtemis10lbs%20(1).jpg?alt=media&token=9f7cc7b5-df16-440d-9a4c-1e250470bb12",
+      ],
+      description:
+        "Specialized amendment for trees and shrubs, promoting strong root development and healthy growth. Contains Volcanic Tuff and Organic Dairy Compost.",
+    },
+    {
+      id: "tee-top",
+      name: "Tee Top Divot Repair",
+      mainImage:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tee%20Top%20Divot%20Repair.jpeg?alt=media&token=1ba764aa-272b-4866-936d-425144b66686",
+      thumbnailImages: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414",
+      ],
+      description: "Specialized blend for repairing divots on golf courses and sports fields. Perfect for maintaining pristine playing surfaces.",
+    },
+    {
+      id: "oasis",
+      name: "Oasis Blend",
+      mainImage:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
+      thumbnailImages: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97",
+      ],
+      description: "Premium blend for palm trees and tropical plants, providing optimal moisture retention and nutrient delivery.",
+    },
+    {
+      id: "nature-blanket",
+      name: "Nature's Blanket Premium Mulch",
+      mainImage:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
+      thumbnailImages: [
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulk%20Applied%20in%20outside%20of%20office%20showcase.jpeg?alt=media&token=557e9170-9316-438b-abe8-48f8987144c7",
+      ],
+      description:
+        'Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1" and 1-2") for various applications including commercial parks, residential projects, and garden beds. Perfect for landscaping, erosion control, and soil protection.',
+    },
+  ];
+
   return (
     <>
       {texturePreview && (
-        <div 
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" 
-          onClick={closeTexturePreview}
-        >
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeTexturePreview}>
           <div className="relative bg-white rounded-xl overflow-hidden max-w-3xl max-h-[80vh]">
             <img src={texturePreview} alt="Product Texture" className="max-w-full max-h-[80vh] object-contain" />
-            <button 
-              className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1 rounded-full"
-              onClick={closeTexturePreview}
-            >
+            <button className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1 rounded-full" onClick={closeTexturePreview}>
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -278,7 +447,7 @@ const Landscapers = () => {
                       className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4 shadow-lg rounded-full font-semibold transition-all duration-200"
                       onClick={() => setLocation("/order")}
                     >
-                      Get Your Professional Quote
+                      Get Your Professional
                     </Button>
                     <Badge className="bg-green-700 text-white px-4 py-2 text-base font-medium rounded-full">
                       Exclusive 20% truckload discount for landscapers
@@ -344,6 +513,117 @@ const Landscapers = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Products Section with improved UI - Moved up */}
+        <div id="products-section" className="container mx-auto px-4 py-16">
+          <div className="text-center mb-10">
+            <Badge className="bg-green-700 text-white mb-4">Premium Soil Solutions</Badge>
+            <h2 className="text-3xl font-bold mb-4">Professional-Grade Products for Superior Results</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Our premium soil formulations are the result of years of research and field testing in Arizona's challenging climate. Each product is
+              engineered for maximum performance and efficiency.
+            </p>
+          </div>
+
+          {/* For Landscaping Section */}
+          <div id="landscaping-section" className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Lanscaping%20section%20introduction%20image.jpeg?alt=media&token=7405742b-2696-4f11-920f-d294a63ae6e2"
+                alt="Landscaping"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Landscaping</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Premium soil solutions designed for professional landscapers, ensuring beautiful and sustainable outdoor spaces.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {landscapingProducts.map((product) => (
+                <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <ProductCarousel mainImage={product.mainImage} thumbnailImages={product.thumbnailImages} productName={product.name} />
+                  <div className="p-6">
+                    <h4 className="text-xl font-semibold mb-2">{product.name}</h4>
+                    <p className="text-gray-600">{product.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* For Floriculture Section */}
+          <div className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
+                alt="Floriculture"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Floriculture</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Specialized soil solutions for nurseries, flower growers, and ornamental plant enthusiasts.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products
+                .filter(
+                  (product) =>
+                    product.title.includes("POTTING SOIL") ||
+                    product.title.includes("SUCCULENT") ||
+                    product.title.includes("TROPICAL") ||
+                    product.title.includes("FLOWERING")
+                )
+                .map((product) => (
+                  <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
+                ))}
+            </div>
+          </div>
+
+          {/* For Agriculture Section */}
+          <div className="mb-20">
+            <div className="relative rounded-2xl overflow-hidden mb-10">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
+                alt="Agriculture"
+                className="w-full h-[400px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
+                <div className="p-8">
+                  <h3 className="text-4xl font-bold text-white mb-4">For Agriculture</h3>
+                  <p className="text-xl text-white/90 max-w-xl">
+                    Advanced soil amendments and fertilizers for commercial farming, vineyards, and specialty crops.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products
+                .filter(
+                  (product) =>
+                    product.title.includes("VINEYARD") ||
+                    product.title.includes("AVOCADO") ||
+                    product.title.includes("POME") ||
+                    product.title.includes("CONCENTRATED") ||
+                    product.title.includes("DAIRY COMPOST") ||
+                    product.title.includes("WORM CASTINGS")
+                )
+                .map((product) => (
+                  <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
+                ))}
             </div>
           </div>
         </div>
@@ -431,390 +711,6 @@ const Landscapers = () => {
               <Button size="lg" className="bg-green-700 hover:bg-green-800 text-white" onClick={() => setLocation("/order")}>
                 Get Your Custom Quote
               </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Products Section with improved UI - Moved up */}
-        <div id="products-section" className="container mx-auto px-4 py-16">
-          <div className="text-center mb-10">
-            <Badge className="bg-green-700 text-white mb-4">Premium Soil Solutions</Badge>
-            <h2 className="text-3xl font-bold mb-4">Professional-Grade Products for Superior Results</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our premium soil formulations are the result of years of research and field testing in Arizona's challenging climate. Each product is
-              engineered for maximum performance and efficiency.
-            </p>
-          </div>
-
-          {/* For Landscaping Section */}
-          <div className="mb-20">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Lanscaping%20section%20introduction%20image.jpeg?alt=media&token=7405742b-2696-4f11-920f-d294a63ae6e2"
-                alt="Landscaping"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Landscaping</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
-                    Premium soil solutions designed for professional landscapers, ensuring beautiful and sustainable outdoor spaces.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products
-                .filter(
-                  (product) =>
-                    product.title.includes("MULCH") ||
-                    product.title.includes("OVERSEED") ||
-                    product.title.includes("TREE AND SHRUB") ||
-                    product.title.includes("NATURAL MINERAL") ||
-                    product.title.includes("DROUGHT RESILIENCE")
-                )
-                .map((product) => (
-                  <Card
-                    key={product.id}
-                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-                    onClick={() => setLocation(`/products/${product.id}`)}
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                          View Details
-                        </div>
-                      </div>
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
-                        }}
-                      />
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-                          {product.title.includes("DAIRY")
-                            ? "Dan's Gold"
-                            : product.title.includes("WORM")
-                              ? "Mikey's Worm Poop"
-                              : product.title.includes("GOLF")
-                                ? "Tee Top Divot Repair Blend"
-                                : product.title.includes("OVERSEED")
-                                  ? "Turf Daddy Blend"
-                                  : product.title.includes("TREE")
-                                    ? "Artemis Root Boost Blend"
-                                    : product.title.includes("NATURAL MINERAL")
-                                      ? "Zeolite"
-                                      : product.title.includes("SULFUR")
-                                        ? "SKMicrosource"
-                                        : product.title.includes("DROUGHT")
-                                          ? "Desert Defender"
-                                          : product.title.includes("POTTING")
-                                            ? "Ready Go Garden"
-                                            : product.title.includes("CANNABIS")
-                                              ? "CannaBag"
-                                              : product.title.includes("SUCCULENT")
-                                                ? "Succulent Success"
-                                                : product.title.includes("TROPICAL")
-                                                  ? "Tropic Treasure"
-                                                  : product.title.includes("FLOWERING")
-                                                    ? "Flower Flourish"
-                                                    : product.title.includes("CONCENTRATED")
-                                                      ? "SuperBooster"
-                                                      : product.title.includes("MEDIUM DARK MULCH")
-                                                        ? "Nature Blanket"
-                                                        : product.title.includes("ALL-IN-ONE")
-                                                          ? "Premium Nature's Blanket"
-                                                          : "Dan's Gold"}
-                        </Badge>
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
-                        {product.title}
-                      </h3>
-                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-
-                      {/* Benefits */}
-                      <div className="flex flex-wrap gap-1 mb-6">
-                        {product.benefits.slice(0, 3).map((benefit, idx) => (
-                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
-                            {benefit}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Bulk Options */}
-                      <div className="space-y-2 mb-4">
-                        {product.bulkOptions.map((option, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            <span>{option}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
-                        View Details & Pricing
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-            </div>
-          </div>
-
-          {/* For Floriculture Section */}
-          <div className="mb-20">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
-                alt="Floriculture"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Floriculture</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
-                    Specialized soil solutions for nurseries, flower growers, and ornamental plant enthusiasts.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products
-                .filter(
-                  (product) =>
-                    product.title.includes("POTTING SOIL") ||
-                    product.title.includes("SUCCULENT") ||
-                    product.title.includes("TROPICAL") ||
-                    product.title.includes("FLOWERING")
-                )
-                .map((product) => (
-                  <Card
-                    key={product.id}
-                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-                    onClick={() => setLocation(`/products/${product.id}`)}
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                          View Details
-                        </div>
-                      </div>
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
-                        }}
-                      />
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-                          {product.title.includes("DAIRY")
-                            ? "Dan's Gold"
-                            : product.title.includes("WORM")
-                              ? "Mikey's Worm Poop"
-                              : product.title.includes("GOLF")
-                                ? "Tee Top Divot Repair Blend"
-                                : product.title.includes("OVERSEED")
-                                  ? "Turf Daddy Blend"
-                                  : product.title.includes("TREE")
-                                    ? "Artemis Root Boost Blend"
-                                    : product.title.includes("NATURAL MINERAL")
-                                      ? "Zeolite"
-                                      : product.title.includes("SULFUR")
-                                        ? "SKMicrosource"
-                                        : product.title.includes("DROUGHT")
-                                          ? "Desert Defender"
-                                          : product.title.includes("POTTING")
-                                            ? "Ready Go Garden"
-                                            : product.title.includes("CANNABIS")
-                                              ? "CannaBag"
-                                              : product.title.includes("SUCCULENT")
-                                                ? "Succulent Success"
-                                                : product.title.includes("TROPICAL")
-                                                  ? "Tropic Treasure"
-                                                  : product.title.includes("FLOWERING")
-                                                    ? "Flower Flourish"
-                                                    : product.title.includes("CONCENTRATED")
-                                                      ? "SuperBooster"
-                                                      : product.title.includes("MEDIUM DARK MULCH")
-                                                        ? "Nature Blanket"
-                                                        : product.title.includes("ALL-IN-ONE")
-                                                          ? "Premium Nature's Blanket"
-                                                          : "Dan's Gold"}
-                        </Badge>
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
-                        {product.title}
-                      </h3>
-                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-
-                      {/* Benefits */}
-                      <div className="flex flex-wrap gap-1 mb-6">
-                        {product.benefits.slice(0, 3).map((benefit, idx) => (
-                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
-                            {benefit}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Bulk Options */}
-                      <div className="space-y-2 mb-4">
-                        {product.bulkOptions.map((option, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            <span>{option}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
-                        View Details & Pricing
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-            </div>
-          </div>
-
-          {/* For Agriculture Section */}
-          <div className="mb-20">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
-                alt="Agriculture"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Agriculture</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
-                    Advanced soil amendments and fertilizers for commercial farming, vineyards, and specialty crops.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products
-                .filter(
-                  (product) =>
-                    product.title.includes("VINEYARD") ||
-                    product.title.includes("AVOCADO") ||
-                    product.title.includes("POME") ||
-                    product.title.includes("CONCENTRATED") ||
-                    product.title.includes("DAIRY COMPOST") ||
-                    product.title.includes("WORM CASTINGS")
-                )
-                .map((product) => (
-                  <Card
-                    key={product.id}
-                    className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-                    onClick={() => setLocation(`/products/${product.id}`)}
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                        <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                          View Details
-                        </div>
-                      </div>
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
-                        }}
-                      />
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-                          {product.title.includes("DAIRY")
-                            ? "Dan's Gold"
-                            : product.title.includes("WORM")
-                              ? "Mikey's Worm Poop"
-                              : product.title.includes("GOLF")
-                                ? "Tee Top Divot Repair Blend"
-                                : product.title.includes("OVERSEED")
-                                  ? "Turf Daddy Blend"
-                                  : product.title.includes("TREE")
-                                    ? "Artemis Root Boost Blend"
-                                    : product.title.includes("NATURAL MINERAL")
-                                      ? "Zeolite"
-                                      : product.title.includes("SULFUR")
-                                        ? "SKMicrosource"
-                                        : product.title.includes("DROUGHT")
-                                          ? "Desert Defender"
-                                          : product.title.includes("POTTING")
-                                            ? "Ready Go Garden"
-                                            : product.title.includes("CANNABIS")
-                                              ? "CannaBag"
-                                              : product.title.includes("SUCCULENT")
-                                                ? "Succulent Success"
-                                                : product.title.includes("TROPICAL")
-                                                  ? "Tropic Treasure"
-                                                  : product.title.includes("FLOWERING")
-                                                    ? "Flower Flourish"
-                                                    : product.title.includes("CONCENTRATED")
-                                                      ? "SuperBooster"
-                                                      : product.title.includes("MEDIUM DARK MULCH")
-                                                        ? "Nature Blanket"
-                                                        : product.title.includes("ALL-IN-ONE")
-                                                          ? "Premium Nature's Blanket"
-                                                          : "Dan's Gold"}
-                        </Badge>
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
-                        {product.title}
-                      </h3>
-                      <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-
-                      {/* Benefits */}
-                      <div className="flex flex-wrap gap-1 mb-6">
-                        {product.benefits.slice(0, 3).map((benefit, idx) => (
-                          <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
-                            {benefit}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Bulk Options */}
-                      <div className="space-y-2 mb-4">
-                        {product.bulkOptions.map((option, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                            <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            <span>{option}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
-                        View Details & Pricing
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
             </div>
           </div>
         </div>
