@@ -24,7 +24,7 @@ const ProductCard: React.FC<{
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
           <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-            View Details
+            View Product
           </div>
         </div>
         {product.texture && (
@@ -51,10 +51,10 @@ const ProductCard: React.FC<{
       <div className="p-6">
         <div className="flex items-center gap-2 mb-2">
           <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-            {product.title}
+            {product.brand}
           </Badge>
         </div>
-        <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">{product.brand}</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">{product.title}</h3>
         <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
 
         {/* Benefits */}
@@ -76,8 +76,14 @@ const ProductCard: React.FC<{
           ))}
         </div>
 
-        <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
-          View Details & Pricing
+        <Button 
+          className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
+          onClick={(e) => {
+            e.stopPropagation();
+            setLocation(`/products/${product.id}`);
+          }}
+        >
+          View Product Details
         </Button>
       </div>
     </Card>
@@ -134,156 +140,46 @@ const Landscapers = () => {
   const products: Product[] = [
     {
       id: 1,
-      title: "DAIRY COMPOST",
-      brand: "Dan's Gold",
+      title: "Mulch",
+      brand: "Nature's Blanket Premium Mulch",
       description:
-        "Premium organic dairy compost, perfect for enriching soil and promoting healthy plant growth. Rich in essential nutrients and beneficial microorganisms.",
-      benefits: ["Improves soil structure", "Enhances water retention", "Provides slow-release nutrients", "Supports beneficial soil life"],
+        "Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1\" and 1-2\") for various applications including commercial parks, residential projects, and garden beds.",
+      benefits: ["Enhances moisture retention", "Suppresses weeds", "Improves soil structure", "Decorative finish"],
       image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
+      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FMulch%20Enhanced%20with%20Dairy%20Compost.png?alt=media&token=6627da3e-8dca-4653-82e2-c20d7618b1fe",
       bulkOptions: ["Pallet of 144 units", "Bulk delivery available", "20% truckload discount"],
     },
     {
       id: 2,
-      title: "WORM CASTINGS",
-      brand: "Mikey's Worm Poop",
-      description: "Premium vermicompost, nature's most potent soil amendment. Packed with beneficial microbes and plant-available nutrients.",
-      benefits: ["100% organic", "Rich in beneficial microbes", "Improves soil structure", "Enhances plant immunity"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8",
+      title: "Turf",
+      brand: "OVERSEED TOPDRESS BLEND FOR GRASS",
+      description: "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
+      benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
+      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
+      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 3,
-      title: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
-      brand: "Tee Top Divot Repair Blend",
-      description: "Specialized blend for repairing divots on golf courses and sports fields. Perfect for maintaining pristine playing surfaces.",
-      benefits: ["Quick turf healing", "Natural composition", "Easy application", "Long-lasting results"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      title: "TREE AND SHRUB PLANTING AMENDMENT",
+      brand: "Artemis Root Boost Blend",
+      description: "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems.",
+      benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
+      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
+      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
       id: 4,
-      title: "OVERSEED TOPDRESS BLEND",
-      brand: "Turf Daddy Blend",
-      description: "Advanced blend for overseeding and aeration, designed to improve soil quality and promote healthy turf growth.",
-      benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
-      image: "/Users/rodolfoalvarez/Downloads/Grass.jpeg",
-      texture: "/Users/rodolfoalvarez/Downloads/Grass.jpeg",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 5,
-      title: "TREE AND SHRUB PLANTING AMENDMENT",
-      brand: "Artemis Root Boost Blend",
-      description: "Specialized amendment for trees and shrubs, promoting strong root development and healthy growth.",
-      benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 6,
-      title: "NATURAL MINERAL SOIL CONDITIONER",
-      brand: "Zeolite",
-      description:
-        "Natural mineral amendment that improves soil structure and nutrient retention. Perfect for water conservation and long-term soil improvement.",
-      benefits: ["Enhances nutrient retention", "Improves soil aeration", "Reduces water requirements", "Long-lasting soil amendment"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 7,
-      title: "SULFUR-POTASSIUM NUTRITION BOOST",
-      brand: "SKMicrosource",
-      description: "Premium sulfur-potassium nutrition boost for enhanced plant growth and soil vitality.",
-      benefits: ["Balanced nutrition", "Improves soil health", "Enhances plant growth", "Supports microbial activity"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 8,
-      title: "DROUGHT RESILIENCE SOIL AMENDMENT",
-      brand: "Desert Defender",
-      description: "Specialized blend for drought resilience, helping plants thrive in challenging conditions.",
-      benefits: ["Drought resistance", "Water retention", "Soil improvement", "Plant protection"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 9,
-      title: "BIOCHAR MINERAL",
-      brand: "Amazonian Dark Earth",
-      description: "Premium biochar mineral blend for enhanced soil health and plant growth.",
-      benefits: ["Improves soil structure", "Enhances nutrient retention", "Promotes microbial activity", "Long-lasting amendment"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 10,
-      title: "VINEYARD BLEND",
-      brand: "Bacchus Blend",
-      description: "Specialized blend for vineyards, promoting healthy vine growth and optimal grape production.",
-      benefits: ["Vineyard-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 11,
-      title: "AVOCADO AND CITRUS TREE PLANT FOOD BLEND",
-      brand: "Seriokai's Secret Blend",
-      description: "Specialized blend for avocado and citrus trees, promoting healthy growth and optimal fruit production.",
-      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 12,
-      title: "POME AND STONE FRUIT TREE PLANT FOOD BLEND",
-      brand: "Pomona Blend",
-      description: "Specialized blend for pome and stone fruit trees, promoting healthy growth and optimal fruit production.",
-      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 13,
-      title: "MYCORRHIZAL ROOT ENHANCER",
-      brand: "Stoned Ape's Blend",
-      description: "Premium mycorrhizal root enhancer for improved plant health and growth.",
-      benefits: ["Enhances root development", "Improves nutrient uptake", "Supports plant health", "Long-lasting benefits"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 14,
       title: "PALM AND DATE TREE PLANT FOOD BLEND",
       brand: "Oasis Blend",
-      description: "Specialized blend for palm and date trees, promoting healthy growth and optimal fruit production.",
+      description: "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
       benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
+      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 15,
-      title: "SILT SOIL DROUGHT BLEND FOR ENHANCED MOISTURE RETENTION",
-      brand: "Silky Silt Saver",
-      description: "Specialized blend for silt soils, improving moisture retention and soil health.",
-      benefits: ["Enhances moisture retention", "Improves soil structure", "Supports plant health", "Drought resistance"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
+    }
   ];
 
   const mulchApplications = [
@@ -326,6 +222,7 @@ const Landscapers = () => {
     {
       id: "turf-daddy",
       name: "Turf Daddy Blend",
+      brandName: "OVERSEED TOPDRESS BLEND FOR GRASS",
       mainImage:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
       thumbnailImages: [
@@ -333,11 +230,12 @@ const Landscapers = () => {
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTurf%20Daddy1CF.jpg?alt=media&token=2ed11d15-24e4-4bf4-83cb-e060afcee16e",
       ],
       description:
-        "Premium blend for overseeding and aeration, perfect for maintaining lush, healthy lawns. Contains Zeolite, Worm Castings, and Organic Dairy Compost for optimal turf growth.",
+        "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
     },
     {
       id: "artemis",
       name: "Artemis Root Boost Blend",
+      brandName: "TREE AND SHRUB PLANTING AMENDMENT",
       mainImage:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
       thumbnailImages: [
@@ -345,33 +243,36 @@ const Landscapers = () => {
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FArtemis10lbs%20(1).jpg?alt=media&token=9f7cc7b5-df16-440d-9a4c-1e250470bb12",
       ],
       description:
-        "Specialized amendment for trees and shrubs, promoting strong root development and healthy growth. Contains Volcanic Tuff and Organic Dairy Compost.",
+        "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems in commercial and organic farming.",
     },
     {
       id: "tee-top",
-      name: "Tee Top Divot Repair",
+      name: "Tee Top Divot Repair Blend",
+      brandName: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
       mainImage:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tee%20Top%20Divot%20Repair.jpeg?alt=media&token=1ba764aa-272b-4866-936d-425144b66686",
       thumbnailImages: [
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414",
       ],
-      description: "Specialized blend for repairing divots on golf courses and sports fields. Perfect for maintaining pristine playing surfaces.",
+      description: "Perfect for golf courses, this blend repairs divots and maintains pristine playing surfaces, combining Zeolite and worm castings for optimal soil health and grass recovery.",
     },
     {
       id: "oasis",
       name: "Oasis Blend",
+      brandName: "PALM AND DATE TREE PLANT FOOD BLEND",
       mainImage:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
       thumbnailImages: [
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97",
       ],
-      description: "Premium blend for palm trees and tropical plants, providing optimal moisture retention and nutrient delivery.",
+      description: "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
     },
     {
       id: "nature-blanket",
       name: "Nature's Blanket Premium Mulch",
+      brandName: "MEDIUM DARK MULCH FOR PLANTER COVER",
       mainImage:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
       thumbnailImages: [
@@ -527,87 +428,68 @@ const Landscapers = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {landscapingProducts.map((product) => (
-                <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <ProductCarousel 
-                    mainImage={product.mainImage} 
-                    thumbnailImages={product.thumbnailImages} 
-                    productName={product.name} 
-                    productId={product.id}
-                  />
+                <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                  <div className="relative">
+                    <ProductCarousel 
+                      mainImage={product.mainImage} 
+                      thumbnailImages={product.thumbnailImages} 
+                      productName={product.name}
+                      brandName={product.brandName}
+                      productId={product.id}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <div 
+                        className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg transform translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 cursor-pointer"
+                        onClick={() => setLocation(`/products/${product.id}`)}
+                      >
+                        View Product Details
+                      </div>
+                    </div>
+                  </div>
                   <div className="p-6">
-                    <h4 className="text-xl font-semibold mb-2">{product.name}</h4>
-                    <p className="text-gray-600">{product.description}</p>
+                    <div className="flex flex-col gap-1 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
+                          {product.name}
+                        </Badge>
+                      </div>
+                      <h4 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">{product.brandName}</h4>
+                    </div>
+                    <p className="text-gray-600 mb-4">{product.description}</p>
+                    <Button 
+                      className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                      onClick={() => setLocation(`/products/${product.id}`)}
+                    >
+                      View Details & Pricing
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* For Floriculture Section */}
+          {/* Show all products section */}
           <div className="mb-20">
             <div className="relative rounded-2xl overflow-hidden mb-10">
               <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
-                alt="Floriculture"
+                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7"
+                alt="All Products"
                 className="w-full h-[400px] object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
                 <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Floriculture</h3>
+                  <h3 className="text-4xl font-bold text-white mb-4">Our Products</h3>
                   <p className="text-xl text-white/90 max-w-xl">
-                    Specialized soil solutions for nurseries, flower growers, and ornamental plant enthusiasts.
+                    Premium soil solutions for all your landscaping and gardening needs.
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products
-                .filter(
-                  (product) =>
-                    product.title.includes("POTTING SOIL") ||
-                    product.title.includes("SUCCULENT") ||
-                    product.title.includes("TROPICAL") ||
-                    product.title.includes("FLOWERING")
-                )
-                .map((product) => (
-                  <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
-                ))}
-            </div>
-          </div>
-
-          {/* For Agriculture Section */}
-          <div className="mb-20">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
-                alt="Agriculture"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">For Agriculture</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
-                    Advanced soil amendments and fertilizers for commercial farming, vineyards, and specialty crops.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products
-                .filter(
-                  (product) =>
-                    product.title.includes("VINEYARD") ||
-                    product.title.includes("AVOCADO") ||
-                    product.title.includes("POME") ||
-                    product.title.includes("CONCENTRATED") ||
-                    product.title.includes("DAIRY COMPOST") ||
-                    product.title.includes("WORM CASTINGS")
-                )
-                .map((product) => (
-                  <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
-                ))}
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
+              ))}
             </div>
           </div>
         </div>
