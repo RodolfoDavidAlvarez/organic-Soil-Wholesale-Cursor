@@ -76,7 +76,7 @@ const ProductCard: React.FC<{
           ))}
         </div>
 
-        <Button 
+        <Button
           className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
           onClick={(e) => {
             e.stopPropagation();
@@ -91,7 +91,7 @@ const ProductCard: React.FC<{
 };
 
 interface Product {
-  id: number;
+  id: number | string;
   title: string;
   brand: string;
   description: string;
@@ -139,47 +139,64 @@ const Landscapers = () => {
 
   const products: Product[] = [
     {
-      id: 1,
-      title: "Mulch",
-      brand: "Nature's Blanket Premium Mulch",
+      id: 13,
+      title: "Nature's Blanket Premium Mulch",
+      brand: "ALL-IN-ONE DARK MULCH",
       description:
-        "Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1\" and 1-2\") for various applications including commercial parks, residential projects, and garden beds.",
-      benefits: ["Enhances moisture retention", "Suppresses weeds", "Improves soil structure", "Decorative finish"],
+        'Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1" and 1-2") for various applications including commercial parks, residential projects, and garden beds. Provides superior moisture retention, weed suppression, and soil enhancement.',
+      benefits: [
+        "Enhances moisture retention",
+        "Suppresses weeds",
+        "Improves soil structure",
+        "Decorative finish",
+        "Professional-grade quality",
+        "Long-lasting results",
+      ],
       image:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
-      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FMulch%20Enhanced%20with%20Dairy%20Compost.png?alt=media&token=6627da3e-8dca-4653-82e2-c20d7618b1fe",
-      bulkOptions: ["Pallet of 144 units", "Bulk delivery available", "20% truckload discount"],
+      texture:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FMulch%20Enhanced%20with%20Dairy%20Compost.png?alt=media&token=6627da3e-8dca-4653-82e2-c20d7618b1fe",
+      bulkOptions: ["2CF Bag (unit)", "Bulk delivery available", "20% truckload discount"],
     },
     {
-      id: 2,
-      title: "Turf",
-      brand: "OVERSEED TOPDRESS BLEND FOR GRASS",
-      description: "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
+      id: 5,
+      title: "OVERSEED TOPDRESS BLEND FOR GRASS",
+      brand: "Turf Daddy Blend",
+      description:
+        "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
       benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
-      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
-      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
+      texture:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
-      id: 3,
+      id: 6,
       title: "TREE AND SHRUB PLANTING AMENDMENT",
       brand: "Artemis Root Boost Blend",
-      description: "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems.",
+      description:
+        "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems.",
       benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
-      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
-      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
+      texture:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
     },
     {
-      id: 4,
+      id: 10,
       title: "PALM AND DATE TREE PLANT FOOD BLEND",
       brand: "Oasis Blend",
-      description: "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
+      description:
+        "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
       benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
-      texture: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
+      texture:
+        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
       bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    }
+    },
   ];
 
   const mulchApplications = [
@@ -220,7 +237,7 @@ const Landscapers = () => {
 
   const landscapingProducts = [
     {
-      id: "turf-daddy",
+      id: "5",
       name: "Turf Daddy Blend",
       brandName: "OVERSEED TOPDRESS BLEND FOR GRASS",
       mainImage:
@@ -233,7 +250,7 @@ const Landscapers = () => {
         "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
     },
     {
-      id: "artemis",
+      id: "6",
       name: "Artemis Root Boost Blend",
       brandName: "TREE AND SHRUB PLANTING AMENDMENT",
       mainImage:
@@ -246,7 +263,7 @@ const Landscapers = () => {
         "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems in commercial and organic farming.",
     },
     {
-      id: "tee-top",
+      id: "4",
       name: "Tee Top Divot Repair Blend",
       brandName: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
       mainImage:
@@ -255,10 +272,11 @@ const Landscapers = () => {
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414",
       ],
-      description: "Perfect for golf courses, this blend repairs divots and maintains pristine playing surfaces, combining Zeolite and worm castings for optimal soil health and grass recovery.",
+      description:
+        "Perfect for golf courses, this blend repairs divots and maintains pristine playing surfaces, combining Zeolite and worm castings for optimal soil health and grass recovery.",
     },
     {
-      id: "oasis",
+      id: "11",
       name: "Oasis Blend",
       brandName: "PALM AND DATE TREE PLANT FOOD BLEND",
       mainImage:
@@ -267,10 +285,11 @@ const Landscapers = () => {
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97",
       ],
-      description: "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
+      description:
+        "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
     },
     {
-      id: "nature-blanket",
+      id: "13",
       name: "Nature's Blanket Premium Mulch",
       brandName: "MEDIUM DARK MULCH FOR PLANTER COVER",
       mainImage:
@@ -321,21 +340,11 @@ const Landscapers = () => {
               {/* Right: Text + CTA + Mulch Cards */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center">
                 <div className="mb-8">
-                  <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">
-                    Products Designed for Landscapers
-                  </h1>
+                  <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Products Designed for Landscapers</h1>
                   <p className="text-lg text-green-100 mb-4 max-w-xl animate-fade-in delay-100">
                     Elevate your landscaping projects with our premium soil solutions. Engineered for Arizona's unique climate.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300">
-                    <Button
-                      size="lg"
-                      className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4 shadow-lg rounded-full font-semibold transition-all duration-200"
-                      onClick={() => setLocation("/order")}
-                    >
-                      Shop Now
-                    </Button>
-                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300"></div>
                   {/* Trusted by row */}
                   <div className="flex items-center gap-6 mt-4 mb-2 animate-fade-in delay-400">
                     <span className="text-green-200 text-sm">Trusted by Arizona's Top Landscaping Companies</span>
@@ -419,7 +428,7 @@ const Landscapers = () => {
                 </div>
               </div>
             </div>
-            
+
             <style jsx>{`
               .shadow-text {
                 text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
@@ -430,21 +439,14 @@ const Landscapers = () => {
               {landscapingProducts.map((product) => (
                 <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
                   <div className="relative">
-                    <ProductCarousel 
-                      mainImage={product.mainImage} 
-                      thumbnailImages={product.thumbnailImages} 
+                    <ProductCarousel
+                      mainImage={product.mainImage}
+                      thumbnailImages={product.thumbnailImages}
                       productName={product.name}
                       brandName={product.brandName}
                       productId={product.id}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <div 
-                        className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg transform translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 cursor-pointer"
-                        onClick={() => setLocation(`/products/${product.id}`)}
-                      >
-                        View Product Details
-                      </div>
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"></div>
                   </div>
                   <div className="p-6">
                     <div className="flex flex-col gap-1 mb-3">
@@ -453,42 +455,22 @@ const Landscapers = () => {
                           {product.name}
                         </Badge>
                       </div>
-                      <h4 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">{product.brandName}</h4>
+                      <h4 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
+                        {product.brandName}
+                      </h4>
                     </div>
                     <p className="text-gray-600 mb-4">{product.description}</p>
-                    <Button 
+                    <Button
                       className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={() => setLocation(`/products/${product.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/products/${product.id}`);
+                      }}
                     >
                       View Details & Pricing
                     </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Show all products section */}
-          <div className="mb-20">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7"
-                alt="All Products"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center">
-                <div className="p-8">
-                  <h3 className="text-4xl font-bold text-white mb-4">Our Products</h3>
-                  <p className="text-xl text-white/90 max-w-xl">
-                    Premium soil solutions for all your landscaping and gardening needs.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} onTextureClick={handleTextureClick} />
               ))}
             </div>
           </div>
@@ -578,159 +560,6 @@ const Landscapers = () => {
                 Get Your Custom Quote
               </Button>
             </div>
-          </div>
-        </div>
-
-        {/* Value Proposition Section */}
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Why Professional Landscapers Trust Our Products</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our premium soil formulations are backed by years of research and proven results in Arizona's challenging climate. Every product is
-              engineered for maximum performance and efficiency.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg">
-              <CardContent className="p-6">
-                <Award className="h-12 w-12 text-green-600 mb-4" />
-                <h3 className="text-xl font-bold mb-2">Premium Quality</h3>
-                <p className="text-gray-600">
-                  Industry-leading soil products with superior nutrient content and optimal composition for Arizona's unique conditions.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg">
-              <CardContent className="p-6">
-                <Leaf className="h-12 w-12 text-green-600 mb-4" />
-                <h3 className="text-xl font-bold mb-2">Desert-Optimized</h3>
-                <p className="text-gray-600">
-                  Scientifically formulated for Arizona's arid climate, extreme temperatures, and challenging soil conditions.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg">
-              <CardContent className="p-6">
-                <Zap className="h-12 w-12 text-green-600 mb-4" />
-                <h3 className="text-xl font-bold mb-2">Performance Guaranteed</h3>
-                <p className="text-gray-600">Consistent results that exceed client expectations and reduce maintenance costs.</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Extra Benefits Section */}
-          <div className="bg-green-50 rounded-2xl p-8 mb-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="flex items-start gap-3">
-                <ThumbsUp className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold mb-1">Higher Client Satisfaction</h4>
-                  <p className="text-sm text-gray-600">Deliver exceptional results that keep your clients coming back</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Clock className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold mb-1">Time-Saving Solutions</h4>
-                  <p className="text-sm text-gray-600">Pre-blended products that reduce your prep time</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Shield className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold mb-1">Consistent Quality</h4>
-                  <p className="text-sm text-gray-600">Dependable products for predictable outcomes</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Users className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold mb-1">Expert Support</h4>
-                  <p className="text-sm text-gray-600">Access to specialists who understand Arizona landscaping</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Order Section */}
-          <div className="mt-12 bg-green-50 rounded-xl p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Need a Quick Quote?</h3>
-                <p className="text-gray-600">Get instant pricing for bulk orders and special projects.</p>
-              </div>
-              <div className="flex gap-4">
-                <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => setLocation("/order")}>
-                  Get Quote Now
-                </Button>
-                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" onClick={() => setLocation("/contact")}>
-                  Contact Sales
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Testimonials Section */}
-          <div className="bg-green-800 text-white rounded-2xl p-10 mb-16">
-            <div className="text-center mb-10">
-              <Badge className="bg-green-700 mb-4">Trusted by Arizona's Leading Landscapers</Badge>
-              <h2 className="text-3xl font-bold mb-4">Professional Results, Professional Testimonials</h2>
-              <p className="text-xl text-green-100 max-w-3xl mx-auto">
-                Hear from landscaping professionals who trust our premium soil products for their most demanding projects.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="bg-green-700/50 border-green-600">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">{testimonial.name}</h3>
-                        <p className="text-green-100">{testimonial.company}</p>
-                        <div className="flex items-center gap-1 text-yellow-400 mt-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-current" />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-green-100 mb-4">{testimonial.content}</p>
-                    <div className="flex items-center gap-2 text-green-200">
-                      <MapPin className="h-4 w-4" />
-                      <span>{testimonial.location}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="bg-gradient-to-r from-green-700 to-green-600 rounded-2xl p-10 text-center text-white shadow-xl mb-16">
-            <Zap className="h-12 w-12 mx-auto mb-4" />
-            <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Arizona Landscapes?</h2>
-            <p className="text-xl text-green-100 mb-8 max-w-3xl mx-auto">
-              Get premium soil products delivered to your job site and experience the difference quality makes. Special pricing for professional
-              landscapers.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" className="button-white-visible text-lg px-8 py-6 shadow-lg" onClick={() => setLocation("/order")}>
-                Get Your Custom Quote
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-green-600 text-lg px-8 py-6"
-                onClick={() => setLocation("/contact")}
-              >
-                Contact Sales Team
-              </Button>
-            </div>
-            <p className="text-green-200 mt-6">No obligation · Fast response · Volume discounts available</p>
           </div>
         </div>
       </div>

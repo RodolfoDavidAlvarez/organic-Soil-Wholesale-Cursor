@@ -46,6 +46,11 @@ const ProductDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
+  // Add history handling
+  const handleBack = () => {
+    window.history.back();
+  };
+
   useEffect(() => {
     const loadProductData = async () => {
       if (typeof productId !== "number" || isNaN(productId)) {
@@ -92,11 +97,9 @@ const ProductDetail = () => {
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <Link href="/products">
-            <div className="text-primary hover:text-primary-light flex items-center cursor-pointer">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Products
-            </div>
-          </Link>
+          <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </div>
         </div>
         {isLoading ? (
           <div className="flex flex-col lg:flex-row">

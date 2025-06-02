@@ -13,27 +13,27 @@ import { Card } from "@/components/ui/card";
 const SIZE_CATEGORIES = [
   {
     name: "2CF Bag",
-    description: "2 cubic feet bag",
+    description: "25 units of 2 cubic feet bags",
     image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d",
-  },
-  {
-    name: "Pallet of Boxes",
-    description: "144 units / 36 boxes (4 units per box)",
-    image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=730d72a2-62b1-4c53-bd67-426f7224772e",
-  },
-  {
-    name: "Pallet of Bags",
-    description: "50 bags (1cf Bags)",
-    image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%20bags.png?alt=media&token=4ff026e5-7318-4c35-869a-a1bc0a3ff94d",
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
   },
   {
     name: "Bulk Delivery",
     description: "Compost and blends: 22-24 tons per truckload\nPotting soil: 90-110 CYs",
     image:
-      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=5c59cabf-aa01-4745-9026-51ee7ab8f195",
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
+  },
+  {
+    name: "Bulk Pickup",
+    description: "Bulk In Cubic Yard for pickup only",
+    image:
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc",
+  },
+  {
+    name: "2.2 CY Tote",
+    description: "Pallet of Single 2.2 CY Tote (supersack)",
+    image:
+      "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a",
   },
 ];
 
@@ -152,7 +152,7 @@ const MulchDetail = () => {
                   Mulch
                 </Badge>
               </div>
-              <h1 className="text-3xl font-bold mb-2">Nature Blanket Mulch</h1>
+              <h1 className="text-3xl font-bold mb-2">Nature's Blanket Premium Mulch</h1>
               <p className="text-lg text-neutral-600 mb-6">Premium mulch enhanced with dairy compost for optimal soil health and plant growth.</p>
 
               {/* Mulch Variants */}
@@ -184,13 +184,17 @@ const MulchDetail = () => {
               {/* Available Sizes */}
               <div className="mb-8">
                 <h3 className="text-sm font-medium mb-3">Available Sizes</h3>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {SIZE_CATEGORIES.map((cat) => (
-                    <div key={cat.name} className="rounded-lg border overflow-hidden">
-                      <img src={cat.image} alt={cat.name} className="w-full h-32 object-cover" />
-                      <div className="p-2 text-center">
-                        <div className="font-semibold">{cat.name}</div>
-                        <div className="text-xs text-neutral-600">{cat.description}</div>
+                    <div key={cat.name} className="rounded-lg border overflow-hidden hover:shadow-md transition-shadow duration-200">
+                      <div className="aspect-[4/3] relative">
+                        <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-end p-2">
+                          <span className="text-white text-xs font-medium">{cat.description}</span>
+                        </div>
+                      </div>
+                      <div className="p-2 text-center bg-white">
+                        <div className="font-semibold text-sm">{cat.name}</div>
                       </div>
                     </div>
                   ))}
