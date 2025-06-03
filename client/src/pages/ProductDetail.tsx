@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { getProductByIndex } from "@/data/productData";
+import { getProductByIndex, getProductsData } from "@/data/productData";
 import { Badge } from "@/components/ui/badge";
 
 // Size category images and labels from adminInputs.txt
@@ -37,9 +37,9 @@ const SIZE_CATEGORIES = [
 ];
 
 const ProductDetail = () => {
-  const [, params] = useRoute("/products/:id");
+  const [, params] = useRoute("/products/:slug");
   const [, navigate] = useLocation();
-  const productId = params && (params as any).id ? parseInt((params as any).id) : undefined;
+  const slug = params && (params as any).slug ? (params as any).slug : undefined;
   const [product, setProduct] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -53,14 +53,29 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const loadProductData = async () => {
-      if (typeof productId !== "number" || isNaN(productId)) {
+      if (!slug) {
         setError(true);
         setIsLoading(false);
         return;
       }
       try {
-        // Subtract 1 from productId since our getProductByIndex is 0-based
-        const foundProduct = await getProductByIndex(productId - 1);
+        // First try to see if the slug is a number (for backward compatibility)
+        const productId = parseInt(slug);
+        if (!isNaN(productId)) {
+          const foundProduct = await getProductByIndex(productId - 1);
+          if (foundProduct) {
+            setProduct(foundProduct);
+            return;
+          }
+        }
+        
+        // If not a number or product not found by ID, try to find by name
+        const allProducts = getProductsData();
+        const foundProduct = allProducts.find(
+          (p) => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug.toLowerCase() ||
+                p.productType?.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug.toLowerCase()
+        );
+        
         if (foundProduct) {
           setProduct(foundProduct);
         } else {
@@ -73,7 +88,7 @@ const ProductDetail = () => {
       }
     };
     loadProductData();
-  }, [productId]);
+  }, [slug]);
 
   const allImages: string[] = [...(product?.additionalImages || []), ...(product?.imageUrl ? [product.imageUrl] : [])];
 

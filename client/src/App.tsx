@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import FloatingCTA from "@/components/layout/FloatingCTA";
 import Home from "@/pages/Home";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
@@ -39,7 +40,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/products" component={Products} />
       <Route path="/products/mulch/:id" component={MulchDetail} />
-      <Route path="/products/:id" component={ProductDetail} />
+      <Route path="/products/:slug" component={ProductDetail} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/faq" component={FAQ} />
@@ -64,6 +65,7 @@ function App() {
             <Footer />
             <Toaster />
             <ScrollToTop />
+            <FloatingCTA />
           </div>
         </TooltipProvider>
       </ThemeProvider>
