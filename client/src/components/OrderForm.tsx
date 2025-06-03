@@ -71,11 +71,10 @@ export const OrderForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
-    name: "Development Test Business",
-    email: "rodolfodavid110@gmail.com",
-    phone: "928-550-1649",
+    name: "",
+    email: "",
+    phone: "",
     deliveryType: "delivery",
-    address: "123 Test Street, Phoenix, AZ 85001",
   });
   const [products, setProducts] = useState<ProductSelection[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
