@@ -1,46 +1,41 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield, X } from "lucide-react";
-import { useState } from "react";
+import { Award, Leaf, Zap, Shield, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import React from "react";
+import { productsData } from "@/data/productData";
+import ProductShowcase from "@/components/ProductShowcase";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
-  const [showGallery, setShowGallery] = useState(false);
   const [texturePreview, setTexturePreview] = useState<string | null>(null);
-
-  const handleTextureClick = (e: React.MouseEvent, texturePath: string) => {
-    e.stopPropagation();
-    setTexturePreview(texturePath);
-  };
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const closeTexturePreview = () => {
     setTexturePreview(null);
   };
 
-  const scrollToProducts = () => {
-    const productsSection = document.getElementById("products-section");
-    productsSection?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Load products with IDs
+  useEffect(() => {
+    // Filter products for landscapers
+    const landscapingProducts = productsData.filter((product) => {
+      const name = product.name.toLowerCase();
+      return name.includes("mulch") || name.includes("turf daddy") || name.includes("artemis") || name.includes("oasis") || name.includes("tee top");
+    });
 
-  const testimonials = [
-    {
-      name: "Mike Rodriguez",
-      company: "Green Horizons Landscaping",
-      content:
-        "Organic Soil Wholesale has completely transformed our landscaping projects. The quality of their products is unmatched, and our clients are thrilled with the results.",
-      location: "Phoenix, AZ",
-    },
-    {
-      name: "Sarah Williams",
-      company: "Desert Bloom Gardens",
-      content:
-        "Working with their premium soil products has saved us time and money. The bulk delivery option is perfect for our large commercial projects.",
-      location: "Scottsdale, AZ",
-    },
-  ];
+    // Sort products in the specified order
+    const sortedProducts = landscapingProducts.sort((a, b) => {
+      const order = ["mulch", "turf daddy", "artemis", "oasis", "tee top"];
+      const aIndex = order.findIndex((term) => a.name.toLowerCase().includes(term));
+      const bIndex = order.findIndex((term) => b.name.toLowerCase().includes(term));
+      return aIndex - bIndex;
+    });
+
+    setProducts(sortedProducts);
+    setIsLoading(false);
+  }, []);
 
   const mulchApplications = [
     {
@@ -183,6 +178,13 @@ const Landscapers = () => {
           </div>
         </div>
 
+        {/* Products Section - Moved right after hero */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <ProductShowcase products={products} loading={isLoading} initialCategory="all" />
+          </div>
+        </section>
+
         {/* Mulch Applications Section */}
         <div id="mulch-applications" className="py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
@@ -219,7 +221,7 @@ const Landscapers = () => {
               ))}
             </div>
 
-            {/* Benefits Section - Moved down */}
+            {/* Benefits Section */}
             <div className="mb-16 grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-3">

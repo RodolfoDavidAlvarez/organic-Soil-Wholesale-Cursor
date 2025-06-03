@@ -26,7 +26,7 @@ import { generateCustomerEmail, generateAdminEmail, generateOrderMarkdown } from
 // Group products by "Type" field (Amendment, Potting, Specialty) from product information
 const productsByCategory: Record<string, typeof productsData> = {};
 productsData.forEach((product) => {
-  const productType = product.type || "Other"; // Use the Type field from product information JSON
+  const productType = product.type || "Other"; 
   if (!productsByCategory[productType]) {
     productsByCategory[productType] = [];
   }
@@ -35,7 +35,7 @@ productsData.forEach((product) => {
 
 // Create category map for display with proper naming and ordering
 const DISPLAY_CATEGORIES = Object.keys(productsByCategory)
-  .filter((category) => category !== "Discarded product") // Filter out any discarded products
+  .filter((category) => category !== "Discarded product") 
   .sort((a, b) => {
     // Custom sorting to ensure important categories come first
     const order = { Amendment: 1, Potting: 2, Specialty: 3, Other: 4 };
@@ -64,32 +64,6 @@ interface BusinessInfo {
 }
 
 export const OrderForm: React.FC = () => {
-  // Add CSS styles for the highlight effect
-  useEffect(() => {
-    // Create a style element
-    const styleEl = document.createElement("style");
-
-    // Define the highlight animation
-    const css = `
-      @keyframes highlight-pulse {
-        0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.2); }
-        70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-      }
-      .highlight-order {
-        animation: highlight-pulse 1.5s ease-out;
-        border-color: #16a34a !important;
-      }
-    `;
-
-    styleEl.textContent = css;
-    document.head.appendChild(styleEl);
-
-    // Clean up on component unmount
-    return () => {
-      document.head.removeChild(styleEl);
-    };
-  }, []);
   // State management
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,35 +80,7 @@ export const OrderForm: React.FC = () => {
   const [selectedSizeCategory, setSelectedSizeCategory] = useState<string | null>(null);
 
   // Refs for scrolling
-  const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const productSectionRef = useRef<HTMLDivElement>(null);
-  const sizeSectionRef = useRef<HTMLDivElement>(null);
   const orderSummaryRef = useRef<HTMLDivElement>(null);
-
-  // Function to register a category ref
-  const registerCategoryRef = (id: string, element: HTMLDivElement | null) => {
-    categoryRefs.current[id] = element;
-  };
-
-  // Effect for scrolling when selection changes
-  useEffect(() => {
-    if (expandedCategory && categoryRefs.current[expandedCategory]) {
-      categoryRefs.current[expandedCategory]?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-      // After a category is expanded, focus on the product section
-      setTimeout(() => {
-        productSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    }
-  }, [expandedCategory]);
-
-  useEffect(() => {
-    if (selectedProductId && sizeSectionRef.current) {
-      setTimeout(() => {
-        sizeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    }
-  }, [selectedProductId]);
 
   // Helper functions
   const removeProduct = (id: string) => {
@@ -185,23 +131,14 @@ export const OrderForm: React.FC = () => {
     setSelectedProductId(null);
     setSelectedSizeCategory(null);
 
-    // First briefly highlight the order summary
-    setTimeout(() => {
-      if (orderSummaryRef.current) {
-        orderSummaryRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-
-        // Add and remove highlight class for animation effect
-        orderSummaryRef.current.classList.add("highlight-order");
-        setTimeout(() => {
-          orderSummaryRef.current?.classList.remove("highlight-order");
-        }, 1500);
-      }
-
-      // Then scroll back to the top of the page
+    // Highlight the order summary
+    if (orderSummaryRef.current) {
+      orderSummaryRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      orderSummaryRef.current.classList.add("highlight-order");
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 1000);
-    }, 100);
+        orderSummaryRef.current?.classList.remove("highlight-order");
+      }, 1500);
+    }
   };
 
   // Form submission handlers
@@ -336,10 +273,9 @@ export const OrderForm: React.FC = () => {
 
   // Category Card Component
   const CategoryCard = ({ category }: { category: { id: string; name: string; products: typeof productsData } }) => {
-    // Select one featured product from this category
     const featuredProduct = category.products[0];
     const isExpanded = expandedCategory === category.id;
-
+    
     // Create a friendly display name for the category
     const getCategoryDisplayName = (categoryName: string): string => {
       switch (categoryName) {
@@ -357,7 +293,7 @@ export const OrderForm: React.FC = () => {
     const categoryDisplayName = getCategoryDisplayName(category.name);
 
     return (
-      <div ref={(el) => registerCategoryRef(category.id, el)} className={`mb-6 rounded-lg ${isExpanded ? "ring-2 ring-green-500" : ""}`}>
+      <div className={`mb-6 rounded-lg ${isExpanded ? "ring-2 ring-green-500" : ""}`}>
         <Card
           className={`overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md ${
             isExpanded ? "border-green-500" : "border-gray-200"
@@ -393,9 +329,9 @@ export const OrderForm: React.FC = () => {
         </Card>
 
         {isExpanded && (
-          <div className="mt-4 space-y-4" ref={productSectionRef}>
+          <div className="mt-4 space-y-4">
             <div className="p-3 bg-green-50 border border-green-100 rounded-md">
-              <h5 className="font-medium text-green-800 mb-1">Step 2: Select a {categoryDisplayName} Product</h5>
+              <h5 className="font-medium text-green-800 mb-1">Select a {categoryDisplayName} Product</h5>
               <p className="text-xs text-green-700">Choose from our premium {categoryDisplayName.toLowerCase()} below</p>
             </div>
 
@@ -443,8 +379,8 @@ export const OrderForm: React.FC = () => {
   const renderProductSelection = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">Step 1: Category & Product Selection</h2>
-        <p className="text-gray-500">Start by selecting a category, then choose your product and size options.</p>
+        <h2 className="text-2xl font-bold mb-2">Select Your Products</h2>
+        <p className="text-gray-500">Choose your products, packaging options, and quantities.</p>
       </div>
 
       {/* Two-column layout */}
@@ -503,102 +439,14 @@ export const OrderForm: React.FC = () => {
                       return (
                         <div key={product.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
-                            {/* Show the appropriate size category image with product texture */}
-                            {product.sizeOption === "boxes" && (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89"
-                                  alt="Pallet of boxes"
-                                  className="w-full h-full object-cover brightness-90"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
-                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
-                                  {productData?.additionalImages?.[0] && (
-                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                              </div>
+                            {productData?.imageUrl && (
+                              <img
+                                src={productData.imageUrl}
+                                alt={productData.productType}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
                             )}
-                            {product.sizeOption === "bags" && (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440"
-                                  alt="Pallet of bags"
-                                  className="w-full h-full object-cover brightness-90"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
-                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
-                                  {productData?.additionalImages?.[0] && (
-                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {product.sizeOption === "totes" && (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a"
-                                  alt="2.2 CY Tote"
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
-                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
-                                  {productData?.additionalImages?.[0] && (
-                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {product.sizeOption === "bulk" && (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a"
-                                  alt="Bulk delivery"
-                                  className="w-full h-full object-cover brightness-90"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
-                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
-                                  {productData?.additionalImages?.[0] && (
-                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {product.sizeOption === "bulk-pickup" && (
-                              <div className="relative w-full h-full">
-                                <img
-                                  src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc"
-                                  alt="Bulk pickup"
-                                  className="w-full h-full object-cover brightness-90"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20"></div>
-                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-tl overflow-hidden">
-                                  {productData?.additionalImages?.[0] && (
-                                    <img src={productData.additionalImages[0]} alt="Product texture" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Fallback if we don't have a specific image */}
-                            {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(product.sizeOption) &&
-                              (productData?.additionalImages?.[0] ? (
-                                <img
-                                  src={productData.additionalImages[0]}
-                                  alt={`${productData.productType} texture`}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                productData?.imageUrl && (
-                                  <img
-                                    src={productData.imageUrl}
-                                    alt={productData.productType}
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                  />
-                                )
-                              ))}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
@@ -649,100 +497,48 @@ export const OrderForm: React.FC = () => {
             </Card>
 
             {selectedProductId && (
-              <div ref={sizeSectionRef}>
-                <Card className="border border-green-200 bg-green-50">
-                  <div className="p-4">
-                    <h3 className="font-medium text-green-800 mb-2 line-clamp-1">
-                      Step 3: Select Packaging Option for {productsData.find((p) => p.id === selectedProductId)?.productType}
-                    </h3>
-                    <div className="space-y-2">
-                      {PRODUCT_CATEGORIES.map((category) => {
-                        // Check if this category is compatible with the selected product
-                        const product = productsData.find((p) => p.id === selectedProductId);
-                        let isCompatible = true;
+              <Card className="border border-green-200 bg-green-50">
+                <div className="p-4">
+                  <h3 className="font-medium text-green-800 mb-2 line-clamp-1">
+                    Select Packaging Option for {productsData.find((p) => p.id === selectedProductId)?.productType}
+                  </h3>
+                  <div className="space-y-2">
+                    {PRODUCT_CATEGORIES.map((category) => {
+                      // Check if this category is compatible with the selected product
+                      const product = productsData.find((p) => p.id === selectedProductId);
+                      let isCompatible = true;
 
-                        if (category.value === "bulk-pickup" && product) {
-                          isCompatible = ["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType);
-                        }
+                      if (category.value === "bulk-pickup" && product) {
+                        isCompatible = ["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType);
+                      }
 
-                        if (!isCompatible) return null;
+                      if (!isCompatible) return null;
 
-                        return (
-                          <Button
-                            key={category.value}
-                            onClick={() => handleSizeCategorySelect(category.value)}
-                            variant="outline"
-                            className="flex items-center justify-between w-full p-3 h-auto text-left bg-white hover:bg-gray-50 overflow-hidden"
-                          >
-                            <div className="flex items-start gap-3 w-full max-w-full">
-                              <div className="w-12 h-12 bg-white rounded border border-gray-100 overflow-hidden flex-shrink-0 relative">
-                                {/* Show appropriate category image */}
-                                {category.value === "boxes" && (
-                                  <div className="relative w-full h-full">
-                                    <img
-                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89"
-                                      alt="Pallet of boxes"
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-tl overflow-hidden border border-gray-200">
-                                      <img
-                                        src={productsData.find((p) => p.id === selectedProductId)?.imageUrl}
-                                        alt="9lb bag"
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                                {category.value === "bags" && (
-                                  <div className="relative w-full h-full">
-                                    <img
-                                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440"
-                                      alt="Pallet of bags"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                )}
-                                {category.value === "totes" && (
-                                  <img
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2F2.2%20CY%20Tote%20(supersack).png?alt=media&token=dea1277a-9bdf-4216-a5bb-5f7fa8f4c35a"
-                                    alt="2.2 CY Tote"
-                                    className="w-full h-full object-cover"
-                                  />
-                                )}
-                                {category.value === "bulk" && (
-                                  <img
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a"
-                                    alt="Bulk delivery"
-                                    className="w-full h-full object-cover"
-                                  />
-                                )}
-                                {category.value === "bulk-pickup" && (
-                                  <img
-                                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc"
-                                    alt="Bulk pickup"
-                                    className="w-full h-full object-cover"
-                                  />
-                                )}
-                                {/* If no image available, show the icon */}
-                                {!["boxes", "bags", "totes", "bulk", "bulk-pickup"].includes(category.value) && (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <category.icon className="h-6 w-6 text-green-600" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0 overflow-hidden mr-2">
-                                <p className="font-medium text-sm truncate">{category.label}</p>
-                                <p className="text-xs text-gray-500 line-clamp-1">{category.description}</p>
+                      return (
+                        <Button
+                          key={category.value}
+                          onClick={() => handleSizeCategorySelect(category.value)}
+                          variant="outline"
+                          className="flex items-center justify-between w-full p-3 h-auto text-left bg-white hover:bg-gray-50 overflow-hidden"
+                        >
+                          <div className="flex items-start gap-3 w-full max-w-full">
+                            <div className="w-8 h-8 bg-white rounded border border-gray-100 overflow-hidden flex-shrink-0 relative">
+                              <div className="w-full h-full flex items-center justify-center">
+                                <category.icon className="h-4 w-4 text-green-600" />
                               </div>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
-                          </Button>
-                        );
-                      })}
-                    </div>
+                            <div className="flex-1 min-w-0 overflow-hidden mr-2">
+                              <p className="font-medium text-sm truncate">{category.label}</p>
+                              <p className="text-xs text-gray-500 line-clamp-1">{category.description}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      );
+                    })}
                   </div>
-                </Card>
-              </div>
+                </div>
+              </Card>
             )}
           </div>
         </div>
@@ -753,7 +549,7 @@ export const OrderForm: React.FC = () => {
   const renderContactInfo = () => (
     <form onSubmit={handleBusinessInfoSubmit} className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">Step 2: Contact Information</h2>
+        <h2 className="text-2xl font-bold mb-2">Contact Information</h2>
         <p className="text-gray-500">Let us know how to reach you for your order.</p>
       </div>
 
@@ -816,7 +612,7 @@ export const OrderForm: React.FC = () => {
     return (
       <form onSubmit={handleDeliveryOptionsSubmit} className="space-y-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold mb-2">Step 3: Pickup vs. Delivery</h2>
+          <h2 className="text-2xl font-bold mb-2">Delivery Options</h2>
           <p className="text-gray-500">Choose how you'd like to receive your order.</p>
         </div>
 
@@ -911,7 +707,7 @@ export const OrderForm: React.FC = () => {
     return (
       <form onSubmit={handleSubmitOrder} className="space-y-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold mb-2">Step 4: Review Your Order</h2>
+          <h2 className="text-2xl font-bold mb-2">Review Your Order</h2>
           <p className="text-gray-500">Please review your order details before submitting.</p>
         </div>
 
@@ -960,14 +756,6 @@ export const OrderForm: React.FC = () => {
             </h3>
 
             <Card className="p-4 space-y-4">
-              <div className="bg-green-50 border border-green-100 p-3 rounded-md text-sm text-green-800">
-                <div className="flex items-center gap-2 mb-1">
-                  <InfoIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <span className="font-medium">Truckload Discount</span>
-                </div>
-                <p>Orders of 22 or more pallets of the same category qualify for a 20% discount.</p>
-              </div>
-
               {products.map((product) => {
                 const productData = productsData.find((p) => p.id === product.productId);
                 const categoryInfo = PRODUCT_CATEGORIES.find((c) => c.value === product.sizeOption);
@@ -1053,6 +841,27 @@ export const OrderForm: React.FC = () => {
       </div>
     </div>
   );
+
+  // Add CSS styles for the highlight effect
+  useEffect(() => {
+    const styleEl = document.createElement("style");
+    const css = `
+      @keyframes highlight-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.2); }
+        70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+      }
+      .highlight-order {
+        animation: highlight-pulse 1.5s ease-out;
+        border-color: #16a34a !important;
+      }
+    `;
+    styleEl.textContent = css;
+    document.head.appendChild(styleEl);
+    return () => {
+      document.head.removeChild(styleEl);
+    };
+  }, []);
 
   if (showThankYou) {
     return renderThankYou();

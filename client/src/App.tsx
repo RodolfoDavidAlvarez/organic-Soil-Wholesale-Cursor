@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import FloatingCTA from "@/components/layout/FloatingCTA";
 import Home from "@/pages/Home";
 import Products from "@/pages/Products";
 import ProductDetail from "@/pages/ProductDetail";
@@ -64,6 +65,7 @@ function App() {
             <Footer />
             <Toaster />
             <ScrollToTop />
+            <FloatingCTA />
           </div>
         </TooltipProvider>
       </ThemeProvider>

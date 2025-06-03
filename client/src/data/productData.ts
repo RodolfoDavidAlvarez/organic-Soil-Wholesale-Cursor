@@ -86,4 +86,18 @@ export function getConcentratedAmendmentProducts(): Product[] {
   return mergeProductData(concentratedAmendmentProducts);
 }
 
+// Helper function to create a URL-friendly slug from a product name
+export function createProductSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+// Helper function to get a product by slug
+export function getProductBySlug(slug: string): Product | undefined {
+  return productsData.find(
+    (product) => 
+      createProductSlug(product.name) === slug || 
+      (product.productType && createProductSlug(product.productType) === slug)
+  );
+}
+
 // This file is now the single source of truth for product data, loaded from the CSV.
