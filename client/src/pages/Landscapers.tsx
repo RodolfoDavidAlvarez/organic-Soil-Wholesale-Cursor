@@ -1,203 +1,41 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { MapPin, Truck, Leaf, Award, Star, Zap, DollarSign, Package, Users, ThumbsUp, Clock, Shield, X } from "lucide-react";
-import { useState } from "react";
+import { Award, Leaf, Zap, Shield, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import React from "react";
-import ProductCarousel from "@/components/ProductCarousel";
-
-// Create a component for the product card
-const ProductCard: React.FC<{
-  product: Product;
-  onTextureClick: (e: React.MouseEvent, texturePath: string) => void;
-}> = ({ product, onTextureClick }) => {
-  const [, setLocation] = useLocation();
-
-  return (
-    <Card
-      key={product.id}
-      className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-      onClick={() => setLocation(`/products/${product.id}`)}
-    >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-          <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-            View Product
-          </div>
-        </div>
-        {product.texture && (
-          <div className="absolute top-2 right-2 z-20" onClick={(e) => onTextureClick(e, product.texture!)}>
-            <div className="bg-white p-1 rounded-full shadow-md cursor-pointer hover:bg-green-50">
-              <Badge variant="outline" className="border-green-500 text-green-600 text-xs">
-                View Texture
-              </Badge>
-            </div>
-          </div>
-        )}
-        <img
-          src={product.image}
-          alt={product.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
-          }}
-        />
-      </div>
-
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-            {product.brand}
-          </Badge>
-        </div>
-        <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">{product.title}</h3>
-        <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-
-        {/* Benefits */}
-        <div className="flex flex-wrap gap-1 mb-6">
-          {product.benefits.slice(0, 3).map((benefit, idx) => (
-            <Badge key={idx} variant="outline" className="bg-primary/5 text-primary text-[10px] font-normal px-2">
-              {benefit}
-            </Badge>
-          ))}
-        </div>
-
-        {/* Bulk Options */}
-        <div className="space-y-2 mb-4">
-          {product.bulkOptions.map((option, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-              <Package className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <span>{option}</span>
-            </div>
-          ))}
-        </div>
-
-        <Button
-          className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
-          onClick={(e) => {
-            e.stopPropagation();
-            setLocation(`/products/${product.id}`);
-          }}
-        >
-          View Product Details
-        </Button>
-      </div>
-    </Card>
-  );
-};
-
-interface Product {
-  id: number | string;
-  title: string;
-  brand: string;
-  description: string;
-  benefits: string[];
-  image: string;
-  texture?: string;
-  bulkOptions: string[];
-}
+import { productsData } from "@/data/productData";
+import ProductShowcase from "@/components/ProductShowcase";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
-  const [showGallery, setShowGallery] = useState(false);
   const [texturePreview, setTexturePreview] = useState<string | null>(null);
-
-  const handleTextureClick = (e: React.MouseEvent, texturePath: string) => {
-    e.stopPropagation();
-    setTexturePreview(texturePath);
-  };
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const closeTexturePreview = () => {
     setTexturePreview(null);
   };
 
-  const scrollToProducts = () => {
-    const productsSection = document.getElementById("products-section");
-    productsSection?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Load products with IDs
+  useEffect(() => {
+    // Filter products for landscapers
+    const landscapingProducts = productsData.filter((product) => {
+      const name = product.name.toLowerCase();
+      return name.includes("mulch") || name.includes("turf daddy") || name.includes("artemis") || name.includes("oasis") || name.includes("tee top");
+    });
 
-  const testimonials = [
-    {
-      name: "Mike Rodriguez",
-      company: "Green Horizons Landscaping",
-      content:
-        "Organic Soil Wholesale has completely transformed our landscaping projects. The quality of their products is unmatched, and our clients are thrilled with the results.",
-      location: "Phoenix, AZ",
-    },
-    {
-      name: "Sarah Williams",
-      company: "Desert Bloom Gardens",
-      content:
-        "Working with their premium soil products has saved us time and money. The bulk delivery option is perfect for our large commercial projects.",
-      location: "Scottsdale, AZ",
-    },
-  ];
+    // Sort products in the specified order
+    const sortedProducts = landscapingProducts.sort((a, b) => {
+      const order = ["mulch", "turf daddy", "artemis", "oasis", "tee top"];
+      const aIndex = order.findIndex((term) => a.name.toLowerCase().includes(term));
+      const bIndex = order.findIndex((term) => b.name.toLowerCase().includes(term));
+      return aIndex - bIndex;
+    });
 
-  const products: Product[] = [
-    {
-      id: 13,
-      title: "Nature's Blanket Premium Mulch",
-      brand: "ALL-IN-ONE DARK MULCH",
-      description:
-        'Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1" and 1-2") for various applications including commercial parks, residential projects, and garden beds. Provides superior moisture retention, weed suppression, and soil enhancement.',
-      benefits: [
-        "Enhances moisture retention",
-        "Suppresses weeds",
-        "Improves soil structure",
-        "Decorative finish",
-        "Professional-grade quality",
-        "Long-lasting results",
-      ],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
-      texture:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FMulch%20Enhanced%20with%20Dairy%20Compost.png?alt=media&token=6627da3e-8dca-4653-82e2-c20d7618b1fe",
-      bulkOptions: ["2CF Bag (unit)", "Bulk delivery available", "20% truckload discount"],
-    },
-    {
-      id: 5,
-      title: "OVERSEED TOPDRESS BLEND FOR GRASS",
-      brand: "Turf Daddy Blend",
-      description:
-        "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
-      benefits: ["Enhances soil quality", "Improves water retention", "Promotes root development", "Reduces maintenance needs"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
-      texture:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 6,
-      title: "TREE AND SHRUB PLANTING AMENDMENT",
-      brand: "Artemis Root Boost Blend",
-      description:
-        "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems.",
-      benefits: ["Enhances root growth", "Improves soil structure", "Provides essential nutrients", "Supports plant health"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
-      texture:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-    {
-      id: 10,
-      title: "PALM AND DATE TREE PLANT FOOD BLEND",
-      brand: "Oasis Blend",
-      description:
-        "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
-      benefits: ["Tree-specific", "Enhances fruit quality", "Improves soil health", "Supports root development"],
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
-      texture:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-      bulkOptions: ["Bulk delivery available", "Custom packaging options", "20% truckload discount"],
-    },
-  ];
+    setProducts(sortedProducts);
+    setIsLoading(false);
+  }, []);
 
   const mulchApplications = [
     {
@@ -232,75 +70,6 @@ const Landscapers = () => {
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FRaw%20Golden%20Looking%20Mulch%20Commercial%20Application%20look.jpeg?alt=media&token=11ad38f6-0678-40c6-a3bc-7656785e8456",
       ],
       benefits: ["Cost-effective", "Project efficiency", "Consistent quality", "Timely delivery"],
-    },
-  ];
-
-  const landscapingProducts = [
-    {
-      id: "5",
-      name: "Turf Daddy Blend",
-      brandName: "OVERSEED TOPDRESS BLEND FOR GRASS",
-      mainImage:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7",
-      thumbnailImages: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTurf%20Daddy1CF.jpg?alt=media&token=2ed11d15-24e4-4bf4-83cb-e060afcee16e",
-      ],
-      description:
-        "Ideal for overseeding, aeration, and turf laying, Turf Daddy Blend improves soil quality and plant health with a mix of dairy compost, Zeolite, and worm castings, ensuring lush, resilient turf.",
-    },
-    {
-      id: "6",
-      name: "Artemis Root Boost Blend",
-      brandName: "TREE AND SHRUB PLANTING AMENDMENT",
-      mainImage:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d",
-      thumbnailImages: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FArtemis10lbs%20(1).jpg?alt=media&token=9f7cc7b5-df16-440d-9a4c-1e250470bb12",
-      ],
-      description:
-        "Specifically designed to support root health for trees and shrubs, Artemis Root Boost Blend enriches the soil with dairy compost and essential nutrients, promoting strong, healthy root systems in commercial and organic farming.",
-    },
-    {
-      id: "4",
-      name: "Tee Top Divot Repair Blend",
-      brandName: "GOLF COURSE TEE TOP DIVOT REPAIR MIX",
-      mainImage:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tee%20Top%20Divot%20Repair.jpeg?alt=media&token=1ba764aa-272b-4866-936d-425144b66686",
-      thumbnailImages: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414",
-      ],
-      description:
-        "Perfect for golf courses, this blend repairs divots and maintains pristine playing surfaces, combining Zeolite and worm castings for optimal soil health and grass recovery.",
-    },
-    {
-      id: "11",
-      name: "Oasis Blend",
-      brandName: "PALM AND DATE TREE PLANT FOOD BLEND",
-      mainImage:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7",
-      thumbnailImages: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97",
-      ],
-      description:
-        "Formulated for palm and date trees, Oasis Blend enriches soil with dairy compost, worm castings, and essential nutrients for healthy growth and fruit development, creating lush, thriving oases.",
-    },
-    {
-      id: "13",
-      name: "Nature's Blanket Premium Mulch",
-      brandName: "MEDIUM DARK MULCH FOR PLANTER COVER",
-      mainImage:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
-      thumbnailImages: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulk%20Applied%20in%20outside%20of%20office%20showcase.jpeg?alt=media&token=557e9170-9316-438b-abe8-48f8987144c7",
-      ],
-      description:
-        'Premium mulch enhanced with dairy compost and worm castings. Available in multiple sizes (.5-1" and 1-2") for various applications including commercial parks, residential projects, and garden beds. Perfect for landscaping, erosion control, and soil protection.',
     },
   ];
 
@@ -409,74 +178,14 @@ const Landscapers = () => {
           </div>
         </div>
 
-        {/* Products Section - Moved up and cleaned up */}
-        <div id="products-section" className="container mx-auto px-4 py-10">
-          {/* For Landscaping Section */}
-          <div id="landscaping-section" className="mb-16">
-            <div className="relative rounded-2xl overflow-hidden mb-10">
-              <img
-                src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Lanscaping%20section%20introduction%20image.jpeg?alt=media&token=7405742b-2696-4f11-920f-d294a63ae6e2"
-                alt="Landscaping"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="p-8 text-center">
-                  <h3 className="text-4xl font-bold text-white mb-4 shadow-text">Products for Landscaping</h3>
-                  <p className="text-xl text-white/90 max-w-xl shadow-text">
-                    Premium soil solutions designed for professional landscapers, ensuring beautiful and sustainable outdoor spaces.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <style jsx>{`
-              .shadow-text {
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-              }
-            `}</style>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {landscapingProducts.map((product) => (
-                <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                  <div className="relative">
-                    <ProductCarousel
-                      mainImage={product.mainImage}
-                      thumbnailImages={product.thumbnailImages}
-                      productName={product.name}
-                      brandName={product.brandName}
-                      productId={product.id}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"></div>
-                  </div>
-                  <div className="p-6">
-                    <div className="flex flex-col gap-1 mb-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-gray-50 text-gray-500 text-[10px] font-normal px-2 py-0.5 border-gray-200">
-                          {product.name}
-                        </Badge>
-                      </div>
-                      <h4 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
-                        {product.brandName}
-                      </h4>
-                    </div>
-                    <p className="text-gray-600 mb-4">{product.description}</p>
-                    <Button
-                      className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocation(`/products/${product.id}`);
-                      }}
-                    >
-                      View Details & Pricing
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Products Section - Moved right after hero */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <ProductShowcase products={products} loading={isLoading} initialCategory="all" />
           </div>
-        </div>
+        </section>
 
-        {/* Mulch Applications Section */}
+        {/* Mulch Applications Section - Moved to end */}
         <div id="mulch-applications" className="py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
@@ -512,7 +221,7 @@ const Landscapers = () => {
               ))}
             </div>
 
-            {/* Benefits Section - Moved down */}
+            {/* Benefits Section */}
             <div className="mb-16 grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-3">
