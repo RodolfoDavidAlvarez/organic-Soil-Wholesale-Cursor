@@ -185,7 +185,7 @@ const Landscapers = () => {
           </div>
         </section>
 
-        {/* Mulch Applications Section - Moved to end */}
+        {/* Mulch Applications Section */}
         <div id="mulch-applications" className="py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">

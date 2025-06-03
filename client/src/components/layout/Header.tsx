@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Package, X, ChevronDown, Leaf, Sprout, Flower, Droplet } from "lucide-react";
+import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Define the main product categories with icons
@@ -127,12 +127,18 @@ const Header = () => {
                 </div>
               </Link>
             ))}
-            <Link href="/order">
-              <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white">
-                <Package className="h-4 w-4" />
-                <span>Place Order</span>
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <a href="tel:9285501649" className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200">
+                <Phone className="h-4 w-4" />
+                <span className="font-medium">(928) 550-1649</span>
+              </a>
+              <Link href="/order">
+                <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Place Order</span>
+                </Button>
+              </Link>
+            </div>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -200,9 +206,14 @@ const Header = () => {
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 
+                    <a href="tel:9285501649" className="flex items-center gap-2 py-3 px-4 text-primary">
+                      <Phone className="h-4 w-4" />
+                      <span className="font-medium">(928) 550-1649</span>
+                    </a>
+                    
                     <Link href="/order">
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white" size="lg">
-                        <Package className="h-4 w-4 mr-2" />
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">
+                        <ShoppingCart className="h-4 w-4 mr-2" />
                         Place Order
                       </Button>
                     </Link>
