@@ -23,10 +23,12 @@ import { productsData } from "../data/productData";
 import { PRODUCT_CATEGORIES, ProductCategory } from "../data/categories";
 import { generateCustomerEmail, generateAdminEmail, generateOrderMarkdown } from "../lib/emailTemplates";
 
+const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
+
 // Group products by "Type" field (Amendment, Potting, Specialty) from product information
 const productsByCategory: Record<string, typeof productsData> = {};
 productsData.forEach((product) => {
-  const productType = product.type || "Other"; 
+  const productType = product.type || "Other";
   if (!productsByCategory[productType]) {
     productsByCategory[productType] = [];
   }
@@ -35,7 +37,7 @@ productsData.forEach((product) => {
 
 // Create category map for display with proper naming and ordering
 const DISPLAY_CATEGORIES = Object.keys(productsByCategory)
-  .filter((category) => category !== "Discarded product") 
+  .filter((category) => category !== "Discarded product")
   .sort((a, b) => {
     // Custom sorting to ensure important categories come first
     const order = { Amendment: 1, Potting: 2, Specialty: 3, Other: 4 };
@@ -69,10 +71,11 @@ export const OrderForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
-    name: "",
-    email: "",
-    phone: "",
+    name: "Development Test Business",
+    email: "rodolfodavid110@gmail.com",
+    phone: "928-550-1649",
     deliveryType: "delivery",
+    address: "123 Test Street, Phoenix, AZ 85001",
   });
   const [products, setProducts] = useState<ProductSelection[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -196,41 +199,80 @@ export const OrderForm: React.FC = () => {
           productImageUrl: productData?.imageUrl || "",
           categoryName: categoryInfo?.label || "Standard",
           categoryDescription: categoryInfo?.description || "",
+          category: product.sizeOption,
         };
       });
 
-      const orderData = {
+      // Format product list for email
+      const productsString = enhancedProducts.map((p) => `${p.productName} - ${p.categoryName} - Quantity: ${p.quantity}`).join("; ");
+
+      // Create simple format of products
+      const productSummary = enhancedProducts
+        .map((product) => {
+          return `Product: ${product.productName}, Size: ${product.categoryName}, Quantity: ${product.quantity}`;
+        })
+        .join("\n");
+
+      // Prepare the full order data
+      const fullOrderData = {
         businessInfo,
         products: enhancedProducts,
         submittedAt: new Date().toISOString(),
-        emails: {
-          customer: generateCustomerEmail({
-            businessInfo,
-            products: enhancedProducts,
-            submittedAt: new Date().toISOString(),
-          }),
-          admin: generateAdminEmail({
-            businessInfo,
-            products: enhancedProducts,
-            submittedAt: new Date().toISOString(),
-          }),
-        },
-        markdown: generateOrderMarkdown({
-          businessInfo,
-          products: enhancedProducts,
-          submittedAt: new Date().toISOString(),
-        }),
       };
 
-      // Here you would typically send the order to your backend
-      console.log("Order submitted:", orderData);
+      // Order data for webhook - simplified format
+      const orderData = {
+        formType: "Product Order",
+        formIdentifier: "main-order-form",
+        name: businessInfo.name,
+        email: businessInfo.email,
+        phone: businessInfo.phone,
+        address: businessInfo.deliveryType === "delivery" ? businessInfo.address : "",
+        pickupLocation: businessInfo.deliveryType === "pickup" ? businessInfo.pickupLocation : "",
+        deliveryType: businessInfo.deliveryType,
+        products: productSummary,
+        orderDetails: JSON.stringify(fullOrderData),
+        emails: {
+          admin: {
+            subject: `New Order from ${businessInfo.name}`,
+            html: generateAdminEmail(fullOrderData),
+          },
+          customer: {
+            subject: "Your Order with Organic Soil Wholesale",
+            html: generateCustomerEmail(fullOrderData),
+          },
+        },
+      };
 
-      setShowThankYou(true);
+      console.log("Submitting order data to webhook:", JSON.stringify(orderData));
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to submit order: ${response.status} ${response.statusText}`);
+        }
+
+        const responseText = await response.text();
+        console.log("Webhook response:", responseText);
+
+        setShowThankYou(true);
+        toast.success("Order submitted successfully!");
+      } catch (error) {
+        console.error("Error submitting order:", error);
+        toast.error("There was an error submitting your order. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     } catch (error) {
       console.error("Error submitting order:", error);
       toast.error("There was an error submitting your order. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -275,7 +317,7 @@ export const OrderForm: React.FC = () => {
   const CategoryCard = ({ category }: { category: { id: string; name: string; products: typeof productsData } }) => {
     const featuredProduct = category.products[0];
     const isExpanded = expandedCategory === category.id;
-    
+
     // Create a friendly display name for the category
     const getCategoryDisplayName = (categoryName: string): string => {
       switch (categoryName) {
@@ -440,12 +482,7 @@ export const OrderForm: React.FC = () => {
                         <div key={product.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
                             {productData?.imageUrl && (
-                              <img
-                                src={productData.imageUrl}
-                                alt={productData.productType}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
+                              <img src={productData.imageUrl} alt={productData.productType} className="w-full h-full object-cover" loading="lazy" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">

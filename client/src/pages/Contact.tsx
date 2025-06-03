@@ -123,8 +123,11 @@ const Contact = () => {
     try {
       const contactData = {
         formType: "Contact us form",
-        submittedAt: new Date().toISOString(),
-        ...data,
+        formIdentifier: "contact-form",
+        data: {
+          ...data,
+          submittedAt: new Date().toISOString(),
+        },
         emails: {
           admin: {
             subject: `New Contact Form Submission from ${data.name}`,
@@ -199,7 +202,11 @@ const Contact = () => {
                       <Phone className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
                       <div>
                         <h4 className="font-medium">Phone</h4>
-                        <p className="text-neutral-700">(555) 123-4567</p>
+                        <p className="text-neutral-700">
+                          <a href="tel:9285501649" className="text-primary hover:underline">
+                            (928) 550-1649
+                          </a>
+                        </p>
                       </div>
                     </div>
 
