@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Phone, Mail, Clock, Facebook, Instagram, Youtube } from "lucide-react";
+import { Map, Phone, Mail, Clock } from "lucide-react";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -176,7 +176,15 @@ const Contact = () => {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-3xl font-heading font-bold text-primary mb-4">Contact Us</h1>
-            <p className="text-lg text-neutral-800 max-w-3xl mx-auto">Have questions about our products or wholesale program? We're here to help.</p>
+            <p className="text-lg text-neutral-800 max-w-3xl mx-auto">
+              Have questions about our products or wholesale program? We're here to help.
+              <span className="block text-sm text-neutral-600 mt-2">
+                A division of{" "}
+                <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Soil Seed and Water
+                </a>
+              </span>
+            </p>
           </div>
 
           <div className="flex flex-col md:flex-row">
@@ -191,9 +199,9 @@ const Contact = () => {
                       <div>
                         <h4 className="font-medium">Address</h4>
                         <p className="text-neutral-700">
-                          123 Organic Way
+                          16.34 N 19th Ave
                           <br />
-                          Fertile Valley, CA 95000
+                          Phoenix, AZ 85009
                         </p>
                       </div>
                     </div>
@@ -230,21 +238,6 @@ const Contact = () => {
                           Sunday: Closed
                         </p>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <h4 className="font-medium mb-2">Follow Us</h4>
-                    <div className="flex space-x-3">
-                      <a href="#" className="text-primary hover:text-primary-light transition-colors" aria-label="Facebook">
-                        <Facebook className="h-5 w-5" />
-                      </a>
-                      <a href="#" className="text-primary hover:text-primary-light transition-colors" aria-label="Instagram">
-                        <Instagram className="h-5 w-5" />
-                      </a>
-                      <a href="#" className="text-primary hover:text-primary-light transition-colors" aria-label="YouTube">
-                        <Youtube className="h-5 w-5" />
-                      </a>
                     </div>
                   </div>
                 </CardContent>

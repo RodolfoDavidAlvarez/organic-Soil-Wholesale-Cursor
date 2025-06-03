@@ -23,6 +23,8 @@ import {
   Tractor,
   Flower,
   Apple,
+  ShoppingBag,
+  ArrowUpRight,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { productsData } from "@/data/productData";
@@ -700,69 +702,25 @@ const Home = () => {
             <div className="bg-white/10 backdrop-blur-sm p-10 md:p-16 rounded-3xl shadow-xl border border-white/20">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-6">
-                  <Award className="h-8 w-8 text-white" />
+                  <ShoppingBag className="h-8 w-8 text-white" />
                 </div>
 
-                <h2 className="text-4xl font-heading font-bold mb-6 text-white">Ready to Elevate Your Growing Operations?</h2>
+                <h2 className="text-4xl font-heading font-bold mb-6 text-white">Looking for Small Quantities?</h2>
 
                 <p className="text-xl mb-10 text-white/90 max-w-2xl mx-auto">
-                  Join our wholesale program today and experience the benefits of premium organic soil products with competitive pricing and dedicated
-                  support for your business.
+                  For orders of 1-2 units, please visit our retail store at Soil Seed and Water. We offer the same premium quality products in smaller
+                  quantities for home gardeners and small projects.
                 </p>
 
-                <div className="flex flex-col sm:flex-row justify-center gap-6">
-                  <Link href="/onboarding">
-                    <Button
-                      size="lg"
-                      className="bg-white hover:bg-white/90 text-primary hover:text-primary-dark shadow-lg hover:shadow-xl transition-all duration-300 text-base font-medium px-8 py-6 h-auto"
-                    >
-                      Apply Now <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link href="/contact">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="border-white text-white hover:bg-white/10 transition-all duration-300 text-base font-medium px-8 py-6 h-auto"
-                    >
-                      Contact Sales
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-
-              <div className="mt-12 pt-8 border-t border-white/20">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="flex items-start">
-                    <div className="bg-white/20 p-2 rounded-full mr-4">
-                      <Truck className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium text-lg mb-1">Nationwide Delivery</h3>
-                      <p className="text-white/80 text-sm">Fast shipping to any location across the country</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <div className="bg-white/20 p-2 rounded-full mr-4">
-                      <CheckCircle className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium text-lg mb-1">Quality Guarantee</h3>
-                      <p className="text-white/80 text-sm">All products tested and certified organic</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start">
-                    <div className="bg-white/20 p-2 rounded-full mr-4">
-                      <DollarSign className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium text-lg mb-1">Bulk Pricing</h3>
-                      <p className="text-white/80 text-sm">Competitive rates for commercial quantities</p>
-                    </div>
-                  </div>
-                </div>
+                <a
+                  href="https://soilseedandwater.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-primary bg-white rounded-full shadow-lg hover:bg-white/90 transition-all duration-300"
+                >
+                  Visit Retail Store
+                  <ArrowUpRight className="ml-2 h-5 w-5" />
+                </a>
               </div>
             </div>
           </div>
