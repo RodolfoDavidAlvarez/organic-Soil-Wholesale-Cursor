@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import SEO from "@/components/layout/SEO";
 import {
   ArrowRight,
   CheckCircle,
@@ -448,6 +449,27 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Premium Bulk Organic Soil Products"
+        description="Arizona's leading wholesale supplier of organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads."
+        keywords="bulk organic soil, wholesale compost, dairy compost bulk, worm castings wholesale, commercial soil supplier, soil amendments wholesale, potting soil bulk, landscaper soil supplier, golf course soil, supersack soil, pallet soil, wholesale plant nutrients"
+        canonical="https://organicsoilwholesale.com"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "speakable": {
+            "@type": "SpeakableSpecification",
+            "cssSelector": ["h1", ".speakable"]
+          },
+          "name": "Organic Soil Wholesale - Premium Bulk Soil Products",
+          "url": "https://organicsoilwholesale.com",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://organicsoilwholesale.com/products?category={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }}
+      />
       {/* Hero Section with Title */}
       <section className="relative py-8 bg-white">
         <div className="container mx-auto px-4">

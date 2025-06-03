@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getProductByIndex, getProductsData } from "@/data/productData";
 import { Badge } from "@/components/ui/badge";
+import SEO from "@/components/layout/SEO";
 
 // Size category images and labels from adminInputs.txt
 const SIZE_CATEGORIES = [
@@ -108,8 +109,49 @@ const ProductDetail = () => {
     return null;
   }
 
+  // Prepare SEO data when product is loaded
+  const getProductSchema = (product) => {
+    if (!product) return null;
+    
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": product.productType || product.name,
+      "description": product.description,
+      "category": product.category,
+      "brand": {
+        "@type": "Brand",
+        "name": "Organic Soil Wholesale"
+      },
+      "image": allImages[0] || "",
+      "offers": {
+        "@type": "Offer",
+        "availability": "https://schema.org/InStock",
+        "price": "0",
+        "priceCurrency": "USD",
+        "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        "url": `https://organicsoilwholesale.com/products/${slug}`,
+        "seller": {
+          "@type": "Organization",
+          "name": "Organic Soil Wholesale"
+        },
+        "businessFunction": "http://purl.org/goodrelations/v1#Sell"
+      }
+    };
+  };
+
   return (
     <section className="py-16 bg-white">
+      {product && (
+        <SEO 
+          title={product.productType || product.name}
+          description={`Wholesale ${product.name} available in bulk quantities for commercial applications. ${product.description || ''}`}
+          keywords={`wholesale ${product.name.toLowerCase()}, bulk ${product.name.toLowerCase()}, commercial ${product.name.toLowerCase()}, ${product.category.toLowerCase()} wholesale, organic soil wholesale, ${product.ingredients ? product.ingredients.toLowerCase() + ',' : ''} bulk soil delivery, commercial soil supplier`}
+          canonical={`https://organicsoilwholesale.com/products/${slug}`}
+          ogImage={allImages[0] || ''}
+          structuredData={getProductSchema(product)}
+        />
+      )}
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer">

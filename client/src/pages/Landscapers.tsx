@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import React from "react";
 import { productsData } from "@/data/productData";
 import ProductShowcase from "@/components/ProductShowcase";
+import SEO from "@/components/layout/SEO";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
@@ -75,6 +76,43 @@ const Landscapers = () => {
 
   return (
     <>
+      <SEO 
+        title="Professional Landscaper Soil Solutions"
+        description="Specialized bulk soil products for professional landscapers. Premium mulch, soil amendments, and turf solutions available in commercial quantities for landscape contractors in Arizona."
+        keywords="landscaper soil supplier, bulk mulch for landscapers, turf blend wholesale, commercial landscape soil, professional landscaping supplies, golf course soil, soil amendments contractors, drought resilient landscaping, bulk soil delivery landscapers, wholesale mulch"
+        canonical="https://organicsoilwholesale.com/landscapers"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Service",
+          "name": "Commercial Landscaping Soil Solutions",
+          "provider": {
+            "@type": "Organization",
+            "name": "Organic Soil Wholesale"
+          },
+          "serviceType": "Landscape Supply",
+          "areaServed": {
+            "@type": "State",
+            "name": "Arizona"
+          },
+          "description": "Premium soil products in commercial quantities specially formulated for professional landscapers",
+          "offers": {
+            "@type": "Offer",
+            "availability": "https://schema.org/InStock",
+            "itemOffered": [
+              {
+                "@type": "Product",
+                "name": "Premium Mulch - Bulk Delivery",
+                "description": "High-quality mulch for commercial landscaping projects"
+              },
+              {
+                "@type": "Product",
+                "name": "Turf Daddy Blend",
+                "description": "Professional grade turf soil for landscape contractors"
+              }
+            ]
+          }
+        }}
+      />
       {texturePreview && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeTexturePreview}>
           <div className="relative bg-white rounded-xl overflow-hidden max-w-3xl max-h-[80vh]">

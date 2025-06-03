@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Award, Leaf, ChevronRight, Loader2, Package, Filter } from "lucide-react";
 import ProductShowcase from "@/components/ProductShowcase";
 import { productsData } from "@/data/productData";
+import SEO from "@/components/layout/SEO";
 
 const Products = () => {
   const [, setLocation] = useLocation();
@@ -35,6 +36,28 @@ const Products = () => {
 
   return (
     <>
+      <SEO 
+        title="Wholesale Organic Soil Products"
+        description="Browse our complete collection of premium organic soil products available in bulk for commercial applications. Featuring amendments, composts, potting soils, and specialty blends for landscapers and growers."
+        keywords="bulk soil products, wholesale soil amendments, commercial compost, organic soil wholesale, landscaper soil supplies, worm castings wholesale, dairy compost bulk, potting soil bulk, zeolite wholesale, biochar commercial, soil supersacks, soil pallets"
+        canonical="https://organicsoilwholesale.com/products"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          "itemListElement": products.slice(0, 10).map((product, index) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": {
+              "@type": "Product",
+              "name": product.productType || product.name,
+              "description": product.description,
+              "url": `https://organicsoilwholesale.com/products/${product.id}`,
+              "image": product.imageUrl,
+              "category": product.category
+            }
+          }))
+        }}
+      />
       {/* Products Section */}
       <section className="pt-0 pb-12 bg-white">
         <div className="container mx-auto px-4">
