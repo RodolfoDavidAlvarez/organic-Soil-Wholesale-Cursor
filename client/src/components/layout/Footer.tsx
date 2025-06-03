@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Clock } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -13,27 +13,22 @@ const Footer = () => {
                 <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center">
                   <div className="text-white text-xl font-bold">OSW</div>
                 </div>
-                <span className="text-xl font-heading font-bold">
-                  Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
-                </span>
+                <div>
+                  <span className="text-xl font-heading font-bold">
+                    Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
+                  </span>
+                  <div className="text-sm text-foreground/60 mt-1">
+                    by{" "}
+                    <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                      Soil Seed and Water
+                    </a>
+                  </div>
+                </div>
               </div>
               <p className="text-foreground/80 mb-6 max-w-md">
-                Providing premium organic soil products for commercial growers, landscapers, and agricultural professionals. Sustainable solutions for healthier plants and a healthier planet.
+                Providing premium organic soil products for commercial growers, landscapers, and agricultural professionals. Sustainable solutions for
+                healthier plants and a healthier planet.
               </p>
-              <div className="flex space-x-4">
-                <a href="#" className="bg-white/10 hover:bg-white/20 text-primary rounded-full p-2.5 transition-colors duration-200">
-                  <Facebook className="h-5 w-5" />
-                </a>
-                <a href="#" className="bg-white/10 hover:bg-white/20 text-primary rounded-full p-2.5 transition-colors duration-200">
-                  <Instagram className="h-5 w-5" />
-                </a>
-                <a href="#" className="bg-white/10 hover:bg-white/20 text-primary rounded-full p-2.5 transition-colors duration-200">
-                  <Youtube className="h-5 w-5" />
-                </a>
-                <a href="#" className="bg-white/10 hover:bg-white/20 text-primary rounded-full p-2.5 transition-colors duration-200">
-                  <Linkedin className="h-5 w-5" />
-                </a>
-              </div>
             </div>
 
             {/* Quick Links */}
@@ -71,77 +66,12 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/faq">
+                  <Link href="/order">
                     <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      FAQ
-                    </div>
-                  </Link>
-                </li>
-                <li>
-                  <a href="#blog" className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Blog
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Product Categories */}
-            <div className="md:col-span-3">
-              <h3 className="font-heading font-semibold text-lg mb-4">Product Categories</h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link href="/products?category=compost">
-                    <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Compost
-                    </div>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products?category=amendment">
-                    <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Soil Amendments
-                    </div>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products?category=potting">
-                    <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Potting Soils
-                    </div>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products?category=specialty">
-                    <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Specialty Blends
-                    </div>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products">
-                    <div className="text-foreground/80 hover:text-primary transition-colors duration-200 flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      All Products
+                      Place Order
                     </div>
                   </Link>
                 </li>
@@ -157,14 +87,18 @@ const Footer = () => {
                     <MapPin className="h-4 w-4" />
                   </div>
                   <span className="text-foreground/80">
-                    123 Organic Way<br />Fertile Valley, CA 95000
+                    16.34 N 19th Ave
+                    <br />
+                    Phoenix, AZ 85009
                   </span>
                 </li>
                 <li className="flex items-center">
                   <div className="bg-white/10 rounded-full p-1.5 mr-3">
                     <Phone className="h-4 w-4" />
                   </div>
-                  <a href="tel:9285501649" className="text-foreground/80 hover:text-primary transition-colors duration-200 font-medium">(928) 550-1649</a>
+                  <a href="tel:9285501649" className="text-foreground/80 hover:text-primary transition-colors duration-200 font-medium">
+                    (928) 550-1649
+                  </a>
                 </li>
                 <li className="flex items-center">
                   <div className="bg-white/10 rounded-full p-1.5 mr-3">
@@ -177,8 +111,10 @@ const Footer = () => {
                     <Clock className="h-4 w-4" />
                   </div>
                   <span className="text-foreground/80">
-                    Monday - Friday: 8am - 5pm<br />
-                    Saturday: 9am - 2pm<br />
+                    Monday - Friday: 8am - 5pm
+                    <br />
+                    Saturday: 9am - 2pm
+                    <br />
                     Sunday: Closed
                   </span>
                 </li>
@@ -195,14 +131,22 @@ const Footer = () => {
               &copy; {new Date().getFullYear()} Soil Seed and Water LLC. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              <Link href="/privacy" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
                 Privacy Policy
-              </a>
-              <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              </Link>
+              <Link href="/terms" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
                 Terms of Service
-              </a>
-              <a href="#" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              </Link>
+              <Link href="/shipping" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
                 Shipping Policy
+              </Link>
+              <a
+                href="https://soilseedandwater.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200"
+              >
+                Retail Store
               </a>
             </div>
           </div>

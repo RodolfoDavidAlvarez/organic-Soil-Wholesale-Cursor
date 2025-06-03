@@ -60,9 +60,17 @@ const Header = () => {
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer">
-              <span className="text-xl font-heading font-bold">
-                Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
-              </span>
+              <div>
+                <span className="text-xl font-heading font-bold">
+                  Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
+                </span>
+                <div className="text-xs text-foreground/60 mt-0.5">
+                  by{" "}
+                  <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    Soil Seed and Water
+                  </a>
+                </div>
+              </div>
             </div>
           </Link>
 
@@ -210,7 +218,7 @@ const Header = () => {
                       <Phone className="h-4 w-4" />
                       <span className="font-medium">(928) 550-1649</span>
                     </a>
-                    
+
                     <Link href="/order">
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">
                         <ShoppingCart className="h-4 w-4 mr-2" />
