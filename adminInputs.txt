@@ -1,6 +1,14 @@
 run command: 
 npm run dev
 
+NEW  PHOTOS to ilustrate images
+Three and shrub planting Amendment https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tree%20and%20Shrub.jpeg?alt=media&token=81fc1b7b-da04-45c8-ba82-0737bf65ef5d
+Tee top Divot Rapair: https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Tee%20Top%20Divot%20Repair.jpeg?alt=media&token=1ba764aa-272b-4866-936d-425144b66686
+Grass https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Grass.jpeg?alt=media&token=d484ed3c-2d0b-4c6b-8e31-f5eb5ab22ea7
+Palm trees: https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Palm%20Trees.jpg?alt=media&token=3adb0d47-3707-4a34-ab66-8ccccb88b7e7
+
+
+
 TEXTURE DEFAULT PHOTOS
 Default photo for all Amendment:
 https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341
@@ -8,6 +16,8 @@ Default for concentrated Amendment
 https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78
 Default for potting soil:
 https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FDefault%20Potting%20Soil%20Texture.jpeg?alt=media&token=7c04030a-6c11-4a09-923b-1a58276905f0
+Mulch
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FMulch%20Enhanced%20with%20Dairy%20Compost.png?alt=media&token=6627da3e-8dca-4653-82e2-c20d7618b1fe
 INIDIVIDUAL PRODUCT PHOTOS
 SkM Product Texture
 https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FSKM%20Product%20Texture%20look.JPG?alt=media&token=5e745b06-6907-41bf-93e5-b5050c10782a
@@ -16,10 +26,48 @@ https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage
 Biochar
 https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8
 
+9LB BAG PHOTOS
+use the photo url name to match to correct product (brand name)
+See the first product Zeolite found name in the url, i will add comments for not clearly displayed names
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FZeolite10lbs.jpg?alt=media&token=8d0049e9-05ca-485c-9ff5-0faf9fd94277
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTurf%20Daddy1CF.jpg?alt=media&token=2ed11d15-24e4-4bf4-83cb-e060afcee16e
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FTee%20Top1CF.jpg?alt=media&token=fa3031ac-b5ad-49c4-8299-4b1c87556414
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FSuperBooster%20(1).jpg?alt=media&token=509787d8-89dd-47c5-b19c-599f8868cb13
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FStoned%20Ape10lbs.jpg?alt=media&token=f4a6ebb3-06d5-41dc-bebb-649a9d2adfdf
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FSeriokai10lbs.jpg?alt=media&token=93acd658-c100-422f-9e5c-192aea016e49
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FSK%20Microsource10lbs.jpg?alt=media&token=e0de04cc-7f38-48f4-b36e-ba050d762526
+Comment:ready go garden pottil soil 9lb bag
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FRGG9lbs.jpg?alt=media&token=002e1022-b9e0-4450-b35f-8f1230b3b0fb
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FPropaGrow10lbs.jpg?alt=media&token=3c451ed8-4730-42fc-9f63-417ec43f3443
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FPomona10lbs.jpg?alt=media&token=3ee9ff44-26f8-49ac-86f7-db0fab7d38d1
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FPlugBoost10lbs.jpg?alt=media&token=ebf58efa-76d8-4b90-b027-1d3e4def7db0
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FPlantPal10lbs.jpg?alt=media&token=3b844e20-1d79-4b24-996a-59f9766d9871
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FOasis%209LB%20WB.jpg?alt=media&token=2298645a-42cc-4529-a42a-a7ce2433ff97
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FMikeys%20Worm%20Poop9lbs.jpg?alt=media&token=00b4c093-0de2-4751-a725-a744f3d4b981
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FDansGold9lbs%20(1).jpg?alt=media&token=716ab4a8-681a-4be6-92af-6b8ee99be43e
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FDans%20Drought10lbs.jpg?alt=media&token=dc67ffcc-3aad-447d-bad6-c12b365874ce
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FCultivators%209LB%20WB.jpg?alt=media&token=71149bc6-ebe0-4899-8946-6be9f16eb99d
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FCannabag10lbs.jpg?alt=media&token=a3c46476-ce1a-44d9-9606-8201c66e46fc
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FBacchus1CF.jpg?alt=media&token=c7362fbc-b6fd-4a73-80e1-bd710aa72cdc
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FArtemis10lbs%20(1).jpg?alt=media&token=9f7cc7b5-df16-440d-9a4c-1e250470bb12
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FAmazonian1CF.jpg?alt=media&token=bd8150cd-877d-4d83-93b2-02b2b594ad39
+
+MULCH PHOTOS
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulk%20Applied%20in%20outside%20of%20office%20showcase.jpeg?alt=media&token=557e9170-9316-438b-abe8-48f8987144c7
+Commercial application
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FPark%202%20application.jpeg?alt=media&token=3d6bb609-f245-49c1-ac4d-7e711e60783e
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FParks.%20appliationjpeg.jpeg?alt=media&token=049de967-4c24-412a-8fc4-86ddf7defef7
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FRaw%20Golden%20Looking%20Mulch%20Commercial%20Application%20look.jpeg?alt=media&token=11ad38f6-0678-40c6-a3bc-7656785e8456
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb
+Residential application
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidentail%2C%20Raw%20Mulch%20Front%20Yard.jpeg?alt=media&token=f19349bb-a103-478f-998a-f1fe94ee3a15
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54
+https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Open%20area%20with%20Raw%20Mulch.jpeg?alt=media&token=9938ef5d-604b-43c7-96f3-c65ff9c71f6d
 
 SIZE CATEGORIES
 PALLET OF 9 lb Bags (In boxes)
--Pallet of 144 unites/ 36 boxes (4units per box)
+-Pallet of 144 units/ 36 cases (4 units per case)
 -Photo:https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89
 
 PALLET OF BAGS

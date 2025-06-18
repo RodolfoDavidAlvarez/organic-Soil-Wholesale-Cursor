@@ -42,6 +42,10 @@ export const products = pgTable("products", {
   additionalImages: text("additional_images").array(),
   allowBulkPickup: boolean("allow_bulk_pickup").default(false),
   availableSizeOptions: text("available_size_options").array(),
+  minOrderQuantity: integer("min_order_quantity").notNull().default(1),
+  maxOrderQuantity: integer("max_order_quantity"),
+  isPriceNegotiable: boolean("is_price_negotiable").default(false).notNull(),
+  requiresQuote: boolean("requires_quote").default(false).notNull(),
 });
 
 export const orders = pgTable("orders", {
@@ -86,6 +90,62 @@ export const contactMessages = pgTable("contact_messages", {
   email: text("email").notNull(),
   subject: text("subject").notNull(),
   message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const pricingTiers = pgTable("pricing_tiers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  minQuantity: integer("min_quantity").notNull(),
+  maxQuantity: integer("max_quantity"),
+  discountPercentage: integer("discount_percentage").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const sizeCategories = pgTable("size_categories", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unit: text("unit").notNull(), // e.g., "ton", "cubic yard", "bag"
+  basePrice: integer("base_price").notNull(),
+  minOrderQuantity: integer("min_order_quantity").notNull(),
+  maxOrderQuantity: integer("max_order_quantity"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const deliveryZones = pgTable("delivery_zones", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  minDistance: integer("min_distance").notNull(), // in miles
+  maxDistance: integer("max_distance").notNull(), // in miles
+  baseRate: integer("base_rate").notNull(), // base delivery cost
+  perMileRate: integer("per_mile_rate").notNull(), // cost per mile
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const priceHistory = pgTable("price_history", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
+  sizeCategoryId: integer("size_category_id")
+    .references(() => sizeCategories.id)
+    .notNull(),
+  price: integer("price").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  endDate: timestamp("end_date"),
+  reason: text("reason"),
+  createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

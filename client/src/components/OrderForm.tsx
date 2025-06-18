@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Package,
   CheckCircle2,
@@ -22,8 +22,6 @@ import {
 import { productsData } from "../data/productData";
 import { PRODUCT_CATEGORIES, ProductCategory } from "../data/categories";
 import { generateCustomerEmail, generateAdminEmail, generateOrderMarkdown } from "../lib/emailTemplates";
-
-const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
 
 // Group products by "Type" field (Amendment, Potting, Specialty) from product information
 const productsByCategory: Record<string, typeof productsData> = {};
@@ -54,6 +52,12 @@ interface ProductSelection {
   productId: number;
   sizeOption: string;
   quantity: number;
+  category?: string;
+  productName?: string;
+  productDescription?: string;
+  productImageUrl?: string;
+  categoryName?: string;
+  categoryDescription?: string;
 }
 
 interface BusinessInfo {
@@ -66,6 +70,9 @@ interface BusinessInfo {
 }
 
 export const OrderForm: React.FC = () => {
+  const { toast } = useToast();
+  const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
+
   // State management
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,19 +113,31 @@ export const OrderForm: React.FC = () => {
 
   const handleSizeCategorySelect = (category: string) => {
     if (!selectedProductId) {
-      toast.error("Please select a product first");
+      toast({
+        title: "Selection Required",
+        description: "Please select a product first",
+        variant: "destructive",
+      });
       return;
     }
 
     // Check for bulk pickup - only Dairy Compost and Worm Castings
     const product = productsData.find((p) => p.id === selectedProductId);
     if (!product) {
-      toast.error("Product not found");
+      toast({
+        title: "Error",
+        description: "Product not found",
+        variant: "destructive",
+      });
       return;
     }
 
-    if (category === "bulk-pickup" && !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType)) {
-      toast.error("Only Dairy Compost and Worm Castings are available for bulk pickup");
+    if (category === "bulk-pickup" && !["ORGANIC DAIRY COMPOST"].includes(product.productType)) {
+      toast({
+        title: "Product Restriction",
+        description: "Only Dairy Compost is available for bulk pickup",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -155,7 +174,11 @@ export const OrderForm: React.FC = () => {
     // Validate that if bulk delivery was selected, delivery type must be delivery
     const hasBulkDelivery = products.some((p) => p.sizeOption === "bulk");
     if (hasBulkDelivery && businessInfo.deliveryType !== "delivery") {
-      toast.error("Bulk orders require delivery. Please select delivery option.");
+      toast({
+        title: "Delivery Required",
+        description: "Bulk orders require delivery. Please select delivery option.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -163,11 +186,15 @@ export const OrderForm: React.FC = () => {
     if (businessInfo.deliveryType === "pickup" && businessInfo.pickupLocation === "vicksburg") {
       const invalidProducts = products.filter((p) => {
         const product = productsData.find((pd) => pd.id === p.productId);
-        return !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product?.productType || "");
+        return !["ORGANIC DAIRY COMPOST"].includes(product?.productType || "");
       });
 
       if (invalidProducts.length > 0) {
-        toast.error("Only Dairy Compost and Worm Castings are available for pickup at Vicksburg");
+        toast({
+          title: "Product Restriction",
+          description: "Only Dairy Compost is available for pickup at Vicksburg, AZ",
+          variant: "destructive",
+        });
         return;
       }
     }
@@ -180,7 +207,13 @@ export const OrderForm: React.FC = () => {
 
     const validationErrors = validateOrder();
     if (validationErrors.length > 0) {
-      validationErrors.forEach((error) => toast.error(error));
+      validationErrors.forEach((error) =>
+        toast({
+          title: "Validation Error",
+          description: error,
+          variant: "destructive",
+        })
+      );
       return;
     }
 
@@ -198,80 +231,61 @@ export const OrderForm: React.FC = () => {
           productImageUrl: productData?.imageUrl || "",
           categoryName: categoryInfo?.label || "Standard",
           categoryDescription: categoryInfo?.description || "",
-          category: product.sizeOption,
+          category: productData?.category || "Unknown Category",
         };
       });
 
-      // Format product list for email
-      const productsString = enhancedProducts.map((p) => `${p.productName} - ${p.categoryName} - Quantity: ${p.quantity}`).join("; ");
-
-      // Create simple format of products
-      const productSummary = enhancedProducts
-        .map((product) => {
-          return `Product: ${product.productName}, Size: ${product.categoryName}, Quantity: ${product.quantity}`;
-        })
-        .join("\n");
-
-      // Prepare the full order data
-      const fullOrderData = {
+      const orderData = {
+        formType: "Order form",
         businessInfo,
         products: enhancedProducts,
         submittedAt: new Date().toISOString(),
-      };
-
-      // Order data for webhook - simplified format
-      const orderData = {
-        formType: "Product Order",
-        formIdentifier: "main-order-form",
-        name: businessInfo.name,
-        email: businessInfo.email,
-        phone: businessInfo.phone,
-        address: businessInfo.deliveryType === "delivery" ? businessInfo.address : "",
-        pickupLocation: businessInfo.deliveryType === "pickup" ? businessInfo.pickupLocation : "",
-        deliveryType: businessInfo.deliveryType,
-        products: productSummary,
-        orderDetails: JSON.stringify(fullOrderData),
         emails: {
-          admin: {
-            subject: `New Order from ${businessInfo.name}`,
-            html: generateAdminEmail(fullOrderData),
-          },
-          customer: {
-            subject: "Your Order with Organic Soil Wholesale",
-            html: generateCustomerEmail(fullOrderData),
-          },
+          customer: generateCustomerEmail({
+            businessInfo,
+            products: enhancedProducts,
+            submittedAt: new Date().toISOString(),
+          }),
+          admin: generateAdminEmail({
+            businessInfo,
+            products: enhancedProducts,
+            submittedAt: new Date().toISOString(),
+          }),
         },
+        markdown: generateOrderMarkdown({
+          businessInfo,
+          products: enhancedProducts,
+          submittedAt: new Date().toISOString(),
+        }),
       };
 
-      console.log("Submitting order data to webhook:", JSON.stringify(orderData));
+      // Send the order data to the webhook
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
 
-      try {
-        const response = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(orderData),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to submit order: ${response.status} ${response.statusText}`);
-        }
-
-        const responseText = await response.text();
-        console.log("Webhook response:", responseText);
-
-        setShowThankYou(true);
-        toast.success("Order submitted successfully!");
-      } catch (error) {
-        console.error("Error submitting order:", error);
-        toast.error("There was an error submitting your order. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+      if (!response.ok) {
+        throw new Error("Failed to submit order");
       }
+
+      setShowThankYou(true);
+      toast({
+        title: "Order Submitted",
+        description: "Thank you for your order. We'll contact you shortly to confirm the details.",
+      });
     } catch (error) {
       console.error("Error submitting order:", error);
-      toast.error("There was an error submitting your order. Please try again.");
+      toast({
+        title: "Submission Failed",
+        description: "There was an error submitting your order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -301,11 +315,11 @@ export const OrderForm: React.FC = () => {
     if (businessInfo.deliveryType === "pickup" && businessInfo.pickupLocation === "vicksburg") {
       const invalidProducts = products.filter((p) => {
         const product = productsData.find((pd) => pd.id === p.productId);
-        return !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product?.productType || "");
+        return !["ORGANIC DAIRY COMPOST"].includes(product?.productType || "");
       });
 
       if (invalidProducts.length > 0) {
-        errors.push("Only Dairy Compost and Worm Castings are available for pickup at Vicksburg");
+        errors.push("Only Dairy Compost is available for pickup at Vicksburg, AZ");
       }
     }
 
@@ -545,10 +559,20 @@ export const OrderForm: React.FC = () => {
                       let isCompatible = true;
 
                       if (category.value === "bulk-pickup" && product) {
-                        isCompatible = ["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType);
+                        isCompatible = ["ORGANIC DAIRY COMPOST"].includes(product.productType);
                       }
 
                       if (!isCompatible) return null;
+
+                      // Get dynamic description for bulk delivery based on product type
+                      let description = category.description;
+                      if (category.value === "bulk" && product) {
+                        if (product.category === "Amendment" || product.category === "Concentrated Amendment") {
+                          description = "22-24 tons per truckload";
+                        } else if (product.category === "Potting Soil" || product.category === "Mulch") {
+                          description = "90-110 CYs per truckload";
+                        }
+                      }
 
                       return (
                         <Button
@@ -565,7 +589,7 @@ export const OrderForm: React.FC = () => {
                             </div>
                             <div className="flex-1 min-w-0 overflow-hidden mr-2">
                               <p className="font-medium text-sm truncate">{category.label}</p>
-                              <p className="text-xs text-gray-500 line-clamp-1">{category.description}</p>
+                              <p className="text-xs text-gray-500 line-clamp-1">{description}</p>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -710,15 +734,15 @@ export const OrderForm: React.FC = () => {
                     className="w-full rounded-md border border-gray-300 px-3 py-2"
                   >
                     <option value="">Select a location</option>
-                    <option value="phoenix">Phoenix</option>
-                    <option value="parker">Parker</option>
-                    <option value="vicksburg">Vicksburg (Bulk Only: Dairy Compost, Worm Castings)</option>
+                    <option value="phoenix">Phoenix, AZ</option>
+                    <option value="congress">Congress, AZ</option>
+                    <option value="vicksburg">Vicksburg, AZ (Bulk Only: Dairy Compost)</option>
                   </select>
 
                   {businessInfo.pickupLocation === "vicksburg" && (
                     <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700 flex items-center gap-2">
                       <Info className="h-4 w-4 flex-shrink-0" />
-                      <span>Vicksburg location only offers Dairy Compost and Worm Castings in bulk format</span>
+                      <span>Vicksburg, AZ location only offers Dairy Compost in bulk format</span>
                     </div>
                   )}
                 </div>
@@ -773,11 +797,11 @@ export const OrderForm: React.FC = () => {
                 <p>
                   <strong>Pickup Location:</strong>{" "}
                   {businessInfo.pickupLocation === "phoenix"
-                    ? "Phoenix"
-                    : businessInfo.pickupLocation === "parker"
-                      ? "Parker"
+                    ? "Phoenix, AZ"
+                    : businessInfo.pickupLocation === "congress"
+                      ? "Congress, AZ"
                       : businessInfo.pickupLocation === "vicksburg"
-                        ? "Vicksburg"
+                        ? "Vicksburg, AZ"
                         : businessInfo.pickupLocation}
                 </p>
               )}

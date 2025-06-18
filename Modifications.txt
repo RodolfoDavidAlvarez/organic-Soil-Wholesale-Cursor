@@ -1,0 +1,20 @@
+With goal to make this app more manageble I separated all of the product infromation by category in the next files
+
+new files:
+-/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/Amendment Products.json
+-/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/Potting Soil Products.json
+-/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/Mulch Products.json
+-/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/Concentrated Amendment Products.json
+
+To replace
+/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/Product Information.json
+/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/client/src/data/json/productInfo.json
+/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/client/src/data/json/productPhotos.json
+
+AND ANY OTHER FILES THAT ARE BEING CALLED
+
+Task
+Update all of the existing connections to outdated documents
+update all of the product with the proper product categories as outlined by new the json files
+
+

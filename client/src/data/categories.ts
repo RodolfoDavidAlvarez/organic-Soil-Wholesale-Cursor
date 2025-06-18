@@ -11,32 +11,32 @@ export interface ProductCategory {
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
   {
     value: "boxes",
-    label: "Pallet of Boxes",
+    label: "Pallet of 9 lb bags",
     icon: Box,
-    description: "Pallet of 144 units/ 36 boxes (4 units per box)",
+    description: "144 units (36 cases of 4 units)",
   },
   {
     value: "bags",
-    label: "Pallet of Bags",
+    label: "Pallet of 1CF bags",
     icon: ShoppingBag,
-    description: "50 bags (1CF Bags)",
+    description: "50 bags (1CF each)",
   },
   {
     value: "totes",
     label: "2.2 CY Tote",
     icon: Package,
-    description: "Single 2.2 CY Tote (supersack)",
+    description: "Single supersack",
   },
   {
     value: "bulk",
     label: "Bulk Delivery",
     icon: Truck,
-    description: "Compost: 22-24 tons | Potting soil: 90-110 CYs per truckload",
+    description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
   },
   {
     value: "bulk-pickup",
     label: "Bulk Pickup",
     icon: Warehouse,
-    description: "Cubic yard pickup (Available only at Vicksburg location)",
+    description: "Cubic yards (Dairy Compost only)",
   },
 ];
