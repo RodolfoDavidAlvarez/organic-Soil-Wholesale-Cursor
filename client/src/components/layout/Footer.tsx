@@ -87,7 +87,7 @@ const Footer = () => {
                     <MapPin className="h-4 w-4" />
                   </div>
                   <span className="text-foreground/80">
-                    16.34 N 19th Ave
+                    1634 N 19th Ave
                     <br />
                     Phoenix, AZ 85009
                   </span>
@@ -104,18 +104,14 @@ const Footer = () => {
                   <div className="bg-white/10 rounded-full p-1.5 mr-3">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="text-foreground/80">wholesale@soilseedwater.com</span>
+                  <span className="text-foreground/80">ralvarez@soilseedandwater.com</span>
                 </li>
                 <li className="flex items-start">
                   <div className="bg-white/10 rounded-full p-1.5 mr-3 mt-0.5">
                     <Clock className="h-4 w-4" />
                   </div>
                   <span className="text-foreground/80">
-                    Monday - Friday: 8am - 5pm
-                    <br />
-                    Saturday: 9am - 2pm
-                    <br />
-                    Sunday: Closed
+                    By appointment only
                   </span>
                 </li>
               </ul>
@@ -136,9 +132,6 @@ const Footer = () => {
               </Link>
               <Link href="/terms" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
                 Terms of Service
-              </Link>
-              <Link href="/shipping" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
-                Shipping Policy
               </Link>
               <a
                 href="https://soilseedandwater.com"

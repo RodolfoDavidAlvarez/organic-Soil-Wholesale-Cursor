@@ -22,6 +22,20 @@ const About = () => {
                   <h4 className="font-semibold text-neutral-800">Phoenix, Arizona - Distribution Hub</h4>
                   <p className="text-neutral-700">1634 North 19th Avenue</p>
                   <p className="text-neutral-700">Our main hub for pickup and distribution. You can place an order and pick up or schedule delivery.</p>
+                  <div className="mt-3">
+                    <a 
+                      href="https://maps.google.com/?q=1634+North+19th+Avenue,+Phoenix,+AZ" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary hover:text-white transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      Navigate to Location
+                    </a>
+                  </div>
                 </div>
                 
                 <div className="bg-neutral-50 p-4 rounded-lg">
@@ -30,8 +44,8 @@ const About = () => {
                 </div>
                 
                 <div className="bg-neutral-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-neutral-800">Bixburg, Arizona</h4>
-                  <p className="text-neutral-700">Where we developed vermicompost.</p>
+                  <h4 className="font-semibold text-neutral-800">Vicksburg, Arizona</h4>
+                  <p className="text-neutral-700">Dairy compost production facility. Available for truckload orders only.</p>
                 </div>
               </div>
             </div>

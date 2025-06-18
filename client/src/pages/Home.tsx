@@ -504,11 +504,22 @@ const Home = () => {
                 <div className="space-y-3">
                   <p className="text-muted-foreground flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary/70" />
-                    <span>Phoenix, AZ Distribution Center</span>
+                    <span>1634 N 19th Ave, Phoenix AZ, 85009</span>
                   </p>
-                  <p className="text-sm text-muted-foreground/80">
-                    Conveniently located for easy pickup and delivery services throughout the Phoenix, AZ metropolitan area.
-                  </p>
+                  <div className="text-sm text-muted-foreground/90 space-y-3">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                            <MapPin className="h-3.5 w-3.5 text-green-600" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-green-800 text-sm font-medium">Organic Soil Wholesale Available within a 300 mile radius</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
 

@@ -30,7 +30,7 @@ export const productImages = [
   },
   {
     name: "SuperBooster",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FCultivators%209LB%20WB.jpg?alt=media&token=dde1c11a-e6f9-4bae-af25-ccfa2817ddb1"
+    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FSuperBooster%20(1).jpg?alt=media&token=509787d8-89dd-47c5-b19c-599f8868cb13"
   },
   {
     name: "Ready Go Garden",

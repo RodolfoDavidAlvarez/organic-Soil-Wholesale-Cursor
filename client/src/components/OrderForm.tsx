@@ -33,19 +33,38 @@ productsData.forEach((product) => {
   productsByCategory[productType].push(product);
 });
 
-// Create category map for display with proper naming and ordering
+// Create category map for display with proper naming, ordering, and subtitles
 const DISPLAY_CATEGORIES = Object.keys(productsByCategory)
   .filter((category) => category !== "Discarded product")
   .sort((a, b) => {
-    // Custom sorting to ensure important categories come first
-    const order = { Amendment: 1, Potting: 2, Specialty: 3, Other: 4 };
+    // Custom sorting with the specified order: Amendment, Potting, Mulch, Concentrated Amendment
+    const order = { Amendment: 1, "Potting Soil": 2, Mulch: 3, "Concentrated Amendment": 4, Other: 5 };
     return (order[a] || 999) - (order[b] || 999);
   })
-  .map((category) => ({
-    id: category.toLowerCase().replace(/\s/g, "-"),
-    name: category,
-    products: productsByCategory[category],
-  }));
+  .map((category) => {
+    // Add subtitles for each category
+    const getSubtitle = (categoryName: string): string => {
+      switch (categoryName) {
+        case "Amendment":
+          return "Worm castings, dairy compost, amendments and more";
+        case "Potting Soil":
+          return "To grow vegetables, fruits or ornamentals";
+        case "Mulch":
+          return "Protecting soil, water retention, backfilling";
+        case "Concentrated Amendment":
+          return "Fast acting nutrients and properties for soil";
+        default:
+          return "";
+      }
+    };
+
+    return {
+      id: category.toLowerCase().replace(/\s/g, "-"),
+      name: category,
+      subtitle: getSubtitle(category),
+      products: productsByCategory[category],
+    };
+  });
 
 interface ProductSelection {
   id: string;
@@ -333,7 +352,7 @@ export const OrderForm: React.FC = () => {
   };
 
   // Category Card Component
-  const CategoryCard = ({ category }: { category: { id: string; name: string; products: typeof productsData } }) => {
+  const CategoryCard = ({ category }: { category: { id: string; name: string; subtitle: string; products: typeof productsData } }) => {
     const featuredProduct = category.products[0];
     const isExpanded = expandedCategory === category.id;
 
@@ -381,6 +400,7 @@ export const OrderForm: React.FC = () => {
                 <h4 className="font-medium text-base sm:text-lg mb-1">{categoryDisplayName}</h4>
                 {isExpanded ? <ChevronUp className="h-5 w-5 text-green-600" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
               </div>
+              <p className="text-xs text-gray-500 mb-1">{category.subtitle}</p>
               <p className="text-xs sm:text-sm text-gray-500 mb-2">{category.products.length} products available</p>
               <Badge variant="outline" className="text-xs text-primary border-primary">
                 {categoryDisplayName}

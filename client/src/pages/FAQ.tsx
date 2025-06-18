@@ -20,7 +20,7 @@ const FAQ = () => {
     },
     {
       question: "How long does the wholesale approval process take?",
-      answer: "The wholesale approval process typically takes 1-2 business days. Once approved, you'll receive login credentials to access our wholesale portal where you can view pricing and place orders. For expedited approval, please contact our wholesale department directly."
+      answer: "It takes about 1-2 business days to get approved. Then you'll be contacted and given directions on how to proceed."
     },
     {
       question: "Are your products certified organic?",

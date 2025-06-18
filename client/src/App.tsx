@@ -20,6 +20,8 @@ import Order from "@/pages/Order";
 import SpecialRequest from "@/pages/SpecialRequest";
 import Landscapers from "@/pages/Landscapers";
 import Wholesale from "@/pages/Wholesale";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import { useEffect } from "react";
 
 // ScrollToTop component to handle auto-scrolling
@@ -50,6 +52,8 @@ function Router() {
       <Route path="/special-request" component={SpecialRequest} />
       <Route path="/landscapers" component={Landscapers} />
       <Route path="/wholesale" component={Wholesale} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       <Route component={NotFound} />
     </Switch>
   );
