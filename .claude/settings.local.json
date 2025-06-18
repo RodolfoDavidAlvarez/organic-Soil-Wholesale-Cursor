@@ -35,7 +35,8 @@
       "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"bg-blue-|bg-green-50\" -n -A 3 -B 3 OrderForm.tsx)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }
