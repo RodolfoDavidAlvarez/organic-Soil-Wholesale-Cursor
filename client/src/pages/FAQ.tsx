@@ -12,11 +12,11 @@ const FAQ = () => {
   const faqs = [
     {
       question: "What are the minimum order quantities for wholesale?",
-      answer: "Minimum order quantities vary by product. Generally, we require a minimum purchase of 10 units for bagged products and 1 unit for totes. Customized bulk options are available for larger operations. Full details are available after wholesale account approval."
+      answer: "For wholesale, we require a minimum of a pallet of bags (50 units depending on size or quantity). This makes it easy for customers to calculate their orders and qualify for wholesale pricing."
     },
     {
       question: "Do you offer delivery services?",
-      answer: "Yes, we offer delivery services within a 100-mile radius of our facility for orders exceeding certain volume thresholds. Delivery fees are calculated based on distance and order size. For locations outside our delivery zone, we can arrange third-party shipping at competitive rates."
+      answer: "Yes, we offer delivery services within a 300-mile radius from Phoenix or Congress, Arizona. This is calculated based on our trucking service capabilities."
     },
     {
       question: "How long does the wholesale approval process take?",
@@ -24,15 +24,15 @@ const FAQ = () => {
     },
     {
       question: "Are your products certified organic?",
-      answer: "Many of our products are certified by the Organic Materials Review Institute (OMRI) and the US Compost Council. Specific certifications for each product are listed on their detail pages. We maintain strict quality control processes to ensure all our products meet or exceed industry standards."
+      answer: "Yes, all of our products at Soil Seed and Water are certified organic with OMRI, the U.S. Compost Council, and tested with certified labs. We maintain the highest standards for organic certification across our entire product line."
     },
     {
       question: "Can I get custom blends for my specific growing needs?",
-      answer: "Yes, we offer custom blending services for wholesale customers with specific requirements. Our agronomists can work with you to develop specialized formulations for your unique growing conditions. Custom blends require minimum order quantities and may have longer lead times. Contact us for more information."
+      answer: "Yes, we do offer custom services. This is opt-in and requires a little planning. Depending on the complexity, it could take some time. Please contact us to discuss your specific needs and place an order."
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards, ACH transfers, and business checks. For established wholesale partners, we offer Net 30 payment terms after a credit application and approval process."
+      answer: "We accept credit cards, ACH, business checks, and cash. For our established partners, we offer net 30 and net 60 payment terms depending on quantity and order volume."
     },
     {
       question: "Do you offer seasonal discounts or promotions?",
@@ -44,11 +44,11 @@ const FAQ = () => {
     },
     {
       question: "What is your return policy?",
-      answer: "We stand by the quality of our products. If you receive damaged or defective products, please contact us within 7 days of delivery with photos and details. For wholesale orders, returns of undamaged products may be subject to a restocking fee. Custom blended products cannot be returned unless defective."
+      answer: "We stand by the quality of our products. If you receive damaged or defective products, please contact the owner at the email provided in our footer. We're committed to resolving any quality issues promptly."
     },
     {
       question: "Do you ship internationally?",
-      answer: "Currently, we only ship within the continental United States. We're actively working on expanding our shipping capabilities to include international destinations. Please contact us directly if you have specific international shipping requirements, and we'll do our best to accommodate your needs."
+      answer: "At this moment, we only ship within the United States. We are currently working on expanding our shipping capabilities. We reach nationwide through our partners at Amazon. Wholesale is only based on region or location. Contact our support team for more information."
     }
   ];
 
@@ -101,17 +101,7 @@ const FAQ = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-neutral-50 p-6 rounded-lg">
-              <h3 className="font-heading font-semibold text-lg mb-3">Product Guides</h3>
-              <p className="text-neutral-700 mb-4">
-                Detailed guides on how to use our products effectively for different applications.
-              </p>
-              <a href="#" className="text-primary hover:underline font-medium">
-                Download Guides →
-              </a>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-neutral-50 p-6 rounded-lg">
               <h3 className="font-heading font-semibold text-lg mb-3">Growing Tips</h3>
               <p className="text-neutral-700 mb-4">
@@ -127,7 +117,7 @@ const FAQ = () => {
               <p className="text-neutral-700 mb-4">
                 Learn more about our wholesale program, benefits, and how to qualify.
               </p>
-              <Link href="/onboarding">
+              <Link href="/wholesale">
                 <a className="text-primary hover:underline font-medium">
                   Wholesale Program →
                 </a>

@@ -19,6 +19,7 @@ import FAQ from "@/pages/FAQ";
 import Order from "@/pages/Order";
 import SpecialRequest from "@/pages/SpecialRequest";
 import Landscapers from "@/pages/Landscapers";
+import Wholesale from "@/pages/Wholesale";
 import { useEffect } from "react";
 
 // ScrollToTop component to handle auto-scrolling
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/order" component={Order} />
       <Route path="/special-request" component={SpecialRequest} />
       <Route path="/landscapers" component={Landscapers} />
+      <Route path="/wholesale" component={Wholesale} />
       <Route component={NotFound} />
     </Switch>
   );
