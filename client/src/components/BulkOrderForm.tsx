@@ -146,22 +146,42 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
         emails: {
           admin: {
             subject: `New Bulk Order Request from ${formValues.companyName}`,
-            html: generateAdminEmail(formValues),
+            html: generateAdminEmail({
+              companyName: formValues.companyName,
+              contactName: formValues.contactName,
+              email: formValues.email,
+              phone: formValues.phone,
+              productName: formValues.productName,
+              quantity: formValues.quantity,
+              deliveryDate: formValues.deliveryDate,
+              notes: formValues.notes || "",
+              submittedAt: new Date().toISOString(),
+            }),
           },
           customer: {
             subject: "Your Bulk Order Request with Organic Soil Wholesale",
-            html: generateCustomerEmail(formValues),
+            html: generateCustomerEmail({
+              companyName: formValues.companyName,
+              contactName: formValues.contactName,
+              email: formValues.email,
+              phone: formValues.phone,
+              productName: formValues.productName,
+              quantity: formValues.quantity,
+              deliveryDate: formValues.deliveryDate,
+              notes: formValues.notes || "",
+              submittedAt: new Date().toISOString(),
+            }),
           },
-        }
+        },
       };
 
       console.log("Submitting bulk order data to webhook:", JSON.stringify(payload));
-      
+
       try {
         // Send the bulk order to the webhook
         const requestStartTime = new Date().getTime();
         console.log(`Making request to webhook at ${WEBHOOK_URL} at ${new Date().toISOString()}`);
-        
+
         const response = await fetch(WEBHOOK_URL, {
           method: "POST",
           headers: {
@@ -169,7 +189,7 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
           },
           body: JSON.stringify(payload),
         });
-        
+
         const requestEndTime = new Date().getTime();
         const requestDuration = requestEndTime - requestStartTime;
         console.log(`Webhook request took ${requestDuration}ms`);
@@ -187,16 +207,16 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
             status: response.status,
             statusText: response.statusText,
             responseText,
-            url: WEBHOOK_URL
+            url: WEBHOOK_URL,
           });
           throw new Error(`Failed to submit form: ${response.status} ${response.statusText}`);
         }
 
         console.log("Webhook request successful!", {
           status: response.status,
-          responseText
+          responseText,
         });
-        
+
         toast({
           title: "Request Submitted",
           description: "We'll contact you shortly with a custom quote.",
@@ -207,7 +227,7 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
         console.error("Fetch error details:", {
           message: fetchError.message,
           stack: fetchError.stack,
-          url: WEBHOOK_URL
+          url: WEBHOOK_URL,
         });
         throw fetchError; // Re-throw to be caught by the outer try-catch
       }

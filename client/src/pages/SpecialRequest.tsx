@@ -125,11 +125,25 @@ const SpecialRequest: React.FC = () => {
         emails: {
           admin: {
             subject: `New Special Request from ${formData.name}`,
-            html: generateAdminEmail(formData),
+            html: generateAdminEmail({
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              zipCode: formData.zipCode,
+              message: formData.message,
+              submittedAt: new Date().toISOString(),
+            }),
           },
           customer: {
             subject: "Your Special Request with Organic Soil Wholesale",
-            html: generateCustomerEmail(formData),
+            html: generateCustomerEmail({
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              zipCode: formData.zipCode,
+              message: formData.message,
+              submittedAt: new Date().toISOString(),
+            }),
           },
         },
       };

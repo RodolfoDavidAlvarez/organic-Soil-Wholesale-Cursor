@@ -5,34 +5,21 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Package,
-  CheckCircle2,
-  Trash2,
-  Plus,
-  ShoppingCart,
-  Box,
-  Truck,
-  ShoppingBag,
-  Warehouse,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, CheckCircle2, Trash2, Plus, ShoppingCart, Box, Truck, ShoppingBag, Warehouse } from "lucide-react";
 import { productsData } from "../data/productData";
 import { PRODUCT_CATEGORIES } from "../data/categories";
 
 // Group products by category for easier selection
-const productsByCategory = productsData.reduce((acc, product) => {
-  const category = product.type || "Other";
-  if (!acc[category]) acc[category] = [];
-  acc[category].push(product);
-  return acc;
-}, {} as Record<string, typeof productsData>);
+const productsByCategory = productsData.reduce(
+  (acc, product) => {
+    const category = product.type || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(product);
+    return acc;
+  },
+  {} as Record<string, typeof productsData>
+);
 
 // Available categories with friendly names
 const categories = [
@@ -40,7 +27,7 @@ const categories = [
   { id: "Concentrated Amendment", name: "Concentrated Amendments", products: productsByCategory["Concentrated Amendment"] || [] },
   { id: "Potting Soil", name: "Potting Soils", products: productsByCategory["Potting Soil"] || [] },
   { id: "Mulch", name: "Mulch Products", products: productsByCategory["Mulch"] || [] },
-].filter(cat => cat.products.length > 0);
+].filter((cat) => cat.products.length > 0);
 
 // Size options with icons and descriptions
 const sizeOptions = [
@@ -49,35 +36,35 @@ const sizeOptions = [
     label: "Pallet of 9 lb bags",
     icon: Box,
     description: "144 units (36 cases of 4 units)",
-    image: "/images/packaging/boxes.jpg"
+    image: "/images/packaging/boxes.jpg",
   },
   {
     value: "bags",
     label: "Pallet of 1CF bags",
     icon: ShoppingBag,
     description: "50 bags (1CF each)",
-    image: "/images/packaging/bags.jpg"
+    image: "/images/packaging/bags.jpg",
   },
   {
     value: "totes",
     label: "2.2 CY Tote",
     icon: Package,
     description: "Single supersack",
-    image: "/images/packaging/totes.jpg"
+    image: "/images/packaging/totes.jpg",
   },
   {
     value: "bulk",
     label: "Bulk Delivery",
     icon: Truck,
     description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-    image: "/images/packaging/bulk.jpg"
+    image: "/images/packaging/bulk.jpg",
   },
   {
     value: "bulk-pickup",
     label: "Bulk Pickup",
     icon: Warehouse,
     description: "Cubic yards (Dairy compost only)",
-    image: "/images/packaging/pickup.jpg"
+    image: "/images/packaging/pickup.jpg",
   },
 ];
 
@@ -100,6 +87,113 @@ interface CustomerInfo {
   pickupLocation?: string;
   specialRequests?: string;
 }
+
+const generateAdminEmail = (data: any) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2C3E50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .customer-info { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; }
+        .order-info { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>New Simple Order Submission</h1>
+        </div>
+        <div class="content">
+            <div class="customer-info">
+                <h2>Customer Information</h2>
+                <p><strong>Business Name:</strong> ${data.customerInfo.businessName}</p>
+                <p><strong>Contact Name:</strong> ${data.customerInfo.contactName}</p>
+                <p><strong>Email:</strong> ${data.customerInfo.email}</p>
+                <p><strong>Phone:</strong> ${data.customerInfo.phone}</p>
+                <p><strong>Delivery Type:</strong> ${data.customerInfo.deliveryType}</p>
+            </div>
+            
+            <div class="order-info">
+                <h2>Order Details</h2>
+                <p><strong>Total Items:</strong> ${data.orderSummary.totalItems}</p>
+                <p><strong>Total Quantity:</strong> ${data.orderSummary.totalQuantity}</p>
+                <h3>Order Items:</h3>
+                ${data.orderItems
+                  .map(
+                    (item: any) => `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <p><strong>Product:</strong> ${item.productDescription}</p>
+                        <p><strong>Size:</strong> ${item.sizeDescription}</p>
+                        <p><strong>Quantity:</strong> ${item.quantity}</p>
+                    </div>
+                `
+                  )
+                  .join("")}
+            </div>
+            
+            <p>This order was submitted on ${new Date().toLocaleDateString()}.</p>
+        </div>
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} Organic Soil Wholesale</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+const generateCustomerEmail = (data: any) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thank You for Your Order</h1>
+        </div>
+        <div class="content">
+            <p>Dear ${data.customerInfo.contactName},</p>
+            <p>Thank you for your order with Organic Soil Wholesale. We have received your request and will process it shortly.</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 6px;">
+                <h3>Order Summary</h3>
+                <p><strong>Total Items:</strong> ${data.orderSummary.totalItems}</p>
+                <p><strong>Total Quantity:</strong> ${data.orderSummary.totalQuantity}</p>
+                <h4>Order Items:</h4>
+                ${data.orderItems
+                  .map(
+                    (item: any) => `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <p><strong>Product:</strong> ${item.productDescription}</p>
+                        <p><strong>Size:</strong> ${item.sizeDescription}</p>
+                        <p><strong>Quantity:</strong> ${item.quantity}</p>
+                    </div>
+                `
+                  )
+                  .join("")}
+            </div>
+            
+            <p>We will contact you shortly with pricing and delivery details. If you have any questions, please don't hesitate to contact us at (928) 550-1649.</p>
+            <p>Best regards,<br>The Organic Soil Wholesale Team</p>
+        </div>
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} Organic Soil Wholesale</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
 
 export const SimpleOrderForm: React.FC = () => {
   const { toast } = useToast();
@@ -132,19 +226,17 @@ export const SimpleOrderForm: React.FC = () => {
 
   // Remove order item
   const removeOrderItem = (id: string) => {
-    setOrderItems(orderItems.filter(item => item.id !== id));
+    setOrderItems(orderItems.filter((item) => item.id !== id));
   };
 
   // Update order item
   const updateOrderItem = (id: string, updates: Partial<OrderItem>) => {
-    setOrderItems(orderItems.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ));
+    setOrderItems(orderItems.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   };
 
   // Get products for selected category
   const getProductsForCategory = (categoryId: string) => {
-    const category = categories.find(cat => cat.id === categoryId);
+    const category = categories.find((cat) => cat.id === categoryId);
     return category ? category.products : [];
   };
 
@@ -179,7 +271,7 @@ export const SimpleOrderForm: React.FC = () => {
 
       // Special validation for bulk pickup
       if (item.sizeOption === "bulk-pickup") {
-        const product = productsData.find(p => p.id === item.productId);
+        const product = productsData.find((p) => p.id === item.productId);
         if (product && !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType)) {
           errors.push(`Product ${index + 1}: Only Dairy Compost and Worm Castings available for bulk pickup`);
         }
@@ -188,11 +280,11 @@ export const SimpleOrderForm: React.FC = () => {
 
     // Vicksburg pickup validation
     if (customerInfo.deliveryType === "pickup" && customerInfo.pickupLocation === "vicksburg") {
-      const invalidProducts = orderItems.filter(item => {
-        const product = productsData.find(p => p.id === item.productId);
+      const invalidProducts = orderItems.filter((item) => {
+        const product = productsData.find((p) => p.id === item.productId);
         return product && !["ORGANIC DAIRY COMPOST"].includes(product.productType);
       });
-      
+
       if (invalidProducts.length > 0) {
         errors.push("Vicksburg, AZ pickup only available for Dairy Compost");
       }
@@ -207,7 +299,7 @@ export const SimpleOrderForm: React.FC = () => {
 
     const errors = validateForm();
     if (errors.length > 0) {
-      errors.forEach(error => {
+      errors.forEach((error) => {
         toast({
           title: "Validation Error",
           description: error,
@@ -221,10 +313,10 @@ export const SimpleOrderForm: React.FC = () => {
 
     try {
       // Enhance order items with product details
-      const enhancedItems = orderItems.map(item => {
-        const product = productsData.find(p => p.id === item.productId);
-        const sizeInfo = sizeOptions.find(s => s.value === item.sizeOption);
-        
+      const enhancedItems = orderItems.map((item) => {
+        const product = productsData.find((p) => p.id === item.productId);
+        const sizeInfo = sizeOptions.find((s) => s.value === item.sizeOption);
+
         return {
           ...item,
           productDescription: product?.description || "",
@@ -241,7 +333,33 @@ export const SimpleOrderForm: React.FC = () => {
         orderSummary: {
           totalItems: orderItems.length,
           totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
-        }
+        },
+        emails: {
+          admin: {
+            subject: `New Simple Order from ${customerInfo.businessName}`,
+            html: generateAdminEmail({
+              customerInfo,
+              orderItems: enhancedItems,
+              orderSummary: {
+                totalItems: orderItems.length,
+                totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+              },
+              submittedAt: new Date().toISOString(),
+            }),
+          },
+          customer: {
+            subject: "Thank You for Your Order with Organic Soil Wholesale",
+            html: generateCustomerEmail({
+              customerInfo,
+              orderItems: enhancedItems,
+              orderSummary: {
+                totalItems: orderItems.length,
+                totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+              },
+              submittedAt: new Date().toISOString(),
+            }),
+          },
+        },
       };
 
       const response = await fetch(WEBHOOK_URL, {
@@ -261,7 +379,6 @@ export const SimpleOrderForm: React.FC = () => {
         title: "Order Submitted",
         description: "Thank you! We'll contact you shortly with pricing and delivery details.",
       });
-
     } catch (error) {
       console.error("Error submitting order:", error);
       toast({
@@ -293,13 +410,11 @@ export const SimpleOrderForm: React.FC = () => {
         <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
         <h2 className="text-2xl font-bold text-gray-900">Order Submitted Successfully!</h2>
         <p className="text-gray-600">
-          Thank you for your order! Our team will review your request and contact you within one business day 
-          with pricing details and delivery arrangements.
+          Thank you for your order! Our team will review your request and contact you within one business day with pricing details and delivery
+          arrangements.
         </p>
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Order Reference: #{Date.now().toString().slice(-6)}
-          </p>
+          <p className="text-sm text-gray-500">Order Reference: #{Date.now().toString().slice(-6)}</p>
           <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
             Place Another Order
           </Button>
@@ -463,16 +578,12 @@ export const SimpleOrderForm: React.FC = () => {
                     {item.productId > 0 && (
                       <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                         {(() => {
-                          const product = productsData.find(p => p.id === item.productId);
+                          const product = productsData.find((p) => p.id === item.productId);
                           return product ? (
                             <>
                               <div className="w-16 h-16 bg-white rounded-md overflow-hidden flex-shrink-0">
                                 {product.imageUrl ? (
-                                  <img
-                                    src={product.imageUrl}
-                                    alt={product.productType}
-                                    className="w-full h-full object-cover"
-                                  />
+                                  <img src={product.imageUrl} alt={product.productType} className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                                     <Package className="h-6 w-6 text-gray-400" />
@@ -481,9 +592,7 @@ export const SimpleOrderForm: React.FC = () => {
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-medium text-sm">{product.productType}</h4>
-                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                  {product.description}
-                                </p>
+                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</p>
                               </div>
                             </>
                           ) : null;
@@ -499,31 +608,29 @@ export const SimpleOrderForm: React.FC = () => {
                             { step: 1, label: "Category", completed: !!item.category },
                             { step: 2, label: "Product", completed: !!item.productId },
                             { step: 3, label: "Size", completed: !!item.sizeOption },
-                            { step: 4, label: "Quantity", completed: item.quantity > 0 }
+                            { step: 4, label: "Quantity", completed: item.quantity > 0 },
                           ].map((stepInfo, stepIndex) => (
                             <div key={stepInfo.step} className="flex items-center flex-1">
                               <div className="flex items-center space-x-1 sm:space-x-2">
-                                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
-                                  stepInfo.completed 
-                                    ? 'bg-green-500 text-white' 
-                                    : 'bg-gray-200 text-gray-600'
-                                }`}>
-                                  {stepInfo.completed ? (
-                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  ) : (
-                                    stepInfo.step
-                                  )}
+                                <div
+                                  className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
+                                    stepInfo.completed ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                                  }`}
+                                >
+                                  {stepInfo.completed ? <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" /> : stepInfo.step}
                                 </div>
-                                <span className={`text-xs sm:text-sm font-medium hidden sm:inline ${
-                                  stepInfo.completed ? 'text-green-600' : 'text-gray-500'
-                                }`}>
+                                <span
+                                  className={`text-xs sm:text-sm font-medium hidden sm:inline ${
+                                    stepInfo.completed ? "text-green-600" : "text-gray-500"
+                                  }`}
+                                >
                                   {stepInfo.label}
                                 </span>
                               </div>
                               {stepIndex < 3 && (
-                                <div className={`flex-1 h-0.5 mx-1 sm:mx-3 transition-colors ${
-                                  stepInfo.completed ? 'bg-green-500' : 'bg-gray-200'
-                                }`} />
+                                <div
+                                  className={`flex-1 h-0.5 mx-1 sm:mx-3 transition-colors ${stepInfo.completed ? "bg-green-500" : "bg-gray-200"}`}
+                                />
                               )}
                             </div>
                           ))}
@@ -542,16 +649,16 @@ export const SimpleOrderForm: React.FC = () => {
                           <Select
                             value={item.category}
                             onValueChange={(value) => {
-                              updateOrderItem(item.id, { 
-                                category: value, 
-                                productId: 0, 
+                              updateOrderItem(item.id, {
+                                category: value,
+                                productId: 0,
                                 productName: "",
                                 sizeOption: "",
-                                quantity: 1
+                                quantity: 1,
                               });
                             }}
                           >
-                            <SelectTrigger className={`transition-all ${item.category ? 'border-green-500' : ''}`}>
+                            <SelectTrigger className={`transition-all ${item.category ? "border-green-500" : ""}`}>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -567,30 +674,30 @@ export const SimpleOrderForm: React.FC = () => {
                         {/* Step 2: Product Selection */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                              item.category ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                            }`}>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                                item.category ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                              }`}
+                            >
                               2
                             </div>
-                            <Label className={!item.category ? 'text-gray-400' : ''}>Choose Product *</Label>
+                            <Label className={!item.category ? "text-gray-400" : ""}>Choose Product *</Label>
                           </div>
                           <Select
                             value={item.productId.toString()}
                             onValueChange={(value) => {
                               const productId = parseInt(value);
-                              const product = productsData.find(p => p.id === productId);
-                              updateOrderItem(item.id, { 
-                                productId, 
+                              const product = productsData.find((p) => p.id === productId);
+                              updateOrderItem(item.id, {
+                                productId,
                                 productName: product?.productType || "",
                                 sizeOption: "",
-                                quantity: 1
+                                quantity: 1,
                               });
                             }}
                             disabled={!item.category}
                           >
-                            <SelectTrigger className={`transition-all ${
-                              !item.category ? 'bg-gray-50' : item.productId ? 'border-green-500' : ''
-                            }`}>
+                            <SelectTrigger className={`transition-all ${!item.category ? "bg-gray-50" : item.productId ? "border-green-500" : ""}`}>
                               <SelectValue placeholder={!item.category ? "Select category first" : "Select product"} />
                             </SelectTrigger>
                             <SelectContent>
@@ -606,31 +713,34 @@ export const SimpleOrderForm: React.FC = () => {
                         {/* Step 3: Size Selection */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                              item.productId ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                            }`}>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                                item.productId ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                              }`}
+                            >
                               3
                             </div>
-                            <Label className={!item.productId ? 'text-gray-400' : ''}>Choose Size/Packaging *</Label>
+                            <Label className={!item.productId ? "text-gray-400" : ""}>Choose Size/Packaging *</Label>
                           </div>
                           <Select
                             value={item.sizeOption}
                             onValueChange={(value) => updateOrderItem(item.id, { sizeOption: value })}
                             disabled={!item.productId}
                           >
-                            <SelectTrigger className={`h-12 p-3 transition-all ${
-                              !item.productId ? 'bg-gray-50' : item.sizeOption ? 'border-green-500' : ''
-                            }`}>
+                            <SelectTrigger
+                              className={`h-12 p-3 transition-all ${!item.productId ? "bg-gray-50" : item.sizeOption ? "border-green-500" : ""}`}
+                            >
                               <SelectValue placeholder={!item.productId ? "Select product first" : "Select size"}>
-                                {item.sizeOption && (() => {
-                                  const selectedSize = sizeOptions.find(s => s.value === item.sizeOption);
-                                  return selectedSize ? (
-                                    <div className="flex items-center gap-2">
-                                      <selectedSize.icon className="h-4 w-4 flex-shrink-0" />
-                                      <span className="font-medium truncate">{selectedSize.label}</span>
-                                    </div>
-                                  ) : null;
-                                })()}
+                                {item.sizeOption &&
+                                  (() => {
+                                    const selectedSize = sizeOptions.find((s) => s.value === item.sizeOption);
+                                    return selectedSize ? (
+                                      <div className="flex items-center gap-2">
+                                        <selectedSize.icon className="h-4 w-4 flex-shrink-0" />
+                                        <span className="font-medium truncate">{selectedSize.label}</span>
+                                      </div>
+                                    ) : null;
+                                  })()}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -638,7 +748,7 @@ export const SimpleOrderForm: React.FC = () => {
                                 // Get dynamic description for bulk delivery based on product type
                                 let description = size.description;
                                 if (size.value === "bulk") {
-                                  const selectedProduct = productsData.find(p => p.id === parseInt(item.productId.toString()));
+                                  const selectedProduct = productsData.find((p) => p.id === parseInt(item.productId.toString()));
                                   if (selectedProduct) {
                                     if (selectedProduct.category === "Amendment" || selectedProduct.category === "Concentrated Amendment") {
                                       description = "22-24 tons per truckload";
@@ -647,7 +757,7 @@ export const SimpleOrderForm: React.FC = () => {
                                     }
                                   }
                                 }
-                                
+
                                 return (
                                   <SelectItem key={size.value} value={size.value}>
                                     <div className="flex flex-col gap-1">
@@ -667,12 +777,14 @@ export const SimpleOrderForm: React.FC = () => {
                         {/* Step 4: Quantity */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                              item.sizeOption ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                            }`}>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                                item.sizeOption ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                              }`}
+                            >
                               4
                             </div>
-                            <Label className={!item.sizeOption ? 'text-gray-400' : ''}>Enter Quantity *</Label>
+                            <Label className={!item.sizeOption ? "text-gray-400" : ""}>Enter Quantity *</Label>
                           </div>
                           <Input
                             type="text"
@@ -680,22 +792,19 @@ export const SimpleOrderForm: React.FC = () => {
                             pattern="[0-9]*"
                             value={item.quantity.toString()}
                             onChange={(e) => {
-                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              const value = e.target.value.replace(/[^0-9]/g, "");
                               const numValue = parseInt(value) || 1;
                               updateOrderItem(item.id, { quantity: Math.max(1, numValue) });
                             }}
                             onFocus={(e) => e.target.select()}
                             placeholder={!item.sizeOption ? "Select size first" : "Enter quantity"}
                             disabled={!item.sizeOption}
-                            className={`transition-all ${
-                              !item.sizeOption ? 'bg-gray-50' : item.quantity > 0 ? 'border-green-500' : ''
-                            }`}
+                            className={`transition-all ${!item.sizeOption ? "bg-gray-50" : item.quantity > 0 ? "border-green-500" : ""}`}
                           />
                         </div>
                       </div>
                     </div>
                   </div>
-
                 </Card>
               ))}
             </div>
@@ -715,11 +824,7 @@ export const SimpleOrderForm: React.FC = () => {
 
         {/* Submit Button */}
         <div className="flex justify-center">
-          <Button
-            type="submit"
-            disabled={isSubmitting || orderItems.length === 0}
-            className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg"
-          >
+          <Button type="submit" disabled={isSubmitting || orderItems.length === 0} className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg">
             {isSubmitting ? "Submitting..." : "Submit Order Request"}
           </Button>
         </div>

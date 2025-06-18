@@ -241,16 +241,22 @@ export const OrderForm: React.FC = () => {
         products: enhancedProducts,
         submittedAt: new Date().toISOString(),
         emails: {
-          customer: generateCustomerEmail({
-            businessInfo,
-            products: enhancedProducts,
-            submittedAt: new Date().toISOString(),
-          }),
-          admin: generateAdminEmail({
-            businessInfo,
-            products: enhancedProducts,
-            submittedAt: new Date().toISOString(),
-          }),
+          admin: {
+            subject: `New Order from ${businessInfo.name}`,
+            html: generateAdminEmail({
+              businessInfo,
+              products: enhancedProducts,
+              submittedAt: new Date().toISOString(),
+            }),
+          },
+          customer: {
+            subject: "Thank You for Your Order with Organic Soil Wholesale",
+            html: generateCustomerEmail({
+              businessInfo,
+              products: enhancedProducts,
+              submittedAt: new Date().toISOString(),
+            }),
+          },
         },
         markdown: generateOrderMarkdown({
           businessInfo,
