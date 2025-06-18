@@ -1,28 +1,15 @@
 Website Revision Task List
+START WITH NOT COMPLETED AND AFTER COMPLETION COME BACK AND UPDATE COMPLETION COMMENT
 
-Task 1: Remove Zip Code Availability Check ✅
-
-Remove "Enter your zip code to check availability" section from the homepage.
-
-Mark this feature as "To Re-Implement Later."
+Task 1: Remove Zip Code Availability Check (COMPLETED)
 
 Task 2: Homepage Mobile View - Product Visibility
 
 Ensure that the mobile homepage displays at least 4 featured products immediately under "Buy Organic Soil Products in Wholesale."
+Situation:
+Under mobile that first thing you see is the size categories instead of the 4 products
+ de-emphasize "Size Category" from initial mobile view before the products should showcase
 
-Hide or de-emphasize "Size Category" from initial mobile view.
+Task 3: Update Propercontact information
 
-Task 3: Featured Products Section
-
-Reorder the homepage layout to prioritize the gallery of featured products.
-
-Include a clear call-to-action to "View All Products" immediately after the featured products.
-
-Keep the current 4 featured products as-is in terms of visuals and layout.
-
-Next Steps:
-
-Review desktop and mobile versions for UI consistency.
-
-Continue with inspection of "Place an Order" page for polishing.
 

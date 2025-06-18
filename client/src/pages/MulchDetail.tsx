@@ -19,7 +19,7 @@ const SIZE_CATEGORIES = [
   },
   {
     name: "Bulk Delivery",
-    description: "Compost and blends: 22-24 tons per truckload\nPotting soil: 90-110 CYs",
+    description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
     image:
       "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
   },

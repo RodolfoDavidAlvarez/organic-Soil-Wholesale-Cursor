@@ -11,26 +11,26 @@ import { Badge } from "@/components/ui/badge";
 // Size category images and labels from adminInputs.txt
 const SIZE_CATEGORIES = [
   {
-    name: "Pallet of Boxes",
-    description: "144 units / 36 boxes",
+    name: "Pallet of 9 lb bags",
+    description: "144 units (36 cases of 4 units)",
     image:
       "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89",
   },
   {
-    name: "Pallet of Bags",
-    description: "50 bags (1cf Bags)",
+    name: "Pallet of 1CF bags",
+    description: "50 bags (1CF each)",
     image:
       "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
   },
   {
-    name: "Bulk",
-    description: "22-24 tons per truckload",
+    name: "Bulk Delivery",
+    description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
     image:
       "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
   },
   {
-    name: "Buy in Cubic Yard",
-    description: "Bulk pickup only",
+    name: "Bulk Pickup",
+    description: "Cubic yards (Dairy compost only)",
     image:
       "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc",
   },

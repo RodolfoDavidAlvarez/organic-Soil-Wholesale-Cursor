@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(cd:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx update-browserslist-db:*)",
+      "Bash(npx:*)",
+      "Bash(python:*)",
+      "Bash(rm:*)",
+      "Bash(jq:*)",
+      "Bash(rg:*)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Size Categories\" --no-heading -A 0 -B 0)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Pallet of Boxes\" -n -A 2 -B 2)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Parker|Phoenix|Vicksburg\" -n -A 1 -B 1 OrderForm.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Parker|Phoenix|Vicksburg\" -n -A 1 -B 1 SimpleOrderForm.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Pallet of Boxes\" --no-heading)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Pallet of Boxes\" \"/Users/rodolfoalvarez/Documents/Better Systems AI/OrganicSoilWholesale/client/src\" --no-heading)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Phoenix\" -n --no-heading)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Worm Castings\" -n -A 1 -B 1 Home.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Vicksburg.*Worm|Dairy Compost, Worm\" --no-heading)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Size/Packaging\" -n -A 10 -B 5 SimpleOrderForm.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"35 cases\" --no-heading)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"Pallet of 9 lb bags\" -n -A 5 -B 5 SimpleOrderForm.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"bg-blue-|bg-sky-|bg-green-100\" -n -A 5 -B 5 SimpleOrderForm.tsx)",
+      "Bash(/Users/rodolfoalvarez/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg \"bg-blue-|bg-green-50\" -n -A 3 -B 3 OrderForm.tsx)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": []
+  }
+}

@@ -25,6 +25,7 @@ import {
   Apple,
   ShoppingBag,
   ArrowUpRight,
+  Building2,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { productsData } from "@/data/productData";
@@ -169,23 +170,23 @@ const Home = () => {
   const locations = [
     { name: "Vicksburg", zip: "85348", deliverable: true, coordinates: { lat: 34.2417, lng: -113.768 } },
     { name: "Congress", zip: "85332", deliverable: true, coordinates: { lat: 34.1625, lng: -112.8507 } },
-    { name: "Phoenix", zip: "85001", deliverable: true, coordinates: { lat: 33.4484, lng: -112.074 } },
+    { name: "Phoenix, AZ", zip: "85001", deliverable: true, coordinates: { lat: 33.4484, lng: -112.074 } },
   ];
 
   // Size categories data
   const sizeCategories = [
     {
       id: "pallet-boxes",
-      name: "Pallet of Boxes",
-      description: "144 units / 36 boxes (4 units per box)",
+      name: "Pallet of 9 lb bags",
+      description: "144 units (36 cases of 4 units)",
       image:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89",
       icon: <Box className="h-6 w-6" />,
     },
     {
       id: "pallet-bags",
-      name: "Pallet of Bags",
-      description: "50 bags (1cf Bags)",
+      name: "Pallet of 1CF bags",
+      description: "50 bags (1CF each)",
       image:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
       icon: <Package className="h-6 w-6" />,
@@ -193,7 +194,7 @@ const Home = () => {
     {
       id: "bulk",
       name: "Bulk Delivery",
-      description: "Compost and blends: 22-24 tons per truckload\nPotting soil: 90-110 CYs",
+      description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
       image:
         "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
       icon: <Container className="h-6 w-6" />,
@@ -465,6 +466,28 @@ const Home = () => {
                 <p className="text-2xl md:text-3xl text-muted-foreground flex items-center gap-4">
                   in wholesale <Truck className="h-10 w-10 md:h-14 md:w-14 text-primary/90" />
                 </p>
+              </motion.div>
+
+              {/* Pickup and Distribution Center */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <MapPin className="h-6 w-6 text-primary" />
+                  <h2 className="text-lg font-bold text-primary">Pickup & Distribution</h2>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-muted-foreground flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary/70" />
+                    <span>Phoenix, AZ Distribution Center</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground/80">
+                    Conveniently located for easy pickup and delivery services throughout the Phoenix, AZ metropolitan area.
+                  </p>
+                </div>
               </motion.div>
 
               {/* Size Categories Carousel */}

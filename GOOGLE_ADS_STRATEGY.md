@@ -11,6 +11,7 @@ Organic Soil Wholesale is an ecommerce platform focused exclusively on **bulk so
 - Vineyard operators
 
 The website sells premium organic soil products in wholesale quantities only:
+
 - Pallets of bags
 - Pallets of boxes
 - Supersacks (2.2 CY totes)
@@ -22,18 +23,21 @@ The business primarily serves Arizona with delivery options available to commerc
 ## Product Categories
 
 1. **Soil Amendments** (highest priority)
+
    - Dairy Compost (flagship product)
    - Worm Castings (flagship product)
    - Biochar Mineral
    - Zeolite
 
 2. **Specialized Blends**
+
    - Turf Daddy Blend (for landscapers/golf courses)
    - Artemis Root Boost (for tree/shrub planting)
    - Bacchus Blend (for vineyards)
    - Desert Defender (for drought conditions)
 
 3. **Potting Soils**
+
    - Ready Go Garden
    - CannaBag (for cannabis growers)
 
@@ -54,6 +58,7 @@ The business primarily serves Arizona with delivery options available to commerc
 ### 2. Target Keywords by Category
 
 #### Primary Keywords (Highest Priority)
+
 - bulk organic soil
 - wholesale compost
 - commercial soil supplier
@@ -67,6 +72,7 @@ The business primarily serves Arizona with delivery options available to commerc
 - pallets of soil
 
 #### Secondary Keywords
+
 - commercial landscapers soil
 - golf course soil
 - nursery soil suppliers
@@ -78,6 +84,7 @@ The business primarily serves Arizona with delivery options available to commerc
 - wholesale plant nutrients
 
 #### Negative Keywords (to avoid retail customers)
+
 - small bags
 - single bag
 - home depot
@@ -92,21 +99,25 @@ The business primarily serves Arizona with delivery options available to commerc
 ### 3. Key Pages for Ad Targeting
 
 1. **Homepage** ("/")
+
    - General wholesale positioning
    - Overview of product categories
    - Focus on bulk quantities and commercial applications
 
 2. **Products Page** ("/products")
+
    - Complete product catalog
    - Filterable by category
    - All products display commercial packaging options
 
 3. **Landscapers Page** ("/landscapers")
+
    - Specialized content for landscape contractors
    - Showcases mulch applications and bulk delivery
    - Ideal landing page for landscaper-targeted ads
 
 4. **Order Page** ("/order")
+
    - Direct conversion page
    - Clear B2B ordering process
    - Shows all wholesale packaging options
@@ -119,17 +130,20 @@ The business primarily serves Arizona with delivery options available to commerc
 ### 4. Conversion Points
 
 1. **Primary Conversion: Order Form**
+
    - Multi-step form with commercial focus
    - Requires business information
    - Options for delivery vs. pickup
    - Located at: /order
 
 2. **Secondary Conversion: Bulk Order Request**
+
    - Simplified form for bulk inquiries
    - Accessible through floating CTA button
    - Ideal for users not ready for full order process
 
 3. **Tertiary Conversion: Special Request Form**
+
    - For custom/specialty orders
    - Located at: /special-request
 
@@ -146,14 +160,17 @@ All form submissions include both customer and admin email notifications through
 Recommend organizing campaigns by buyer persona:
 
 1. **Landscapers Campaign**
+
    - Focus on mulch, turf blends, soil amendments
    - Target keywords related to commercial landscaping
 
 2. **Growers Campaign**
+
    - Focus on amendments, potting soils, specialized blends
    - Target keywords related to commercial growing operations
 
 3. **Golf Course Campaign**
+
    - Focus on specialized products for turf management
    - Narrow targeting to golf course maintenance professionals
 
@@ -171,12 +188,12 @@ Recommend organizing campaigns by buyer persona:
 
 ### 3. Landing Page Strategy
 
-| Campaign | Primary Landing Page | Secondary Landing Pages |
-|----------|----------------------|------------------------|
-| Landscapers | /landscapers | /products?category=mulch |
-| Growers | /products?category=amendment | /products/dairy-compost, /products/worm-castings |
-| Golf Course | /products/turf-daddy-blend | /landscapers |
-| Generic Wholesale | / (homepage) | /order |
+| Campaign          | Primary Landing Page         | Secondary Landing Pages                          |
+| ----------------- | ---------------------------- | ------------------------------------------------ |
+| Landscapers       | /landscapers                 | /products?category=mulch                         |
+| Growers           | /products?category=amendment | /products/dairy-compost, /products/worm-castings |
+| Golf Course       | /products/turf-daddy-blend   | /landscapers                                     |
+| Generic Wholesale | / (homepage)                 | /order                                           |
 
 ### 4. Audience Targeting
 
