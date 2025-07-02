@@ -227,10 +227,10 @@ const Landscapers = () => {
                   <img
                     src="plant-pal-showcase.png"
                     alt="Plant Pal - Multi-Purpose Organic Soil"
-                    className="w-full h-full object-cover min-h-[400px] bg-gray-50"
+                    className="w-full h-full object-contain min-h-[400px] bg-gray-50"
                   />
                   {/* Overlapping Healthy Soil Image */}
-                  <div className="absolute top-4 right-4 w-32 h-32 sm:top-6 sm:right-6 sm:w-48 sm:h-48 lg:top-8 lg:right-8 lg:w-60 lg:h-60 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
+                  <div className="absolute top-3 right-3 w-32 h-32 sm:top-4 sm:right-4 sm:w-40 sm:h-40 md:top-6 md:right-6 md:w-52 md:h-52 lg:top-8 lg:right-8 lg:w-72 lg:h-72 xl:w-80 xl:h-80 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
                     <img
                       src="healthy-soil-hands.jpg"
                       alt="Premium quality soil in hands"
