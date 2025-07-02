@@ -227,7 +227,7 @@ const Landscapers = () => {
                   <img
                     src="plant-pal-showcase.png"
                     alt="Plant Pal - Multi-Purpose Organic Soil"
-                    className="w-full h-full object-cover min-h-[400px]"
+                    className="w-full h-full object-contain min-h-[400px] bg-gray-50"
                   />
                 </div>
                 {/* Product Information */}
@@ -292,6 +292,41 @@ const Landscapers = () => {
                     {/* Use Cases */}
                     <div className="mb-6">
                       <h4 className="text-lg font-semibold text-gray-900 mb-3">Versatile Applications:</h4>
+                      
+                      {/* Application Images */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="rounded-xl overflow-hidden shadow-md">
+                          <img
+                            src="raised-garden-bed-soil.jpg"
+                            alt="Plant Pal in raised garden beds"
+                            className="w-full h-36 object-cover"
+                          />
+                          <div className="p-3 bg-white">
+                            <span className="text-sm font-medium text-gray-700">Raised Bed Applications</span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl overflow-hidden shadow-md">
+                          <img
+                            src="potting-soil.jpg"
+                            alt="Plant Pal for container potting"
+                            className="w-full h-36 object-cover"
+                          />
+                          <div className="p-3 bg-white">
+                            <span className="text-sm font-medium text-gray-700">Container Potting</span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl overflow-hidden shadow-md">
+                          <img
+                            src="nursery-blend.jpg"
+                            alt="Plant Pal as nursery blend"
+                            className="w-full h-36 object-cover"
+                          />
+                          <div className="p-3 bg-white">
+                            <span className="text-sm font-medium text-gray-700">Nursery Mix</span>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div className="flex flex-wrap gap-3">
                         <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">In-Ground Mixing</span>
                         <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Raised Beds Filling</span>
