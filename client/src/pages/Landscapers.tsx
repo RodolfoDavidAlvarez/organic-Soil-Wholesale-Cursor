@@ -177,29 +177,29 @@ const Landscapers = () => {
               {/* Right: Text + CTA + Product Cards */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center">
                 <div className="mb-8">
-                  <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Arizona's #1 Organic Soil Platform for Wholesale</h1>
-                  <p className="text-lg text-green-100 mb-6 max-w-xl animate-fade-in delay-100">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Arizona's #1 Organic Soil Platform for Wholesale</h1>
+                  <p className="text-sm sm:text-lg text-green-100 mb-6 max-w-xl animate-fade-in delay-100">
                     Bulk Orders. Call & Pickup. OMRI-Listed.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300">
-                    <span className="text-2xl text-white font-bold bg-green-700/30 px-4 py-2 rounded-lg">Shop Wholesale Today</span>
+                    <span className="text-lg sm:text-2xl text-white font-bold bg-green-700/30 px-3 py-2 sm:px-4 rounded-lg">Shop Wholesale Today</span>
                   </div>
                   <div className="flex items-center gap-2 mt-2 animate-fade-in delay-500">
-                    <Award className="h-5 w-5" />
-                    <span className="text-green-100 text-base font-semibold">Best Prices in Town for Wholesale</span>
+                    <Award className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-green-100 text-sm sm:text-base font-semibold">Best Prices in Town for Wholesale</span>
                   </div>
                 </div>
                 {/* Product Photos */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6 animate-fade-in delay-600">
+                <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 animate-fade-in delay-600">
                   {/* Dark Beautiful Mulch Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
                     <img
                       src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
                       alt="Dark Beautiful Mulch Application"
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Dark Beautiful Mulch</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
+                      <span className="text-white text-xs sm:text-lg font-semibold">Dark Beautiful Mulch</span>
                     </div>
                   </div>
                   {/* Worm Castings Card */}
@@ -207,10 +207,10 @@ const Landscapers = () => {
                     <img
                       src="worm-castings.jpg"
                       alt="Premium Worm Castings"
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Worm Castings</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
+                      <span className="text-white text-xs sm:text-lg font-semibold">Worm Castings</span>
                     </div>
                   </div>
                   {/* Dairy Compost Card */}
@@ -218,35 +218,35 @@ const Landscapers = () => {
                     <img
                       src="dairy-compost.jpg"
                       alt="Organic Dairy Compost"
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Dairy Compost</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
+                      <span className="text-white text-xs sm:text-lg font-semibold">Dairy Compost</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Target Demographics */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in delay-700">
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
-                    <Trees className="h-6 w-6 text-green-200" />
-                    <span className="text-white font-medium text-sm">Landscapers</span>
+                <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 animate-fade-in delay-700">
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
+                    <Trees className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
+                    <span className="text-white font-medium text-xs sm:text-sm">Landscapers</span>
                   </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
-                    <Sprout className="h-6 w-6 text-green-200" />
-                    <span className="text-white font-medium text-sm">Organic Growers</span>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
+                    <Sprout className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
+                    <span className="text-white font-medium text-xs sm:text-sm">Organic Growers</span>
                   </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
-                    <Apple className="h-6 w-6 text-green-200" />
-                    <span className="text-white font-medium text-sm">Fruit Growers</span>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
+                    <Apple className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
+                    <span className="text-white font-medium text-xs sm:text-sm">Fruit Growers</span>
                   </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
-                    <Home className="h-6 w-6 text-green-200" />
-                    <span className="text-white font-medium text-sm">Residential Grower</span>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
+                    <Home className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
+                    <span className="text-white font-medium text-xs sm:text-sm">Residential Grower</span>
                   </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
-                    <Store className="h-6 w-6 text-green-200" />
-                    <span className="text-white font-medium text-sm">Garden Centers</span>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
+                    <Store className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
+                    <span className="text-white font-medium text-xs sm:text-sm">Garden Centers</span>
                   </div>
                 </div>
               </div>
@@ -257,23 +257,23 @@ const Landscapers = () => {
         {/* Certifications Section */}
         <section className="py-8 bg-white border-b border-gray-100">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-center gap-6">
-              <h3 className="text-lg font-semibold text-gray-700">Certified By</h3>
-              <div className="flex items-center gap-4 animate-pulse">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6">
+              <h3 className="text-sm sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-0">Certified By</h3>
+              <div className="flex items-center gap-2 sm:gap-4 animate-pulse">
                   <img 
                     src="omri-logo.png" 
                     alt="OMRI Certified" 
-                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                    className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
                   <img 
                     src="uscc-logo.png" 
                     alt="USCC Certified" 
-                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                    className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
                   <img 
                     src="made-in-usa.png" 
                     alt="Made in USA" 
-                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                    className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
               </div>
             </div>
@@ -281,23 +281,23 @@ const Landscapers = () => {
         </section>
 
         {/* Featured Product Section - Plant Pal */}
-        <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <section className="py-8 sm:py-16 bg-gradient-to-b from-white to-gray-50">
           <div className="container mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               
               {/* Top Section: Image + Info */}
               <div className="flex flex-col lg:flex-row">
                 {/* Left Column: Product Image + Available Sizes */}
-                <div className="lg:w-1/2 bg-gray-50 p-4">
+                <div className="lg:w-1/2 bg-gray-50 p-2 sm:p-4 order-2 lg:order-1">
                   {/* Product Image - Adjusted position */}
                   <div className="relative flex items-center justify-center">
                     <img
                       src="plant-pal-showcase.png"
                       alt="Plant Pal - Multi-Purpose Organic Soil"
-                      className="w-full max-w-[450px] h-[400px] object-contain"
+                      className="w-full max-w-[300px] sm:max-w-[450px] h-[250px] sm:h-[400px] object-contain"
                     />
                     {/* Overlapping Healthy Soil Image */}
-                    <div className="absolute top-2 right-2 w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
+                    <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white"
                       <img
                         src="healthy-soil-hands.jpg"
                         alt="Premium quality soil in hands"
@@ -307,8 +307,8 @@ const Landscapers = () => {
                   </div>
                   
                   {/* Available Sizes - Moved under image */}
-                  <div className="mt-4 px-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Available Sizes:</h4>
+                  <div className="mt-2 sm:mt-4 px-2 sm:px-4">
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">Available Sizes:</h4>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <img
@@ -358,20 +358,20 @@ const Landscapers = () => {
                 </div>
                 
                 {/* Product Information - Condensed */}
-                <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col justify-center">
-                  <div className="inline-flex items-center bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-full mb-3 self-start">
+                <div className="lg:w-1/2 p-4 sm:p-6 lg:p-8 flex flex-col justify-center order-1 lg:order-2">
+                  <div className="inline-flex items-center bg-green-600 text-white text-xs sm:text-sm font-bold px-3 py-1 sm:px-4 sm:py-2 rounded-full mb-2 sm:mb-3 self-start">
                     #1 FEATURED PRODUCT
                   </div>
-                  <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                  <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
                     Plant Pal – Organic Soil
                   </h2>
-                  <p className="text-xl text-green-600 font-semibold mb-4">
+                  <p className="text-sm sm:text-xl text-green-600 font-semibold mb-3 sm:mb-4">
                     One of the Best Organic Planting Soils to Grow Food and Ornamentals
                   </p>
                   
                   {/* Best For Section */}
                   <div className="mb-6">
-                    <h4 className="text-base font-semibold text-gray-700 mb-3">Best For:</h4>
+                    <h4 className="text-sm sm:text-base font-semibold text-gray-700 mb-2 sm:mb-3">Best For:</h4>
                     <div className="flex flex-wrap gap-2">
                       <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">Raised Garden Beds</span>
                       <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">In-Ground Mixing</span>
@@ -410,26 +410,26 @@ const Landscapers = () => {
                   {/* Key Features */}
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Leaf className="h-5 w-5 text-green-600" />
+                      <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                        <Leaf className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                       <span className="text-gray-700 font-medium">100% Organic</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
+                      <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
                         <Award className="h-5 w-5 text-green-600" />
                       </div>
                       <span className="text-gray-700 font-medium">Premium Quality</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Zap className="h-5 w-5 text-green-600" />
+                      <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                        <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                       <span className="text-gray-700 font-medium">Fast Results</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Shield className="h-5 w-5 text-green-600" />
+                      <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                        <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                       <span className="text-gray-700 font-medium">Arizona Tested</span>
                     </div>
@@ -531,13 +531,13 @@ const Landscapers = () => {
         </section>
 
         {/* Mulch Applications Section */}
-        <div id="mulch-applications" className="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <div id="mulch-applications" className="py-10 sm:py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-4">Mulch Applications</h2>
+            <div className="text-center mb-8 sm:mb-16">
+              <h2 className="text-2xl sm:text-4xl font-bold mb-3 sm:mb-4">Mulch Applications</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 mb-8 sm:mb-16">
               {mulchApplications.map((application) => (
                 <div key={application.id} className="space-y-4">
                   <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl group">
@@ -546,11 +546,11 @@ const Landscapers = () => {
                       alt={application.title}
                       className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-                      <span className="text-white text-xl font-semibold">{application.title}</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2 sm:p-4">
+                      <span className="text-white text-sm sm:text-xl font-semibold">{application.title}</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     {application.images.slice(1, 3).map((image, index) => (
                       <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-lg group">
                         <img
@@ -567,45 +567,45 @@ const Landscapers = () => {
             </div>
 
             {/* Benefits Section */}
-            <div className="mb-16 grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <Leaf className="h-5 w-5 text-green-600" />
+            <div className="mb-8 sm:mb-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+              <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                    <Leaf className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-800">Soil Health</h3>
+                  <h3 className="font-semibold text-xs sm:text-base text-gray-800">Soil Health</h3>
                 </div>
-                <p className="text-sm text-gray-600">Improves soil structure and promotes beneficial microbial activity</p>
+                <p className="text-xs sm:text-sm text-gray-600">Improves soil structure and promotes beneficial microbial activity</p>
               </div>
 
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <Zap className="h-5 w-5 text-green-600" />
+              <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-800">Temperature Control</h3>
+                  <h3 className="font-semibold text-xs sm:text-base text-gray-800">Temperature Control</h3>
                 </div>
-                <p className="text-sm text-gray-600">Reduces soil temperature in hot climates, protecting plant roots</p>
+                <p className="text-xs sm:text-sm text-gray-600">Reduces soil temperature in hot climates, protecting plant roots</p>
               </div>
 
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <Shield className="h-5 w-5 text-green-600" />
+              <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-800">Weed Control</h3>
+                  <h3 className="font-semibold text-xs sm:text-base text-gray-800">Weed Control</h3>
                 </div>
-                <p className="text-sm text-gray-600">Natural weed suppression and moisture retention</p>
+                <p className="text-xs sm:text-sm text-gray-600">Natural weed suppression and moisture retention</p>
               </div>
 
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
+              <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="bg-green-100 p-1 sm:p-2 rounded-lg">
                     <Award className="h-5 w-5 text-green-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-800">Premium Quality</h3>
+                  <h3 className="font-semibold text-xs sm:text-base text-gray-800">Premium Quality</h3>
                 </div>
-                <p className="text-sm text-gray-600">Consistently high-quality mulch for professional results</p>
+                <p className="text-xs sm:text-sm text-gray-600">Consistently high-quality mulch for professional results</p>
               </div>
             </div>
 
