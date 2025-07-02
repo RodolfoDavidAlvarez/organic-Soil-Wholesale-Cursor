@@ -216,7 +216,72 @@ const Landscapers = () => {
           </div>
         </div>
 
-        {/* Products Section - Moved right after hero */}
+        {/* Featured Product Section - Plant Pal */}
+        <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="flex flex-col lg:flex-row">
+                {/* Product Image */}
+                <div className="lg:w-1/2">
+                  <img
+                    src="plant-pal-showcase.png"
+                    alt="Plant Pal - Multi-Purpose Organic Soil"
+                    className="w-full h-full object-cover min-h-[400px]"
+                  />
+                </div>
+                {/* Product Information */}
+                <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
+                  <div className="mb-6">
+                    <Badge className="bg-green-100 text-green-800 text-sm font-medium mb-4">
+                      #1 FEATURED PRODUCT
+                    </Badge>
+                    <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                      Plant Pal
+                    </h2>
+                    <p className="text-xl text-green-600 font-semibold mb-4">
+                      Multi-Purpose Best-In-Class Organic Soil
+                    </p>
+                    <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                      The ultimate bulk soil solution for professional landscapers. Our premium organic blend delivers 
+                      exceptional results for all your landscaping projects, from commercial installations to residential gardens.
+                    </p>
+                  </div>
+                  
+                  {/* Key Features */}
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Leaf className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">100% Organic</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Award className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Premium Quality</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Zap className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Fast Results</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Shield className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Arizona Tested</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Products Section - Moved right after featured product */}
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <ProductShowcase products={products} loading={isLoading} initialCategory="all" />
