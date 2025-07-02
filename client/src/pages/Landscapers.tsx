@@ -309,46 +309,46 @@ const Landscapers = () => {
                   {/* Available Sizes - Moved under image */}
                   <div className="mt-4 px-4">
                     <h4 className="text-lg font-semibold text-gray-900 mb-3">Available Sizes:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <img
                           src="2cf-bag-pallet.png"
                           alt="2 ft³ bags on pallet"
-                          className="w-full h-28 object-cover rounded mb-3"
+                          className="w-full h-20 object-cover rounded mb-2"
                         />
-                        <div className="text-sm font-medium text-gray-700">2 ft³ Bags</div>
+                        <div className="text-xs font-medium text-gray-700">2 ft³ Bags</div>
                         <div className="text-xs text-gray-500">Single/pallet</div>
-                        <div className="text-sm font-bold text-red-600">$7.69/bag</div>
+                        <div className="text-xs font-bold text-red-600">$7.69/bag</div>
                         <div className="text-xs text-orange-600">(30% off)</div>
                         <div className="text-xs text-gray-600 mt-1">Pallet (40): $220</div>
                         <div className="text-xs text-green-600 font-semibold">(50% off)</div>
                       </div>
-                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                      <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <img
                           src="tote-supersack.png"
                           alt="2.2 cubic yard tote"
-                          className="w-full h-28 object-cover rounded mb-3"
+                          className="w-full h-20 object-cover rounded mb-2"
                         />
-                        <div className="text-sm font-medium text-gray-700">2.2 yd³ Tote</div>
+                        <div className="text-xs font-medium text-gray-700">2.2 yd³ Tote</div>
                         <div className="text-xs text-gray-500">Single unit or truckload</div>
-                        <div className="text-sm font-bold text-green-600 mt-1">$247.28/tote</div>
+                        <div className="text-xs font-bold text-green-600 mt-1">$247.28/tote</div>
                         <div className="text-xs text-gray-600 mt-1">Truckload (22 totes): $4,897.99</div>
                         <div className="text-xs text-green-600 font-semibold">(10% off - Save $544.17!)</div>
                       </div>
-                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                      <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <img
                           src="truckload-bulk-delivery.png"
                           alt="Truckload bulk delivery"
-                          className="w-full h-28 object-cover rounded mb-3"
+                          className="w-full h-20 object-cover rounded mb-2"
                         />
-                        <div className="text-sm font-medium text-gray-700">Entire Truckload of Bulk</div>
+                        <div className="text-xs font-medium text-gray-700">Entire Truckload of Bulk</div>
                         <div className="text-xs text-gray-500">92-110 yd³</div>
                         <div className="text-xs text-green-600 font-semibold mt-2">Our Best Price for Bulk</div>
                         <div className="text-xs text-gray-600">Call to Get Quote</div>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="text-blue-600 border-blue-600 hover:bg-blue-50 mt-2 text-xs"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50 mt-1 text-xs px-2 py-1"
                         >
                           Call Now
                         </Button>
@@ -363,11 +363,23 @@ const Landscapers = () => {
                     #1 FEATURED PRODUCT
                   </div>
                   <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                    Plant Pal
+                    Plant Pal – Organic Soil
                   </h2>
                   <p className="text-xl text-green-600 font-semibold mb-4">
                     One of the Best Organic Planting Soils to Grow Food and Ornamentals
                   </p>
+                  
+                  {/* Best For Section */}
+                  <div className="mb-6">
+                    <h4 className="text-base font-semibold text-gray-700 mb-3">Best For:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">Raised Garden Beds</span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">In-Ground Mixing</span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">Container Potting</span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">Top Dressing</span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs font-medium">Seed Starting</span>
+                    </div>
+                  </div>
                   
                   {/* Flash Sale Pricing Highlight */}
                   <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4 mb-6">
@@ -513,17 +525,6 @@ const Landscapers = () => {
                   </div>
                 </div>
                 
-                {/* Use Case Tags - Centered */}
-                <div className="text-center">
-                  <h5 className="text-base font-semibold text-gray-700 mb-3">Ideal Applications:</h5>
-                  <div className="flex flex-wrap justify-center gap-3">
-                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">In-Ground Mixing</span>
-                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Raised Beds Filling</span>
-                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Container Potting</span>
-                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Top Dressing</span>
-                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Seed Starting</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
