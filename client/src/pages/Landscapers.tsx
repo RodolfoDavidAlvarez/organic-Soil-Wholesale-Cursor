@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { Award, Leaf, Zap, Shield, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Award, Leaf, Zap, Shield, X, ChevronDown, ChevronUp, Trees, Sprout, Apple, Store, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import React from "react";
 import { productsData } from "@/data/productData";
@@ -135,87 +135,150 @@ const Landscapers = () => {
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-              {/* Left: Landscaper Photo */}
+              {/* Left: Cover Image */}
               <div className="w-full lg:w-1/2 flex items-center justify-center">
-                <div className="rounded-2xl overflow-hidden shadow-xl aspect-square w-full max-w-md bg-white/10">
-                  <img
-                    src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/landscaper%20photo.png?alt=media&token=9eb039a4-ab25-4276-9763-2b9901c2cdf8"
-                    alt="Professional Landscaper"
-                    className="w-full h-full object-cover"
-                  />
+                <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg relative mb-20 sm:mb-16 group">
+                  <div className="rounded-2xl overflow-hidden bg-gray-50">
+                    <img
+                      src="cover-page-image.png"
+                      alt="Organic Soil Wholesale Cover"
+                      className="w-full h-full object-contain p-4 transform -translate-y-10"
+                    />
+                  </div>
+                  {/* Overlapping Badge */}
+                  <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-full shadow-lg transform rotate-12">
+                    <span className="text-sm font-bold">BULK SUPPLIER</span>
+                  </div>
+                  {/* Desktop Banner */}
+                  <div className="hidden sm:block absolute -bottom-16 left-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl drop-shadow-lg border border-gray-100 max-w-sm">
+                    <div className="text-base font-bold text-green-700 mb-2">Everything Your Garden Needs</div>
+                    
+                    {/* Main Categories */}
+                    <div className="space-y-1 mb-2">
+                      <div className="text-xs text-gray-700 font-medium">• Raised Garden Bed Soil</div>
+                      <div className="text-xs text-gray-700 font-medium">• Mulch</div>
+                      <div className="text-xs text-gray-700 font-medium">• Worm Castings & Dairy Compost</div>
+                    </div>
+                    
+                    {/* Specialty Plants Section */}
+                    <div className="border-t border-gray-200 pt-2">
+                      <div className="text-xs font-semibold text-green-600 mb-1">Specialty Plants:</div>
+                      <div className="text-xs text-gray-600">Palm Trees • Apple, Pears & Peaches • Avocados • Citrus & More</div>
+                    </div>
+                  </div>
+                  
+                  {/* Mobile Compact Version */}
+                  <div className="block sm:hidden absolute -bottom-12 left-3 bg-white/95 backdrop-blur-sm px-2 py-2 rounded-lg shadow-xl drop-shadow-lg border border-gray-100 max-w-[260px]">
+                    <div className="text-sm font-bold text-green-700 mb-1">Everything Your Garden Needs</div>
+                    <div className="text-xs text-gray-600">Soil • Mulch • Compost • Specialty Plants</div>
+                  </div>
                 </div>
               </div>
-              {/* Right: Text + CTA + Mulch Cards */}
+              {/* Right: Text + CTA + Product Cards */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center">
                 <div className="mb-8">
-                  <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Products Designed for Landscapers</h1>
-                  <p className="text-lg text-green-100 mb-4 max-w-xl animate-fade-in delay-100">
-                    Elevate your landscaping projects with our premium soil solutions. Engineered for Arizona's unique climate.
+                  <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Arizona's #1 Organic Soil Platform for Wholesale</h1>
+                  <p className="text-lg text-green-100 mb-6 max-w-xl animate-fade-in delay-100">
+                    Bulk Orders. Call & Pickup. OMRI-Listed.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300"></div>
-                  {/* Trusted by row */}
-                  <div className="flex items-center gap-6 mt-4 mb-2 animate-fade-in delay-400">
-                    <span className="text-green-200 text-sm">Trusted by Arizona's Top Landscaping Companies</span>
-                    <div className="flex gap-2">
-                      <div className="h-6 w-20 bg-green-900/30 rounded" />
-                      <div className="h-6 w-20 bg-green-900/30 rounded" />
-                      <div className="h-6 w-20 bg-green-900/30 rounded" />
-                    </div>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300">
+                    <span className="text-2xl text-white font-bold bg-green-700/30 px-4 py-2 rounded-lg">Shop Wholesale Today</span>
                   </div>
                   <div className="flex items-center gap-2 mt-2 animate-fade-in delay-500">
                     <Award className="h-5 w-5" />
-                    <span className="text-green-100 text-base font-semibold">Arizona's #1 Premium Mulch Supplier</span>
+                    <span className="text-green-100 text-base font-semibold">Best Prices in Town for Wholesale</span>
                   </div>
                 </div>
-                {/* Mulch Application Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in delay-600">
-                  {/* Commercial Parks Card */}
-                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
-                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb"
-                      alt="Commercial Park Application"
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Commercial Parks</span>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="bg-green-700/90 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">Learn More</span>
-                    </div>
-                  </div>
-                  {/* Residential Projects Card */}
-                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
-                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54"
-                      alt="Residential Application"
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Residential Projects</span>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="bg-green-700/90 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">Learn More</span>
-                    </div>
-                  </div>
-                  {/* Garden Beds Card */}
+                {/* Product Photos */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6 animate-fade-in delay-600">
+                  {/* Dark Beautiful Mulch Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
                     <img
                       src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
-                      alt="Garden Beds Application"
+                      alt="Dark Beautiful Mulch Application"
                       className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
-                      <span className="text-white text-lg font-semibold">Garden Beds</span>
+                      <span className="text-white text-lg font-semibold">Dark Beautiful Mulch</span>
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="bg-green-700/90 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">Learn More</span>
+                  </div>
+                  {/* Worm Castings Card */}
+                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
+                    <img
+                      src="worm-castings.jpg"
+                      alt="Premium Worm Castings"
+                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
+                      <span className="text-white text-lg font-semibold">Worm Castings</span>
                     </div>
+                  </div>
+                  {/* Dairy Compost Card */}
+                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
+                    <img
+                      src="dairy-compost.jpg"
+                      alt="Organic Dairy Compost"
+                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
+                      <span className="text-white text-lg font-semibold">Dairy Compost</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Target Demographics */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in delay-700">
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
+                    <Trees className="h-6 w-6 text-green-200" />
+                    <span className="text-white font-medium text-sm">Landscapers</span>
+                  </div>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
+                    <Sprout className="h-6 w-6 text-green-200" />
+                    <span className="text-white font-medium text-sm">Organic Growers</span>
+                  </div>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
+                    <Apple className="h-6 w-6 text-green-200" />
+                    <span className="text-white font-medium text-sm">Fruit Growers</span>
+                  </div>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
+                    <Home className="h-6 w-6 text-green-200" />
+                    <span className="text-white font-medium text-sm">Residential Grower</span>
+                  </div>
+                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-4 py-3 text-center flex flex-col items-center gap-2">
+                    <Store className="h-6 w-6 text-green-200" />
+                    <span className="text-white font-medium text-sm">Garden Centers</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Certifications Section */}
+        <section className="py-8 bg-white border-b border-gray-100">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-center gap-6">
+              <h3 className="text-lg font-semibold text-gray-700">Certified By</h3>
+              <div className="flex items-center gap-4 animate-pulse">
+                  <img 
+                    src="omri-logo.png" 
+                    alt="OMRI Certified" 
+                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                  />
+                  <img 
+                    src="uscc-logo.png" 
+                    alt="USCC Certified" 
+                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                  />
+                  <img 
+                    src="made-in-usa.png" 
+                    alt="Made in USA" 
+                    className="h-12 w-auto hover:scale-110 transition-transform duration-300"
+                  />
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Featured Product Section - Plant Pal */}
         <section className="py-16 bg-gradient-to-b from-white to-gray-50">
