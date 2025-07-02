@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { Award, Leaf, Zap, Shield, X } from "lucide-react";
+import { Award, Leaf, Zap, Shield, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import React from "react";
 import { productsData } from "@/data/productData";
@@ -13,6 +13,7 @@ const Landscapers = () => {
   const [texturePreview, setTexturePreview] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
 
   const closeTexturePreview = () => {
     setTexturePreview(null);
@@ -248,24 +249,56 @@ const Landscapers = () => {
                     
                     {/* Premium Ingredients */}
                     <div className="mb-6">
-                      <div className="flex items-center gap-4 mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <h4 className="text-lg font-semibold text-gray-900">Premium Ingredient Blend:</h4>
-                        <div className="w-12 h-8 rounded-lg overflow-hidden shadow-sm">
-                          <img 
-                            src="soil-texture.png"
-                            alt="Plant Pal soil texture" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIngredientsExpanded(!ingredientsExpanded)}
+                          className="border-green-600 text-green-600 hover:bg-green-50"
+                        >
+                          {ingredientsExpanded ? (
+                            <>
+                              Hide Details <ChevronUp className="ml-1 h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              View Ingredients <ChevronDown className="ml-1 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <ul className="text-sm text-gray-600 space-y-2">
-                        <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
-                        <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
-                        <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
-                        <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
-                        <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
-                        <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
-                      </ul>
+                      
+                      {/* Collapsed Preview */}
+                      {!ingredientsExpanded && (
+                        <div className="text-sm text-gray-600">
+                          <span className="font-medium">6 Premium Ingredients:</span> Clean Wood Fiber, 8-3-1 Granules, Worm Castings, Organic Dairy Compost + more...
+                        </div>
+                      )}
+                      
+                      {/* Expanded Full List */}
+                      {ingredientsExpanded && (
+                        <ul className="text-sm text-gray-600 space-y-2">
+                          <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
+                          <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
+                          <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
+                          <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
+                          <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
+                          <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Use Cases */}
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-3">Versatile Applications:</h4>
+                      <div className="flex flex-wrap gap-3">
+                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">In-Ground Mixing</span>
+                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Raised Beds Filling</span>
+                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Container Potting</span>
+                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Top Dressing</span>
+                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Seed Starting</span>
+                      </div>
                     </div>
                   </div>
                   
