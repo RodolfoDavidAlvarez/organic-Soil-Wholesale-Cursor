@@ -255,7 +255,7 @@ const Landscapers = () => {
         </div>
 
         {/* Certifications Section */}
-        <section className="py-8 bg-white border-b border-gray-100">
+        <section className="py-4 sm:py-6 bg-white border-b border-gray-100">
           <div className="container mx-auto px-4">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6">
               <h3 className="text-sm sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-0">Certified By</h3>
@@ -297,7 +297,7 @@ const Landscapers = () => {
                       className="w-full max-w-[300px] sm:max-w-[450px] h-[250px] sm:h-[400px] object-contain"
                     />
                     {/* Overlapping Healthy Soil Image */}
-                    <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white"
+                    <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white">
                       <img
                         src="healthy-soil-hands.jpg"
                         alt="Premium quality soil in hands"
