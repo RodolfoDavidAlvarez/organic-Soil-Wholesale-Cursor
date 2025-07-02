@@ -223,12 +223,20 @@ const Landscapers = () => {
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <div className="flex flex-col lg:flex-row">
                 {/* Product Image */}
-                <div className="lg:w-1/2">
+                <div className="lg:w-1/2 relative">
                   <img
                     src="plant-pal-showcase.png"
                     alt="Plant Pal - Multi-Purpose Organic Soil"
-                    className="w-full h-full object-contain min-h-[400px] bg-gray-50"
+                    className="w-full h-full object-cover min-h-[400px] bg-gray-50"
                   />
+                  {/* Overlapping Healthy Soil Image */}
+                  <div className="absolute top-4 right-4 w-32 h-32 sm:top-6 sm:right-6 sm:w-48 sm:h-48 lg:top-8 lg:right-8 lg:w-60 lg:h-60 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
+                    <img
+                      src="healthy-soil-hands.jpg"
+                      alt="Premium quality soil in hands"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
                 {/* Product Information */}
                 <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
@@ -239,13 +247,37 @@ const Landscapers = () => {
                     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                       Plant Pal
                     </h2>
-                    <p className="text-xl text-green-600 font-semibold mb-4">
+                    <p className="text-xl text-green-600 font-semibold mb-6">
                       One of the Best Organic Planting Soils to Grow Food and Ornamentals
                     </p>
-                    <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                      The ultimate bulk soil solution for professional landscapers. Our premium organic blend delivers 
-                      exceptional results for all your landscaping projects, from commercial installations to residential gardens.
-                    </p>
+                    
+                    {/* Key Features */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-lg">
+                          <Leaf className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">100% Organic</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-lg">
+                          <Award className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">Premium Quality</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-lg">
+                          <Zap className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">Fast Results</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-lg">
+                          <Shield className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-gray-700 font-medium">Arizona Tested</span>
+                      </div>
+                    </div>
                     
                     {/* Premium Ingredients */}
                     <div className="mb-6">
@@ -305,7 +337,7 @@ const Landscapers = () => {
                             <span className="text-sm font-medium text-gray-700">Raised Bed Applications</span>
                           </div>
                         </div>
-                        <div className="rounded-xl overflow-hidden shadow-md">
+                        <div className="rounded-xl overflow-hidden shadow-md relative">
                           <img
                             src="potting-soil.jpg"
                             alt="Plant Pal for container potting"
@@ -313,6 +345,14 @@ const Landscapers = () => {
                           />
                           <div className="p-3 bg-white">
                             <span className="text-sm font-medium text-gray-700">Container Potting</span>
+                          </div>
+                          {/* Overlapping Healthy Soil Image */}
+                          <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full overflow-hidden shadow-lg border-4 border-white bg-white">
+                            <img
+                              src="healthy-soil-hands.jpg"
+                              alt="Premium quality soil in hands"
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                         </div>
                         <div className="rounded-xl overflow-hidden shadow-md">
@@ -337,31 +377,35 @@ const Landscapers = () => {
                     </div>
                   </div>
                   
-                  {/* Key Features */}
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Leaf className="h-5 w-5 text-green-600" />
+                  {/* Size Categories */}
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Available Sizes:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <img
+                          src="2cf-bag-pallet.png"
+                          alt="2 ft³ bags on pallet"
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                        <div className="text-sm font-medium text-gray-700 mb-1">2 ft³ Bags</div>
+                        <div className="text-xs text-gray-500">Single unit or full pallet</div>
                       </div>
-                      <span className="text-gray-700 font-medium">100% Organic</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Award className="h-5 w-5 text-green-600" />
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <img
+                          src="tote-supersack.png"
+                          alt="2.2 cubic yard tote"
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                        <span className="text-sm font-medium text-gray-700">2.2 yd³ Tote</span>
                       </div>
-                      <span className="text-gray-700 font-medium">Premium Quality</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Zap className="h-5 w-5 text-green-600" />
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <img
+                          src="truckload-bulk-delivery.png"
+                          alt="Truckload bulk delivery"
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                        <span className="text-sm font-medium text-gray-700">92-110 yd³ Truckload</span>
                       </div>
-                      <span className="text-gray-700 font-medium">Fast Results</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <Shield className="h-5 w-5 text-green-600" />
-                      </div>
-                      <span className="text-gray-700 font-medium">Arizona Tested</span>
                     </div>
                   </div>
 
