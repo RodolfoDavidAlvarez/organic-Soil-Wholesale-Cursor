@@ -470,12 +470,14 @@ const Home = () => {
             "query-input": "required name=search_term_string"
           }
         }}
-      />
+      >
+        <link rel="preload" href="hero-main-photo-v2-optimized.jpg" as="image" />
+      </SEO>
       {/* Hero Section with Title */}
-      <section className="relative py-8 bg-white">
-        <div className="container mx-auto px-4">
+      <section className="relative py-16 bg-white overflow-hidden min-h-[60vh]">
+        <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
           {/* Main Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             {/* Left Column - Title, Availability Checker, and Size Categories */}
             <div className="lg:col-span-4 flex flex-col gap-6">
               <motion.div

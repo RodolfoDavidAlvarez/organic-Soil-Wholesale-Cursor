@@ -43,6 +43,7 @@ const Header = () => {
 
   const navLinks = [
     { name: "Products", path: "/products" },
+    { name: "Why Organic", path: "/why-organic" },
     { name: "Landscapers", path: "/landscapers" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },

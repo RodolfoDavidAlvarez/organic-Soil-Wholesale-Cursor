@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { Award, Leaf, Zap, Shield, X, ChevronDown, ChevronUp, Trees, Sprout, Apple, Store, Home } from "lucide-react";
+import { Award, Leaf, Zap, Shield, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trees, Sprout, Apple, Store, Home, Phone } from "lucide-react";
 import { useState, useEffect } from "react";
 import React from "react";
 import { productsData } from "@/data/productData";
@@ -14,10 +14,42 @@ const Landscapers = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   const closeTexturePreview = () => {
     setTexturePreview(null);
   };
+
+  // Navigation functions for image gallery
+  const nextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % plantPalImages.length);
+  };
+
+  const prevImage = () => {
+    setSelectedImage((prev) => (prev - 1 + plantPalImages.length) % plantPalImages.length);
+  };
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (texturePreview) {
+        switch (e.key) {
+          case 'ArrowLeft':
+            prevImage();
+            break;
+          case 'ArrowRight':
+            nextImage();
+            break;
+          case 'Escape':
+            closeTexturePreview();
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [texturePreview]);
 
   // Load products with IDs
   useEffect(() => {
@@ -38,6 +70,30 @@ const Landscapers = () => {
     setProducts(sortedProducts);
     setIsLoading(false);
   }, []);
+
+  // Plant Pal product images
+  const plantPalImages = [
+    {
+      src: "plantpal-with-veggies.png",
+      alt: "Plant Pal - Multi-Purpose Organic Soil with Fresh Vegetables",
+      title: "Premium Organic Soil"
+    },
+    {
+      src: "raised-garden-bed-soil.jpg",
+      alt: "Plant Pal in raised garden beds",
+      title: "Raised Garden Beds"
+    },
+    {
+      src: "potting-soil.jpg",
+      alt: "Plant Pal for container potting",
+      title: "Container Gardens"
+    },
+    {
+      src: "nursery-blend.jpg",
+      alt: "Plant Pal as nursery blend",
+      title: "Professional Nursery"
+    }
+  ];
 
   const mulchApplications = [
     {
@@ -115,12 +171,44 @@ const Landscapers = () => {
         }}
       />
       {texturePreview && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeTexturePreview}>
-          <div className="relative bg-white rounded-xl overflow-hidden max-w-3xl max-h-[80vh]">
-            <img src={texturePreview} alt="Product Texture" className="max-w-full max-h-[80vh] object-contain" />
-            <button className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1 rounded-full" onClick={closeTexturePreview}>
-              <X className="h-5 w-5" />
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-2 sm:p-4" onClick={closeTexturePreview}>
+          <div className="relative bg-white rounded-xl overflow-hidden max-w-4xl max-h-[90vh] w-full">
+            {/* Navigation arrows in expanded view */}
+            <button
+              onClick={(e) => { e.stopPropagation(); prevImage(); }}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
             </button>
+            
+            <img 
+              src={plantPalImages[selectedImage].src} 
+              alt={plantPalImages[selectedImage].alt} 
+              className="max-w-full max-h-[90vh] object-contain w-full" 
+            />
+            
+            <button
+              onClick={(e) => { e.stopPropagation(); nextImage(); }}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
+            </button>
+
+            {/* Close button */}
+            <button 
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white/80 hover:bg-white p-2 rounded-full transition-all duration-200" 
+              onClick={closeTexturePreview}
+            >
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
+            </button>
+
+            {/* Image title and counter */}
+            <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg">
+              <div className="text-sm sm:text-base font-medium text-center">{plantPalImages[selectedImage].title}</div>
+              <div className="text-xs sm:text-sm text-center opacity-80">{selectedImage + 1} / {plantPalImages.length}</div>
+            </div>
           </div>
         </div>
       )}
@@ -135,62 +223,82 @@ const Landscapers = () => {
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-              {/* Left: Cover Image */}
-              <div className="w-full lg:w-1/2 flex items-center justify-center">
-                <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg relative mb-20 sm:mb-16 group">
+              {/* Left: Cover Image with Overlapping Pickup */}
+              <div className="w-full lg:w-1/2 flex flex-col items-center justify-center">
+                <div className="bg-white rounded-3xl shadow-2xl p-1 w-full max-w-lg relative mb-4 group">
                   <div className="rounded-2xl overflow-hidden bg-gray-50">
                     <img
-                      src="cover-page-image.png"
-                      alt="Organic Soil Wholesale Cover"
-                      className="w-full h-full object-contain p-4 transform -translate-y-10"
+                      src="hero-main-photo-v2-optimized.jpg"
+                      alt="Organic Soil Wholesale - Premium Bulk Soil Products"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   {/* Overlapping Badge */}
                   <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-full shadow-lg transform rotate-12">
                     <span className="text-sm font-bold">BULK SUPPLIER</span>
                   </div>
-                  {/* Desktop Banner */}
-                  <div className="hidden sm:block absolute -bottom-16 left-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl drop-shadow-lg border border-gray-100 max-w-sm">
-                    <div className="text-base font-bold text-green-700 mb-2">Everything Your Garden Needs</div>
-                    
-                    {/* Main Categories */}
-                    <div className="space-y-1 mb-2">
-                      <div className="text-xs text-gray-700 font-medium">• Raised Garden Bed Soil</div>
-                      <div className="text-xs text-gray-700 font-medium">• Mulch</div>
-                      <div className="text-xs text-gray-700 font-medium">• Worm Castings & Dairy Compost</div>
+                  {/* Large Overlapping Pickup Photo */}
+                  <div className="absolute -bottom-8 -left-8 sm:-bottom-12 sm:-left-12 w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-white transform -rotate-6 hover:rotate-0 transition-transform duration-300 z-10">
+                    <img
+                      src="organic-wholesale-pickup.png"
+                      alt="Call and Pick Up service"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Simple overlay text */}
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="bg-blue-600/90 text-white text-center py-1.5 rounded-lg">
+                        <span className="text-sm sm:text-base font-bold">CALL & PICKUP</span>
+                      </div>
                     </div>
-                    
-                    {/* Specialty Plants Section */}
-                    <div className="border-t border-gray-200 pt-2">
-                      <div className="text-xs font-semibold text-green-600 mb-1">Specialty Plants:</div>
-                      <div className="text-xs text-gray-600">Palm Trees • Apple, Pears & Peaches • Avocados • Citrus & More</div>
-                    </div>
-                  </div>
-                  
-                  {/* Mobile Compact Version */}
-                  <div className="block sm:hidden absolute -bottom-12 left-3 bg-white/95 backdrop-blur-sm px-2 py-2 rounded-lg shadow-xl drop-shadow-lg border border-gray-100 max-w-[260px]">
-                    <div className="text-sm font-bold text-green-700 mb-1">Everything Your Garden Needs</div>
-                    <div className="text-xs text-gray-600">Soil • Mulch • Compost • Specialty Plants</div>
                   </div>
                 </div>
+                
               </div>
               {/* Right: Text + CTA + Product Cards */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center">
+                
                 <div className="mb-8">
                   <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight animate-fade-in">Arizona's #1 Organic Soil Platform for Wholesale</h1>
-                  <p className="text-sm sm:text-lg text-green-100 mb-6 max-w-xl animate-fade-in delay-100">
-                    Bulk Orders. Call & Pickup. OMRI-Listed.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-2 animate-fade-in delay-300">
-                    <span className="text-lg sm:text-2xl text-white font-bold bg-green-700/30 px-3 py-2 sm:px-4 rounded-lg">Shop Wholesale Today</span>
+                  <div className="flex items-center gap-2 mb-6 animate-fade-in delay-100">
+                    <Award className="h-4 w-4 sm:h-5 sm:w-5 text-green-200" />
+                    <p className="text-sm sm:text-lg text-green-100 max-w-xl font-semibold">
+                      Best Prices in Town for Wholesale
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 mt-2 animate-fade-in delay-500">
-                    <Award className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-green-100 text-sm sm:text-base font-semibold">Best Prices in Town for Wholesale</span>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center mb-6 animate-fade-in delay-300">
+                    <span className="text-lg sm:text-2xl text-white font-bold bg-green-700/30 px-4 py-3 rounded-lg shadow-sm">Bulk Orders. Call & Pickup. OMRI-Listed.</span>
                   </div>
                 </div>
+                
+                {/* Everything Your Garden Needs - Under Best Prices, Above Images */}
+                <div className="mb-3 animate-fade-in delay-500">
+                  <div className="text-lg sm:text-xl font-bold text-white mb-3">Everything Your Garden Needs</div>
+                </div>
+                
                 {/* Product Photos */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 animate-fade-in delay-600">
+                <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 animate-fade-in delay-700">
+                  {/* Soil Card */}
+                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
+                    <img
+                      src="dairy-compost.jpg"
+                      alt="Organic Soil"
+                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
+                      <span className="text-white text-xs sm:text-lg font-semibold">Soil</span>
+                    </div>
+                  </div>
+                  {/* Amendments Card */}
+                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
+                    <img
+                      src="worm-castings.jpg"
+                      alt="Premium Amendments"
+                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
+                      <span className="text-white text-xs sm:text-lg font-semibold">Amendments</span>
+                    </div>
+                  </div>
                   {/* Dark Beautiful Mulch Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
                     <img
@@ -202,52 +310,12 @@ const Landscapers = () => {
                       <span className="text-white text-xs sm:text-lg font-semibold">Dark Beautiful Mulch</span>
                     </div>
                   </div>
-                  {/* Worm Castings Card */}
-                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
-                      src="worm-castings.jpg"
-                      alt="Premium Worm Castings"
-                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
-                      <span className="text-white text-xs sm:text-lg font-semibold">Worm Castings</span>
-                    </div>
-                  </div>
-                  {/* Dairy Compost Card */}
-                  <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
-                      src="dairy-compost.jpg"
-                      alt="Organic Dairy Compost"
-                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
-                      <span className="text-white text-xs sm:text-lg font-semibold">Dairy Compost</span>
-                    </div>
-                  </div>
                 </div>
                 
-                {/* Target Demographics */}
-                <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 animate-fade-in delay-700">
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
-                    <Trees className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
-                    <span className="text-white font-medium text-xs sm:text-sm">Landscapers</span>
-                  </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
-                    <Sprout className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
-                    <span className="text-white font-medium text-xs sm:text-sm">Organic Growers</span>
-                  </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
-                    <Apple className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
-                    <span className="text-white font-medium text-xs sm:text-sm">Fruit Growers</span>
-                  </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
-                    <Home className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
-                    <span className="text-white font-medium text-xs sm:text-sm">Residential Grower</span>
-                  </div>
-                  <div className="bg-green-700/20 backdrop-blur-sm rounded-lg px-2 py-2 sm:px-4 sm:py-3 text-center flex flex-col items-center gap-1 sm:gap-2">
-                    <Store className="h-4 w-4 sm:h-6 sm:w-6 text-green-200" />
-                    <span className="text-white font-medium text-xs sm:text-sm">Garden Centers</span>
-                  </div>
+                {/* Specialty Soil Products Section - Moved below product images */}
+                <div className="bg-white/95 backdrop-blur-sm px-4 py-3 rounded-lg shadow-xl drop-shadow-lg border border-gray-100 mt-4">
+                  <div className="text-xs font-semibold text-green-600 mb-1">Specialty Soil Products:</div>
+                  <div className="text-xs text-gray-600">Palm Trees • Apple, Pears & Peaches • Avocados • Citrus & More</div>
                 </div>
               </div>
             </div>
@@ -280,6 +348,7 @@ const Landscapers = () => {
           </div>
         </section>
 
+
         {/* Featured Product Section - Plant Pal */}
         <section className="py-8 sm:py-16 bg-gradient-to-b from-white to-gray-50">
           <div className="container mx-auto px-4">
@@ -287,23 +356,74 @@ const Landscapers = () => {
               
               {/* Top Section: Image + Info */}
               <div className="flex flex-col lg:flex-row">
-                {/* Left Column: Product Image + Available Sizes */}
+                {/* Left Column: Product Image Gallery + Available Sizes */}
                 <div className="lg:w-1/2 bg-gray-50 p-2 sm:p-4 order-2 lg:order-1">
-                  {/* Product Image - Adjusted position */}
-                  <div className="relative flex items-center justify-center">
+                  {/* Main Product Image with Navigation */}
+                  <div className="relative flex items-center justify-center mb-4 group">
+                    {/* Previous Arrow */}
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-105"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-5 w-5 text-gray-700" />
+                    </button>
+
+                    {/* Main Image */}
                     <img
-                      src="plant-pal-showcase.png"
-                      alt="Plant Pal - Multi-Purpose Organic Soil"
-                      className="w-full max-w-[300px] sm:max-w-[450px] h-[250px] sm:h-[400px] object-contain"
+                      src={plantPalImages[selectedImage].src}
+                      alt={plantPalImages[selectedImage].alt}
+                      className="w-full max-w-[300px] sm:max-w-[450px] h-[250px] sm:h-[400px] object-contain cursor-pointer"
+                      onClick={() => setTexturePreview(plantPalImages[selectedImage].src)}
                     />
-                    {/* Overlapping Healthy Soil Image */}
-                    <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white">
-                      <img
-                        src="healthy-soil-hands.jpg"
-                        alt="Premium quality soil in hands"
-                        className="w-full h-full object-cover"
-                      />
+
+                    {/* Next Arrow */}
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-105"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-5 w-5 text-gray-700" />
+                    </button>
+
+                    {/* Overlapping Healthy Soil Image - only show on first image */}
+                    {selectedImage === 0 && (
+                      <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white">
+                        <img
+                          src="healthy-soil-hands.jpg"
+                          alt="Premium quality soil in hands"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Image Title and Counter */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-center">
+                      <div className="text-sm font-medium">{plantPalImages[selectedImage].title}</div>
+                      <div className="text-xs opacity-80">{selectedImage + 1} / {plantPalImages.length}</div>
                     </div>
+                  </div>
+                  
+                  {/* Thumbnail Gallery - Mobile Optimized */}
+                  <div className="flex gap-1 sm:gap-2 justify-center mb-4 overflow-x-auto px-2 scrollbar-hide">
+                    {plantPalImages.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(index)}
+                        className={`flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                          selectedImage === index 
+                            ? 'border-green-600 ring-2 ring-green-200 scale-105' 
+                            : 'border-gray-300 hover:border-gray-400 hover:scale-102'
+                        }`}
+                        aria-label={`View ${image.alt}`}
+                      >
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
                   </div>
                   
                   {/* Available Sizes - Moved under image */}
@@ -363,11 +483,8 @@ const Landscapers = () => {
                     #1 FEATURED PRODUCT
                   </div>
                   <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-                    Plant Pal – Organic Soil
+                    Organic Soil - Plantpal
                   </h2>
-                  <p className="text-sm sm:text-xl text-green-600 font-semibold mb-3 sm:mb-4">
-                    One of the Best Organic Planting Soils to Grow Food and Ornamentals
-                  </p>
                   
                   {/* Best For Section */}
                   <div className="mb-6">
@@ -399,6 +516,7 @@ const Landscapers = () => {
                             <div className="text-xs text-gray-500">Local Wholesale</div>
                           </div>
                           <div>
+                            <div className="text-xs text-blue-600 font-semibold">In purchase of 5+ bags</div>
                             <div className="text-3xl font-bold text-red-600">$7.69</div>
                             <div className="text-xs text-green-600 font-semibold">Save $3.30</div>
                           </div>
@@ -460,72 +578,25 @@ const Landscapers = () => {
                     {/* Collapsed Preview */}
                     {!ingredientsExpanded && (
                       <div className="text-sm text-gray-600">
-                        <span className="font-medium">6 Premium Ingredients:</span> Clean Wood Fiber, 8-3-1 Granules, Worm Castings, Organic Dairy Compost + more...
+                        <span className="font-medium">6 Premium Ingredients:</span> 8-3-1 Granules, Worm Castings, Organic Dairy Compost, Calcium + more...
                       </div>
                     )}
                     
                     {/* Expanded Full List */}
                     {ingredientsExpanded && (
                       <ul className="text-sm text-gray-600 space-y-2">
-                        <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
                         <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
                         <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
                         <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
                         <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
                         <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
+                        <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
                       </ul>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Section: Full-Width Applications */}
-              <div className="bg-gray-50 border-t border-gray-200 p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">Versatile Applications</h4>
-                
-                {/* Application Images - Full Width Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div className="rounded-xl overflow-hidden shadow-md">
-                    <img
-                      src="raised-garden-bed-soil.jpg"
-                      alt="Plant Pal in raised garden beds"
-                      className="w-full h-40 object-cover"
-                    />
-                    <div className="p-4 bg-white">
-                      <span className="text-sm font-medium text-gray-700">Raised Bed Applications</span>
-                    </div>
-                  </div>
-                  <div className="rounded-xl overflow-hidden shadow-md relative">
-                    <img
-                      src="potting-soil.jpg"
-                      alt="Plant Pal for container potting"
-                      className="w-full h-40 object-cover"
-                    />
-                    <div className="p-4 bg-white">
-                      <span className="text-sm font-medium text-gray-700">Container Potting</span>
-                    </div>
-                    {/* Overlapping Healthy Soil Image */}
-                    <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full overflow-hidden shadow-lg border-4 border-white bg-white">
-                      <img
-                        src="healthy-soil-hands.jpg"
-                        alt="Premium quality soil in hands"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="rounded-xl overflow-hidden shadow-md">
-                    <img
-                      src="nursery-blend.jpg"
-                      alt="Plant Pal as nursery blend"
-                      className="w-full h-40 object-cover"
-                    />
-                    <div className="p-4 bg-white">
-                      <span className="text-sm font-medium text-gray-700">Nursery Mix</span>
-                    </div>
-                  </div>
-                </div>
-                
-              </div>
             </div>
           </div>
         </section>
