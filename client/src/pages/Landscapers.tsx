@@ -284,239 +284,248 @@ const Landscapers = () => {
         <section className="py-16 bg-gradient-to-b from-white to-gray-50">
           <div className="container mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+              
+              {/* Top Section: Image + Info */}
               <div className="flex flex-col lg:flex-row">
-                {/* Product Image */}
-                <div className="lg:w-1/2 relative">
-                  <img
-                    src="plant-pal-showcase.png"
-                    alt="Plant Pal - Multi-Purpose Organic Soil"
-                    className="w-full h-full object-contain min-h-[400px] bg-gray-50"
-                  />
-                  {/* Overlapping Healthy Soil Image */}
-                  <div className="absolute top-3 right-3 w-32 h-32 sm:top-4 sm:right-4 sm:w-40 sm:h-40 md:top-6 md:right-6 md:w-52 md:h-52 lg:top-8 lg:right-8 lg:w-72 lg:h-72 xl:w-80 xl:h-80 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
+                {/* Left Column: Product Image + Available Sizes */}
+                <div className="lg:w-1/2 bg-gray-50 p-4">
+                  {/* Product Image - Adjusted position */}
+                  <div className="relative flex items-center justify-center">
                     <img
-                      src="healthy-soil-hands.jpg"
-                      alt="Premium quality soil in hands"
-                      className="w-full h-full object-cover"
+                      src="plant-pal-showcase.png"
+                      alt="Plant Pal - Multi-Purpose Organic Soil"
+                      className="w-full max-w-[450px] h-[400px] object-contain"
                     />
-                  </div>
-                </div>
-                {/* Product Information */}
-                <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
-                  <div className="mb-6">
-                    <Badge className="bg-green-100 text-green-800 text-sm font-medium mb-4">
-                      #1 FEATURED PRODUCT
-                    </Badge>
-                    <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                      Plant Pal
-                    </h2>
-                    <p className="text-xl text-green-600 font-semibold mb-4">
-                      One of the Best Organic Planting Soils to Grow Food and Ornamentals
-                    </p>
-                    
-                    {/* Flash Sale Pricing Highlight */}
-                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4 mb-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold mb-2">
-                            30% OFF FLASH SALE
-                          </div>
-                          <div className="text-sm text-blue-600 font-medium">
-                            Call and Pick Up
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <div className="text-gray-400 line-through text-lg">$10.99</div>
-                              <div className="text-xs text-gray-500">Local Wholesale</div>
-                            </div>
-                            <div>
-                              <div className="text-3xl font-bold text-red-600">$7.69</div>
-                              <div className="text-xs text-green-600 font-semibold">Save $3.30</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Key Features */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-lg">
-                          <Leaf className="h-5 w-5 text-green-600" />
-                        </div>
-                        <span className="text-gray-700 font-medium">100% Organic</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-lg">
-                          <Award className="h-5 w-5 text-green-600" />
-                        </div>
-                        <span className="text-gray-700 font-medium">Premium Quality</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-lg">
-                          <Zap className="h-5 w-5 text-green-600" />
-                        </div>
-                        <span className="text-gray-700 font-medium">Fast Results</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-lg">
-                          <Shield className="h-5 w-5 text-green-600" />
-                        </div>
-                        <span className="text-gray-700 font-medium">Arizona Tested</span>
-                      </div>
-                    </div>
-                    
-                    {/* Premium Ingredients */}
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-lg font-semibold text-gray-900">Premium Ingredient Blend:</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIngredientsExpanded(!ingredientsExpanded)}
-                          className="border-green-600 text-green-600 hover:bg-green-50"
-                        >
-                          {ingredientsExpanded ? (
-                            <>
-                              Hide Details <ChevronUp className="ml-1 h-4 w-4" />
-                            </>
-                          ) : (
-                            <>
-                              View Ingredients <ChevronDown className="ml-1 h-4 w-4" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      
-                      {/* Collapsed Preview */}
-                      {!ingredientsExpanded && (
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">6 Premium Ingredients:</span> Clean Wood Fiber, 8-3-1 Granules, Worm Castings, Organic Dairy Compost + more...
-                        </div>
-                      )}
-                      
-                      {/* Expanded Full List */}
-                      {ingredientsExpanded && (
-                        <ul className="text-sm text-gray-600 space-y-2">
-                          <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
-                          <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
-                          <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
-                          <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
-                          <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
-                          <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
-                        </ul>
-                      )}
-                    </div>
-
-                    {/* Use Cases */}
-                    <div className="mb-6">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-3">Versatile Applications:</h4>
-                      
-                      {/* Application Images */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="rounded-xl overflow-hidden shadow-md">
-                          <img
-                            src="raised-garden-bed-soil.jpg"
-                            alt="Plant Pal in raised garden beds"
-                            className="w-full h-36 object-cover"
-                          />
-                          <div className="p-3 bg-white">
-                            <span className="text-sm font-medium text-gray-700">Raised Bed Applications</span>
-                          </div>
-                        </div>
-                        <div className="rounded-xl overflow-hidden shadow-md relative">
-                          <img
-                            src="potting-soil.jpg"
-                            alt="Plant Pal for container potting"
-                            className="w-full h-36 object-cover"
-                          />
-                          <div className="p-3 bg-white">
-                            <span className="text-sm font-medium text-gray-700">Container Potting</span>
-                          </div>
-                          {/* Overlapping Healthy Soil Image */}
-                          <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full overflow-hidden shadow-lg border-4 border-white bg-white">
-                            <img
-                              src="healthy-soil-hands.jpg"
-                              alt="Premium quality soil in hands"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                        <div className="rounded-xl overflow-hidden shadow-md">
-                          <img
-                            src="nursery-blend.jpg"
-                            alt="Plant Pal as nursery blend"
-                            className="w-full h-36 object-cover"
-                          />
-                          <div className="p-3 bg-white">
-                            <span className="text-sm font-medium text-gray-700">Nursery Mix</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-3">
-                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">In-Ground Mixing</span>
-                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Raised Beds Filling</span>
-                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Container Potting</span>
-                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Top Dressing</span>
-                        <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">Seed Starting</span>
-                      </div>
+                    {/* Overlapping Healthy Soil Image */}
+                    <div className="absolute top-2 right-2 w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-4 border-white bg-white">
+                      <img
+                        src="healthy-soil-hands.jpg"
+                        alt="Premium quality soil in hands"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   </div>
                   
-                  {/* Size Categories */}
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Available Sizes:</h4>
+                  {/* Available Sizes - Moved under image */}
+                  <div className="mt-4 px-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Available Sizes:</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
                         <img
                           src="2cf-bag-pallet.png"
                           alt="2 ft³ bags on pallet"
-                          className="w-full h-32 object-cover rounded-lg mb-3"
+                          className="w-full h-28 object-cover rounded mb-3"
                         />
-                        <div className="text-sm font-medium text-gray-700 mb-1">2 ft³ Bags</div>
-                        <div className="text-xs text-gray-500">Single unit or full pallet</div>
-                        <div className="text-sm font-bold text-red-600">$7.69</div>
+                        <div className="text-sm font-medium text-gray-700">2 ft³ Bags</div>
+                        <div className="text-xs text-gray-500">Single/pallet</div>
+                        <div className="text-sm font-bold text-red-600">$7.69/bag</div>
+                        <div className="text-xs text-orange-600">(30% off)</div>
+                        <div className="text-xs text-gray-600 mt-1">Pallet (40): $220</div>
+                        <div className="text-xs text-green-600 font-semibold">(50% off)</div>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
                         <img
                           src="tote-supersack.png"
                           alt="2.2 cubic yard tote"
-                          className="w-full h-32 object-cover rounded-lg mb-3"
+                          className="w-full h-28 object-cover rounded mb-3"
                         />
-                        <div className="text-sm font-medium text-gray-700 mb-1">2.2 yd³ Tote</div>
-                        <div className="text-sm font-bold text-green-600">$247.28</div>
+                        <div className="text-sm font-medium text-gray-700">2.2 yd³ Tote</div>
+                        <div className="text-xs text-gray-500">Single unit or truckload</div>
+                        <div className="text-sm font-bold text-green-600 mt-1">$247.28/tote</div>
+                        <div className="text-xs text-gray-600 mt-1">Truckload (22 totes): $4,897.99</div>
+                        <div className="text-xs text-green-600 font-semibold">(10% off - Save $544.17!)</div>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                      <div className="bg-white rounded-lg p-4 text-center shadow-sm">
                         <img
                           src="truckload-bulk-delivery.png"
                           alt="Truckload bulk delivery"
-                          className="w-full h-32 object-cover rounded-lg mb-3"
+                          className="w-full h-28 object-cover rounded mb-3"
                         />
-                        <div className="text-sm font-medium text-gray-700 mb-1">92-110 yd³ Truckload</div>
+                        <div className="text-sm font-medium text-gray-700">Entire Truckload of Bulk</div>
+                        <div className="text-xs text-gray-500">92-110 yd³</div>
+                        <div className="text-xs text-green-600 font-semibold mt-2">Our Best Price for Bulk</div>
+                        <div className="text-xs text-gray-600">Call to Get Quote</div>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50 mt-2 text-xs"
                         >
                           Call Now
                         </Button>
                       </div>
                     </div>
                   </div>
+                </div>
+                
+                {/* Product Information - Condensed */}
+                <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col justify-center">
+                  <div className="inline-flex items-center bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-full mb-3 self-start">
+                    #1 FEATURED PRODUCT
+                  </div>
+                  <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                    Plant Pal
+                  </h2>
+                  <p className="text-xl text-green-600 font-semibold mb-4">
+                    One of the Best Organic Planting Soils to Grow Food and Ornamentals
+                  </p>
+                  
+                  {/* Flash Sale Pricing Highlight */}
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold mb-2">
+                          30% OFF FLASH SALE
+                        </div>
+                        <div className="text-sm text-blue-600 font-medium">
+                          Call and Pick Up
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="text-gray-400 line-through text-lg">$10.99</div>
+                            <div className="text-xs text-gray-500">Local Wholesale</div>
+                          </div>
+                          <div>
+                            <div className="text-3xl font-bold text-red-600">$7.69</div>
+                            <div className="text-xs text-green-600 font-semibold">Save $3.30</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Key Features */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Leaf className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">100% Organic</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Award className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Premium Quality</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Zap className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Fast Results</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Shield className="h-5 w-5 text-green-600" />
+                      </div>
+                      <span className="text-gray-700 font-medium">Arizona Tested</span>
+                    </div>
+                  </div>
+                  
+                  {/* Premium Ingredients */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-semibold text-gray-900">Learn Why We Chose Our Ingredients</h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIngredientsExpanded(!ingredientsExpanded)}
+                        className="border-green-600 text-green-600 hover:bg-green-50"
+                      >
+                        {ingredientsExpanded ? (
+                          <>
+                            Hide Details <ChevronUp className="ml-1 h-4 w-4" />
+                          </>
+                        ) : (
+                          <>
+                            View Ingredients <ChevronDown className="ml-1 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Collapsed Preview */}
+                    {!ingredientsExpanded && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">6 Premium Ingredients:</span> Clean Wood Fiber, 8-3-1 Granules, Worm Castings, Organic Dairy Compost + more...
+                      </div>
+                    )}
+                    
+                    {/* Expanded Full List */}
+                    {ingredientsExpanded && (
+                      <ul className="text-sm text-gray-600 space-y-2">
+                        <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
+                        <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
+                        <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
+                        <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
+                        <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
+                        <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
 
+              {/* Bottom Section: Full-Width Applications */}
+              <div className="bg-gray-50 border-t border-gray-200 p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">Versatile Applications</h4>
+                
+                {/* Application Images - Full Width Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="rounded-xl overflow-hidden shadow-md">
+                    <img
+                      src="raised-garden-bed-soil.jpg"
+                      alt="Plant Pal in raised garden beds"
+                      className="w-full h-40 object-cover"
+                    />
+                    <div className="p-4 bg-white">
+                      <span className="text-sm font-medium text-gray-700">Raised Bed Applications</span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl overflow-hidden shadow-md relative">
+                    <img
+                      src="potting-soil.jpg"
+                      alt="Plant Pal for container potting"
+                      className="w-full h-40 object-cover"
+                    />
+                    <div className="p-4 bg-white">
+                      <span className="text-sm font-medium text-gray-700">Container Potting</span>
+                    </div>
+                    {/* Overlapping Healthy Soil Image */}
+                    <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full overflow-hidden shadow-lg border-4 border-white bg-white">
+                      <img
+                        src="healthy-soil-hands.jpg"
+                        alt="Premium quality soil in hands"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-xl overflow-hidden shadow-md">
+                    <img
+                      src="nursery-blend.jpg"
+                      alt="Plant Pal as nursery blend"
+                      className="w-full h-40 object-cover"
+                    />
+                    <div className="p-4 bg-white">
+                      <span className="text-sm font-medium text-gray-700">Nursery Mix</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Use Case Tags - Centered */}
+                <div className="text-center">
+                  <h5 className="text-base font-semibold text-gray-700 mb-3">Ideal Applications:</h5>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">In-Ground Mixing</span>
+                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Raised Beds Filling</span>
+                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Container Potting</span>
+                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Top Dressing</span>
+                    <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-medium">Seed Starting</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Products Section - Moved right after featured product */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4">
-            <ProductShowcase products={products} loading={isLoading} initialCategory="all" />
           </div>
         </section>
 
@@ -606,6 +615,13 @@ const Landscapers = () => {
             </div>
           </div>
         </div>
+
+        {/* Products Section - Moved after Mulch Applications */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <ProductShowcase products={products} loading={isLoading} initialCategory="all" />
+          </div>
+        </section>
       </div>
     </>
   );
