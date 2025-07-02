@@ -239,12 +239,34 @@ const Landscapers = () => {
                       Plant Pal
                     </h2>
                     <p className="text-xl text-green-600 font-semibold mb-4">
-                      Multi-Purpose Best-In-Class Organic Soil
+                      One of the Best Organic Planting Soils to Grow Food and Ornamentals
                     </p>
                     <p className="text-gray-600 text-lg leading-relaxed mb-6">
                       The ultimate bulk soil solution for professional landscapers. Our premium organic blend delivers 
                       exceptional results for all your landscaping projects, from commercial installations to residential gardens.
                     </p>
+                    
+                    {/* Premium Ingredients */}
+                    <div className="mb-6">
+                      <div className="flex items-center gap-4 mb-3">
+                        <h4 className="text-lg font-semibold text-gray-900">Premium Ingredient Blend:</h4>
+                        <div className="w-12 h-8 rounded-lg overflow-hidden shadow-sm">
+                          <img 
+                            src="soil-texture.png"
+                            alt="Plant Pal soil texture" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                      <ul className="text-sm text-gray-600 space-y-2">
+                        <li><strong>Clean Wood Fiber</strong> – Natural bulking agent that improves aeration and moisture balance for healthy roots</li>
+                        <li><strong>8-3-1 Granules</strong> – Organic source of nitrogen and other macronutrients for steady plant growth</li>
+                        <li><strong>Worm Castings</strong> – Readily available nutrients plus beneficial microbes to boost vitality</li>
+                        <li><strong>Organic Dairy Compost</strong> – Slow-release nutrient and biology enhancer that enriches soil fertility</li>
+                        <li><strong>Calcium</strong> – Strengthens cell walls and prevents blossom end rot</li>
+                        <li><strong>Zinc Sulfate</strong> – Supports enzyme function and healthy development</li>
+                      </ul>
+                    </div>
                   </div>
                   
                   {/* Key Features */}
