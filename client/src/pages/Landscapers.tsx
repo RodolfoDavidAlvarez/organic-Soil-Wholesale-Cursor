@@ -247,9 +247,35 @@ const Landscapers = () => {
                     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                       Plant Pal
                     </h2>
-                    <p className="text-xl text-green-600 font-semibold mb-6">
+                    <p className="text-xl text-green-600 font-semibold mb-4">
                       One of the Best Organic Planting Soils to Grow Food and Ornamentals
                     </p>
+                    
+                    {/* Flash Sale Pricing Highlight */}
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4 mb-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold mb-2">
+                            30% OFF FLASH SALE
+                          </div>
+                          <div className="text-sm text-blue-600 font-medium">
+                            Call and Pick Up
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <div className="text-gray-400 line-through text-lg">$10.99</div>
+                              <div className="text-xs text-gray-500">Local Wholesale</div>
+                            </div>
+                            <div>
+                              <div className="text-3xl font-bold text-red-600">$7.69</div>
+                              <div className="text-xs text-green-600 font-semibold">Save $3.30</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     
                     {/* Key Features */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -389,6 +415,7 @@ const Landscapers = () => {
                         />
                         <div className="text-sm font-medium text-gray-700 mb-1">2 ft³ Bags</div>
                         <div className="text-xs text-gray-500">Single unit or full pallet</div>
+                        <div className="text-sm font-bold text-red-600">$7.69</div>
                       </div>
                       <div className="bg-gray-50 rounded-xl p-4 text-center">
                         <img
@@ -396,7 +423,8 @@ const Landscapers = () => {
                           alt="2.2 cubic yard tote"
                           className="w-full h-32 object-cover rounded-lg mb-3"
                         />
-                        <span className="text-sm font-medium text-gray-700">2.2 yd³ Tote</span>
+                        <div className="text-sm font-medium text-gray-700 mb-1">2.2 yd³ Tote</div>
+                        <div className="text-sm font-bold text-green-600">$247.28</div>
                       </div>
                       <div className="bg-gray-50 rounded-xl p-4 text-center">
                         <img
@@ -404,7 +432,14 @@ const Landscapers = () => {
                           alt="Truckload bulk delivery"
                           className="w-full h-32 object-cover rounded-lg mb-3"
                         />
-                        <span className="text-sm font-medium text-gray-700">92-110 yd³ Truckload</span>
+                        <div className="text-sm font-medium text-gray-700 mb-1">92-110 yd³ Truckload</div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        >
+                          Call Now
+                        </Button>
                       </div>
                     </div>
                   </div>
