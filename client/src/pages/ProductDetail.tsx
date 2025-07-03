@@ -220,7 +220,7 @@ const ProductDetail = () => {
                 <div className="grid grid-cols-3 gap-4">
                   {SIZE_CATEGORIES.map((cat) => (
                     <div key={cat.name} className="rounded-lg border overflow-hidden">
-                      <img src={cat.image} alt={cat.name} className="w-full h-32 object-cover" />
+                      <img src={cat.image} alt={cat.name} className="w-full h-auto object-contain" />
                       <div className="p-2 text-center">
                         <div className="font-semibold">{cat.name}</div>
                         <div className="text-xs text-neutral-600">{cat.description}</div>
