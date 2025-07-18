@@ -203,8 +203,8 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                 {/* 9-pound Bag Preview Thumbnail */}
                 {product.imageUrl && (
                   <div className="absolute bottom-3 right-3 flex flex-col items-end z-20">
-                    <span className="mb-1 text-xs bg-white px-2 py-0.5 rounded-full shadow-md text-primary font-semibold">9lb Bag</span>
-                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-neutral-200 relative transform transition-transform duration-300 group-hover:scale-110 hover:scale-125">
+                    <span className="mb-1 text-xs sm:text-sm bg-white px-2 py-0.5 rounded-full shadow-md text-primary font-semibold">9lb Bag</span>
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-neutral-200 relative transform transition-transform duration-300 group-hover:scale-110 hover:scale-125">
                       {!textureLoaded[product.id] && (
                         <div className="absolute inset-0 bg-neutral-200 animate-pulse flex items-center justify-center">
                           <div className="h-8 w-8 text-neutral-400 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />

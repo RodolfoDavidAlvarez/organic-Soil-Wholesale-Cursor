@@ -315,7 +315,7 @@ const Landscapers = () => {
                     <img
                       src="dairy-compost.jpg"
                       alt="Organic Soil"
-                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
                       <span className="text-white text-xs sm:text-lg font-semibold">Soil</span>
@@ -326,7 +326,7 @@ const Landscapers = () => {
                     <img
                       src="worm-castings.jpg"
                       alt="Premium Amendments"
-                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
                       <span className="text-white text-xs sm:text-lg font-semibold">Amendments</span>
@@ -337,7 +337,7 @@ const Landscapers = () => {
                     <img
                       src="Dark Mulk Applied in outside of office showcase.jpeg"
                       alt="Dark Beautiful Mulch Application"
-                      className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-1 sm:p-4">
                       <span className="text-white text-xs sm:text-lg font-semibold">Dark Beautiful Mulch</span>

@@ -284,11 +284,11 @@ const ProductDetail = () => {
                 
                 {/* Thumbnail Gallery */}
                 {allMedia.length > 1 && (
-                  <div className="mt-4 grid grid-cols-4 gap-3">
+                  <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
                     {allMedia.map((media, index) => (
                       <button
                         key={index}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 min-h-[60px] sm:min-h-0 ${
                           currentImageIndex === index 
                             ? "border-primary shadow-md" 
                             : "border-neutral-200 hover:border-neutral-300"
@@ -303,8 +303,8 @@ const ProductDetail = () => {
                               className="w-full h-full object-contain"
                             />
                             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center group-hover:bg-black/50 transition-colors">
-                              <PlayCircle className="h-8 w-8 text-white mb-1 drop-shadow-lg" />
-                              <span className="text-xs text-white font-medium drop-shadow-md">Watch Video</span>
+                              <PlayCircle className="h-6 w-6 sm:h-8 sm:w-8 text-white mb-1 drop-shadow-lg" />
+                              <span className="text-[10px] sm:text-xs text-white font-medium drop-shadow-md">Watch Video</span>
                             </div>
                           </div>
                         ) : media === 'video' ? (
@@ -376,26 +376,26 @@ const ProductDetail = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-10 w-10 sm:h-8 sm:w-8"
                       onClick={() => {
                         setIsAutoPlaying(false);
                         setCurrentSizeIndex(Math.max(0, currentSizeIndex - 1));
                       }}
                       disabled={currentSizeIndex === 0}
                     >
-                      <ChevronLeft className="h-3 w-3" />
+                      <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-10 w-10 sm:h-8 sm:w-8"
                       onClick={() => {
                         setIsAutoPlaying(false);
                         setCurrentSizeIndex(Math.min(SIZE_CATEGORIES.length - 2, currentSizeIndex + 1));
                       }}
                       disabled={currentSizeIndex >= SIZE_CATEGORIES.length - 2}
                     >
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </div>
@@ -434,13 +434,13 @@ const ProductDetail = () => {
                             alt={cat.name} 
                             className="w-full h-full object-contain p-3" 
                           />
-                          <div className="absolute top-2 right-2 bg-white/90 p-1 rounded-full opacity-0 hover:opacity-100 transition-opacity">
-                            <ZoomIn className="h-3 w-3 text-neutral-600" />
+                          <div className="absolute top-2 right-2 bg-white/90 p-2 rounded-full opacity-0 hover:opacity-100 transition-opacity">
+                            <ZoomIn className="h-4 w-4 text-neutral-600" />
                           </div>
                         </div>
-                        <div className="p-2 bg-white">
-                          <h4 className="font-semibold text-xs mb-0.5">{cat.name}</h4>
-                          <p className="text-[10px] text-neutral-600 leading-relaxed line-clamp-2">{cat.description}</p>
+                        <div className="p-3 sm:p-2 bg-white">
+                          <h4 className="font-semibold text-sm sm:text-xs mb-1 sm:mb-0.5">{cat.name}</h4>
+                          <p className="text-sm sm:text-[10px] text-neutral-600 leading-relaxed line-clamp-2">{cat.description}</p>
                         </div>
                       </Card>
                     ))}

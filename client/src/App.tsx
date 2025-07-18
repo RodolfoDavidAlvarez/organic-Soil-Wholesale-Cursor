@@ -28,6 +28,7 @@ import StoreLocatorMapbox from "@/pages/StoreLocatorMapbox";
 import StoreLocatorWithRouting from "@/pages/StoreLocatorWithRouting";
 import StoreLocatorEnhanced from "@/pages/StoreLocatorEnhanced";
 import { useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 // ScrollToTop component to handle auto-scrolling
 const ScrollToTop = () => {
@@ -80,6 +81,7 @@ function App() {
               <Footer />
               <Toaster />
               <ScrollToTop />
+              <Analytics />
               <FloatingCTA />
             </div>
           </TooltipProvider>

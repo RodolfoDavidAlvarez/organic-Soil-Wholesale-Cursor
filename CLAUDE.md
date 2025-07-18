@@ -1,5 +1,12 @@
 # Project-Specific Instructions
 
+## Mobile-First Development Priority
+- **90% of website visitors use mobile phones** - CRITICAL priority
+- Always develop and test mobile view first before desktop
+- Ensure all touch targets are minimum 44x44px for easy tapping
+- Test all features on mobile viewport (375px-414px width)
+- Avoid horizontal scrolling at all costs on mobile
+
 ## Product Image Display Order
 - **ALWAYS display texture photo as the first/primary image** for all products
 - Order: 1) Product Texture Photo, 2) Additional images, 3) Product bag photo
