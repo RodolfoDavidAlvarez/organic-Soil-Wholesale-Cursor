@@ -107,7 +107,8 @@ const ProductDetail = () => {
   }, [isAutoPlaying]);
 
   const allImages: string[] = [
-    ...(product?.additionalImages || []).map(img => img.startsWith('/') ? img : `/${img}`),
+    ...(product?.texturePhotoUrl ? [product.texturePhotoUrl.startsWith('/') ? product.texturePhotoUrl : `/${product.texturePhotoUrl}`] : []),
+    ...(product?.additionalImages || []).filter(img => img !== product?.texturePhotoUrl).map(img => img.startsWith('/') ? img : `/${img}`),
     ...(product?.imageUrl ? [product.imageUrl.startsWith('/') ? product.imageUrl : `/${product.imageUrl}`] : [])
   ];
 

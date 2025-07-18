@@ -22,7 +22,8 @@ const mergeProductData = (products: any[]) => {
       type: product["Product Category"] as string,
       price: 0,
       stockQuantity: 0,
-      imageUrl: product["9lb Bag Photo URL"] || product["Product Texture Photo URL"] || "",
+      imageUrl: product["9lb Bag Photo URL"] || "",
+      texturePhotoUrl: product["Product Texture Photo URL"] || "",
       ingredients: product["Ingredients"] as string,
       targetAudience: product["Target audience"] as string,
       recommendedUses: product["Recommended Uses"] as string,
@@ -42,10 +43,7 @@ const mergeProductData = (products: any[]) => {
       safetyPrecautions: product["Safety Precautions"] as string,
       warranty: product["Limited Warranty"] as string,
       isWholesaleOnly: false,
-      additionalImages: [
-        ...(product["additionalImages"] || []),
-        ...(product["Product Texture Photo URL"] ? [product["Product Texture Photo URL"]] : []),
-      ],
+      additionalImages: product["additionalImages"] || [],
     };
   });
 };

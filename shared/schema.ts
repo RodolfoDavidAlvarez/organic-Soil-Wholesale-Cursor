@@ -27,6 +27,7 @@ export const products = pgTable("products", {
   price: integer("price").notNull(),
   stockQuantity: integer("stock_quantity").notNull(),
   imageUrl: text("image_url"),
+  texturePhotoUrl: text("texture_photo_url"),
   ingredients: text("ingredients"),
   targetAudience: text("target_audience"),
   recommendedUses: text("recommended_uses"),

@@ -15,6 +15,7 @@ const Landscapers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [sizeImageIndices, setSizeImageIndices] = useState({ bags: 0, tote: 0, bulk: 0 });
 
   const closeTexturePreview = () => {
     setTexturePreview(null);
@@ -69,6 +70,38 @@ const Landscapers = () => {
 
     setProducts(sortedProducts);
     setIsLoading(false);
+  }, []);
+
+  // Size category images for dynamic switching
+  const sizeImages = {
+    bags: [
+      "2cf-bag-pallet.png",
+      "plantpal-with-veggies.png",
+      "raised-garden-bed-soil.jpg"
+    ],
+    tote: [
+      "tote-supersack.png",
+      "nursery-blend.jpg",
+      "potting-soil.jpg"
+    ],
+    bulk: [
+      "truckload-bulk-delivery.png",
+      "Dark Mulck Truckload Delivery.jpeg",
+      "Raw Golden Looking Mulch Commercial Application look.jpeg"
+    ]
+  };
+
+  // Dynamic image switching effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSizeImageIndices(prev => ({
+        bags: (prev.bags + 1) % sizeImages.bags.length,
+        tote: (prev.tote + 1) % sizeImages.tote.length,
+        bulk: (prev.bulk + 1) % sizeImages.bulk.length
+      }));
+    }, 2500); // Switch every 2.5 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Plant Pal product images
@@ -431,11 +464,16 @@ const Landscapers = () => {
                     <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">Available Sizes:</h4>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
-                        <img
-                          src="2cf-bag-pallet.png"
-                          alt="2 ft³ bags on pallet"
-                          className="w-full h-20 object-cover rounded mb-2"
-                        />
+                        <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
+                          {sizeImages.bags.map((img, idx) => (
+                            <img
+                              key={img}
+                              src={img}
+                              alt="2 ft³ bags"
+                              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${idx === sizeImageIndices.bags ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                          ))}
+                        </div>
                         <div className="text-xs font-medium text-gray-700">2 ft³ Bags</div>
                         <div className="text-xs text-gray-500">Single/pallet</div>
                         <div className="text-xs font-bold text-red-600">$7.69/bag</div>
@@ -444,11 +482,16 @@ const Landscapers = () => {
                         <div className="text-xs text-green-600 font-semibold">(50% off)</div>
                       </div>
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
-                        <img
-                          src="tote-supersack.png"
-                          alt="2.2 cubic yard tote"
-                          className="w-full h-20 object-cover rounded mb-2"
-                        />
+                        <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
+                          {sizeImages.tote.map((img, idx) => (
+                            <img
+                              key={img}
+                              src={img}
+                              alt="2.2 cubic yard tote"
+                              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${idx === sizeImageIndices.tote ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                          ))}
+                        </div>
                         <div className="text-xs font-medium text-gray-700">2.2 yd³ Tote</div>
                         <div className="text-xs text-gray-500">Single unit or truckload</div>
                         <div className="text-xs font-bold text-green-600 mt-1">$247.28/tote</div>
@@ -456,11 +499,16 @@ const Landscapers = () => {
                         <div className="text-xs text-green-600 font-semibold">(10% off - Save $544.17!)</div>
                       </div>
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
-                        <img
-                          src="truckload-bulk-delivery.png"
-                          alt="Truckload bulk delivery"
-                          className="w-full h-20 object-cover rounded mb-2"
-                        />
+                        <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
+                          {sizeImages.bulk.map((img, idx) => (
+                            <img
+                              key={img}
+                              src={img}
+                              alt="Truckload bulk delivery"
+                              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${idx === sizeImageIndices.bulk ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                          ))}
+                        </div>
                         <div className="text-xs font-medium text-gray-700">Entire Truckload of Bulk</div>
                         <div className="text-xs text-gray-500">92-110 yd³</div>
                         <div className="text-xs text-green-600 font-semibold mt-2">Our Best Price for Bulk</div>

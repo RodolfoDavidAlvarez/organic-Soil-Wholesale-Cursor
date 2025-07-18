@@ -36,6 +36,8 @@ interface Product {
   additionalImages?: string[] | null;
   price?: number;
   imageUrl?: string;
+  texturePhotoUrl?: string;
+  displayTitle?: string;
   certifications?:
     | string
     | Array<{
@@ -190,10 +192,11 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                   </div>
                 </div>
                 <img
-                  src={product.additionalImages?.[0] || product["Product Texture Photo URL"] || DEFAULT_IMAGE}
+                  src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
+                  decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
 
