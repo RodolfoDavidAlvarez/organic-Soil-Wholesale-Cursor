@@ -78,15 +78,14 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {/* Products Dropdown */}
-            <div className="relative group">
+            <div className="relative group flex items-center">
               <Link href="/products">
                 <div
-                  className={`relative font-medium transition-colors duration-200 cursor-pointer flex items-center gap-1 ${
+                  className={`relative font-medium transition-colors duration-200 cursor-pointer flex items-center ${
                     isActive("/products") ? "text-primary" : "text-foreground hover:text-primary"
                   }`}
                 >
                   Products
-                  <ChevronDown className="h-4 w-4" />
                   <span
                     className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${
                       isActive("/products") ? "w-full" : "group-hover:w-full"
@@ -96,12 +95,26 @@ const Header = () => {
               </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="absolute inset-0" />
+                  <button
+                    className={`p-1 ml-1 rounded hover:bg-primary/10 transition-colors duration-200 ${
+                      isActive("/products") ? "text-primary" : "text-foreground hover:text-primary"
+                    }`}
+                    aria-label="Product categories dropdown"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
                   className="w-56 p-2 bg-white/95 backdrop-blur-sm border border-neutral-200/50 shadow-lg rounded-xl"
                 >
+                  <DropdownMenuItem
+                    onClick={() => window.location.href = '/products'}
+                    className="flex items-center gap-3 px-4 py-3 text-sm cursor-pointer rounded-lg hover:bg-primary/5 hover:text-primary transition-colors duration-200 font-medium"
+                  >
+                    <span>All Products</span>
+                  </DropdownMenuItem>
+                  <div className="h-px w-full bg-neutral-200/50 my-1"></div>
                   {PRODUCT_CATEGORIES.map((category) => {
                     const Icon = category.icon;
                     return (
@@ -144,7 +157,7 @@ const Header = () => {
               <Link href="/order">
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
                   <ShoppingCart className="h-4 w-4" />
-                  <span>Place Order</span>
+                  <span>Request a Quote</span>
                 </Button>
               </Link>
             </div>
@@ -223,7 +236,7 @@ const Header = () => {
                     <Link href="/order">
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        Place Order
+                        Request a Quote
                       </Button>
                     </Link>
                   </nav>

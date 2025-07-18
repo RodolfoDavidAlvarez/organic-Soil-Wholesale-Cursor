@@ -71,7 +71,7 @@ export default function FirebaseStorageDebug() {
                   className="w-full h-40 object-cover rounded"
                   onError={(e) => {
                     console.error(`Failed to load image: ${image.name}`);
-                    e.currentTarget.src = "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+                    e.currentTarget.src = "potting-soil.jpg";
                   }}
                 />
               </div>

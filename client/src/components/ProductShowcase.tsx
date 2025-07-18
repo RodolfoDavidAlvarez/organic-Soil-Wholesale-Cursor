@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { productsData } from "@/data/productData";
 
 // Default placeholder image for products that don't have images
-const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+const DEFAULT_IMAGE = "potting-soil.jpg";
 
 // Define the main product categories
 const PRODUCT_CATEGORIES = [
@@ -57,7 +57,7 @@ interface ProductShowcaseProps {
 
 // Helper function to get the display name for products (copied from Home/ProductDetail)
 const getProductDisplayName = (product: Product): string => {
-  return product.productType || product.name;
+  return product.displayTitle || product.productType || product.name;
 };
 
 export default function ProductShowcase({ products, loading = false, onProductSelect, initialCategory = "all" }: ProductShowcaseProps) {

@@ -1,51 +1,51 @@
-// Product images with public URLs from Firebase Storage
+// Product images with local file references
 export const productImages = [
   {
     name: "Dan's Gold",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FDansGold9lbs%20(1).jpg?alt=media&token=b0f2e6d8-0290-4044-835a-6f103dde1825"
+    url: "DansGold9lbs (1).jpg"
   },
   {
     name: "Mikey's Worm Poop",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FMikeys%20Worm%20Poop9lbs.jpg?alt=media&token=51ec4f5e-8802-4be3-a9ee-2bc7ebdf55f1"
+    url: "Mikeys Worm Poop9lbs.jpg"
   },
   {
     name: "CannaBag",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FCannabag10lbs.jpg?alt=media&token=17087b73-37fa-4e7b-a3a4-c1562400d263"
+    url: "Cannabag10lbs.jpg"
   },
   {
     name: "Amazonian Dark Earth",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FAmazonian1CF.jpg?alt=media&token=5dc7a4a4-8d93-4a67-8eb7-67031e2bd104"
+    url: "Amazonian1CF.jpg"
   },
   {
     name: "Dan's Drought",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FDans%20Drought10lbs.jpg?alt=media&token=37181ac4-1e34-44c0-8e10-5b990785380f"
+    url: "Dans Drought10lbs.jpg"
   },
   {
     name: "Artemis Root Boost Blend",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FArtemis10lbs%20(1).jpg?alt=media&token=06e1d610-504d-4745-8e59-9ae28a475297"
+    url: "Artemis10lbs (1).jpg"
   },
   {
     name: "Bacchus Blend",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FBacchus1CF.jpg?alt=media&token=9bef6263-5f5e-4579-91b9-fc14ba1421c3"
+    url: "Bacchus1CF.jpg"
   },
   {
     name: "SuperBooster",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/9lb%20bag%20product%20photos%2FSuperBooster%20(1).jpg?alt=media&token=509787d8-89dd-47c5-b19c-599f8868cb13"
+    url: "SuperBooster (1).jpg"
   },
   {
     name: "Ready Go Garden",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FOasis%209LB%20WB.jpg?alt=media&token=cc4f6af4-1bba-42ab-97ad-c7a7829720d5"
+    url: "RGG9lbs.jpg"
   },
   {
     name: "Plant Pal",
-    url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/SSWwholesale.com%2FPlantPal10lbs.jpg?alt=media&token=5289eae1-571d-4826-9f74-818b171021b8"
+    url: "PlantPal10lbs.jpg"
   }
 ];
 
 // Helper function to get image URL for a product name
 export function getProductImageUrlByName(productName: string): string | undefined {
   // Default fallback for when there are no matches
-  const fallbackUrl = "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+  const fallbackUrl = "hero-main-photo-v2-optimized.jpg";
   
   // Normalize product name and check for partial matches
   const normalizedProductName = productName.toLowerCase();

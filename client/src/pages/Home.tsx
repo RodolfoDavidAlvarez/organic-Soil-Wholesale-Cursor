@@ -75,7 +75,7 @@ interface ProductShowcaseProps {
 }
 
 // Default placeholder image for products that don't have images
-const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
+const DEFAULT_IMAGE = "potting-soil.jpg";
 
 const Home = () => {
   // Product categories for showcase
@@ -89,23 +89,23 @@ const Home = () => {
   // Carousel images
   const carouselImages = [
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
-      alt: "Commercial Application",
+      url: "/Healthy soil in hands.jpeg",
+      alt: "Healthy Soil in Hands",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FPark%202%20application.jpeg?alt=media&token=3d6bb609-f245-49c1-ac4d-7e711e60783e",
-      alt: "Park Application",
+      url: "/Raise Garden Bed Soil.jpeg",
+      alt: "Raised Garden Bed Soil",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54",
-      alt: "Residential Planter Cover",
+      url: "/plantpal showcase.png",
+      alt: "Plant Pal Showcase",
       type: "image",
     },
     {
-      url: "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
-      alt: "Residential Garden Beds",
+      url: "/V2 Hero Page Photo.png",
+      alt: "Premium Organic Soil",
       type: "image",
     },
     {
@@ -180,32 +180,28 @@ const Home = () => {
       id: "pallet-boxes",
       name: "Pallet of 9 lb bags",
       description: "144 units (36 cases of 4 units)",
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Categories-%20Pallet%20of%20Box.png?alt=media&token=319faa6b-499b-47db-9119-1a982e31ec89",
+      image: "/Size Categories- Pallet of Box.png",
       icon: <Box className="h-6 w-6" />,
     },
     {
       id: "pallet-bags",
       name: "Pallet of 1CF bags",
       description: "50 bags (1CF each)",
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FSize%20Category%20-%20pallet%20of%2050%201%20CF%20bags.png?alt=media&token=69966db5-9e26-4dce-b6ab-0a13b7b97440",
+      image: "/Size Category - pallet of 50 1 CF bags.png",
       icon: <Package className="h-6 w-6" />,
     },
     {
       id: "bulk",
       name: "Bulk Delivery",
       description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FBulk%20delivery.png?alt=media&token=2dfcfe98-d631-4d67-9749-528dc267099a",
+      image: "/Truckload Bulk delivery.png",
       icon: <Container className="h-6 w-6" />,
     },
     {
       id: "cubic-yard",
       name: "Buy in Cubic Yard",
       description: "Bulk pickup only",
-      image:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FSize%20Categories%2FCY%20of%20Bulk%20for%20pick%20only.png?alt=media&token=ea70e2e7-638f-47fb-9f7d-cad9ac48fabc",
+      image: "/CY of Bulk for pick only.png",
       icon: <Container className="h-6 w-6" />,
     },
   ];
@@ -417,32 +413,28 @@ const Home = () => {
     {
       id: 1, // Dan's Gold Dairy Compost
       name: "Dairy Compost",
-      imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FCompost%20Texture%20Look.jpg?alt=media&token=67d70a1e-c47e-4af9-a18d-6d96d73c6341",
+      imageUrl: "/Compost Texture Look.jpg",
       description: "ALL NATURAL DAIRY COMPOST",
       category: "Amendment",
     },
     {
       id: 2, // Mikey's Worm Poop
       name: "Worm Castings",
-      imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FWorm%20castting%20product%20texture.png?alt=media&token=59d6f3da-f603-4d5e-bac2-42cd2b7ff9f8",
+      imageUrl: "/Worm castting product texture.png",
       description: "ALL NATURAL VERMICOMPOST",
       category: "Amendment",
     },
     {
       id: 25, // SuperBooster
       name: "Organic Concentrated Blend",
-      imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FConcentrated%20Organic%20Amendment%20Fertilizer%20Product%20look.jpeg?alt=media&token=7182db19-d3b2-4bfd-9e27-db0891db9f78",
+      imageUrl: "/Concentrated Organic Amendment Fertilizer Product look.jpeg",
       description: "ORGANIC CONCENTRATED AMENDMENT",
       category: "Concentrated Amendment",
     },
     {
       id: 3, // Amazonian Dark Earth
       name: "Biochar",
-      imageUrl:
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Product%20Texture%2FProduct%20Texture%2FBiochar%20Product%20Texture%20Look.jpg?alt=media&token=ee8746dc-875d-4379-b09e-cfebaa99f1d8",
+      imageUrl: "/Biochar Product Texture Look.jpg",
       description: "BIOCHAR MINERAL",
       category: "Amendment",
     },
@@ -471,7 +463,7 @@ const Home = () => {
           }
         }}
       >
-        <link rel="preload" href="hero-main-photo-v2-optimized.jpg" as="image" />
+        <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
       </SEO>
       {/* Hero Section with Title */}
       <section className="relative py-16 bg-white overflow-hidden min-h-[60vh]">

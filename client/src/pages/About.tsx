@@ -65,7 +65,7 @@ const About = () => {
           </div>
           <div className="lg:w-1/2">
             <img
-              src="https://images.unsplash.com/photo-1605000797499-95a51c5269ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80"
+              src="Organic Wholesale Pickup.png"
               alt="Soil Seed and Water operations"
               className="rounded-lg shadow-xl w-full h-auto"
             />

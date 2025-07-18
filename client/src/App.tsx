@@ -23,6 +23,10 @@ import Wholesale from "@/pages/Wholesale";
 import WhyOrganic from "@/pages/WhyOrganic";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import StoreLocator from "@/pages/StoreLocator";
+import StoreLocatorMapbox from "@/pages/StoreLocatorMapbox";
+import StoreLocatorWithRouting from "@/pages/StoreLocatorWithRouting";
+import StoreLocatorEnhanced from "@/pages/StoreLocatorEnhanced";
 import { useEffect } from "react";
 
 // ScrollToTop component to handle auto-scrolling
@@ -56,6 +60,7 @@ function Router() {
       <Route path="/why-organic" component={WhyOrganic} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/store-locator" component={StoreLocatorEnhanced} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -5,87 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, CheckCircle2, Trash2, Plus, ShoppingCart, Box, Truck, ShoppingBag, Warehouse } from "lucide-react";
-import { productsData } from "../data/productData";
-import { PRODUCT_CATEGORIES } from "../data/categories";
+import { CheckCircle2 } from "lucide-react";
 
-// Group products by category for easier selection
-const productsByCategory = productsData.reduce(
-  (acc, product) => {
-    const category = product.type || "Other";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(product);
-    return acc;
-  },
-  {} as Record<string, typeof productsData>
-);
-
-// Available categories with friendly names and subtitles in the specified order
-const categories = [
-  { id: "Amendment", name: "Soil Amendments", subtitle: "Worm castings, dairy compost, amendments and more", products: productsByCategory["Amendment"] || [] },
-  { id: "Potting Soil", name: "Potting Soils", subtitle: "To grow vegetables, fruits or ornamentals", products: productsByCategory["Potting Soil"] || [] },
-  { id: "Mulch", name: "Mulch Products", subtitle: "Protecting soil, water retention, backfilling", products: productsByCategory["Mulch"] || [] },
-  { id: "Concentrated Amendment", name: "Concentrated Amendments", subtitle: "Fast acting nutrients and properties for soil", products: productsByCategory["Concentrated Amendment"] || [] },
-].filter((cat) => cat.products.length > 0);
-
-// Size options with icons and descriptions
-const sizeOptions = [
-  {
-    value: "boxes",
-    label: "Pallet of 9 lb bags",
-    icon: Box,
-    description: "144 units (36 cases of 4 units)",
-    image: "/images/packaging/boxes.jpg",
-  },
-  {
-    value: "bags",
-    label: "Pallet of 1CF bags",
-    icon: ShoppingBag,
-    description: "50 bags (1CF each)",
-    image: "/images/packaging/bags.jpg",
-  },
-  {
-    value: "totes",
-    label: "2.2 CY Tote",
-    icon: Package,
-    description: "Single supersack",
-    image: "/images/packaging/totes.jpg",
-  },
-  {
-    value: "bulk",
-    label: "Bulk Delivery",
-    icon: Truck,
-    description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-    image: "/images/packaging/bulk.jpg",
-  },
-  {
-    value: "bulk-pickup",
-    label: "Bulk Pickup",
-    icon: Warehouse,
-    description: "Cubic yards (Dairy compost only)",
-    image: "/images/packaging/pickup.jpg",
-  },
-];
-
-interface OrderItem {
-  id: string;
-  category: string;
-  productId: number;
-  productName: string;
-  sizeOption: string;
-  quantity: number;
-}
-
-interface CustomerInfo {
-  businessName: string;
-  contactName: string;
+interface LeadInfo {
+  name: string;
   email: string;
   phone: string;
-  deliveryType: "delivery" | "pickup";
-  address?: string;
-  pickupLocation?: string;
-  specialRequests?: string;
+  notes: string;
 }
 
 const generateAdminEmail = (data: any) => `
@@ -98,44 +24,24 @@ const generateAdminEmail = (data: any) => `
         .header { background-color: #2C3E50; color: white; padding: 20px; text-align: center; }
         .content { padding: 20px; }
         .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-        .customer-info { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; }
-        .order-info { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 6px; }
+        .lead-info { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>New Simple Order Submission</h1>
+            <h1>New Lead Submission</h1>
         </div>
         <div class="content">
-            <div class="customer-info">
-                <h2>Customer Information</h2>
-                <p><strong>Business Name:</strong> ${data.customerInfo.businessName}</p>
-                <p><strong>Contact Name:</strong> ${data.customerInfo.contactName}</p>
-                <p><strong>Email:</strong> ${data.customerInfo.email}</p>
-                <p><strong>Phone:</strong> ${data.customerInfo.phone}</p>
-                <p><strong>Delivery Type:</strong> ${data.customerInfo.deliveryType}</p>
+            <div class="lead-info">
+                <h2>Lead Information</h2>
+                <p><strong>Name:</strong> ${data.leadInfo.name}</p>
+                <p><strong>Email:</strong> ${data.leadInfo.email}</p>
+                <p><strong>Phone:</strong> ${data.leadInfo.phone}</p>
+                ${data.leadInfo.notes ? `<p><strong>Notes:</strong><br>${data.leadInfo.notes.replace(/\n/g, '<br>')}</p>` : ''}
             </div>
             
-            <div class="order-info">
-                <h2>Order Details</h2>
-                <p><strong>Total Items:</strong> ${data.orderSummary.totalItems}</p>
-                <p><strong>Total Quantity:</strong> ${data.orderSummary.totalQuantity}</p>
-                <h3>Order Items:</h3>
-                ${data.orderItems
-                  .map(
-                    (item: any) => `
-                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <p><strong>Product:</strong> ${item.productDescription}</p>
-                        <p><strong>Size:</strong> ${item.sizeDescription}</p>
-                        <p><strong>Quantity:</strong> ${item.quantity}</p>
-                    </div>
-                `
-                  )
-                  .join("")}
-            </div>
-            
-            <p>This order was submitted on ${new Date().toLocaleDateString()}.</p>
+            <p>This lead was submitted on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}.</p>
         </div>
         <div class="footer">
             <p>© ${new Date().getFullYear()} Organic Soil Wholesale</p>
@@ -160,31 +66,16 @@ const generateCustomerEmail = (data: any) => `
 <body>
     <div class="container">
         <div class="header">
-            <h1>Thank You for Your Order</h1>
+            <h1>Thank You for Contacting Us</h1>
         </div>
         <div class="content">
-            <p>Dear ${data.customerInfo.contactName},</p>
-            <p>Thank you for your order with Organic Soil Wholesale. We have received your request and will process it shortly.</p>
+            <p>Dear ${data.leadInfo.name},</p>
+            <p>Thank you for reaching out to Organic Soil Wholesale. We have received your inquiry and will get back to you shortly.</p>
             
-            <div style="background: #f9f9f9; padding: 15px; margin: 20px 0; border-radius: 6px;">
-                <h3>Order Summary</h3>
-                <p><strong>Total Items:</strong> ${data.orderSummary.totalItems}</p>
-                <p><strong>Total Quantity:</strong> ${data.orderSummary.totalQuantity}</p>
-                <h4>Order Items:</h4>
-                ${data.orderItems
-                  .map(
-                    (item: any) => `
-                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <p><strong>Product:</strong> ${item.productDescription}</p>
-                        <p><strong>Size:</strong> ${item.sizeDescription}</p>
-                        <p><strong>Quantity:</strong> ${item.quantity}</p>
-                    </div>
-                `
-                  )
-                  .join("")}
-            </div>
+            <p>Our team will review your request and contact you within one business day to discuss how we can help with your soil and compost needs.</p>
             
-            <p>We will contact you shortly with pricing and delivery details. If you have any questions, please don't hesitate to contact us at (928) 550-1649.</p>
+            <p>If you have any urgent questions, please don't hesitate to call us at (928) 550-1649.</p>
+            
             <p>Best regards,<br>The Organic Soil Wholesale Team</p>
         </div>
         <div class="footer">
@@ -199,101 +90,35 @@ export const SimpleOrderForm: React.FC = () => {
   const { toast } = useToast();
   const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
 
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
-    businessName: "",
-    contactName: "",
+  const [leadInfo, setLeadInfo] = useState<LeadInfo>({
+    name: "",
     email: "",
     phone: "",
-    deliveryType: "delivery",
+    notes: "",
   });
 
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
 
-  // Add new order item
-  const addOrderItem = () => {
-    const newItem: OrderItem = {
-      id: Date.now().toString(),
-      category: "",
-      productId: 0,
-      productName: "",
-      sizeOption: "",
-      quantity: 1,
-    };
-    setOrderItems([...orderItems, newItem]);
-  };
-
-  // Remove order item
-  const removeOrderItem = (id: string) => {
-    setOrderItems(orderItems.filter((item) => item.id !== id));
-  };
-
-  // Update order item
-  const updateOrderItem = (id: string, updates: Partial<OrderItem>) => {
-    setOrderItems(orderItems.map((item) => (item.id === id ? { ...item, ...updates } : item)));
-  };
-
-  // Get products for selected category
-  const getProductsForCategory = (categoryId: string) => {
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category ? category.products : [];
-  };
 
   // Validate form
   const validateForm = (): string[] => {
     const errors: string[] = [];
 
-    // Customer info validation
-    if (!customerInfo.businessName.trim()) errors.push("Business name is required");
-    if (!customerInfo.contactName.trim()) errors.push("Contact name is required");
-    if (!customerInfo.email.trim()) errors.push("Email is required");
-    if (!customerInfo.phone.trim()) errors.push("Phone number is required");
+    if (!leadInfo.name.trim()) errors.push("Name is required");
+    if (!leadInfo.email.trim()) errors.push("Email is required");
+    if (!leadInfo.phone.trim()) errors.push("Phone number is required");
 
-    // Delivery validation
-    if (customerInfo.deliveryType === "delivery" && !customerInfo.address?.trim()) {
-      errors.push("Delivery address is required");
-    }
-    if (customerInfo.deliveryType === "pickup" && !customerInfo.pickupLocation?.trim()) {
-      errors.push("Pickup location is required");
-    }
-
-    // Order items validation
-    if (orderItems.length === 0) {
-      errors.push("Please add at least one product");
-    }
-
-    orderItems.forEach((item, index) => {
-      if (!item.category) errors.push(`Product ${index + 1}: Category is required`);
-      if (!item.productId) errors.push(`Product ${index + 1}: Product selection is required`);
-      if (!item.sizeOption) errors.push(`Product ${index + 1}: Size option is required`);
-      if (item.quantity < 1) errors.push(`Product ${index + 1}: Quantity must be at least 1`);
-
-      // Special validation for bulk pickup
-      if (item.sizeOption === "bulk-pickup") {
-        const product = productsData.find((p) => p.id === item.productId);
-        if (product && !["ORGANIC DAIRY COMPOST", "ORGANIC WORM CASTINGS"].includes(product.productType)) {
-          errors.push(`Product ${index + 1}: Only Dairy Compost and Worm Castings available for bulk pickup`);
-        }
-      }
-    });
-
-    // Vicksburg pickup validation
-    if (customerInfo.deliveryType === "pickup" && customerInfo.pickupLocation === "vicksburg") {
-      const invalidProducts = orderItems.filter((item) => {
-        const product = productsData.find((p) => p.id === item.productId);
-        return product && !["ORGANIC DAIRY COMPOST"].includes(product.productType);
-      });
-
-      if (invalidProducts.length > 0) {
-        errors.push("Vicksburg, AZ pickup only available for Dairy Compost");
-      }
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (leadInfo.email && !emailRegex.test(leadInfo.email)) {
+      errors.push("Please enter a valid email address");
     }
 
     return errors;
   };
 
-  // Submit order
+  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -312,51 +137,21 @@ export const SimpleOrderForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Enhance order items with product details
-      const enhancedItems = orderItems.map((item) => {
-        const product = productsData.find((p) => p.id === item.productId);
-        const sizeInfo = sizeOptions.find((s) => s.value === item.sizeOption);
-
-        return {
-          ...item,
-          productDescription: product?.description || "",
-          productImageUrl: product?.imageUrl || "",
-          sizeDescription: sizeInfo?.description || "",
-        };
-      });
-
-      const orderData = {
-        formType: "Simple Order Form",
-        customerInfo,
-        orderItems: enhancedItems,
+      const formData = {
+        formType: "Lead Form",
+        leadInfo,
         submittedAt: new Date().toISOString(),
-        orderSummary: {
-          totalItems: orderItems.length,
-          totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
-        },
         emails: {
           admin: {
-            subject: `New Simple Order from ${customerInfo.businessName}`,
+            subject: `New Lead from ${leadInfo.name}`,
             html: generateAdminEmail({
-              customerInfo,
-              orderItems: enhancedItems,
-              orderSummary: {
-                totalItems: orderItems.length,
-                totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
-              },
-              submittedAt: new Date().toISOString(),
+              leadInfo,
             }),
           },
           customer: {
-            subject: "Thank You for Your Order with Organic Soil Wholesale",
+            subject: "Thank You for Contacting Organic Soil Wholesale",
             html: generateCustomerEmail({
-              customerInfo,
-              orderItems: enhancedItems,
-              orderSummary: {
-                totalItems: orderItems.length,
-                totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
-              },
-              submittedAt: new Date().toISOString(),
+              leadInfo,
             }),
           },
         },
@@ -367,23 +162,23 @@ export const SimpleOrderForm: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit order");
+        throw new Error("Failed to submit form");
       }
 
       setShowThankYou(true);
       toast({
-        title: "Order Submitted",
-        description: "Thank you! We'll contact you shortly with pricing and delivery details.",
+        title: "Form Submitted",
+        description: "Thank you! We'll contact you shortly.",
       });
     } catch (error) {
-      console.error("Error submitting order:", error);
+      console.error("Error submitting form:", error);
       toast({
         title: "Submission Failed",
-        description: "There was an error submitting your order. Please try again.",
+        description: "There was an error submitting your information. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -393,14 +188,12 @@ export const SimpleOrderForm: React.FC = () => {
 
   // Reset form
   const resetForm = () => {
-    setCustomerInfo({
-      businessName: "",
-      contactName: "",
+    setLeadInfo({
+      name: "",
       email: "",
       phone: "",
-      deliveryType: "delivery",
+      notes: "",
     });
-    setOrderItems([]);
     setShowThankYou(false);
   };
 
@@ -408,15 +201,14 @@ export const SimpleOrderForm: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto p-6 text-center space-y-6">
         <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-bold text-gray-900">Order Submitted Successfully!</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Thank You!</h2>
         <p className="text-gray-600">
-          Thank you for your order! Our team will review your request and contact you within one business day with pricing details and delivery
-          arrangements.
+          We've received your information and will contact you shortly to discuss your needs.
         </p>
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">Order Reference: #{Date.now().toString().slice(-6)}</p>
+          <p className="text-sm text-gray-500">Reference: #{Date.now().toString().slice(-6)}</p>
           <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
-            Place Another Order
+            Submit Another Inquiry
           </Button>
         </div>
       </div>
@@ -424,383 +216,64 @@ export const SimpleOrderForm: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="max-w-lg mx-auto p-6 space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Place Your Order</h1>
-        <p className="text-gray-600">Select your products and we'll provide pricing and delivery details</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Get in Touch</h1>
+        <p className="text-gray-600">Tell us about your soil and compost needs</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Customer Information */}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
+              <Label htmlFor="name">Name *</Label>
               <Input
-                id="businessName"
-                value={customerInfo.businessName}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, businessName: e.target.value })}
-                placeholder="Enter your business name"
+                id="name"
+                value={leadInfo.name}
+                onChange={(e) => setLeadInfo({ ...leadInfo, name: e.target.value })}
+                placeholder="Enter your name"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contactName">Contact Name *</Label>
-              <Input
-                id="contactName"
-                value={customerInfo.contactName}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, contactName: e.target.value })}
-                placeholder="Enter contact person name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                placeholder="Enter email address"
+                value={leadInfo.email}
+                onChange={(e) => setLeadInfo({ ...leadInfo, email: e.target.value })}
+                placeholder="Enter your email"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">Phone *</Label>
               <Input
                 id="phone"
                 type="tel"
-                value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                placeholder="Enter phone number"
+                value={leadInfo.phone}
+                onChange={(e) => setLeadInfo({ ...leadInfo, phone: e.target.value })}
+                placeholder="Enter your phone number"
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Tell us about your needs</Label>
+              <Textarea
+                id="notes"
+                value={leadInfo.notes}
+                onChange={(e) => setLeadInfo({ ...leadInfo, notes: e.target.value })}
+                placeholder="What products are you interested in? Any special requirements or questions?"
+                rows={5}
               />
             </div>
           </div>
         </Card>
 
-        {/* Delivery Options */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Delivery Options</h2>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Delivery Type *</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Button
-                  type="button"
-                  variant={customerInfo.deliveryType === "delivery" ? "default" : "outline"}
-                  className={customerInfo.deliveryType === "delivery" ? "bg-green-600 hover:bg-green-700" : ""}
-                  onClick={() => setCustomerInfo({ ...customerInfo, deliveryType: "delivery" })}
-                >
-                  <Truck className="mr-2 h-4 w-4" />
-                  Delivery
-                </Button>
-                <Button
-                  type="button"
-                  variant={customerInfo.deliveryType === "pickup" ? "default" : "outline"}
-                  className={customerInfo.deliveryType === "pickup" ? "bg-green-600 hover:bg-green-700" : ""}
-                  onClick={() => setCustomerInfo({ ...customerInfo, deliveryType: "pickup" })}
-                >
-                  <Warehouse className="mr-2 h-4 w-4" />
-                  Pickup
-                </Button>
-              </div>
-            </div>
-
-            {customerInfo.deliveryType === "delivery" ? (
-              <div className="space-y-2">
-                <Label htmlFor="address">Delivery Address *</Label>
-                <Textarea
-                  id="address"
-                  value={customerInfo.address || ""}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                  placeholder="Enter complete delivery address including street, city, state, and zip code"
-                  required
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="pickupLocation">Pickup Location *</Label>
-                <Select
-                  value={customerInfo.pickupLocation || ""}
-                  onValueChange={(value) => setCustomerInfo({ ...customerInfo, pickupLocation: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select pickup location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="phoenix">Phoenix, AZ</SelectItem>
-                    <SelectItem value="congress">Congress, AZ</SelectItem>
-                    <SelectItem value="vicksburg">Vicksburg, AZ (Bulk Only: Dairy Compost)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Product Selection */}
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Products</h2>
-            <Button type="button" onClick={addOrderItem} className="bg-green-600 hover:bg-green-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </div>
-
-          {orderItems.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <ShoppingCart className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-              <p>No products added yet</p>
-              <p className="text-sm">Click "Add Product" to get started</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {orderItems.map((item, index) => (
-                <Card key={item.id} className="p-6 border border-gray-200 shadow-sm">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium">Product {index + 1}</h3>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeOrderItem(item.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Step Progress Indicator */}
-                    <div className="mb-6">
-                      <div className="flex items-center space-x-2 sm:space-x-4 w-full">
-                        {[
-                          { step: 1, label: "Category", completed: !!item.category },
-                          { step: 2, label: "Product", completed: !!item.productId },
-                          { step: 3, label: "Size", completed: !!item.sizeOption },
-                          { step: 4, label: "Quantity", completed: item.quantity > 0 },
-                        ].map((stepInfo, stepIndex) => (
-                          <div key={stepInfo.step} className="flex items-center flex-1">
-                            <div className="flex items-center space-x-1 sm:space-x-2">
-                              <div
-                                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
-                                  stepInfo.completed ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
-                                }`}
-                              >
-                                {stepInfo.completed ? <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" /> : stepInfo.step}
-                              </div>
-                              <span
-                                className={`text-xs sm:text-sm font-medium hidden sm:inline ${
-                                  stepInfo.completed ? "text-green-600" : "text-gray-500"
-                                }`}
-                              >
-                                {stepInfo.label}
-                              </span>
-                            </div>
-                            {stepIndex < 3 && (
-                              <div
-                                className={`flex-1 h-0.5 mx-1 sm:mx-3 transition-colors ${stepInfo.completed ? "bg-green-500" : "bg-gray-200"}`}
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {/* Step 1: Category Selection */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-medium">
-                            1
-                          </div>
-                          <Label>Choose Category *</Label>
-                        </div>
-                          <Select
-                            value={item.category}
-                            onValueChange={(value) => {
-                              updateOrderItem(item.id, {
-                                category: value,
-                                productId: 0,
-                                productName: "",
-                                sizeOption: "",
-                                quantity: 1,
-                              });
-                            }}
-                          >
-                            <SelectTrigger className={`transition-all ${item.category ? "border-green-500" : ""}`}>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{category.name}</span>
-                                    <span className="text-xs text-gray-500">{category.subtitle}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Step 2: Product Selection */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                                item.category ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
-                              }`}
-                            >
-                              2
-                            </div>
-                            <Label className={!item.category ? "text-gray-400" : ""}>Choose Product *</Label>
-                          </div>
-                          <Select
-                            value={item.productId.toString()}
-                            onValueChange={(value) => {
-                              const productId = parseInt(value);
-                              const product = productsData.find((p) => p.id === productId);
-                              updateOrderItem(item.id, {
-                                productId,
-                                productName: product?.productType || "",
-                                sizeOption: "",
-                                quantity: 1,
-                              });
-                            }}
-                            disabled={!item.category}
-                          >
-                            <SelectTrigger className={`transition-all ${!item.category ? "bg-gray-50" : item.productId ? "border-green-500" : ""}`}>
-                              <SelectValue placeholder={!item.category ? "Select category first" : "Select product"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getProductsForCategory(item.category).map((product) => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.productType}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Step 3: Size Selection */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                                item.productId ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
-                              }`}
-                            >
-                              3
-                            </div>
-                            <Label className={!item.productId ? "text-gray-400" : ""}>Choose Size/Packaging *</Label>
-                          </div>
-                          <Select
-                            value={item.sizeOption}
-                            onValueChange={(value) => updateOrderItem(item.id, { sizeOption: value })}
-                            disabled={!item.productId}
-                          >
-                            <SelectTrigger
-                              className={`h-12 p-3 transition-all ${!item.productId ? "bg-gray-50" : item.sizeOption ? "border-green-500" : ""}`}
-                            >
-                              <SelectValue placeholder={!item.productId ? "Select product first" : "Select size"}>
-                                {item.sizeOption &&
-                                  (() => {
-                                    const selectedSize = sizeOptions.find((s) => s.value === item.sizeOption);
-                                    return selectedSize ? (
-                                      <div className="flex items-center gap-2">
-                                        <selectedSize.icon className="h-4 w-4 flex-shrink-0" />
-                                        <span className="font-medium truncate">{selectedSize.label}</span>
-                                      </div>
-                                    ) : null;
-                                  })()}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sizeOptions.map((size) => {
-                                // Get dynamic description for bulk delivery based on product type
-                                let description = size.description;
-                                if (size.value === "bulk") {
-                                  const selectedProduct = productsData.find((p) => p.id === parseInt(item.productId.toString()));
-                                  if (selectedProduct) {
-                                    if (selectedProduct.category === "Amendment" || selectedProduct.category === "Concentrated Amendment") {
-                                      description = "22-24 tons per truckload";
-                                    } else if (selectedProduct.category === "Potting Soil" || selectedProduct.category === "Mulch") {
-                                      description = "90-110 CYs per truckload";
-                                    }
-                                  }
-                                }
-
-                                return (
-                                  <SelectItem key={size.value} value={size.value}>
-                                    <div className="flex flex-col gap-1">
-                                      <div className="flex items-center gap-2">
-                                        <size.icon className="h-4 w-4" />
-                                        <span className="font-medium">{size.label}</span>
-                                      </div>
-                                      <span className="text-xs text-gray-500 ml-6">{description}</span>
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Step 4: Quantity */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                                item.sizeOption ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
-                              }`}
-                            >
-                              4
-                            </div>
-                            <Label className={!item.sizeOption ? "text-gray-400" : ""}>Enter Quantity *</Label>
-                          </div>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={item.quantity.toString()}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[^0-9]/g, "");
-                              const numValue = parseInt(value) || 1;
-                              updateOrderItem(item.id, { quantity: Math.max(1, numValue) });
-                            }}
-                            onFocus={(e) => e.target.select()}
-                            placeholder={!item.sizeOption ? "Select size first" : "Enter quantity"}
-                            disabled={!item.sizeOption}
-                            className={`transition-all ${!item.sizeOption ? "bg-gray-50" : item.quantity > 0 ? "border-green-500" : ""}`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Special Requests */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Special Requests (Optional)</h2>
-          <Textarea
-            value={customerInfo.specialRequests || ""}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, specialRequests: e.target.value })}
-            placeholder="Any special delivery instructions, timing requirements, or other notes..."
-            rows={3}
-          />
-        </Card>
-
-        {/* Submit Button */}
         <div className="flex justify-center">
-          <Button type="submit" disabled={isSubmitting || orderItems.length === 0} className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg">
-            {isSubmitting ? "Submitting..." : "Submit Order Request"}
+          <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg">
+            {isSubmitting ? "Submitting..." : "Submit"}
           </Button>
         </div>
       </form>

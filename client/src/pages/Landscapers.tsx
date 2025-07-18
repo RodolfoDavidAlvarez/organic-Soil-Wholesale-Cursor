@@ -101,9 +101,9 @@ const Landscapers = () => {
       title: "Commercial Park Applications",
       description: "Professional mulch application for parks and public spaces, providing both aesthetic appeal and soil protection.",
       images: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FCommercial%20Applicaiton.png?alt=media&token=1eb4155a-00d0-462e-9280-928ff21db9eb",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FPark%202%20application.jpeg?alt=media&token=3d6bb609-f245-49c1-ac4d-7e711e60783e",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FParks.%20appliationjpeg.jpeg?alt=media&token=049de967-4c24-412a-8fc4-86ddf7defef7",
+        "Raw Golden Looking Mulch Commercial Application look.jpeg",
+        "Dark Mulk Applied in outside of office showcase.jpeg",
+        "Dark Mulck Truckload Delivery.jpeg",
       ],
       benefits: ["Professional finish", "Long-lasting results", "Erosion control", "Water conservation"],
     },
@@ -112,9 +112,9 @@ const Landscapers = () => {
       title: "Residential Landscaping",
       description: "Premium mulch solutions for residential properties, enhancing curb appeal and garden health.",
       images: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Dark%20Mulch%20Planter%20Cover.jpeg?alt=media&token=0051d3f2-0116-4cd9-909c-5b4861171c54",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Open%20area%20with%20Raw%20Mulch.jpeg?alt=media&token=9938ef5d-604b-43c7-96f3-c65ff9c71f6d",
+        "Dark Mulk Applied in outside of office showcase.jpeg",
+        "Dark Mulk Applied in outside of office showcase.jpeg",
+        "Raw Golden Looking Mulch Commercial Application look.jpeg",
       ],
       benefits: ["Enhanced aesthetics", "Soil protection", "Weed suppression", "Moisture retention"],
     },
@@ -123,9 +123,9 @@ const Landscapers = () => {
       title: "Bulk Delivery Solutions",
       description: "Efficient bulk mulch delivery for large-scale landscaping projects.",
       images: [
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulck%20Truckload%20Delivery.jpeg?alt=media&token=f2709c22-8af6-48aa-8deb-00200d4e78d9",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FDark%20Mulk%20Applied%20in%20outside%20of%20office%20showcase.jpeg?alt=media&token=557e9170-9316-438b-abe8-48f8987144c7",
-        "https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FRaw%20Golden%20Looking%20Mulch%20Commercial%20Application%20look.jpeg?alt=media&token=11ad38f6-0678-40c6-a3bc-7656785e8456",
+        "Dark Mulck Truckload Delivery.jpeg",
+        "Dark Mulk Applied in outside of office showcase.jpeg",
+        "Raw Golden Looking Mulch Commercial Application look.jpeg",
       ],
       benefits: ["Cost-effective", "Project efficiency", "Consistent quality", "Timely delivery"],
     },
@@ -302,7 +302,7 @@ const Landscapers = () => {
                   {/* Dark Beautiful Mulch Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
                     <img
-                      src="https://firebasestorage.googleapis.com/v0/b/whysoilmatters-1c40b.firebasestorage.app/o/Mulch%20photos%2FResidential%2C%20Around%20Medium%20Dark%20Mulch%20raised%20garden%20beds.jpeg?alt=media&token=a2d49936-7575-421d-8083-f0f029f93ffa"
+                      src="Dark Mulk Applied in outside of office showcase.jpeg"
                       alt="Dark Beautiful Mulch Application"
                       className="w-full h-24 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                     />

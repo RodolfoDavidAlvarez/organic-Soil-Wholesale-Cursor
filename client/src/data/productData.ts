@@ -8,8 +8,11 @@ import productStories from "./json/product_stories_and_overview.json";
 // Helper function to merge product info with photos and stories
 const mergeProductData = (products: any[]) => {
   return products.map((product: any) => {
-    // Find matching story data
-    const storyData = productStories.find((story: any) => story["Product name"].toLowerCase() === product["Product name"].toLowerCase());
+    // Find matching story data by Product name OR Brand name
+    const storyData = productStories.find((story: any) => 
+      story["Product name"].toLowerCase() === product["Product name"].toLowerCase() ||
+      story["Product name"].toLowerCase() === product["Brand name"]?.toLowerCase()
+    );
 
     return {
       id: products.indexOf(product) + 1,
@@ -19,7 +22,7 @@ const mergeProductData = (products: any[]) => {
       type: product["Product Category"] as string,
       price: 0,
       stockQuantity: 0,
-      imageUrl: product["9lb Bag Photo URL"] || "",
+      imageUrl: product["9lb Bag Photo URL"] || product["Product Texture Photo URL"] || "",
       ingredients: product["Ingredients"] as string,
       targetAudience: product["Target audience"] as string,
       recommendedUses: product["Recommended Uses"] as string,
@@ -30,6 +33,12 @@ const mergeProductData = (products: any[]) => {
       sizeOptions: product["Size Categories"] as string,
       sizeCategories: [] as SizeCategory[],
       productType: product["Brand name"] as string,
+      displayTitle: product["Display Title"] as string,
+      marketingTitle: product["Marketing Title"] as string,
+      seoKeywords: product["SEO Keywords"] as string,
+      marketingNote: product["Marketing Note"] as string,
+      productVideoUrl: product["Product Video URL"] as string,
+      productVideoTitle: product["Product Video Title"] as string,
       safetyPrecautions: product["Safety Precautions"] as string,
       warranty: product["Limited Warranty"] as string,
       isWholesaleOnly: false,
