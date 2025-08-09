@@ -14,6 +14,10 @@ export default defineConfig({
       ? [await import("@replit/vite-plugin-cartographer").then((m) => m.cartographer())]
       : []),
   ],
+  server: {
+    host: true, // This allows external connections
+    port: 5173, // Default Vite port
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),

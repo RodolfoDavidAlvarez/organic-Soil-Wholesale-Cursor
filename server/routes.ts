@@ -3,9 +3,17 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertContactMessageSchema, insertOnboardingRequestSchema, insertProductSchema } from "@shared/schema";
 import { productsData } from "../client/src/data/productData";
+import inventoryRoutes from "./routes/inventory";
+import checkoutRoutes from "./routes/checkout";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
+
+  // Inventory routes
+  app.use("/api/inventory", inventoryRoutes);
+  
+  // Checkout routes
+  app.use("/api/checkout", checkoutRoutes);
 
   // Products routes
   app.get("/api/products", async (req, res) => {

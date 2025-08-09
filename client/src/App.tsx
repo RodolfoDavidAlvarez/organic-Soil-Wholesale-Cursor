@@ -28,6 +28,8 @@ import StoreLocatorMapbox from "@/pages/StoreLocatorMapbox";
 import StoreLocatorWithRouting from "@/pages/StoreLocatorWithRouting";
 import StoreLocatorEnhanced from "@/pages/StoreLocatorEnhanced";
 import QRLanding from "@/pages/QRLanding";
+import Checkout from "@/pages/Checkout";
+import OrderConfirmation from "@/pages/OrderConfirmation";
 import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -64,6 +66,8 @@ function Router() {
       <Route path="/privacy" component={Privacy} />
       <Route path="/store-locator" component={StoreLocatorEnhanced} />
       <Route path="/qr" component={QRLanding} />
+      <Route path="/checkout" component={Checkout} />
+      <Route path="/order-confirmation" component={OrderConfirmation} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -72,6 +76,7 @@ function Router() {
 function App() {
   const [location] = useLocation();
   const isQRLanding = location === '/qr';
+  const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation';
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -79,15 +84,15 @@ function App() {
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <TooltipProvider>
             <div className="min-h-screen flex flex-col">
-              {!isQRLanding && <Header />}
-              <main className={`flex-grow ${!isQRLanding ? 'pt-20' : ''}`}>
+              {!isQRLanding && !isCheckoutFlow && <Header />}
+              <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow ? 'pt-20' : ''}`}>
                 <Router />
               </main>
-              {!isQRLanding && <Footer />}
+              {!isQRLanding && !isCheckoutFlow && <Footer />}
               <Toaster />
               <ScrollToTop />
               <Analytics />
-              {!isQRLanding && <FloatingCTA />}
+              {!isQRLanding && !isCheckoutFlow && <FloatingCTA />}
             </div>
           </TooltipProvider>
         </ThemeProvider>
