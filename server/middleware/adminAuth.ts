@@ -1,12 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { db } from '../db';
 import { adminSessions, adminUsers, auditLogs } from '../../shared/schema';
 import { eq, and, gt } from 'drizzle-orm';
-
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface AdminRequest extends Request {
   admin?: {

@@ -1,17 +1,11 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { db } from '../../db';
 import { adminUsers, adminSessions, auditLogs } from '../../../shared/schema';
-import { eq } from 'drizzle-orm';
-import { createClient } from '@supabase/supabase-js';
+import { eq, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
 const router = Router();
-
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Login schema
 const loginSchema = z.object({
@@ -140,6 +134,90 @@ router.get('/session', async (req, res) => {
   } catch (error) {
     console.error('Session check error:', error);
     res.status(500).json({ error: 'Session check failed' });
+  }
+});
+
+// Temporary setup endpoint - REMOVE IN PRODUCTION
+router.post('/setup-initial', async (req, res) => {
+  try {
+    const { setupKey } = req.body;
+    
+    if (setupKey !== 'initial-setup-2024') {
+      return res.status(403).json({ error: 'Invalid setup key' });
+    }
+
+    // Create admin tables (will fail silently if they exist)
+    try {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS admin_users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          role VARCHAR(50) DEFAULT 'admin',
+          permissions JSONB DEFAULT '{}',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          last_login TIMESTAMP,
+          is_active BOOLEAN DEFAULT true
+        )
+      `);
+
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          admin_id INTEGER REFERENCES admin_users(id) ON DELETE CASCADE,
+          token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id SERIAL PRIMARY KEY,
+          admin_id INTEGER REFERENCES admin_users(id),
+          action VARCHAR(100) NOT NULL,
+          entity_type VARCHAR(50),
+          entity_id INTEGER,
+          old_values JSONB,
+          new_values JSONB,
+          ip_address INET,
+          user_agent TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (error) {
+      console.log('Tables might already exist, continuing...');
+    }
+
+    // Check if admin exists
+    const existingAdmin = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.email, 'ralvarez@soilseedandwater.com'))
+      .limit(1);
+
+    if (existingAdmin.length === 0) {
+      // Create admin user
+      await db.insert(adminUsers).values({
+        email: 'ralvarez@soilseedandwater.com',
+        role: 'super_admin',
+        permissions: { all: true },
+        isActive: true
+      });
+
+      return res.json({
+        success: true,
+        message: 'Admin user created successfully'
+      });
+    } else {
+      return res.json({
+        success: true,
+        message: 'Admin user already exists'
+      });
+    }
+  } catch (error) {
+    console.error('Setup error:', error);
+    res.status(500).json({ error: 'Setup failed', details: error.message });
   }
 });
 
