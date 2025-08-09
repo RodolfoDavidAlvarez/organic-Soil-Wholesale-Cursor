@@ -111,7 +111,7 @@ const QRLanding: React.FC = () => {
     }
   };
 
-  const updateQuantity = (productId: string, size: string, delta: number) => {
+  const updateQuantity = (productId: number, size: string, delta: number) => {
     setCart(cart.map(item => {
       if (item.product.id === productId && item.size === size) {
         const newQuantity = item.quantity + delta;
@@ -209,13 +209,34 @@ const QRLanding: React.FC = () => {
     }
   };
 
-  // Load saved customer info
+  // Load saved customer info and cart
   useEffect(() => {
-    const saved = localStorage.getItem('qrOrderCustomer');
-    if (saved) {
-      setCustomerInfo(JSON.parse(saved));
+    // Load customer info
+    const savedCustomer = localStorage.getItem('qrOrderCustomer');
+    if (savedCustomer) {
+      setCustomerInfo(JSON.parse(savedCustomer));
+    }
+    
+    // Load cart from localStorage
+    const savedCart = localStorage.getItem('qrOrderCart');
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        setCart(parsedCart);
+      } catch (e) {
+        console.error('Error loading cart:', e);
+      }
     }
   }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem('qrOrderCart', JSON.stringify(cart));
+    } else {
+      localStorage.removeItem('qrOrderCart');
+    }
+  }, [cart]);
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -260,32 +281,46 @@ const QRLanding: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               {step === 'welcome' && (
-                <Link to="/">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-white hover:bg-white/20"
-                  >
-                    <Home className="w-4 h-4 mr-1" />
-                    <span className="text-xs">Main Site</span>
-                  </Button>
-                </Link>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-white hover:bg-white/20"
+                  onClick={() => {
+                    if (cart.length > 0) {
+                      if (confirm(`You have ${getTotalItems()} items in your cart. Are you sure you want to leave? Your cart will be saved for your next visit.`)) {
+                        window.location.href = '/';
+                      }
+                    } else {
+                      window.location.href = '/';
+                    }
+                  }}
+                >
+                  <Home className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Main Site</span>
+                </Button>
               )}
-              {step !== 'welcome' && step !== 'pickup-options' && step !== 'notify-arrival' && (
+              {step !== 'welcome' && (
                 <div className="flex items-center gap-3">
                 {cart.length > 0 && (
-                  <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">
-                    {getTotalItems()} items
-                  </Badge>
+                  <>
+                    <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">
+                      {getTotalItems()} items
+                    </Badge>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="text-white relative"
+                      onClick={() => step === 'cart' ? setStep('menu') : setStep('cart')}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      {cart.length > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {getTotalItems()}
+                        </span>
+                      )}
+                    </Button>
+                  </>
                 )}
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="text-white"
-                  onClick={() => step === 'cart' ? setStep('menu') : setStep('cart')}
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                </Button>
                 </div>
               )}
             </div>
@@ -373,14 +408,19 @@ const QRLanding: React.FC = () => {
                 </motion.div>
               </div>
 
-              {/* Product Categories */}
+              {/* Product Categories - Now Clickable */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {/* Soil Category */}
-                <motion.div
+                <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="relative overflow-hidden rounded-lg shadow-md"
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSelectedCategory('potting');
+                    setStep('menu');
+                  }}
+                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
                     src={products.find(p => p.type === 'Potting Soil')?.texturePhotoUrl || '/placeholder.png'}
@@ -388,16 +428,21 @@ const QRLanding: React.FC = () => {
                     className="w-full h-32 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <p className="p-2 text-white font-semibold text-sm">Soil</p>
+                    <p className="p-2 text-white font-semibold text-sm">Potting Soils</p>
                   </div>
-                </motion.div>
+                </motion.button>
 
                 {/* Amendments Category */}
-                <motion.div
+                <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="relative overflow-hidden rounded-lg shadow-md"
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSelectedCategory('amendment');
+                    setStep('menu');
+                  }}
+                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
                     src={products.find(p => p.type === 'Amendment')?.texturePhotoUrl || '/placeholder.png'}
@@ -407,14 +452,19 @@ const QRLanding: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
                     <p className="p-2 text-white font-semibold text-sm">Amendments</p>
                   </div>
-                </motion.div>
+                </motion.button>
 
                 {/* Mulch Category */}
-                <motion.div
+                <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="relative overflow-hidden rounded-lg shadow-md"
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSelectedCategory('mulch');
+                    setStep('menu');
+                  }}
+                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
                     src={products.find(p => p.type === 'Mulch')?.texturePhotoUrl || '/placeholder.png'}
@@ -424,7 +474,7 @@ const QRLanding: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
                     <p className="p-2 text-white font-semibold text-sm">Mulch</p>
                   </div>
-                </motion.div>
+                </motion.button>
               </div>
 
               <div className="mt-8 flex flex-col items-center gap-4">
@@ -539,7 +589,7 @@ const QRLanding: React.FC = () => {
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
-            className="pb-20"
+            className={cart.length > 0 ? "pb-32" : "pb-6"}
           >
             {/* Store Info Bar */}
             <div className="bg-white border-b px-4 py-3">
@@ -624,7 +674,8 @@ const QRLanding: React.FC = () => {
                               );
                               const price = getProductPrice(product.id, size);
                               const inStock = isInStock(product.id, size);
-                              const inventory = product.inventory?.find(inv => inv.sizeOption === size);
+                              const inventoryData = getProductInventory(product.id);
+                              const inventory = inventoryData.find(inv => inv.sizeOption === size);
                               
                               return (
                                 <div key={size} className={`bg-white rounded-lg p-3 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
@@ -701,23 +752,7 @@ const QRLanding: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Continue Button */}
-            {cart.length > 0 && (
-              <motion.div
-                initial={{ y: 100 }}
-                animate={{ y: 0 }}
-                className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg"
-              >
-                <Button
-                  size="lg"
-                  className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-                  onClick={() => setStep('cart')}
-                >
-                  View Cart ({getTotalItems()} items)
-                  <ChevronRight className="ml-2 w-5 h-5" />
-                </Button>
-              </motion.div>
-            )}
+            {/* Continue Button - Remove this since we have floating cart button */}
           </motion.div>
         )}
 
@@ -941,7 +976,7 @@ const QRLanding: React.FC = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-600">Order #</span>
-                <span className="font-mono font-semibold">OSW-{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+                <span className="font-mono font-semibold">{localStorage.getItem('lastOrderId') || `OSW-${Math.random().toString(36).substr(2, 6).toUpperCase()}`}</span>
               </div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-600">Pickup Time</span>
@@ -1069,21 +1104,28 @@ const QRLanding: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Cart Button */}
+      {/* Floating Cart Button - Fixed position to avoid overlap */}
       {cart.length > 0 && step === 'menu' && (
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="fixed bottom-6 right-6 z-40"
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg z-50"
         >
-          <Button
-            size="lg"
-            className="rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl px-6 py-4"
-            onClick={() => setStep('cart')}
-          >
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            <span className="font-bold">{getTotalItems()}</span>
-          </Button>
+          <div className="container mx-auto max-w-2xl">
+            <Button
+              size="lg"
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-6"
+              onClick={() => setStep('cart')}
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              View Cart ({getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'})
+              <span className="ml-2 font-bold">
+                ${cart.reduce((sum, item) => 
+                  sum + (getProductPrice(item.product.id, item.size) * item.quantity), 0
+                ).toFixed(2)}
+              </span>
+            </Button>
+          </div>
         </motion.div>
       )}
     </div>
