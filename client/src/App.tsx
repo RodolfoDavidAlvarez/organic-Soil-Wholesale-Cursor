@@ -27,6 +27,7 @@ import StoreLocator from "@/pages/StoreLocator";
 import StoreLocatorMapbox from "@/pages/StoreLocatorMapbox";
 import StoreLocatorWithRouting from "@/pages/StoreLocatorWithRouting";
 import StoreLocatorEnhanced from "@/pages/StoreLocatorEnhanced";
+import QRLanding from "@/pages/QRLanding";
 import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -62,27 +63,31 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/store-locator" component={StoreLocatorEnhanced} />
+      <Route path="/qr" component={QRLanding} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  const [location] = useLocation();
+  const isQRLanding = location === '/qr';
+
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <TooltipProvider>
             <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-grow pt-20">
+              {!isQRLanding && <Header />}
+              <main className={`flex-grow ${!isQRLanding ? 'pt-20' : ''}`}>
                 <Router />
               </main>
-              <Footer />
+              {!isQRLanding && <Footer />}
               <Toaster />
               <ScrollToTop />
               <Analytics />
-              <FloatingCTA />
+              {!isQRLanding && <FloatingCTA />}
             </div>
           </TooltipProvider>
         </ThemeProvider>

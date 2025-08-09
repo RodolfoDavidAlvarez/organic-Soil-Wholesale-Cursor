@@ -17,3 +17,10 @@
 - Need to implement image optimization: lazy loading, compression, responsive sizes
 - Consider creating optimized versions (e.g., texture-photo-optimized.jpg at <500KB)
 - Product images are already in client/public/ directory - use local files, not external URLs
+
+## QR Landing Page Strategy
+- **Physical Banner QR Code** → Mobile landing page for landscapers
+- Path: `/qr` - Optimized for quick ordering (2-3 taps max)
+- May become DEFAULT ordering interface for all users
+- Focus: Convert drive-by traffic to immediate orders
+- Design: Bold buttons, simple choices, no distractions
