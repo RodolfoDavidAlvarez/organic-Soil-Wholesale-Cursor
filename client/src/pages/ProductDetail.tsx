@@ -96,7 +96,8 @@ const ProductDetail = () => {
     
     const interval = setInterval(() => {
       setCurrentSizeIndex((prev) => {
-        if (prev >= SIZE_CATEGORIES.length - 2) {
+        const maxIndex = window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2;
+        if (prev >= maxIndex) {
           return 0;
         }
         return prev + 1;
@@ -175,7 +176,7 @@ const ProductDetail = () => {
   };
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-4 sm:py-16 pb-20 sm:pb-16 bg-white">
       {product && (
         <SEO 
           title={product.marketingTitle || product.displayTitle || product.productType || product.name}
@@ -187,8 +188,9 @@ const ProductDetail = () => {
         />
       )}
       <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer">
+        {/* Mobile-optimized back button */}
+        <div className="mb-4 sm:mb-8">
+          <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer p-2 -ml-2">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </div>
         </div>
@@ -219,14 +221,14 @@ const ProductDetail = () => {
             </div>
           </div>
         ) : product ? (
-          <div className="flex flex-col lg:flex-row gap-12">
-            {/* Product Images - Enhanced Gallery */}
-            <div className="lg:w-1/2">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-12">
+            {/* Product Images - Mobile Optimized */}
+            <div className="w-full lg:w-1/2">
               <div className="sticky top-24">
-                {/* Main Image Display */}
-                <div className="relative group bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+                {/* Main Image Display - Mobile optimized */}
+                <div className="relative group bg-white rounded-lg sm:rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
                   <div 
-                    className="relative aspect-square cursor-zoom-in overflow-hidden"
+                    className="relative aspect-[4/3] sm:aspect-square cursor-zoom-in overflow-hidden"
                     onClick={() => setIsGalleryOpen(true)}
                   >
                     {allMedia[currentImageIndex] === 'video' && product.productVideoUrl ? (
@@ -248,7 +250,7 @@ const ProductDetail = () => {
                         <img 
                           src={allImages[currentImageIndex]} 
                           alt={product.name} 
-                          className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105" 
+                          className="w-full h-full object-contain p-4 sm:p-8 transition-transform duration-500 group-hover:scale-105" 
                         />
                         {/* Zoom Indicator */}
                         <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
@@ -282,9 +284,9 @@ const ProductDetail = () => {
                   )}
                 </div>
                 
-                {/* Thumbnail Gallery */}
+                {/* Thumbnail Gallery - Mobile optimized */}
                 {allMedia.length > 1 && (
-                  <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
+                  <div className="mt-3 sm:mt-4 grid grid-cols-4 gap-1.5 sm:gap-3">
                     {allMedia.map((media, index) => (
                       <button
                         key={index}
@@ -329,10 +331,10 @@ const ProductDetail = () => {
                 )}
               </div>
             </div>
-            {/* Product Information - Enhanced Layout */}
-            <div className="lg:w-1/2">
-              {/* Header Section */}
-              <div className="mb-6">
+            {/* Product Information - Mobile Optimized */}
+            <div className="w-full lg:w-1/2">
+              {/* Header Section - Mobile optimized */}
+              <div className="mb-4 sm:mb-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Badge variant="outline" className="text-primary border-primary px-3 py-1">
                     {product.category}
@@ -343,35 +345,35 @@ const ProductDetail = () => {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-4xl font-bold mb-3 text-neutral-900">{product.displayTitle || product.productType || product.name}</h1>
+                <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">{product.displayTitle || product.productType || product.name}</h1>
                 {product.name && product.name !== (product.displayTitle || product.productType) && (
                   <p className="text-lg text-neutral-500 mb-2">{product.name}</p>
                 )}
-                <p className="text-xl text-neutral-600 leading-relaxed">{product.description}</p>
+                <p className="text-base sm:text-xl text-neutral-600 leading-relaxed">{product.description}</p>
               </div>
 
-              {/* Key Benefits */}
-              <div className="bg-primary/5 rounded-xl p-6 mb-8">
-                <div className="grid grid-cols-3 gap-4 text-center">
+              {/* Key Benefits - Mobile optimized */}
+              <div className="bg-primary/5 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                   <div>
-                    <Package className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Bulk Available</p>
+                    <Package className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Bulk Available</p>
                   </div>
                   <div>
-                    <Truck className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Fast Delivery</p>
+                    <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Fast Delivery</p>
                   </div>
                   <div>
-                    <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Quality Assured</p>
+                    <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Quality Assured</p>
                   </div>
                 </div>
               </div>
 
-              {/* Available Sizes - Carousel Display */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-neutral-900">Available Sizes</h3>
+              {/* Available Sizes - Mobile optimized carousel */}
+              <div className="mb-6 sm:mb-8">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Available Sizes</h3>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
@@ -391,9 +393,9 @@ const ProductDetail = () => {
                       className="h-10 w-10 sm:h-8 sm:w-8"
                       onClick={() => {
                         setIsAutoPlaying(false);
-                        setCurrentSizeIndex(Math.min(SIZE_CATEGORIES.length - 2, currentSizeIndex + 1));
+                        setCurrentSizeIndex(Math.min(window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2, currentSizeIndex + 1));
                       }}
-                      disabled={currentSizeIndex >= SIZE_CATEGORIES.length - 2}
+                      disabled={currentSizeIndex >= (window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2)}
                     >
                       <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
                     </Button>
@@ -406,12 +408,12 @@ const ProductDetail = () => {
                 >
                   <div 
                     className="flex transition-transform duration-500 ease-in-out gap-3"
-                    style={{ transform: `translateX(-${currentSizeIndex * 50}%)` }}
+                    style={{ transform: `translateX(-${currentSizeIndex * (window.innerWidth < 640 ? 85 : 50)}%)` }}
                   >
                     {SIZE_CATEGORIES.map((cat) => (
                       <Card 
                         key={cat.name} 
-                        className="flex-shrink-0 w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
+                        className="flex-shrink-0 w-[calc(85%-0.5rem)] sm:w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
                         onClick={() => {
                           const img = new Image();
                           img.src = cat.image;
@@ -448,48 +450,48 @@ const ProductDetail = () => {
                 </div>
                 {/* Carousel Indicators */}
                 <div className="flex justify-center mt-3 gap-1">
-                  {Array.from({ length: Math.ceil(SIZE_CATEGORIES.length / 2) }).map((_, index) => (
+                  {Array.from({ length: window.innerWidth < 640 ? SIZE_CATEGORIES.length : Math.ceil(SIZE_CATEGORIES.length / 2) }).map((_, index) => (
                     <button
                       key={index}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
-                        Math.floor(currentSizeIndex / 2) === index 
+                        (window.innerWidth < 640 ? currentSizeIndex : Math.floor(currentSizeIndex / 2)) === index 
                           ? 'w-4 bg-primary' 
                           : 'w-1.5 bg-neutral-300'
                       }`}
-                      onClick={() => setCurrentSizeIndex(index * 2)}
+                      onClick={() => setCurrentSizeIndex(window.innerWidth < 640 ? index : index * 2)}
                     />
                   ))}
                 </div>
               </div>
-              {/* Product Details Tabs - Enhanced */}
-              <div className="mt-8">
+              {/* Product Details Tabs - Mobile optimized */}
+              <div className="mt-6 sm:mt-8">
                 <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid grid-cols-4 w-full p-1 h-auto">
-                    <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                  <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full p-1 h-auto gap-1">
+                    <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Details
                     </TabsTrigger>
-                    <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                    <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Usage
                     </TabsTrigger>
-                    <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                    <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Ingredients
                     </TabsTrigger>
-                    <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                    <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Certifications
                     </TabsTrigger>
                   </TabsList>
                   
-                  <div className="mt-6 bg-neutral-50 rounded-xl p-6">
+                  <div className="mt-4 sm:mt-6 bg-neutral-50 rounded-lg sm:rounded-xl p-4 sm:p-6">
                     <TabsContent value="details" className="mt-0 space-y-6">
                       {product.story && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Our Story</h4>
-                          <p className="text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.story}</p>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Our Story</h4>
+                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.story}</p>
                         </div>
                       )}
                       {product.targetAudience && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Target Audience</h4>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Target Audience</h4>
                           <div className="flex flex-wrap gap-2">
                             {product.targetAudience.split(',').map((audience, index) => (
                               <Badge key={index} variant="secondary" className="bg-white">
@@ -501,18 +503,18 @@ const ProductDetail = () => {
                       )}
                       {product.recommendedUses && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Recommended Uses</h4>
-                          <p className="text-neutral-700 leading-relaxed">{product.recommendedUses}</p>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Recommended Uses</h4>
+                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{product.recommendedUses}</p>
                         </div>
                       )}
                       {product.features && product.features.includes('|') && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Key Features</h4>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Key Features</h4>
                           <ul className="space-y-2">
                             {product.features.split('|').map((feature, index) => (
                               <li key={index} className="flex items-start gap-2">
                                 <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <span className="text-neutral-700">{feature.trim()}</span>
+                                <span className="text-sm sm:text-base text-neutral-700">{feature.trim()}</span>
                               </li>
                             ))}
                           </ul>
@@ -526,26 +528,26 @@ const ProductDetail = () => {
                     </TabsContent>
                     
                     <TabsContent value="usage" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Usage Instructions</h4>
-                      <div className="bg-white rounded-lg p-5 border border-neutral-200">
-                        <p className="text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.usage || "Usage instructions will be provided with your order."}</p>
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Usage Instructions</h4>
+                      <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
+                        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.usage || "Usage instructions will be provided with your order."}</p>
                       </div>
                     </TabsContent>
                     
                     <TabsContent value="ingredients" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Ingredients</h4>
-                      <div className="bg-white rounded-lg p-5 border border-neutral-200">
-                        <p className="text-neutral-700 font-medium">{product.ingredients || "Ingredient information available upon request."}</p>
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Ingredients</h4>
+                      <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
+                        <p className="text-sm sm:text-base text-neutral-700 font-medium">{product.ingredients || "Ingredient information available upon request."}</p>
                       </div>
                     </TabsContent>
                     
                     <TabsContent value="certifications" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Certifications</h4>
-                      <div className="grid grid-cols-2 gap-4">
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Certifications</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         {product.certifications?.split(',').map((cert, index) => (
-                          <div key={index} className="bg-white rounded-lg p-4 border border-neutral-200 text-center">
-                            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                            <p className="font-medium text-neutral-900">{cert.trim()}</p>
+                          <div key={index} className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200 text-center">
+                            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-1 sm:mb-2" />
+                            <p className="text-sm sm:text-base font-medium text-neutral-900">{cert.trim()}</p>
                           </div>
                         ))}
                       </div>
@@ -554,19 +556,21 @@ const ProductDetail = () => {
                 </Tabs>
               </div>
               
-              {/* CTA Section */}
-              <div className="mt-10 space-y-4">
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
-                  size="lg" 
-                  onClick={() => navigate("/order")}
-                >
-                  <Truck className="mr-2 h-5 w-5" />
-                  Order Now - Arizona Delivery Available
-                </Button>
-                <p className="text-center text-sm text-neutral-600">
-                  Need a custom quote? <Link href="/contact" className="text-primary hover:underline font-medium">Contact us</Link>
-                </p>
+              {/* CTA Section - Sticky on mobile */}
+              <div className="mt-8 sm:mt-10">
+                <div className="hidden sm:block space-y-4">
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                    size="lg" 
+                    onClick={() => navigate("/order")}
+                  >
+                    <Truck className="mr-2 h-5 w-5" />
+                    Order Now - Arizona Delivery Available
+                  </Button>
+                  <p className="text-center text-sm text-neutral-600">
+                    Need a custom quote? <Link href="/contact" className="text-primary hover:underline font-medium">Contact us</Link>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -678,6 +682,20 @@ const ProductDetail = () => {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+      
+      {/* Mobile Sticky CTA */}
+      {product && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4 shadow-lg sm:hidden z-10">
+          <Button 
+            className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" 
+            size="lg" 
+            onClick={() => navigate("/order")}
+          >
+            <Truck className="mr-2 h-5 w-5" />
+            Order Now
+          </Button>
+        </div>
       )}
     </section>
   );

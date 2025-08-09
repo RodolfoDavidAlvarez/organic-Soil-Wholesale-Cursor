@@ -18,7 +18,7 @@ async function seedInitialProducts() {
       {
         name: "Dan's Gold Dairy Compost",
         description: "Premium dairy compost made from aged cow manure. Rich in nutrients and organic matter, perfect for improving soil structure and fertility. OMRI listed for organic use.",
-        price: 19.99,
+        price: 15.00, // Update with actual price from pricing sheet
         category: 'Compost',
         imageUrl: '/dans-gold-bag.png',
         texturePhotoUrl: '/dans-gold-texture.png',
@@ -31,7 +31,7 @@ async function seedInitialProducts() {
       {
         name: 'Plant Pal Potting Soil',
         description: 'All-purpose premium potting soil blend. Contains coconut coir, perlite, and organic compost. Ideal for containers, raised beds, and general gardening.',
-        price: 29.99,
+        price: 25.00, // Update with actual price from pricing sheet
         category: 'Soil',
         imageUrl: '/plant-pal-bag.png',
         texturePhotoUrl: '/plant-pal-texture.png',
@@ -44,7 +44,7 @@ async function seedInitialProducts() {
       {
         name: 'Oasis Blend',
         description: 'Specialized soil blend formulated specifically for date palms and palm trees. Enhanced drainage and nutrient profile for optimal palm health in desert climates.',
-        price: 24.99,
+        price: 20.00, // Update with actual price from pricing sheet
         category: 'Specialty Soil',
         imageUrl: '/oasis-blend-bag.png',
         texturePhotoUrl: '/oasis-blend-texture.png',

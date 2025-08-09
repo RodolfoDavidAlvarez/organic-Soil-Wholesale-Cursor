@@ -6,6 +6,8 @@ import { Product } from '../shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   ShoppingCart, 
   Plus, 
@@ -18,7 +20,11 @@ import {
   Package,
   ChevronRight,
   Home,
-  X
+  X,
+  User,
+  Mail,
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 
 interface CartItem {
@@ -27,11 +33,19 @@ interface CartItem {
   size: string;
 }
 
+interface CustomerInfo {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
 const QRLanding: React.FC = () => {
-  const [step, setStep] = useState<'welcome' | 'pickup-options' | 'menu' | 'cart' | 'checkout' | 'notify-arrival'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'checkout' | 'notify-arrival'>('welcome');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showProductDetail, setShowProductDetail] = useState<Product | null>(null);
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '' });
+  const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
+  const [isProcessing, setIsProcessing] = useState(false);
   const products = getProductsData();
 
   // Track QR landing page visit
@@ -45,24 +59,33 @@ const QRLanding: React.FC = () => {
   }, []);
 
   const categories = [
-    { id: 'popular', label: 'Popular Items', icon: '⭐', color: 'from-yellow-500 to-orange-500' },
-    { id: 'potting', label: 'Potting Soils', icon: '🪴', color: 'from-green-500 to-emerald-500' },
-    { id: 'amendment', label: 'Amendments', icon: '♻️', color: 'from-blue-500 to-cyan-500' },
-    { id: 'mulch', label: 'Mulch', icon: '🛡️', color: 'from-purple-500 to-pink-500' },
+    { id: 'popular', label: 'Popular Items', icon: Package, bgColor: 'bg-green-50', textColor: 'text-green-700', borderColor: 'border-green-200' },
+    { id: 'potting', label: 'Potting Soils', icon: Package, bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', borderColor: 'border-emerald-200' },
+    { id: 'amendment', label: 'Amendments', icon: Package, bgColor: 'bg-teal-50', textColor: 'text-teal-700', borderColor: 'border-teal-200' },
+    { id: 'mulch', label: 'Mulch', icon: Package, bgColor: 'bg-amber-50', textColor: 'text-amber-700', borderColor: 'border-amber-200' },
   ];
 
   const getProductsByCategory = (categoryId: string) => {
+    // Add temporary prices to products
+    const productsWithPrices = products.map(p => ({
+      ...p,
+      price: p.price || Math.floor(Math.random() * 50 + 20), // Temporary prices between $20-70
+      sizeOptions: p.sizeOptions ? 
+        (typeof p.sizeOptions === 'string' ? p.sizeOptions.split(',').map(s => s.trim()) : p.sizeOptions) 
+        : ['Standard', 'Large', 'Bulk']
+    }));
+    
     if (categoryId === 'popular') {
-      return products.slice(0, 6);
+      return productsWithPrices.slice(0, 6);
     }
     if (categoryId === 'potting') {
-      return products.filter(p => p.type === 'Potting Soil');
+      return productsWithPrices.filter(p => p.type === 'Potting Soil');
     }
     if (categoryId === 'amendment') {
-      return products.filter(p => p.type === 'Amendment' || p.type === 'Concentrated Amendment');
+      return productsWithPrices.filter(p => p.type === 'Amendment' || p.type === 'Concentrated Amendment');
     }
     if (categoryId === 'mulch') {
-      return products.filter(p => p.type === 'Mulch');
+      return productsWithPrices.filter(p => p.type === 'Mulch');
     }
     return [];
   };
@@ -81,9 +104,6 @@ const QRLanding: React.FC = () => {
     } else {
       setCart([...cart, { product, quantity: 1, size }]);
     }
-
-    // Show confirmation
-    setShowProductDetail(null);
   };
 
   const updateQuantity = (productId: string, size: string, delta: number) => {
@@ -107,6 +127,63 @@ const QRLanding: React.FC = () => {
     return phone;
   };
 
+  const formatPhoneInput = (value: string) => {
+    const phone = value.replace(/\D/g, '');
+    if (phone.length <= 3) return phone;
+    if (phone.length <= 6) return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
+    return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+  };
+
+  const validateCustomerInfo = (): boolean => {
+    const newErrors: Partial<CustomerInfo> = {};
+    
+    if (!customerInfo.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!customerInfo.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(customerInfo.phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Please enter a valid 10-digit phone number';
+    }
+    
+    if (customerInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateCustomerInfo()) return;
+    
+    setIsProcessing(true);
+    try {
+      // Simulate order processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Save customer info for future orders
+      localStorage.setItem('qrOrderCustomer', JSON.stringify(customerInfo));
+      
+      // Move to checkout screen
+      setStep('checkout');
+    } catch (error) {
+      console.error('Order error:', error);
+      alert('There was an error placing your order. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Load saved customer info
+  useEffect(() => {
+    const saved = localStorage.getItem('qrOrderCustomer');
+    if (saved) {
+      setCustomerInfo(JSON.parse(saved));
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Header */}
@@ -124,8 +201,10 @@ const QRLanding: React.FC = () => {
                       setStep('welcome');
                     } else if (step === 'cart') {
                       setStep('menu');
-                    } else if (step === 'checkout') {
+                    } else if (step === 'customer-info') {
                       setStep('cart');
+                    } else if (step === 'checkout') {
+                      setStep('customer-info');
                     } else if (step === 'notify-arrival') {
                       setStep('pickup-options');
                     }
@@ -442,24 +521,28 @@ const QRLanding: React.FC = () => {
 
             {/* Categories */}
             <div className="px-4 py-4">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Categories</h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Shop by Category</h2>
               <div className="grid grid-cols-2 gap-3">
-                {categories.map((category) => (
-                  <motion.button
-                    key={category.id}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`relative overflow-hidden rounded-2xl p-4 text-left transition-all ${
-                      selectedCategory === category.id ? 'ring-2 ring-green-500' : ''
-                    }`}
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-90`} />
-                    <div className="relative z-10 text-white">
-                      <span className="text-2xl mb-2 block">{category.icon}</span>
-                      <span className="font-semibold text-sm">{category.label}</span>
-                    </div>
-                  </motion.button>
-                ))}
+                {categories.map((category) => {
+                  const Icon = category.icon;
+                  return (
+                    <motion.button
+                      key={category.id}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        selectedCategory === category.id 
+                          ? `${category.bgColor} ${category.borderColor} ${category.textColor}` 
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon className={`w-8 h-8 mb-2 mx-auto ${
+                        selectedCategory === category.id ? category.textColor : 'text-gray-500'
+                      }`} />
+                      <span className="font-medium text-sm block">{category.label}</span>
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
 
@@ -474,45 +557,100 @@ const QRLanding: React.FC = () => {
                   {categories.find(c => c.id === selectedCategory)?.label}
                 </h3>
                 <div className="space-y-4">
-                  {getProductsByCategory(selectedCategory).map((product) => (
-                    <motion.div
-                      key={product.id}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowProductDetail(product)}
-                      className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
-                    >
-                      <div className="flex">
-                        <div className="w-28 h-28 relative">
-                          <img
-                            src={product.texturePhotoUrl || product.imageUrl || '/placeholder.png'}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {cart.some(item => item.product.id === product.id) && (
-                            <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                              <Check className="w-4 h-4 text-white" />
+                  {getProductsByCategory(selectedCategory).map((product) => {
+                    const defaultSize = product.sizeOptions?.[0] || 'Standard';
+                    const cartItem = cart.find(item => 
+                      item.product.id === product.id && item.size === defaultSize
+                    );
+                    
+                    return (
+                      <motion.div
+                        key={product.id}
+                        className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                      >
+                        <div className="p-4">
+                          <div className="flex gap-4">
+                            <img
+                              src={product.texturePhotoUrl || product.imageUrl || '/placeholder.png'}
+                              alt={product.name}
+                              className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-800">
+                                {product.displayTitle || product.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                {product.briefOverview || product.description}
+                              </p>
+                              <p className="text-lg font-bold text-green-700 mt-2">
+                                ${product.price || '0.00'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Size Selection */}
+                          {product.sizeOptions && product.sizeOptions.length > 1 && (
+                            <div className="mt-4">
+                              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Size Options:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {product.sizeOptions.map((size) => {
+                                  const sizeCartItem = cart.find(item => 
+                                    item.product.id === product.id && item.size === size
+                                  );
+                                  return (
+                                    <button
+                                      key={size}
+                                      onClick={() => {
+                                        if (!sizeCartItem) {
+                                          addToCart(product, size);
+                                        }
+                                      }}
+                                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                                        sizeCartItem
+                                          ? 'bg-green-600 text-white border-green-600'
+                                          : 'bg-white text-gray-700 border-gray-300 hover:border-green-500'
+                                      }`}
+                                    >
+                                      {size} {sizeCartItem && `(${sizeCartItem.quantity})`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
+                          
+                          {/* Add to Cart / Quantity Controls */}
+                          <div className="mt-4">
+                            {cartItem ? (
+                              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                                <button
+                                  onClick={() => updateQuantity(product.id, defaultSize, -1)}
+                                  className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="font-semibold text-lg px-4">{cartItem.quantity}</span>
+                                <button
+                                  onClick={() => updateQuantity(product.id, defaultSize, 1)}
+                                  className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={() => addToCart(product, defaultSize)}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add to Cart
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 p-4">
-                          <h4 className="font-semibold text-gray-800">
-                            {product.displayTitle || product.name}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                            {product.briefOverview || product.description}
-                          </p>
-                          {product.sizeOptions && product.sizeOptions.length > 0 && (
-                            <p className="text-xs text-green-600 mt-2 font-medium">
-                              {product.sizeOptions.join(' • ')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="p-4 flex items-center">
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
@@ -617,7 +755,7 @@ const QRLanding: React.FC = () => {
                 <Button
                   size="lg"
                   className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-                  onClick={() => setStep('checkout')}
+                  onClick={() => setStep('customer-info')}
                 >
                   Continue to Checkout
                   <ChevronRight className="ml-2 w-5 h-5" />
@@ -632,6 +770,103 @@ const QRLanding: React.FC = () => {
                 </Button>
               </>
             )}
+          </motion.div>
+        )}
+
+        {/* Customer Info Screen */}
+        {step === 'customer-info' && (
+          <motion.div
+            key="customer-info"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            className="px-4 py-6"
+          >
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Information</h2>
+            
+            <Card className="p-6 mb-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Name *
+                  </Label>
+                  <Input
+                    id="name"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="John Doe"
+                    className={errors.name ? 'border-red-500' : ''}
+                  />
+                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone *
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={customerInfo.phone}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: formatPhoneInput(e.target.value) }))}
+                    placeholder="(555) 123-4567"
+                    className={errors.phone ? 'border-red-500' : ''}
+                  />
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email (optional)
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="john@example.com"
+                    className={errors.email ? 'border-red-500' : ''}
+                  />
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                </div>
+              </div>
+            </Card>
+            
+            <div className="bg-gray-100 rounded-xl p-4 mb-6">
+              <h3 className="font-semibold mb-3">Order Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Total Items</span>
+                  <span className="font-semibold">{getTotalItems()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Pickup Location</span>
+                  <span className="font-semibold">Phoenix Warehouse</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Ready Time</span>
+                  <span className="font-semibold">~15 minutes</span>
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              size="lg"
+              className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
+              onClick={handlePlaceOrder}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  Place Order
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+              )}
+            </Button>
           </motion.div>
         )}
 
@@ -703,81 +938,6 @@ const QRLanding: React.FC = () => {
                 </Button>
               </Link>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Product Detail Modal */}
-      <AnimatePresence>
-        {showProductDetail && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end"
-            onClick={() => setShowProductDetail(null)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25 }}
-              className="bg-white w-full rounded-t-3xl max-h-[80vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="sticky top-0 bg-white p-4 border-b flex items-center justify-between">
-                <h3 className="text-lg font-bold">Add to Cart</h3>
-                <button
-                  onClick={() => setShowProductDetail(null)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-6">
-                <img
-                  src={showProductDetail.texturePhotoUrl || showProductDetail.imageUrl || '/placeholder.png'}
-                  alt={showProductDetail.name}
-                  className="w-full h-48 object-cover rounded-xl mb-4"
-                />
-                
-                <h4 className="text-xl font-bold text-gray-800 mb-2">
-                  {showProductDetail.displayTitle || showProductDetail.name}
-                </h4>
-                
-                <p className="text-gray-600 mb-6">
-                  {showProductDetail.briefOverview || showProductDetail.description}
-                </p>
-
-                {showProductDetail.sizeOptions && showProductDetail.sizeOptions.length > 0 && (
-                  <div className="mb-6">
-                    <h5 className="font-semibold text-gray-800 mb-3">Select Size</h5>
-                    <div className="space-y-2">
-                      {showProductDetail.sizeOptions.map((size) => (
-                        <Button
-                          key={size}
-                          variant="outline"
-                          className="w-full justify-between"
-                          onClick={() => {
-                            addToCart(showProductDetail, size);
-                          }}
-                        >
-                          <span>{size}</span>
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <Link to={`/products/${showProductDetail.slug || showProductDetail.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                  <Button variant="ghost" className="w-full">
-                    View Full Details
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
           </motion.div>
         )}
 
@@ -858,11 +1018,28 @@ const QRLanding: React.FC = () => {
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Browse Products Instead
               </Button>
-
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Cart Button */}
+      {cart.length > 0 && step === 'menu' && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="fixed bottom-6 right-6 z-40"
+        >
+          <Button
+            size="lg"
+            className="rounded-full bg-green-600 hover:bg-green-700 text-white shadow-xl px-6 py-4"
+            onClick={() => setStep('cart')}
+          >
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            <span className="font-bold">{getTotalItems()}</span>
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 };

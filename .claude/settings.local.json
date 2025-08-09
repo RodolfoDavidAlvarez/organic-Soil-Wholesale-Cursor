@@ -43,7 +43,8 @@
       "WebFetch(domain:organic-soil-wholesale-lsydzwk8l.vercel.app)",
       "Bash(find:*)",
       "Bash(npm run preview:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

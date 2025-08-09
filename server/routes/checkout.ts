@@ -1,20 +1,32 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
 
 const router = Router();
+
+// Initialize Stripe lazily to ensure env vars are loaded
+let stripe: Stripe;
+
+function getStripe() {
+  if (!stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.warn('STRIPE_SECRET_KEY not configured - payments will not work');
+      throw new Error('Stripe is not configured');
+    }
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-06-20',
+    });
+  }
+  return stripe;
+}
 
 // Create checkout session
 router.post('/create-session', async (req, res) => {
   try {
-    const { items, customerInfo, pickupTime } = req.body;
+    const { items, customerInfo, pickupTime, locationId, isQuickOrder } = req.body;
+
+    // Use the provided locationId or default to Phoenix (1)
+    const checkoutLocationId = locationId || 1;
 
     // Validate inventory availability
     const inventoryChecks = await Promise.all(
@@ -23,7 +35,7 @@ router.post('/create-session', async (req, res) => {
           .from('inventory')
           .select('quantity_available')
           .eq('product_id', item.productId)
-          .eq('location_id', 1) // Phoenix location
+          .eq('location_id', checkoutLocationId)
           .single();
 
         return {
@@ -44,18 +56,31 @@ router.post('/create-session', async (req, res) => {
     }
 
     // Create order in database with pending status
+    const orderData: any = {
+      email: customerInfo.email || null,
+      phone: customerInfo.phone,
+      status: 'pending_payment',
+      payment_status: 'pending',
+      pickup_scheduled_at: pickupTime || null,
+      total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
+      confirmation_code: generateConfirmationCode(),
+      location_id: checkoutLocationId
+    };
+
+    // Handle different customer info structures
+    if (isQuickOrder) {
+      // Quick order uses name field
+      orderData.business_name = customerInfo.name;
+      orderData.order_type = 'quick_order';
+    } else {
+      // Regular checkout uses businessName
+      orderData.business_name = customerInfo.businessName;
+      orderData.order_type = 'standard';
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        business_name: customerInfo.businessName,
-        email: customerInfo.email,
-        phone: customerInfo.phone,
-        status: 'pending_payment',
-        payment_status: 'pending',
-        pickup_scheduled_at: pickupTime,
-        total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
-        confirmation_code: generateConfirmationCode()
-      })
+      .insert(orderData)
       .select()
       .single();
 
@@ -93,7 +118,7 @@ router.post('/create-session', async (req, res) => {
     }));
 
     // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
@@ -115,7 +140,8 @@ router.post('/create-session', async (req, res) => {
     res.json({ 
       sessionId: session.id, 
       orderId: order.id,
-      confirmationCode: order.confirmation_code
+      confirmationCode: order.confirmation_code,
+      url: session.url
     });
   } catch (error) {
     console.error('Checkout error:', error);
@@ -131,7 +157,7 @@ router.post('/webhook', async (req, res) => {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    event = getStripe().webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err}`);
@@ -199,7 +225,7 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
       .from('inventory')
       .select('id, quantity_available, quantity_reserved')
       .eq('product_id', item.product_id)
-      .eq('location_id', 1) // Phoenix location
+      .eq('location_id', checkoutLocationId)
       .single();
 
     if (inventory) {

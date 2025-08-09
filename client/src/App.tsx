@@ -76,7 +76,7 @@ function Router() {
 function App() {
   const [location] = useLocation();
   const isQRLanding = location === '/qr';
-  const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation';
+  const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation' || location === '/quick-order';
 
   return (
     <QueryClientProvider client={queryClient}>
