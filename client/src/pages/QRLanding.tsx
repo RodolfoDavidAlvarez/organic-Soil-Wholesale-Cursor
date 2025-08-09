@@ -63,10 +63,46 @@ const QRLanding: React.FC = () => {
   }, []);
 
   const categories = [
-    { id: 'popular', label: 'Popular Items', icon: Package, bgColor: 'bg-green-50', textColor: 'text-green-700', borderColor: 'border-green-200' },
-    { id: 'potting', label: 'Potting Soils', icon: Package, bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', borderColor: 'border-emerald-200' },
-    { id: 'amendment', label: 'Amendments', icon: Package, bgColor: 'bg-teal-50', textColor: 'text-teal-700', borderColor: 'border-teal-200' },
-    { id: 'mulch', label: 'Mulch', icon: Package, bgColor: 'bg-amber-50', textColor: 'text-amber-700', borderColor: 'border-amber-200' },
+    { 
+      id: 'popular', 
+      label: 'Popular Items', 
+      icon: Package, 
+      bgColor: 'bg-green-50', 
+      textColor: 'text-green-700', 
+      borderColor: 'border-green-200',
+      image: 'category-popular.jpg',
+      description: 'Best sellers & customer favorites'
+    },
+    { 
+      id: 'potting', 
+      label: 'Potting Soils', 
+      icon: Package, 
+      bgColor: 'bg-emerald-50', 
+      textColor: 'text-emerald-700', 
+      borderColor: 'border-emerald-200',
+      image: 'category-potting-soil.jpeg',
+      description: 'Premium organic potting mixes'
+    },
+    { 
+      id: 'amendment', 
+      label: 'Amendments', 
+      icon: Package, 
+      bgColor: 'bg-teal-50', 
+      textColor: 'text-teal-700', 
+      borderColor: 'border-teal-200',
+      image: 'category-amendments.jpg',
+      description: 'Soil enhancers & nutrients'
+    },
+    { 
+      id: 'mulch', 
+      label: 'Mulch', 
+      icon: Package, 
+      bgColor: 'bg-amber-50', 
+      textColor: 'text-amber-700', 
+      borderColor: 'border-amber-200',
+      image: 'category-mulch.jpeg',
+      description: 'Natural ground cover solutions'
+    },
   ];
 
   const getProductsByCategory = (categoryId: string) => {
@@ -440,8 +476,8 @@ const QRLanding: React.FC = () => {
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
-                    src={products.find(p => p.type === 'Potting Soil')?.texturePhotoUrl || '/placeholder.png'}
-                    alt="Soil"
+                    src="category-potting-soil.jpeg"
+                    alt="Potting Soils"
                     className="w-full h-32 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
@@ -462,7 +498,7 @@ const QRLanding: React.FC = () => {
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
-                    src={products.find(p => p.type === 'Amendment')?.texturePhotoUrl || '/placeholder.png'}
+                    src="category-amendments.jpg"
                     alt="Amendments"
                     className="w-full h-32 object-cover"
                   />
@@ -484,7 +520,7 @@ const QRLanding: React.FC = () => {
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
                   <img
-                    src={products.find(p => p.type === 'Mulch')?.texturePhotoUrl || '/placeholder.png'}
+                    src="category-mulch.jpeg"
                     alt="Mulch"
                     className="w-full h-32 object-cover"
                   />
@@ -630,16 +666,39 @@ const QRLanding: React.FC = () => {
                       key={category.id}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`p-4 rounded-xl border-2 transition-all ${
+                      className={`relative overflow-hidden rounded-xl border-2 transition-all ${
                         selectedCategory === category.id 
-                          ? `${category.bgColor} ${category.borderColor} ${category.textColor}` 
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                          ? `${category.borderColor} shadow-lg` 
+                          : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <Icon className={`w-8 h-8 mb-2 mx-auto ${
-                        selectedCategory === category.id ? category.textColor : 'text-gray-500'
-                      }`} />
-                      <span className="font-medium text-sm block">{category.label}</span>
+                      {/* Background Image */}
+                      <div className="relative h-32">
+                        <img
+                          src={category.image}
+                          alt={category.label}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                        
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Icon className="w-5 h-5" />
+                            <span className="font-semibold text-sm">{category.label}</span>
+                          </div>
+                          <p className="text-xs opacity-90">{category.description}</p>
+                        </div>
+                        
+                        {/* Selected Indicator */}
+                        {selectedCategory === category.id && (
+                          <div className="absolute top-2 right-2">
+                            <div className="bg-green-500 text-white rounded-full p-1">
+                              <Check className="w-4 h-4" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </motion.button>
                   );
                 })}
