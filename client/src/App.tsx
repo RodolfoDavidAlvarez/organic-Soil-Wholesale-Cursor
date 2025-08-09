@@ -32,6 +32,13 @@ import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
 import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
+// Admin imports
+import AdminLogin from "@/pages/admin/Login";
+import AdminDashboard from "@/pages/admin/Dashboard";
+import AdminProducts from "@/pages/admin/Products";
+import AdminProductEdit from "@/pages/admin/ProductEdit";
+import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
+import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 
 // ScrollToTop component to handle auto-scrolling
 const ScrollToTop = () => {
@@ -68,6 +75,15 @@ function Router() {
       <Route path="/qr" component={QRLanding} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+      <Route path="/admin/dashboard" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+      <Route path="/admin/products" component={() => <ProtectedAdminRoute><AdminProducts /></ProtectedAdminRoute>} />
+      <Route path="/admin/products/new" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
+      <Route path="/admin/products/:id" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
+      
       <Route component={NotFound} />
     </Switch>
   );
@@ -77,24 +93,27 @@ function App() {
   const [location] = useLocation();
   const isQRLanding = location === '/qr';
   const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation' || location === '/quick-order';
+  const isAdminRoute = location.startsWith('/admin');
 
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <TooltipProvider>
-            <div className="min-h-screen flex flex-col">
-              {!isQRLanding && !isCheckoutFlow && <Header />}
-              <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow ? 'pt-20' : ''}`}>
-                <Router />
-              </main>
-              {!isQRLanding && !isCheckoutFlow && <Footer />}
-              <Toaster />
-              <ScrollToTop />
-              <Analytics />
-              {!isQRLanding && !isCheckoutFlow && <FloatingCTA />}
-            </div>
-          </TooltipProvider>
+          <AdminAuthProvider>
+            <TooltipProvider>
+              <div className="min-h-screen flex flex-col">
+                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Header />}
+                <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
+                  <Router />
+                </main>
+                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Footer />}
+                <Toaster />
+                <ScrollToTop />
+                <Analytics />
+                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
+              </div>
+            </TooltipProvider>
+          </AdminAuthProvider>
         </ThemeProvider>
       </HelmetProvider>
     </QueryClientProvider>

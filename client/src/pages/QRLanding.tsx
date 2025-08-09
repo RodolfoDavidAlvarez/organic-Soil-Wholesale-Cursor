@@ -25,13 +25,15 @@ import {
   User,
   Mail,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface CartItem {
   product: Product;
   quantity: number;
   size: string;
+  uniqueKey: string; // Add unique key to prevent mixing
 }
 
 interface CustomerInfo {
@@ -47,6 +49,7 @@ const QRLanding: React.FC = () => {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '' });
   const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
   const products = getProductsData();
 
   // Track QR landing page visit
@@ -96,24 +99,26 @@ const QRLanding: React.FC = () => {
   };
 
   const addToCart = (product: Product, size: string) => {
-    const existingItem = cart.find(item => 
-      item.product.id === product.id && item.size === size
-    );
+    const uniqueKey = `${product.id}-${size}`;
+    console.log('Adding to cart:', product.name, product.id, size, uniqueKey);
+    
+    const existingItem = cart.find(item => item.uniqueKey === uniqueKey);
 
     if (existingItem) {
       setCart(cart.map(item => 
-        item.product.id === product.id && item.size === size
+        item.uniqueKey === uniqueKey
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
-      setCart([...cart, { product, quantity: 1, size }]);
+      setCart([...cart, { product, quantity: 1, size, uniqueKey }]);
     }
   };
 
   const updateQuantity = (productId: number, size: string, delta: number) => {
+    const uniqueKey = `${productId}-${size}`;
     setCart(cart.map(item => {
-      if (item.product.id === productId && item.size === size) {
+      if (item.uniqueKey === uniqueKey) {
         const newQuantity = item.quantity + delta;
         return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
       }
@@ -122,6 +127,18 @@ const QRLanding: React.FC = () => {
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const toggleProductExpansion = (productId: number) => {
+    setExpandedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
 
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
@@ -641,13 +658,20 @@ const QRLanding: React.FC = () => {
                 </h3>
                 <div className="space-y-4">
                   {getProductsByCategory(selectedCategory).map((product) => {
+                    const isExpanded = expandedProducts.has(product.id);
+                    const cartItems = cart.filter(item => item.product.id === product.id);
+                    const totalInCart = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+                    
                     return (
                       <motion.div
                         key={product.id}
                         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                       >
-                        {/* Product Header */}
-                        <div className="p-4 border-b border-gray-100">
+                        {/* Product Header - Always Visible */}
+                        <div 
+                          className="p-4 cursor-pointer"
+                          onClick={() => toggleProductExpansion(product.id)}
+                        >
                           <div className="flex gap-4">
                             <img
                               src={product.texturePhotoUrl || product.imageUrl || '/placeholder.png'}
@@ -655,96 +679,155 @@ const QRLanding: React.FC = () => {
                               className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                             />
                             <div className="flex-1">
-                              <h4 className="font-bold text-gray-900 text-lg">
-                                {product.displayTitle || product.name}
-                              </h4>
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {product.briefOverview || product.description}
-                              </p>
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-gray-900 text-lg">
+                                    {product.displayTitle || product.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {product.briefOverview || product.description}
+                                  </p>
+                                </div>
+                                <ChevronDown 
+                                  className={`w-5 h-5 text-gray-400 ml-2 transition-transform ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </div>
+                              
+                              {/* Quick Add Button - Show when collapsed */}
+                              {!isExpanded && (
+                                <div className="mt-3 flex items-center justify-between">
+                                  <div className="text-sm">
+                                    {product.sizeOptions && product.sizeOptions.length > 0 && (
+                                      <span className="text-gray-600">
+                                        From <span className="font-bold text-green-700">
+                                          ${getProductPrice(product.id, product.sizeOptions[0]).toFixed(2)}
+                                        </span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  {totalInCart > 0 ? (
+                                    <Badge className="bg-green-100 text-green-700">
+                                      {totalInCart} in cart
+                                    </Badge>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleProductExpansion(product.id);
+                                      }}
+                                      className="text-green-600 border-green-600 hover:bg-green-50"
+                                    >
+                                      Select Size
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                         
-                        {/* Size and Quantity Selection */}
-                        <div className="p-4 bg-gray-50">
-                          <div className="space-y-3">
-                            {product.sizeOptions && product.sizeOptions.map((size) => {
-                              const cartItem = cart.find(item => 
-                                item.product.id === product.id && item.size === size
-                              );
-                              const price = getProductPrice(product.id, size);
-                              const inStock = isInStock(product.id, size);
-                              const inventoryData = getProductInventory(product.id);
-                              const inventory = inventoryData.find(inv => inv.sizeOption === size);
-                              
-                              return (
-                                <div key={size} className={`bg-white rounded-lg p-3 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                      <span className="font-medium text-gray-900">{size}</span>
-                                      {price > 0 && (
-                                        <span className="ml-3 text-lg font-bold text-green-700">
-                                          ${price.toFixed(2)}
-                                        </span>
-                                      )}
-                                      {inventory && (
-                                        <span className="ml-2 text-xs text-gray-500">
-                                          ({inventory.quantityAvailable} available)
-                                        </span>
-                                      )}
-                                    </div>
+                        {/* Size and Quantity Selection - Collapsible */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="p-4 bg-gray-50 border-t border-gray-100">
+                                <div className="space-y-3">
+                                  {product.sizeOptions && product.sizeOptions.map((size) => {
+                                    const uniqueKey = `${product.id}-${size}`;
+                                    const cartItem = cart.find(item => item.uniqueKey === uniqueKey);
+                                    const price = getProductPrice(product.id, size);
+                                    const inStock = isInStock(product.id, size);
+                                    const inventoryData = getProductInventory(product.id);
+                                    const inventory = inventoryData.find(inv => inv.sizeOption === size);
                                     
-                                    {inStock ? (
-                                      cartItem ? (
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => updateQuantity(product.id, size, -1)}
-                                            className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                                          >
-                                            <Minus className="w-3 h-3" />
-                                          </button>
-                                          <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
-                                          <button
-                                            onClick={() => updateQuantity(product.id, size, 1)}
-                                            className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                                            disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
-                                          >
-                                            <Plus className="w-3 h-3" />
-                                          </button>
+                                    return (
+                                      <div key={uniqueKey} className={`bg-white rounded-lg p-3 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex-1">
+                                            <span className="font-medium text-gray-900">{size}</span>
+                                            {price > 0 && (
+                                              <span className="ml-3 text-lg font-bold text-green-700">
+                                                ${price.toFixed(2)}
+                                              </span>
+                                            )}
+                                            {inventory && (
+                                              <span className="ml-2 text-xs text-gray-500">
+                                                ({inventory.quantityAvailable} available)
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          {inStock ? (
+                                            cartItem ? (
+                                              <div className="flex items-center gap-2">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    updateQuantity(product.id, size, -1);
+                                                  }}
+                                                  className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                >
+                                                  <Minus className="w-3 h-3" />
+                                                </button>
+                                                <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    updateQuantity(product.id, size, 1);
+                                                  }}
+                                                  className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                  disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
+                                                >
+                                                  <Plus className="w-3 h-3" />
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <Button
+                                                size="sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  addToCart(product, size);
+                                                }}
+                                                className="bg-green-600 hover:bg-green-700 text-white"
+                                              >
+                                                <Plus className="w-4 h-4 mr-1" />
+                                                Add
+                                              </Button>
+                                            )
+                                          ) : (
+                                            <span className="text-red-600 text-sm font-medium">Out of Stock</span>
+                                          )}
                                         </div>
-                                      ) : (
-                                        <Button
-                                          size="sm"
-                                          onClick={() => addToCart(product, size)}
-                                          className="bg-green-600 hover:bg-green-700 text-white"
-                                        >
-                                          <Plus className="w-4 h-4 mr-1" />
-                                          Add
-                                        </Button>
-                                      )
-                                    ) : (
-                                      <span className="text-red-600 text-sm font-medium">Out of Stock</span>
-                                    )}
-                                  </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              );
-                            })}
-                          </div>
-                          
-                          {/* Total in Cart for this Product */}
-                          {cart.filter(item => item.product.id === product.id).length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">Total in cart:</span>
-                                <span className="font-bold text-green-700">
-                                  {cart
-                                    .filter(item => item.product.id === product.id)
-                                    .reduce((sum, item) => sum + item.quantity, 0)} units
-                                </span>
+                                
+                                {/* Total in Cart for this Product */}
+                                {totalInCart > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-gray-600">Total in cart:</span>
+                                      <span className="font-bold text-green-700">
+                                        {totalInCart} units
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
+                            </motion.div>
                           )}
-                        </div>
+                        </AnimatePresence>
                       </motion.div>
                     );
                   })}
@@ -784,7 +867,7 @@ const QRLanding: React.FC = () => {
                 <div className="space-y-4 mb-8">
                   {cart.map((item, index) => (
                     <motion.div
-                      key={`${item.product.id}-${item.size}-${index}`}
+                      key={item.uniqueKey}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}

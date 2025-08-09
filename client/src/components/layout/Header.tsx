@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone } from "lucide-react";
+import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, Settings } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Define the main product categories with icons
@@ -154,6 +154,11 @@ const Header = () => {
                 <Phone className="h-4 w-4" />
                 <span className="font-medium">(928) 550-1649</span>
               </a>
+              <Link href="/admin">
+                <div className="p-2 rounded-md hover:bg-primary/10 transition-colors duration-200 cursor-pointer" title="Admin">
+                  <Settings className="h-5 w-5 text-foreground hover:text-primary" />
+                </div>
+              </Link>
               <Link href="/order">
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
                   <ShoppingCart className="h-4 w-4" />
@@ -232,6 +237,13 @@ const Header = () => {
                       <Phone className="h-4 w-4" />
                       <span className="font-medium">(928) 550-1649</span>
                     </a>
+
+                    <Link href="/admin">
+                      <div className="flex items-center gap-2 py-3 px-4 text-foreground hover:bg-primary/5 hover:text-primary rounded-md cursor-pointer">
+                        <Settings className="h-4 w-4" />
+                        <span>Admin</span>
+                      </div>
+                    </Link>
 
                     <Link href="/order">
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">

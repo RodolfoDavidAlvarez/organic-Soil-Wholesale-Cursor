@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { db } from '../db';
-import { adminSessions, adminUsers } from '../db/schema';
+import { adminSessions, adminUsers, auditLogs } from '../../shared/schema';
 import { eq, and, gt } from 'drizzle-orm';
 
 const supabaseUrl = process.env.SUPABASE_URL!;

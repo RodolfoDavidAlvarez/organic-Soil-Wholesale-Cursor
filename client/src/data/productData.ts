@@ -14,8 +14,14 @@ const mergeProductData = (products: any[]) => {
       story["Product name"].toLowerCase() === product["Brand name"]?.toLowerCase()
     );
 
+    // Generate unique ID based on product array and category
+    const baseId = products === amendmentProducts ? 1000 : 
+                  products === pottingSoilProducts ? 2000 : 
+                  products === mulchProducts ? 3000 : 
+                  products === concentratedAmendmentProducts ? 4000 : 5000;
+    
     return {
-      id: products.indexOf(product) + 1,
+      id: baseId + products.indexOf(product),
       name: product["Product name"] as string,
       description: storyData?.["Brief Overview"] || (product["Brief Overview"] as string),
       category: product["Product Category"] as string,
