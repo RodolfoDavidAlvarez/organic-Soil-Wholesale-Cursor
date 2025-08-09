@@ -56,7 +56,7 @@ router.post('/', async (req, res) => {
     
     // Log admin action
     await logAdminAction(
-      req.admin!.id,
+      req.admin!.id.toString(),
       'create_product',
       'product',
       newProduct.id,
@@ -102,7 +102,7 @@ router.put('/:id', async (req, res) => {
     
     // Log admin action
     await logAdminAction(
-      req.admin!.id,
+      req.admin!.id.toString(),
       'update_product',
       'product',
       productId,
@@ -134,7 +134,7 @@ router.delete('/:id', async (req, res) => {
     
     // Log admin action
     await logAdminAction(
-      req.admin!.id,
+      req.admin!.id.toString(),
       'delete_product',
       'product',
       productId,

@@ -5,7 +5,7 @@ import { insertContactMessageSchema, insertOnboardingRequestSchema, insertProduc
 import { productsData } from "../client/src/data/productData";
 import inventoryRoutes from "./routes/inventory";
 import checkoutRoutes from "./routes/checkout";
-import adminAuthRoutes from "./routes/admin/auth";
+import adminAuthRoutes from "./routes/admin/authSimple";
 import adminProductRoutes from "./routes/admin/products";
 import adminDashboardRoutes from "./routes/admin/dashboard";
 import adminOrderRoutes from "./routes/admin/orders";
@@ -19,7 +19,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Checkout routes
   app.use("/api/checkout", checkoutRoutes);
 
-  // Admin routes
+  // Admin routes - using Supabase auth
   app.use("/api/admin/auth", adminAuthRoutes);
   app.use("/api/admin/products", adminProductRoutes);
   app.use("/api/admin/dashboard", adminDashboardRoutes);
