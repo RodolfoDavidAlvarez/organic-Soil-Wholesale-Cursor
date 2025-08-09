@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Setup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #059669;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Setup for Organic Soil Wholesale</h1>
+    
+    <button onclick="setupAdmin()">Click to Set Up Admin User</button>
+    
+    <div id="result"></div>
+    
+    <div style="margin-top: 40px; padding: 20px; background: #e5e7eb; border-radius: 5px;">
+        <h3>After Setup:</h3>
+        <p><strong>Admin URL:</strong> <a href="/admin" target="_blank">http://localhost:3000/admin</a></p>
+        <p><strong>Email:</strong> ralvarez@soilseedandwater.com</p>
+        <p><strong>Password:</strong> Admin2024!Soil</p>
+    </div>
+
+    <script>
+        async function setupAdmin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Setting up admin...';
+            
+            try {
+                const response = await fetch('/api/admin/auth/setup-initial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        setupKey: 'initial-setup-2024'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ ' + result.message + '\n\nYou can now login at /admin';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ Error: ' + (result.error || 'Setup failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
