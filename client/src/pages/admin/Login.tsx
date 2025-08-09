@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 const AdminLogin = () => {
@@ -13,6 +13,7 @@ const AdminLogin = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [, navigate] = useLocation();
   const { login } = useAdminAuth();
 
@@ -101,14 +102,27 @@ const AdminLogin = () => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
                   autoComplete="current-password"
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
               </div>
             </div>
 
@@ -145,6 +159,29 @@ const AdminLogin = () => {
             This is a secure admin area. All actions are logged for security purposes.
           </p>
         </div>
+
+        {/* Debug Info - REMOVE IN PRODUCTION */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm font-semibold text-yellow-800 mb-2">Development Mode - Test Credentials:</p>
+            <div className="text-xs text-yellow-700 space-y-1">
+              <p><strong>Email:</strong> ralvarez@soilseedandwater.com</p>
+              <p><strong>Password:</strong> Admin2024!Soil</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => {
+                  setEmail('ralvarez@soilseedandwater.com');
+                  setPassword('Admin2024!Soil');
+                }}
+              >
+                Fill Test Credentials
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

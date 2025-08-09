@@ -22,10 +22,12 @@ router.post('/login', async (req, res) => {
     const admins = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
     
     if (admins.length === 0) {
+      console.log('Admin not found for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const admin = admins[0];
+    console.log('Found admin:', admin.email, 'Active:', admin.isActive);
 
     // For initial setup with temporary password
     if (email === 'ralvarez@soilseedandwater.com' && password === 'Admin2024!Soil') {
@@ -74,7 +76,10 @@ router.post('/login', async (req, res) => {
     res.status(401).json({ error: 'Invalid credentials' });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ 
+      error: 'Login failed', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 });
 
