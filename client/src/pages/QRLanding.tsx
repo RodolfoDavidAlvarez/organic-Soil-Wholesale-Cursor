@@ -66,13 +66,15 @@ const QRLanding: React.FC = () => {
   ];
 
   const getProductsByCategory = (categoryId: string) => {
-    // Add temporary prices to products
+    // Add temporary prices to products and format size options
     const productsWithPrices = products.map(p => ({
       ...p,
-      price: p.price || Math.floor(Math.random() * 50 + 20), // Temporary prices between $20-70
+      price: p.price || Math.floor(Math.random() * 30 + 25), // Temporary prices between $25-55
       sizeOptions: p.sizeOptions ? 
-        (typeof p.sizeOptions === 'string' ? p.sizeOptions.split(',').map(s => s.trim()) : p.sizeOptions) 
-        : ['Standard', 'Large', 'Bulk']
+        (typeof p.sizeOptions === 'string' ? 
+          p.sizeOptions.split(',').map(s => s.trim().replace('bag', 'Bag').replace('pallet', 'Pallet')) 
+          : p.sizeOptions) 
+        : ['9lb Bag', '25lb Bag', 'Bulk (50lb)']
     }));
     
     if (categoryId === 'popular') {
@@ -558,95 +560,93 @@ const QRLanding: React.FC = () => {
                 </h3>
                 <div className="space-y-4">
                   {getProductsByCategory(selectedCategory).map((product) => {
-                    const defaultSize = product.sizeOptions?.[0] || 'Standard';
-                    const cartItem = cart.find(item => 
-                      item.product.id === product.id && item.size === defaultSize
-                    );
-                    
                     return (
                       <motion.div
                         key={product.id}
-                        className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                       >
-                        <div className="p-4">
+                        {/* Product Header */}
+                        <div className="p-4 border-b border-gray-100">
                           <div className="flex gap-4">
                             <img
                               src={product.texturePhotoUrl || product.imageUrl || '/placeholder.png'}
                               alt={product.name}
-                              className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                              className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                             />
                             <div className="flex-1">
-                              <h4 className="font-semibold text-gray-800">
+                              <h4 className="font-bold text-gray-900 text-lg">
                                 {product.displayTitle || product.name}
                               </h4>
                               <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                                 {product.briefOverview || product.description}
                               </p>
-                              <p className="text-lg font-bold text-green-700 mt-2">
-                                ${product.price || '0.00'}
-                              </p>
                             </div>
                           </div>
+                        </div>
+                        
+                        {/* Size and Quantity Selection */}
+                        <div className="p-4 bg-gray-50">
+                          <div className="space-y-3">
+                            {product.sizeOptions && product.sizeOptions.map((size) => {
+                              const cartItem = cart.find(item => 
+                                item.product.id === product.id && item.size === size
+                              );
+                              
+                              return (
+                                <div key={size} className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <span className="font-medium text-gray-900">{size}</span>
+                                      <span className="ml-3 text-lg font-bold text-green-700">
+                                        ${product.price || '0.00'}
+                                      </span>
+                                    </div>
+                                    
+                                    {cartItem ? (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => updateQuantity(product.id, size, -1)}
+                                          className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                        >
+                                          <Minus className="w-3 h-3" />
+                                        </button>
+                                        <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
+                                        <button
+                                          onClick={() => updateQuantity(product.id, size, 1)}
+                                          className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                        >
+                                          <Plus className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => addToCart(product, size)}
+                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                      >
+                                        <Plus className="w-4 h-4 mr-1" />
+                                        Add
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                           
-                          {/* Size Selection */}
-                          {product.sizeOptions && product.sizeOptions.length > 1 && (
-                            <div className="mt-4">
-                              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Size Options:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {product.sizeOptions.map((size) => {
-                                  const sizeCartItem = cart.find(item => 
-                                    item.product.id === product.id && item.size === size
-                                  );
-                                  return (
-                                    <button
-                                      key={size}
-                                      onClick={() => {
-                                        if (!sizeCartItem) {
-                                          addToCart(product, size);
-                                        }
-                                      }}
-                                      className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
-                                        sizeCartItem
-                                          ? 'bg-green-600 text-white border-green-600'
-                                          : 'bg-white text-gray-700 border-gray-300 hover:border-green-500'
-                                      }`}
-                                    >
-                                      {size} {sizeCartItem && `(${sizeCartItem.quantity})`}
-                                    </button>
-                                  );
-                                })}
+                          {/* Total in Cart for this Product */}
+                          {cart.filter(item => item.product.id === product.id).length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">Total in cart:</span>
+                                <span className="font-bold text-green-700">
+                                  {cart
+                                    .filter(item => item.product.id === product.id)
+                                    .reduce((sum, item) => sum + item.quantity, 0)} units
+                                </span>
                               </div>
                             </div>
                           )}
-                          
-                          {/* Add to Cart / Quantity Controls */}
-                          <div className="mt-4">
-                            {cartItem ? (
-                              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
-                                <button
-                                  onClick={() => updateQuantity(product.id, defaultSize, -1)}
-                                  className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </button>
-                                <span className="font-semibold text-lg px-4">{cartItem.quantity}</span>
-                                <button
-                                  onClick={() => updateQuantity(product.id, defaultSize, 1)}
-                                  className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <Button
-                                onClick={() => addToCart(product, defaultSize)}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add to Cart
-                              </Button>
-                            )}
-                          </div>
                         </div>
                       </motion.div>
                     );
