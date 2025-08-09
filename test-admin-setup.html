@@ -41,8 +41,10 @@
 <body>
     <h1>Admin Setup for Organic Soil Wholesale</h1>
     
+    <button onclick="checkStatus()">Check Admin Status</button>
     <button onclick="setupAdmin()">Click to Set Up Admin User</button>
     
+    <div id="status" style="margin-top: 20px;"></div>
     <div id="result"></div>
     
     <div style="margin-top: 40px; padding: 20px; background: #e5e7eb; border-radius: 5px;">
@@ -53,6 +55,32 @@
     </div>
 
     <script>
+        async function checkStatus() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'result';
+            statusDiv.textContent = 'Checking admin status...';
+            
+            try {
+                const response = await fetch('/api/admin/auth/check');
+                const data = await response.json();
+                
+                statusDiv.className = 'result';
+                statusDiv.innerHTML = `
+                    <strong>Admin System Status:</strong><br>
+                    Tables Exist: ${JSON.stringify(data.tablesExist || false)}<br>
+                    Admin Users Count: ${data.adminCount || 0}<br>
+                    Setup Required: ${data.setupRequired ? 'YES' : 'NO'}<br>
+                    ${data.error ? `Error: ${data.error}` : ''}
+                `;
+            } catch (error) {
+                statusDiv.className = 'result error';
+                statusDiv.textContent = '❌ Error checking status: ' + error.message;
+            }
+        }
+        
+        // Check status on page load
+        window.onload = checkStatus;
+        
         async function setupAdmin() {
             const resultDiv = document.getElementById('result');
             resultDiv.className = 'result';

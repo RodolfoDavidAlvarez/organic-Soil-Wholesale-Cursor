@@ -34,7 +34,8 @@ const AdminLogin = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        console.error('Login failed:', data);
+        throw new Error(data.error || data.details || 'Login failed');
       }
 
       // Store token and admin info

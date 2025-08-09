@@ -7,6 +7,43 @@ import crypto from 'crypto';
 
 const router = Router();
 
+// Health check endpoint
+router.get('/check', async (req, res) => {
+  try {
+    // Check if admin tables exist
+    const tableCheck = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'admin_users'
+      ) as admin_users_exists,
+      EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'admin_sessions'
+      ) as admin_sessions_exists
+    `);
+    
+    // Count admin users
+    let adminCount = 0;
+    try {
+      const admins = await db.select({ count: sql<number>`count(*)` }).from(adminUsers);
+      adminCount = admins[0]?.count || 0;
+    } catch (e) {
+      // Table might not exist
+    }
+    
+    res.json({
+      tablesExist: tableCheck.rows[0],
+      adminCount,
+      setupRequired: adminCount === 0
+    });
+  } catch (error) {
+    res.json({
+      error: error.message,
+      setupRequired: true
+    });
+  }
+});
+
 // Login schema
 const loginSchema = z.object({
   email: z.string().email(),
