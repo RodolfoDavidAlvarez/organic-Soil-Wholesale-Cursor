@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductsData } from '../data/productData';
 import { Product } from '../shared/schema';
+import { getProductInventory, getProductPrice, isInStock, submitOrder } from '../data/staticInventory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,28 +67,30 @@ const QRLanding: React.FC = () => {
   ];
 
   const getProductsByCategory = (categoryId: string) => {
-    // Add temporary prices to products and format size options
-    const productsWithPrices = products.map(p => ({
-      ...p,
-      price: p.price || Math.floor(Math.random() * 30 + 25), // Temporary prices between $25-55
-      sizeOptions: p.sizeOptions ? 
-        (typeof p.sizeOptions === 'string' ? 
-          p.sizeOptions.split(',').map(s => s.trim().replace('bag', 'Bag').replace('pallet', 'Pallet')) 
-          : p.sizeOptions) 
-        : ['9lb Bag', '25lb Bag', 'Bulk (50lb)']
-    }));
+    // Enhanced products with inventory data from static source
+    // In future, this will merge with real-time inventory from API
+    const productsWithInventory = products.map(p => {
+      const inventory = getProductInventory(p.id);
+      const availableSizes = inventory.map(inv => inv.sizeOption);
+      
+      return {
+        ...p,
+        sizeOptions: availableSizes.length > 0 ? availableSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
+        inventory: inventory
+      };
+    });
     
     if (categoryId === 'popular') {
-      return productsWithPrices.slice(0, 6);
+      return productsWithInventory.slice(0, 6);
     }
     if (categoryId === 'potting') {
-      return productsWithPrices.filter(p => p.type === 'Potting Soil');
+      return productsWithInventory.filter(p => p.type === 'Potting Soil');
     }
     if (categoryId === 'amendment') {
-      return productsWithPrices.filter(p => p.type === 'Amendment' || p.type === 'Concentrated Amendment');
+      return productsWithInventory.filter(p => p.type === 'Amendment' || p.type === 'Concentrated Amendment');
     }
     if (categoryId === 'mulch') {
-      return productsWithPrices.filter(p => p.type === 'Mulch');
+      return productsWithInventory.filter(p => p.type === 'Mulch');
     }
     return [];
   };
@@ -162,14 +165,42 @@ const QRLanding: React.FC = () => {
     
     setIsProcessing(true);
     try {
-      // Simulate order processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Prepare order data matching future API structure
+      const orderData = {
+        customer: customerInfo,
+        items: cart.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: getProductPrice(item.product.id, item.size),
+          totalPrice: getProductPrice(item.product.id, item.size) * item.quantity
+        })),
+        locationId: 1, // Phoenix
+        orderType: 'drive_through',
+        totalAmount: cart.reduce((sum, item) => 
+          sum + (getProductPrice(item.product.id, item.size) * item.quantity), 0
+        ),
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      // Submit order using static system (will be API call in future)
+      const result = await submitOrder(orderData);
       
-      // Save customer info for future orders
-      localStorage.setItem('qrOrderCustomer', JSON.stringify(customerInfo));
-      
-      // Move to checkout screen
-      setStep('checkout');
+      if (result.success) {
+        // Save customer info for future orders
+        localStorage.setItem('qrOrderCustomer', JSON.stringify(customerInfo));
+        
+        // Store order ID for confirmation screen
+        localStorage.setItem('lastOrderId', result.orderId || '');
+        
+        // Clear cart and move to confirmation
+        setCart([]);
+        setStep('checkout');
+      } else {
+        throw new Error(result.error || 'Order submission failed');
+      }
     } catch (error) {
       console.error('Order error:', error);
       alert('There was an error placing your order. Please try again.');
@@ -591,42 +622,57 @@ const QRLanding: React.FC = () => {
                               const cartItem = cart.find(item => 
                                 item.product.id === product.id && item.size === size
                               );
+                              const price = getProductPrice(product.id, size);
+                              const inStock = isInStock(product.id, size);
+                              const inventory = product.inventory?.find(inv => inv.sizeOption === size);
                               
                               return (
-                                <div key={size} className="bg-white rounded-lg p-3 border border-gray-200">
+                                <div key={size} className={`bg-white rounded-lg p-3 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
                                   <div className="flex items-center justify-between">
                                     <div className="flex-1">
                                       <span className="font-medium text-gray-900">{size}</span>
-                                      <span className="ml-3 text-lg font-bold text-green-700">
-                                        ${product.price || '0.00'}
-                                      </span>
+                                      {price > 0 && (
+                                        <span className="ml-3 text-lg font-bold text-green-700">
+                                          ${price.toFixed(2)}
+                                        </span>
+                                      )}
+                                      {inventory && (
+                                        <span className="ml-2 text-xs text-gray-500">
+                                          ({inventory.quantityAvailable} available)
+                                        </span>
+                                      )}
                                     </div>
                                     
-                                    {cartItem ? (
-                                      <div className="flex items-center gap-2">
-                                        <button
-                                          onClick={() => updateQuantity(product.id, size, -1)}
-                                          className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                    {inStock ? (
+                                      cartItem ? (
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => updateQuantity(product.id, size, -1)}
+                                            className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                          >
+                                            <Minus className="w-3 h-3" />
+                                          </button>
+                                          <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
+                                          <button
+                                            onClick={() => updateQuantity(product.id, size, 1)}
+                                            className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                            disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <Button
+                                          size="sm"
+                                          onClick={() => addToCart(product, size)}
+                                          className="bg-green-600 hover:bg-green-700 text-white"
                                         >
-                                          <Minus className="w-3 h-3" />
-                                        </button>
-                                        <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
-                                        <button
-                                          onClick={() => updateQuantity(product.id, size, 1)}
-                                          className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                                        >
-                                          <Plus className="w-3 h-3" />
-                                        </button>
-                                      </div>
+                                          <Plus className="w-4 h-4 mr-1" />
+                                          Add
+                                        </Button>
+                                      )
                                     ) : (
-                                      <Button
-                                        size="sm"
-                                        onClick={() => addToCart(product, size)}
-                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                      >
-                                        <Plus className="w-4 h-4 mr-1" />
-                                        Add
-                                      </Button>
+                                      <span className="text-red-600 text-sm font-medium">Out of Stock</span>
                                     )}
                                   </div>
                                 </div>
