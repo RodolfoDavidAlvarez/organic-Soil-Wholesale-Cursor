@@ -37,6 +37,9 @@ import { Analytics } from "@vercel/analytics/react";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import SignUpSuccess from "@/pages/SignUpSuccess";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import VerifyEmail from "@/pages/VerifyEmail";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 // Admin imports
@@ -87,6 +90,9 @@ function Router() {
       <Route path="/signin" component={SignIn} />
       <Route path="/signup" component={SignUp} />
       <Route path="/signup-success" component={SignUpSuccess} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password/:token" component={ResetPassword} />
+      <Route path="/verify-email/:token" component={VerifyEmail} />
       
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />

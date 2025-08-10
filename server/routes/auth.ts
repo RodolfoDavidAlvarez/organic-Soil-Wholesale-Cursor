@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 
 const router = Router();
 
@@ -77,8 +78,14 @@ router.post('/signup', async (req, res) => {
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
 
-    // TODO: Send verification email
-    console.log('Verification token:', verificationToken);
+    // Send verification email
+    try {
+      await sendVerificationEmail(data.email, verificationToken);
+      console.log('Verification email sent to:', data.email);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Continue anyway - user can request resend later
+    }
 
     res.json({
       success: true,
@@ -199,8 +206,14 @@ router.post('/reset-password', async (req, res) => {
         expires_at: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       });
 
-    // TODO: Send reset email
-    console.log('Reset token:', resetToken);
+    // Send reset email
+    try {
+      await sendPasswordResetEmail(data.email, resetToken);
+      console.log('Password reset email sent to:', data.email);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      // Return success anyway to not reveal if email exists
+    }
 
     res.json({ success: true, message: 'If the email exists, a reset link has been sent.' });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
+import { sendOrderConfirmationEmail } from '../services/email';
 
 const router = Router();
 
@@ -262,7 +263,49 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     }
   }
 
-  // TODO: Send confirmation email/SMS
+  // Get full order details for email
+  const { data: fullOrder, error: fullOrderError } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items (
+        quantity,
+        unit_price,
+        total_price,
+        products (
+          name
+        )
+      )
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (!fullOrderError && fullOrder) {
+    // Send confirmation email
+    try {
+      await sendOrderConfirmationEmail(
+        fullOrder.customer_email,
+        {
+          orderNumber: fullOrder.order_number,
+          items: fullOrder.order_items.map((item: any) => ({
+            name: item.products.name,
+            quantity: item.quantity,
+            price: item.total_price
+          })),
+          subtotal: fullOrder.subtotal,
+          tax: fullOrder.tax_amount,
+          total: fullOrder.total_amount,
+          deliveryMethod: fullOrder.order_type === 'pickup' ? 'Pickup' : 'Delivery',
+          estimatedDelivery: fullOrder.order_type === 'pickup' ? 'Ready within 24-48 hours' : undefined
+        }
+      );
+      console.log(`Confirmation email sent for order ${orderId}`);
+    } catch (emailError) {
+      console.error('Failed to send order confirmation email:', emailError);
+      // Don't fail the order process if email fails
+    }
+  }
+
   console.log(`Order ${orderId} successfully paid and inventory reserved`);
 }
 
