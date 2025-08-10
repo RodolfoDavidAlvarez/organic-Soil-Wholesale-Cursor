@@ -39,6 +39,54 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Check session endpoint
+router.get('/session', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Get user from token
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      console.error('Session validation error:', error);
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
+    res.json({
+      admin: {
+        id: user.id,
+        email: user.email,
+        role: 'admin',
+        permissions: { all: true }
+      }
+    });
+  } catch (error) {
+    console.error('Session check error:', error);
+    res.status(500).json({ error: 'Session check failed' });
+  }
+});
+
+// Logout endpoint
+router.post('/logout', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (token) {
+      // Sign out from Supabase
+      await supabase.auth.admin.signOut(token);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
 // Create admin user
 router.post('/create-admin', async (req, res) => {
   try {

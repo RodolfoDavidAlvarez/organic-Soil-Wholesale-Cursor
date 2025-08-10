@@ -32,9 +32,13 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (storedToken && storedAdmin) {
       setToken(storedToken);
-      setAdmin(JSON.parse(storedAdmin));
-      setIsAuthenticated(true);
-      checkSession();
+      try {
+        setAdmin(JSON.parse(storedAdmin));
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Error parsing stored admin data:', error);
+        logout();
+      }
     }
   }, []);
 

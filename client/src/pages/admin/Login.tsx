@@ -45,10 +45,14 @@ const AdminLogin = () => {
       // Set auth context
       login(data.token, data.admin);
 
+      console.log('Login successful, stored token:', data.token);
+      console.log('Navigating to dashboard...');
+
       // Check if password change is required
       if (data.requirePasswordChange) {
         navigate('/admin/change-password');
       } else {
+        // Navigate to dashboard
         navigate('/admin/dashboard');
       }
     } catch (err) {
