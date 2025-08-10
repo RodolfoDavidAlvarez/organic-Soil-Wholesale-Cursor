@@ -32,6 +32,13 @@ import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
 import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
+
+// Customer Auth imports
+import SignIn from "@/pages/SignIn";
+import SignUp from "@/pages/SignUp";
+import SignUpSuccess from "@/pages/SignUpSuccess";
+import { AuthProvider } from "@/contexts/AuthContext";
+
 // Admin imports
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -76,6 +83,11 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
       
+      {/* Customer Auth Routes */}
+      <Route path="/signin" component={SignIn} />
+      <Route path="/signup" component={SignUp} />
+      <Route path="/signup-success" component={SignUpSuccess} />
+      
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
@@ -99,21 +111,23 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <AdminAuthProvider>
-            <TooltipProvider>
-              <div className="min-h-screen flex flex-col">
-                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Header />}
-                <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
-                  <Router />
-                </main>
-                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Footer />}
-                <Toaster />
-                <ScrollToTop />
-                <Analytics />
-                {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
-              </div>
-            </TooltipProvider>
-          </AdminAuthProvider>
+          <AuthProvider>
+            <AdminAuthProvider>
+              <TooltipProvider>
+                <div className="min-h-screen flex flex-col">
+                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Header />}
+                  <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
+                    <Router />
+                  </main>
+                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Footer />}
+                  <Toaster />
+                  <ScrollToTop />
+                  <Analytics />
+                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
+                </div>
+              </TooltipProvider>
+            </AdminAuthProvider>
+          </AuthProvider>
         </ThemeProvider>
       </HelmetProvider>
     </QueryClientProvider>

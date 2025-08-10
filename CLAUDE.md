@@ -24,3 +24,6 @@
 - May become DEFAULT ordering interface for all users
 - Focus: Convert drive-by traffic to immediate orders
 - Design: Bold buttons, simple choices, no distractions
+
+## Database Management
+- Use Supabase MPC when needed modifications in the database

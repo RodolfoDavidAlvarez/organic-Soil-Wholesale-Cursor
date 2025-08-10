@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, Settings } from "lucide-react";
+import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Define the main product categories with icons
 const PRODUCT_CATEGORIES = [
@@ -17,6 +18,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -154,11 +156,53 @@ const Header = () => {
                 <Phone className="h-4 w-4" />
                 <span className="font-medium">(928) 550-1649</span>
               </a>
-              <Link href="/admin">
-                <div className="p-2 rounded-md hover:bg-primary/10 transition-colors duration-200 cursor-pointer" title="Admin">
-                  <Settings className="h-5 w-5 text-foreground hover:text-primary" />
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>{user?.email}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/orders">
+                        <a className="flex items-center w-full">
+                          Order History
+                        </a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account/profile">
+                        <a className="flex items-center w-full">
+                          My Profile
+                        </a>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => signOut()}
+                      className="flex items-center cursor-pointer text-red-600"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link href="/signin">
+                    <Button variant="outline">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button>
+                      Sign Up
+                    </Button>
+                  </Link>
                 </div>
-              </Link>
+              )}
               <Link href="/order">
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
                   <ShoppingCart className="h-4 w-4" />
@@ -233,17 +277,54 @@ const Header = () => {
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 
+                    {/* Auth section in mobile menu */}
+                    {isAuthenticated ? (
+                      <div className="space-y-2">
+                        <div className="py-3 px-4 text-sm text-gray-600">
+                          Signed in as: {user?.email}
+                        </div>
+                        <Link href="/account/orders">
+                          <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">
+                            Order History
+                          </div>
+                        </Link>
+                        <Link href="/account/profile">
+                          <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">
+                            My Profile
+                          </div>
+                        </Link>
+                        <div
+                          onClick={() => {
+                            signOut();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="py-3 px-4 rounded-md text-red-600 hover:bg-red-50 cursor-pointer flex items-center"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Link href="/signin">
+                          <Button variant="outline" className="w-full" size="lg">
+                            Sign In
+                          </Button>
+                        </Link>
+                        <Link href="/signup">
+                          <Button className="w-full" size="lg">
+                            Sign Up
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+
+                    <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
+
                     <a href="tel:9285501649" className="flex items-center gap-2 py-3 px-4 text-primary">
                       <Phone className="h-4 w-4" />
                       <span className="font-medium">(928) 550-1649</span>
                     </a>
-
-                    <Link href="/admin">
-                      <div className="flex items-center gap-2 py-3 px-4 text-foreground hover:bg-primary/5 hover:text-primary rounded-md cursor-pointer">
-                        <Settings className="h-4 w-4" />
-                        <span>Admin</span>
-                      </div>
-                    </Link>
 
                     <Link href="/order">
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">

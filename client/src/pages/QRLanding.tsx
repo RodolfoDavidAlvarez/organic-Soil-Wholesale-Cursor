@@ -26,7 +26,8 @@ import {
   Mail,
   Loader2,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 
 interface CartItem {
@@ -160,6 +161,11 @@ const QRLanding: React.FC = () => {
       }
       return item;
     }).filter(Boolean) as CartItem[]);
+  };
+
+  const removeItem = (productId: number, size: string) => {
+    const uniqueKey = `${productId}-${size}`;
+    setCart(cart.filter(item => item.uniqueKey !== uniqueKey));
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -939,10 +945,21 @@ const QRLanding: React.FC = () => {
                           className="w-20 h-20 rounded-lg object-cover"
                         />
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800">
-                            {item.product.displayTitle || item.product.name}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1">{item.size}</p>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-800">
+                                {item.product.displayTitle || item.product.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">{item.size}</p>
+                            </div>
+                            <button
+                              onClick={() => removeItem(item.product.id, item.size)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                           <div className="flex items-center gap-3 mt-3">
                             <button
                               onClick={() => updateQuantity(item.product.id, item.size, -1)}
