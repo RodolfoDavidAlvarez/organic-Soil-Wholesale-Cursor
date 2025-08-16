@@ -72,10 +72,11 @@ const categories = [
 ];
 
 const AdminProductEdit = () => {
-  const [, params] = useRoute('/admin/products/:id/edit');
+  const [matchEdit, paramsEdit] = useRoute('/admin/products/:id/edit');
+  const [matchNew] = useRoute('/admin/products/new');
   const [, navigate] = useLocation();
-  const productId = params?.id;
-  const isNew = productId === 'new';
+  const productId = paramsEdit?.id;
+  const isNew = matchNew || productId === 'new';
   
   const { toast } = useToast();
   const [loading, setLoading] = useState(!isNew);

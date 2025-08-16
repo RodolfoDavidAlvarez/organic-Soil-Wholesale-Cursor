@@ -47,6 +47,10 @@ import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminProducts from "@/pages/admin/Products";
 import AdminProductEdit from "@/pages/admin/ProductEdit";
+import AdminInventory from "@/pages/admin/Inventory";
+import AdminCustomers from "@/pages/admin/Customers";
+import AdminAnalytics from "@/pages/admin/Analytics";
+import AdminDriveThrough from "@/pages/admin/DriveThrough";
 import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
 import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 
@@ -100,7 +104,11 @@ function Router() {
       <Route path="/admin/dashboard" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
       <Route path="/admin/products" component={() => <ProtectedAdminRoute><AdminProducts /></ProtectedAdminRoute>} />
       <Route path="/admin/products/new" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
-      <Route path="/admin/products/:id" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
+      <Route path="/admin/products/:id/edit" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
+      <Route path="/admin/inventory" component={() => <ProtectedAdminRoute><AdminInventory /></ProtectedAdminRoute>} />
+      <Route path="/admin/customers" component={() => <ProtectedAdminRoute><AdminCustomers /></ProtectedAdminRoute>} />
+      <Route path="/admin/analytics" component={() => <ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
+      <Route path="/admin/drive-through" component={() => <ProtectedAdminRoute><AdminDriveThrough /></ProtectedAdminRoute>} />
       
       <Route component={NotFound} />
     </Switch>

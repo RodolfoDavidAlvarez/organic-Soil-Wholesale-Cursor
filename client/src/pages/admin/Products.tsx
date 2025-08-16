@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -57,6 +57,7 @@ const AdminProducts = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     fetchProducts();
@@ -187,12 +188,10 @@ const AdminProducts = () => {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Link href="/admin/products/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </Link>
+            <Button onClick={() => navigate('/admin/products/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
           </div>
         </div>
 

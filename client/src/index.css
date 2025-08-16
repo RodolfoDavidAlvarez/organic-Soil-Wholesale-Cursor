@@ -14,9 +14,9 @@
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
 
-  /* Primary: Rich Forest Green */
-  --primary: 142 38% 32%;
-  --primary-light: 142 38% 38%;
+  /* Primary: Muted Professional Green */
+  --primary: 142 35% 45%;
+  --primary-light: 142 35% 55%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary: Deep Earthy Brown */
@@ -31,7 +31,7 @@
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 142 38% 32%;
+  --ring: 142 35% 40%;
   --radius: 0.75rem;
 }
 
@@ -47,10 +47,10 @@
   --border: 142 15% 25%;
   --input: 142 15% 25%;
 
-  /* Primary: Rich Green */
-  --primary: 142 38% 50%;
-  --primary-light: 142 38% 58%;
-  --primary-foreground: 35 15% 94%;
+  /* Primary: Muted Professional Green */
+  --primary: 142 35% 55%;
+  --primary-light: 142 35% 65%;
+  --primary-foreground: 0 0% 100%;
 
   /* Secondary: Earthy Brown */
   --secondary: 30 38% 42%;
@@ -64,7 +64,7 @@
 
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 35 15% 94%;
-  --ring: 142 38% 50%;
+  --ring: 142 35% 50%;
   --radius: 0.75rem;
 }
 
