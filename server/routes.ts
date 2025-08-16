@@ -6,6 +6,7 @@ import { productsData } from "../client/src/data/productData";
 import inventoryRoutes from "./routes/inventory";
 import checkoutRoutes from "./routes/checkout";
 import authRoutes from "./routes/auth";
+import pricingRoutes from "./routes/pricing";
 import adminAuthRoutes from "./routes/admin/authSimple";
 import adminProductRoutes from "./routes/admin/products";
 import adminDashboardRoutes from "./routes/admin/dashboard";
@@ -19,6 +20,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Checkout routes
   app.use("/api/checkout", checkoutRoutes);
+  
+  // Pricing routes
+  app.use("/api/pricing", pricingRoutes);
   
   // Customer authentication routes
   app.use("/api/auth", authRoutes);

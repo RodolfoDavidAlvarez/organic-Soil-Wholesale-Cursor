@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY || 're_3NwHmEhS_LufEzsb6iCtrdzZd7d3zLFDi');
 
 // Email configuration
-const FROM_EMAIL = 'Organic Soil Wholesale <noreply@soilseedandwater.com>';
+const FROM_EMAIL = 'Organic Soil Wholesale <ralvarez@bettersystems.ai>';
 const COMPANY_NAME = 'Organic Soil Wholesale';
 const COMPANY_PHONE = '(928) 550-1649';
 const COMPANY_ADDRESS = 'Flagstaff, AZ';

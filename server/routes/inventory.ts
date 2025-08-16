@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
+import { pricingService, CustomerType } from '../services/pricingService.js';
 
 const router = Router();
 
-// Get inventory for a specific location
+// Get inventory for a specific location with pricing
 router.get('/location/:locationId', async (req, res) => {
   try {
     const { locationId } = req.params;
+    const { customerType = 'regular', includeOutOfStock = 'false' } = req.query;
     
-    const { data, error } = await supabase
+    const query = supabase
       .from('inventory')
       .select(`
         *,
@@ -16,19 +18,51 @@ router.get('/location/:locationId', async (req, res) => {
           id,
           name,
           description,
-          price,
           category,
-          imageUrl,
-          texturePhotoUrl,
-          sizeOptions
+          image_url,
+          texture_photo_url,
+          size_options,
+          display_title,
+          brief_overview,
+          available_size_options
         )
       `)
-      .eq('location_id', locationId)
-      .gt('quantity_available', 0);
+      .eq('location_id', locationId);
+
+    // Filter out of stock items unless requested
+    if (includeOutOfStock !== 'true') {
+      query.gt('quantity_available', 0);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    res.json(data);
+    // Enhance with pricing information
+    const inventoryWithPricing = await Promise.all(
+      data.map(async (item) => {
+        const pricing = await pricingService.calculatePrice(
+          item.product_id,
+          item.size_option,
+          1, // Single unit price
+          customerType as CustomerType['type'],
+          parseInt(locationId)
+        );
+
+        return {
+          ...item,
+          pricing: {
+            base_price: pricing.base_price,
+            final_price: pricing.final_price,
+            discount_amount: pricing.discount_amount,
+            tier_applied: pricing.tier_applied,
+            savings: pricing.savings
+          }
+        };
+      })
+    );
+
+    res.json(inventoryWithPricing);
   } catch (error) {
     console.error('Error fetching inventory:', error);
     res.status(500).json({ error: 'Failed to fetch inventory' });
@@ -155,6 +189,211 @@ router.get('/sync/:locationId', async (req, res) => {
   } catch (error) {
     console.error('Error syncing inventory:', error);
     res.status(500).json({ error: 'Failed to sync inventory' });
+  }
+});
+
+// Get product inventory for QR system with enhanced data
+router.get('/products/:locationId', async (req, res) => {
+  try {
+    const { locationId } = req.params;
+    const { category, customerType = 'regular' } = req.query;
+    
+    let query = supabase
+      .from('inventory')
+      .select(`
+        *,
+        products!inner (
+          id,
+          name,
+          description,
+          category,
+          image_url,
+          texture_photo_url,
+          display_title,
+          marketing_title,
+          brief_overview,
+          ingredients,
+          target_audience,
+          recommended_uses,
+          certifications,
+          features,
+          product_type,
+          available_size_options
+        )
+      `)
+      .eq('location_id', locationId)
+      .gt('quantity_available', 0);
+
+    // Filter by category if provided
+    if (category) {
+      query = query.eq('products.category', category);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Group by product and enhance with pricing
+    const productMap = new Map();
+    
+    for (const item of data) {
+      const productId = item.product_id;
+      
+      if (!productMap.has(productId)) {
+        productMap.set(productId, {
+          ...item.products,
+          inventory: []
+        });
+      }
+      
+      // Calculate pricing for this size option
+      const pricing = await pricingService.calculatePrice(
+        productId,
+        item.size_option,
+        1,
+        customerType as CustomerType['type'],
+        parseInt(locationId)
+      );
+
+      productMap.get(productId).inventory.push({
+        size_option: item.size_option,
+        quantity_available: item.quantity_available,
+        quantity_reserved: item.quantity_reserved,
+        price: item.price,
+        pricing: {
+          base_price: pricing.base_price,
+          final_price: pricing.final_price,
+          discount_amount: pricing.discount_amount,
+          tier_applied: pricing.tier_applied,
+          savings: pricing.savings
+        }
+      });
+    }
+
+    const products = Array.from(productMap.values());
+
+    res.json({
+      success: true,
+      location_id: locationId,
+      category: category || 'all',
+      customer_type: customerType,
+      products: products
+    });
+  } catch (error) {
+    console.error('Error fetching products inventory:', error);
+    res.status(500).json({ error: 'Failed to fetch products inventory' });
+  }
+});
+
+// Reserve inventory for checkout
+router.post('/reserve', async (req, res) => {
+  try {
+    const { items, sessionId } = req.body;
+    
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items array is required' });
+    }
+
+    const reservations = [];
+    
+    for (const item of items) {
+      const { productId, locationId, sizeOption, quantity } = item;
+      
+      // Check availability
+      const { data: inventory, error } = await supabase
+        .from('inventory')
+        .select('id, quantity_available, quantity_reserved')
+        .eq('product_id', productId)
+        .eq('location_id', locationId)
+        .eq('size_option', sizeOption)
+        .single();
+
+      if (error || !inventory) {
+        return res.status(404).json({ 
+          error: `Inventory not found for product ${productId}, size ${sizeOption}` 
+        });
+      }
+
+      if (inventory.quantity_available < quantity) {
+        return res.status(400).json({ 
+          error: `Insufficient inventory for product ${productId}, size ${sizeOption}. Available: ${inventory.quantity_available}, Requested: ${quantity}` 
+        });
+      }
+
+      // Reserve inventory
+      const { error: updateError } = await supabase
+        .from('inventory')
+        .update({
+          quantity_available: inventory.quantity_available - quantity,
+          quantity_reserved: inventory.quantity_reserved + quantity
+        })
+        .eq('id', inventory.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      reservations.push({
+        productId,
+        locationId,
+        sizeOption,
+        quantity,
+        reservedAt: new Date().toISOString(),
+        sessionId
+      });
+    }
+
+    res.json({
+      success: true,
+      reservations,
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
+    });
+  } catch (error) {
+    console.error('Error reserving inventory:', error);
+    res.status(500).json({ error: 'Failed to reserve inventory' });
+  }
+});
+
+// Release inventory reservations
+router.post('/release', async (req, res) => {
+  try {
+    const { items } = req.body;
+    
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items array is required' });
+    }
+
+    for (const item of items) {
+      const { productId, locationId, sizeOption, quantity } = item;
+      
+      // Get current inventory
+      const { data: inventory, error } = await supabase
+        .from('inventory')
+        .select('id, quantity_available, quantity_reserved')
+        .eq('product_id', productId)
+        .eq('location_id', locationId)
+        .eq('size_option', sizeOption)
+        .single();
+
+      if (error || !inventory) {
+        console.warn(`Inventory not found for release: product ${productId}, size ${sizeOption}`);
+        continue;
+      }
+
+      // Release reservation
+      await supabase
+        .from('inventory')
+        .update({
+          quantity_available: inventory.quantity_available + quantity,
+          quantity_reserved: Math.max(0, inventory.quantity_reserved - quantity)
+        })
+        .eq('id', inventory.id);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error releasing inventory:', error);
+    res.status(500).json({ error: 'Failed to release inventory' });
   }
 });
 

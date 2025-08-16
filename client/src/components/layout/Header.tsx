@@ -192,7 +192,7 @@ const Header = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Link href="/signin">
-                    <Button variant="outline">
+                    <Button variant="outline" className="border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900">
                       Sign In
                     </Button>
                   </Link>
@@ -307,7 +307,7 @@ const Header = () => {
                     ) : (
                       <div className="space-y-2">
                         <Link href="/signin">
-                          <Button variant="outline" className="w-full" size="lg">
+                          <Button variant="outline" className="w-full border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900" size="lg">
                             Sign In
                           </Button>
                         </Link>

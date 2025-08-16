@@ -5,20 +5,52 @@ import { z } from 'zod';
 const router = Router();
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://govktyrtmwzbzqkmzmrf.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc2OTU2NiwiZXhwIjoyMDcwMzQ1NTY2fQ.Zf6HI1O9ROsRersiYukXzwznHVXALs2EDYiSGLchyVI';
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Login schema
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+});
+
+// Reset admin password endpoint
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { setupKey } = req.body;
+    
+    if (setupKey !== 'initial-setup-2024') {
+      return res.status(403).json({ error: 'Invalid setup key' });
+    }
+
+    // Find the admin user
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const adminUser = users.users.find(u => u.email === 'ralvarez@soilseedandwater.com');
+
+    if (adminUser) {
+      // Update the user's password
+      const { error } = await supabase.auth.admin.updateUserById(adminUser.id, {
+        password: 'Admin2024!Soil'
+      });
+
+      if (error) {
+        console.error('Error updating password:', error);
+        return res.status(500).json({ error: 'Failed to update password', details: error.message });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Admin password updated successfully'
+      });
+    } else {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Password reset failed', details: error.message });
+  }
 });
 
 // Initialize admin user in Supabase Auth
@@ -30,10 +62,9 @@ router.post('/setup-initial', async (req, res) => {
       return res.status(403).json({ error: 'Invalid setup key' });
     }
 
-    // Check if admin user exists
-    const { data: existingUser } = await supabase.auth.admin.getUserById(
-      'ralvarez@soilseedandwater.com'
-    ).catch(() => ({ data: null }));
+    // Check if admin user exists by email
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers.users.find(u => u.email === 'ralvarez@soilseedandwater.com');
 
     if (!existingUser) {
       // Create admin user in Supabase Auth
@@ -72,9 +103,38 @@ router.post('/setup-initial', async (req, res) => {
       });
     }
 
+    // User exists, but make sure admin profile exists
+    const { data: existingProfile } = await supabase
+      .from('admin_profiles')
+      .select('*')
+      .eq('id', existingUser.id)
+      .single();
+
+    if (!existingProfile) {
+      // Create admin profile for existing user
+      const { error: profileError } = await supabase
+        .from('admin_profiles')
+        .insert({
+          id: existingUser.id,
+          email: 'ralvarez@soilseedandwater.com',
+          role: 'super_admin',
+          permissions: { all: true }
+        });
+
+      if (profileError) {
+        console.error('Error creating admin profile:', profileError);
+        return res.status(500).json({ error: 'Failed to create admin profile', details: profileError.message });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Admin profile created for existing user'
+      });
+    }
+
     return res.json({
       success: true,
-      message: 'Admin user already exists'
+      message: 'Admin user and profile already exists'
     });
   } catch (error) {
     console.error('Setup error:', error);
@@ -87,8 +147,11 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
+    // Create a client-side Supabase instance for authentication
+    const clientSupabase = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3Njk1NjYsImV4cCI6MjA3MDM0NTU2Nn0.n59e225VDBmFyLeVzmwlrlv_yt27bvbZLAsl1SgSjwo');
+
     // Sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await clientSupabase.auth.signInWithPassword({
       email,
       password
     });
@@ -98,15 +161,37 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check if user has admin role
-    const { data: profile } = await supabase
+    // Check if user has admin role using service role client
+    console.log('=== ADMIN LOGIN DEBUG ===');
+    console.log('User authenticated successfully:', {
+      id: data.user.id,
+      email: data.user.email
+    });
+    
+    console.log('Querying admin_profiles with service role...');
+    const { data: profile, error: profileError } = await supabase
       .from('admin_profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
 
+    console.log('Profile query result:', { 
+      profile: profile, 
+      profileError: profileError,
+      hasProfile: !!profile 
+    });
+    
+    // Also test a general query to make sure service role works
+    const { data: allProfiles, error: allError } = await supabase
+      .from('admin_profiles')
+      .select('*');
+    console.log('All profiles query:', { 
+      count: allProfiles?.length || 0, 
+      error: allError 
+    });
+
     if (!profile) {
-      await supabase.auth.signOut();
+      await clientSupabase.auth.signOut();
       return res.status(403).json({ error: 'Not authorized as admin' });
     }
 

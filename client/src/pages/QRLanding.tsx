@@ -51,7 +51,8 @@ const QRLanding: React.FC = () => {
   const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
-  const products = getProductsData();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   // Track QR landing page visit
   useEffect(() => {
@@ -61,6 +62,31 @@ const QRLanding: React.FC = () => {
         event_label: 'drive_thru_landing'
       });
     }
+  }, []);
+
+  // Fetch products from database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch('/api/products');
+        const data = await response.json();
+        
+        if (data.products) {
+          setProducts(data.products);
+        } else {
+          // Fallback to static data if API fails
+          setProducts(getProductsData());
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        // Fallback to static data
+        setProducts(getProductsData());
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   const categories = [
@@ -784,7 +810,7 @@ const QRLanding: React.FC = () => {
                                         e.stopPropagation();
                                         toggleProductExpansion(product.id);
                                       }}
-                                      className="text-green-600 border-green-600 hover:bg-green-50"
+                                      className="text-white bg-green-600 border-green-600 hover:bg-green-700"
                                     >
                                       Select Size
                                     </Button>

@@ -56,6 +56,7 @@ const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -157,6 +158,106 @@ const AdminProducts = () => {
     return <Badge variant="success">In Stock</Badge>;
   };
 
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/admin/products/export', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to export products');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `products-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Success',
+        description: 'Products exported successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to export products',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/admin/products/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to import products');
+      }
+
+      toast({
+        title: 'Success',
+        description: data.message || 'Products imported successfully',
+      });
+
+      fetchProducts();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to import products',
+        variant: 'destructive',
+      });
+    } finally {
+      setImporting(false);
+      event.target.value = '';
+    }
+  };
+
+  const downloadTemplate = () => {
+    fetch('/api/admin/products/template', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+      },
+    })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'products-import-template.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      })
+      .catch(() => {
+        toast({
+          title: 'Error',
+          description: 'Failed to download template',
+          variant: 'destructive',
+        });
+      });
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -180,13 +281,29 @@ const AdminProducts = () => {
             <p className="text-gray-600 mt-1">Manage your product catalog</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline">
+            <input
+              type="file"
+              id="import-file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById('import-file')?.click()}
+              disabled={importing}
+            >
               <Upload className="mr-2 h-4 w-4" />
-              Import CSV
+              {importing ? 'Importing...' : 'Import CSV'}
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
               Export
+            </Button>
+            <Button variant="outline" onClick={downloadTemplate}>
+              <FileText className="mr-2 h-4 w-4" />
+              Template
             </Button>
             <Button onClick={() => navigate('/admin/products/new')}>
               <Plus className="mr-2 h-4 w-4" />

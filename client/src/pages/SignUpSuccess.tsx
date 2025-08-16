@@ -1,10 +1,11 @@
-import { Link, useSearch } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { CheckCircle, Mail, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const SignUpSuccess = () => {
-  const searchParams = new URLSearchParams(useSearch());
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const requiresApproval = searchParams.get('approval') === 'true';
 
   return (
