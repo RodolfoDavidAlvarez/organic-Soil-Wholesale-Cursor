@@ -113,7 +113,7 @@ const TriviaGame: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      await fetch('/api/trivia-leads', {
+      const response = await fetch('/api/trivia-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,9 +125,16 @@ const TriviaGame: React.FC = () => {
           answers: selectedAnswers
         })
       });
-      setStage('success');
+      
+      if (response.ok) {
+        // Refresh leaderboard after submission
+        await fetchLeaderboard();
+        setStage('success');
+      }
     } catch (error) {
       console.error('Error:', error);
+      // Still go to success page even if API fails
+      setStage('success');
     }
   };
 
@@ -148,19 +155,14 @@ const TriviaGame: React.FC = () => {
         
         {/* Content */}
         <div className="relative z-10 w-full max-w-3xl px-12 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center px-6 py-3 bg-green-600/20 backdrop-blur-sm border border-green-400/50 rounded-full mb-8">
-            <span className="text-green-400 font-medium text-lg">Trade Show Special • Limited Time</span>
-          </div>
-          
           {/* Main Headline */}
           <h1 className="text-7xl md:text-8xl font-bold text-white mb-6 leading-tight">
             Test Your<br />
-            <span className="text-green-400">Soil IQ</span>
+            <span className="text-green-400">Soil Knowledge</span>
           </h1>
           
           <p className="text-2xl md:text-3xl text-gray-200 mb-12">
-            5 expert questions. Win 20% off + Free Soil Kit.
+            Answer 5 expert questions. Win a Free Soil Test Kit.
           </p>
           
           {/* Name Input with Leaderboard */}
@@ -220,7 +222,7 @@ const TriviaGame: React.FC = () => {
             </button>
             
             <p className="text-center mt-4 text-white/70 text-sm">
-              Beat the high score and win a bonus prize!
+              Complete the quiz to get your free soil test kit!
             </p>
           </form>
           
@@ -282,12 +284,12 @@ const TriviaGame: React.FC = () => {
           )}
           
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-8 mb-8">
-            <p className="text-lg font-medium text-gray-700 mb-3">Your Discount Code:</p>
-            <p className="text-5xl font-bold text-green-600 tracking-wide mb-4">
-              {score === 5 ? 'SOILPRO25' : 'SOIL20'}
+            <p className="text-lg font-medium text-gray-700 mb-3">Your Prize:</p>
+            <p className="text-4xl font-bold text-green-600 mb-4">
+              🧪 Free Soil Test Kit
             </p>
             <p className="text-lg text-gray-600">
-              {score === 5 ? '25% off + Free Soil Test Kit' : '20% off your first order'}
+              Professional soil analysis delivered to your door
             </p>
           </div>
           
@@ -298,7 +300,17 @@ const TriviaGame: React.FC = () => {
           </div>
           
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              // Reset everything and go back to start
+              setStage('landing');
+              setCurrentQuestion(0);
+              setScore(0);
+              setSelectedAnswers([]);
+              setSelectedInterests([]);
+              setFormData({ name: '', phone: '', email: '' });
+              setNameOnly('');
+              // Leaderboard will already be updated from handleSubmit
+            }}
             className="bg-gray-200 hover:bg-gray-300 px-8 py-4 rounded-xl text-gray-700 font-medium transition-colors"
           >
             Play Again
@@ -320,12 +332,6 @@ const TriviaGame: React.FC = () => {
             <p className="text-3xl text-gray-600">
               You scored <span className="font-bold text-green-600">{score}/5</span>
             </p>
-            {score === 5 && (
-              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 rounded-full">
-                <span className="text-2xl">🏆</span>
-                <span className="text-lg font-medium text-yellow-800">Perfect Score!</span>
-              </div>
-            )}
           </div>
 
           {/* Contact Collection */}
@@ -335,7 +341,7 @@ const TriviaGame: React.FC = () => {
                 Want to keep learning about soil health?
               </h3>
               <p className="text-lg text-gray-600">
-                Get weekly tips, exclusive offers, and your discount code!
+                Get weekly tips and claim your free soil test kit!
               </p>
             </div>
 
@@ -405,7 +411,7 @@ const TriviaGame: React.FC = () => {
                 disabled={!formData.email && !formData.phone}
                 className="w-full bg-green-600 text-white py-5 text-xl font-medium rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                Get My {score === 5 ? '25%' : '20%'} Discount →
+                Get My Free Soil Test Kit →
               </button>
 
               <p className="text-center text-sm text-gray-500">
