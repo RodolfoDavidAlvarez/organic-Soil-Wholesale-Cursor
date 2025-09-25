@@ -55,6 +55,24 @@ const TriviaGame: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
   const [nameOnly, setNameOnly] = useState('');
   const [score, setScore] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<{name: string, score: number}[]>([]);
+
+  // Fetch leaderboard on component mount
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/trivia-leads/leaderboard');
+      const result = await response.json();
+      if (result.success && result.data) {
+        setLeaderboard(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    }
+  };
 
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,26 +168,31 @@ const TriviaGame: React.FC = () => {
             {/* High Score Leaderboard */}
             <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-6">
               <p className="text-yellow-400 font-bold text-sm mb-3 text-center">🏆 TODAY'S LEADERBOARD 🏆</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-white/90">
-                  <span className="flex items-center gap-2">
-                    <span className="text-yellow-400">1st</span> Mike Rodriguez
-                  </span>
-                  <span className="font-bold">5/5 ⭐</span>
+              {leaderboard.length > 0 ? (
+                <div className="space-y-2">
+                  {leaderboard.slice(0, 3).map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between text-white/90">
+                      <span className="flex items-center gap-2">
+                        <span className={
+                          index === 0 ? "text-yellow-400" : 
+                          index === 1 ? "text-gray-300" : 
+                          "text-orange-400"
+                        }>
+                          {index === 0 ? "1st" : index === 1 ? "2nd" : "3rd"}
+                        </span>
+                        {entry.name}
+                      </span>
+                      <span className="font-bold">
+                        {entry.score}/5 {entry.score === 5 && '⭐'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between text-white/80">
-                  <span className="flex items-center gap-2">
-                    <span className="text-gray-300">2nd</span> Sarah Chen
-                  </span>
-                  <span className="font-bold">5/5</span>
-                </div>
-                <div className="flex items-center justify-between text-white/70">
-                  <span className="flex items-center gap-2">
-                    <span className="text-orange-400">3rd</span> James Wilson
-                  </span>
-                  <span className="font-bold">4/5</span>
-                </div>
-              </div>
+              ) : (
+                <p className="text-white/70 text-center py-4">
+                  Be the first to play today!
+                </p>
+              )}
             </div>
             
             <div className="relative">
@@ -287,68 +310,108 @@ const TriviaGame: React.FC = () => {
 
   if (stage === 'interests') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-12">
-        <div className="max-w-2xl w-full">
-          <h2 className="text-4xl font-light text-center text-gray-900 mb-12">
-            Almost done! What do you grow?
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-4 mb-12">
-            {['Vegetables', 'Cannabis', 'Landscaping', 
-              'Indoor Plants', 'Lawn', 'Native Plants'].map(interest => (
-              <button
-                key={interest}
-                onClick={() => toggleInterest(interest)}
-                className={`p-8 text-xl rounded-xl transition-all ${
-                  selectedInterests.includes(interest)
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {interest}
-              </button>
-            ))}
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-12">
+        <div className="max-w-3xl w-full">
+          {/* Score Display */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 text-center">
+            <h2 className="text-5xl font-bold text-gray-900 mb-2">
+              Nice work, {formData.name}!
+            </h2>
+            <p className="text-3xl text-gray-600">
+              You scored <span className="font-bold text-green-600">{score}/5</span>
+            </p>
+            {score === 5 && (
+              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 rounded-full">
+                <span className="text-2xl">🏆</span>
+                <span className="text-lg font-medium text-yellow-800">Perfect Score!</span>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-              <p className="text-lg font-medium text-green-800 mb-2">
-                Great job, {formData.name}! You scored {score}/5
+          {/* Contact Collection */}
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-medium text-gray-900 mb-3">
+                Want to keep learning about soil health?
+              </h3>
+              <p className="text-lg text-gray-600">
+                Get weekly tips, exclusive offers, and your discount code!
               </p>
-              {score === 5 && (
-                <p className="text-sm text-green-600">
-                  🏆 Perfect score! You're eligible for the bonus prize!
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-4">
-              <input
-                type="tel"
-                placeholder="Phone number"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                className="w-full px-6 py-5 text-lg text-center border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
-                required
-              />
-              
-              <input
-                type="email"
-                placeholder="Email address"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full px-6 py-5 text-lg text-center border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
-                required
-              />
             </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={selectedInterests.length === 0 || !formData.email || !formData.phone}
-              className="w-full bg-green-600 text-white py-6 text-2xl font-medium rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              Get My 20% Off
-            </button>
+            <div className="space-y-6">
+              {/* Contact Input Options */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="email"
+                    placeholder="Email address (recommended)"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-gray-500">
+                  <div className="flex-1 h-px bg-gray-300"></div>
+                  <span className="px-3 text-sm">or</span>
+                  <div className="flex-1 h-px bg-gray-300"></div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Interests Section */}
+              <div className="pt-6 border-t">
+                <p className="text-sm font-medium text-gray-700 mb-4">What are you growing? (optional)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Vegetables', 'Cannabis', 'Landscaping', 
+                    'Indoor Plants', 'Lawn Care', 'Native Plants'].map(interest => (
+                    <button
+                      key={interest}
+                      onClick={() => toggleInterest(interest)}
+                      className={`py-3 px-4 text-sm rounded-lg transition-all ${
+                        selectedInterests.includes(interest)
+                          ? 'bg-green-100 text-green-700 border-green-300'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      } border`}
+                    >
+                      {interest}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!formData.email && !formData.phone}
+                className="w-full bg-green-600 text-white py-5 text-xl font-medium rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Get My {score === 5 ? '25%' : '20%'} Discount →
+              </button>
+
+              <p className="text-center text-sm text-gray-500">
+                No spam, ever. Unsubscribe anytime.
+              </p>
+            </div>
           </div>
         </div>
       </div>
