@@ -11,6 +11,7 @@ import adminAuthRoutes from "./routes/admin/authSimple";
 import adminProductRoutes from "./routes/admin/products";
 import adminDashboardRoutes from "./routes/admin/dashboard";
 import adminOrderRoutes from "./routes/admin/orders";
+import triviaLeadsRoutes from "./routes/triviaLeads";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -32,6 +33,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/products", adminProductRoutes);
   app.use("/api/admin/dashboard", adminDashboardRoutes);
   app.use("/api/admin/orders", adminOrderRoutes);
+
+  // Trivia leads routes
+  app.use("/api", triviaLeadsRoutes);
 
   // Products routes
   app.get("/api/products", async (req, res) => {

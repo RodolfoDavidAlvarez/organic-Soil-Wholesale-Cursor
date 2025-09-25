@@ -2,41 +2,18 @@
 > rest-express@1.0.0 dev
 > NODE_ENV=development tsx --conditions=node server/index.ts
 
-[dotenv@17.2.1] injecting env (8) from server/.env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
-Server is running on http://localhost:5001
-10:37:01 PM [express] GET /api/admin/products 200 in 717ms :: {"products":[{"id":1,"name":"Amazonian …
-10:37:28 PM [express] GET /api/admin/products 200 in 401ms :: {"products":[{"id":1,"name":"Amazonian …
-6:01:43 AM [express] GET /api/admin/dashboard/stats 404 in 1ms :: {"error":"API endpoint not found",…
-6:01:43 AM [express] GET /api/admin/orders 404 in 1ms :: {"error":"API endpoint not found","path":"/…
-6:01:48 AM [express] GET /api/admin/products 401 in 394ms :: {"error":"Invalid token"}
-6:01:50 AM [express] GET /api/admin/products/undefined 401 in 106ms :: {"error":"Invalid token"}
-6:01:50 AM [express] GET /api/admin/products 401 in 223ms :: {"error":"Invalid token"}
-6:02:35 AM [express] GET /api/admin/products 401 in 151ms :: {"error":"Invalid token"}
-6:07:10 AM [vite] hmr update /src/index.css?v=HrPQS-oABM4IktJe3fTlA
-6:07:20 AM [vite] hmr update /src/index.css?v=HrPQS-oABM4IktJe3fTlA
-6:07:20 AM [vite] hmr update /src/index.css?v=HrPQS-oABM4IktJe3fTlA
-6:08:52 AM [express] GET /api/admin/auth/session 401 in 305ms :: {"error":"Invalid session"}
-6:08:52 AM [express] POST /api/admin/auth/logout 200 in 209ms :: {"success":true}
-=== ADMIN LOGIN DEBUG ===
-User authenticated successfully: {
-  id: 'b15c3202-679f-449d-9020-dc20714aa823',
-  email: 'ralvarez@soilseedandwater.com'
-}
-Querying admin_profiles with service role...
-Profile query result: {
-  profile: {
-    id: 'b15c3202-679f-449d-9020-dc20714aa823',
-    email: 'ralvarez@soilseedandwater.com',
-    role: 'super_admin',
-    permissions: { all: true },
-    created_at: '2025-08-16T04:33:05.918321+00:00',
-    updated_at: '2025-08-16T04:33:05.918321+00:00'
-  },
-  profileError: null,
-  hasProfile: true
-}
-All profiles query: { count: 1, error: null }
-6:08:55 AM [express] POST /api/admin/auth/login 200 in 500ms :: {"token":"eyJhbGciOiJIUzI1NiIsImtpZC…
-6:08:55 AM [express] GET /api/admin/dashboard/stats 404 in 0ms :: {"error":"API endpoint not found",…
-6:08:55 AM [express] GET /api/admin/orders 404 in 0ms :: {"error":"API endpoint not found","path":"/…
-6:08:55 AM [express] GET /api/admin/auth/session 304 in 207ms :: {"admin":{"id":"b15c3202-679f-449d-…
+
+node:internal/process/esm_loader:48
+      internalBinding('errors').triggerUncaughtException(
+                                ^
+TypeError [Error]: s.split is not a function
+    at mapTsExtensions (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/register-C3TE0KFF.mjs:2:1919)
+    at resolveExtensions (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:2880)
+    at resolveBase (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:3330)
+    at async resolveDirectory (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:3578)
+    at async resolve (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:4441)
+    at async nextResolve (node:internal/modules/esm/hooks:832:22)
+    at async Hooks.resolve (node:internal/modules/esm/hooks:277:24)
+    at async handleMessage (node:internal/modules/esm/worker:168:18)
+
+Node.js v20.7.0

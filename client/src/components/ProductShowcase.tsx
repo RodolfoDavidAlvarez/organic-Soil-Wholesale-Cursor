@@ -192,7 +192,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                   </div>
                 </div>
                 <img
-                  src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
+                  src={`/${product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}`}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
@@ -211,7 +211,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                         </div>
                       )}
                       <img
-                        src={product.imageUrl}
+                        src={`/${product.imageUrl}`}
                         alt={`${product.name} 9lb bag preview`}
                         className={`w-full h-full object-cover transition-all duration-700 ${textureLoaded[product.id] ? "opacity-100 blur-0" : "opacity-0 blur-sm"}`}
                         loading="lazy"

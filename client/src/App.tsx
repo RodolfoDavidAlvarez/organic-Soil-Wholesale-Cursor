@@ -20,7 +20,6 @@ import Order from "@/pages/Order";
 import SpecialRequest from "@/pages/SpecialRequest";
 import Landscapers from "@/pages/Landscapers";
 import Wholesale from "@/pages/Wholesale";
-import WhyOrganic from "@/pages/WhyOrganic";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import StoreLocator from "@/pages/StoreLocator";
@@ -32,6 +31,7 @@ import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
 import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
+import TriviaGame from "@/pages/TriviaGame";
 
 // Customer Auth imports
 import SignIn from "@/pages/SignIn";
@@ -82,11 +82,11 @@ function Router() {
       <Route path="/special-request" component={SpecialRequest} />
       <Route path="/landscapers" component={Landscapers} />
       <Route path="/wholesale" component={Wholesale} />
-      <Route path="/why-organic" component={WhyOrganic} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/store-locator" component={StoreLocatorEnhanced} />
       <Route path="/qr" component={QRLanding} />
+      <Route path="/trivia" component={TriviaGame} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
       
@@ -118,6 +118,7 @@ function Router() {
 function App() {
   const [location] = useLocation();
   const isQRLanding = location === '/qr';
+  const isTriviaGame = location === '/trivia';
   const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation' || location === '/quick-order';
   const isAdminRoute = location.startsWith('/admin');
 
@@ -129,15 +130,15 @@ function App() {
             <AdminAuthProvider>
               <TooltipProvider>
                 <div className="min-h-screen flex flex-col">
-                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Header />}
-                  <main className={`flex-grow ${!isQRLanding && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
+                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <Header />}
+                  <main className={`flex-grow ${!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
                     <Router />
                   </main>
-                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <Footer />}
+                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <Footer />}
                   <Toaster />
                   <ScrollToTop />
                   <Analytics />
-                  {!isQRLanding && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
+                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
                 </div>
               </TooltipProvider>
             </AdminAuthProvider>

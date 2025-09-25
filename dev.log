@@ -1,0 +1,9 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx --conditions=node server/index.ts
+
+[dotenv@17.2.1] injecting env (9) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.1] injecting env (3) from server/.env -- tip: ⚙️  suppress all logs with { quiet: true }
+Server is running on http://localhost:5001
+9:37:43 PM [express] GET /api/products 200 in 4ms :: {"products":[{"id":1,"name":"Dan's Gold","produ…
+9:37:49 PM [vite] Pre-transform error: Cannot import non-asset file /trivia-sounds.js which is inside /public. JS/CSS files inside /public are copied as-is on build and can only be referenced via <script src> or <link href> in html. If you want to get the URL of that file, use /trivia-sounds.js?url instead.

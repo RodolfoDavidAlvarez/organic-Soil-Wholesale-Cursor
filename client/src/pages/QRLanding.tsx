@@ -765,7 +765,7 @@ const QRLanding: React.FC = () => {
                         >
                           <div className="flex gap-4">
                             <img
-                              src={product.texturePhotoUrl || product.imageUrl || '/placeholder.png'}
+                              src={`/${product.texturePhotoUrl || product.imageUrl || 'placeholder.png'}`}
                               alt={product.name}
                               className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                             />
@@ -966,7 +966,7 @@ const QRLanding: React.FC = () => {
                     >
                       <div className="flex items-start gap-3">
                         <img
-                          src={item.product.texturePhotoUrl || item.product.imageUrl || '/placeholder.png'}
+                          src={`/${item.product.texturePhotoUrl || item.product.imageUrl || 'placeholder.png'}`}
                           alt={item.product.name}
                           className="w-20 h-20 rounded-lg object-cover"
                         />

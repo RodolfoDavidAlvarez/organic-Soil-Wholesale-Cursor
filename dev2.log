@@ -1,0 +1,86 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx --conditions=node server/index.ts
+
+[dotenv@17.2.1] injecting env (9) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.1] injecting env (3) from server/.env -- tip: ⚙️  override existing env vars with { override: true }
+Server is running on http://localhost:5001
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:07 PM [express] GET /api/products 500 in 265ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:08 PM [express] GET /api/products 500 in 127ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:09 PM [express] GET /api/products 500 in 123ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:11 PM [express] GET /api/products 500 in 113ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:13 PM [express] GET /api/products 500 in 117ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:17 PM [express] GET /api/products 500 in 117ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:22 PM [express] GET /api/products 500 in 212ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:23 PM [express] GET /api/products 500 in 112ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:25 PM [express] GET /api/products 500 in 126ms :: {"error":"Failed to fetch products"}
+Error fetching products: {
+  code: 'PGRST100',
+  details: 'unexpected end of input expecting "...", field name (* or [a..z0..9_$]), "*" or "count()"',
+  hint: null,
+  message: '"failed to parse select parameter (id,name,product_type,display_title,marketing_title,description,category,price,stock_quantity,image_url,texture_photo_url,additional_images,product_video_url,product_video_title,ingredients,target_audience,recommended_uses,story,usage,certifications,features,size_options,safety_precautions,warranty,is_wholesale_only,allow_bulk_pickup,min_order_quantity,max_order_quantity,is_price_negotiable,requires_quote,seo_keywords,marketing_note,)" (line 1, column 437)'
+}
+9:05:29 PM [express] GET /api/products 500 in 121ms :: {"error":"Failed to fetch products"}
+9:05:36 PM [vite] hmr update /src/components/admin/AdminLayout.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/components/layout/Header.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/ProductDetail.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/Products.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/SignIn.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/SignUp.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/admin/Dashboard.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/admin/ProductEdit.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr
+9:05:36 PM [vite] hmr update /src/pages/admin/Products.tsx, /src/index.css?v=ftQchgRje_Mt06oO7BJwr

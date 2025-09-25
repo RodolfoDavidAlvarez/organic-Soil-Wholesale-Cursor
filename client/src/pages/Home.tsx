@@ -413,28 +413,32 @@ const Home = () => {
     {
       id: 1, // Dan's Gold Dairy Compost
       name: "Dairy Compost",
-      imageUrl: "/Compost Texture Look.jpg",
+      imageUrl: "Compost Texture Look.jpg",
+      texturePhotoUrl: "Compost Texture Look.jpg",
       description: "ALL NATURAL DAIRY COMPOST",
       category: "Amendment",
     },
     {
       id: 2, // Mikey's Worm Poop
       name: "Worm Castings",
-      imageUrl: "/Worm castting product texture.png",
+      imageUrl: "Worm castting product texture.png",
+      texturePhotoUrl: "Worm castting product texture.png",
       description: "ALL NATURAL VERMICOMPOST",
       category: "Amendment",
     },
     {
-      id: 25, // SuperBooster
+      id: 23, // SuperBooster (corrected ID)
       name: "Organic Concentrated Blend",
-      imageUrl: "/Concentrated Organic Amendment Fertilizer Product look.jpeg",
+      imageUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
+      texturePhotoUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       description: "ORGANIC CONCENTRATED AMENDMENT",
       category: "Concentrated Amendment",
     },
     {
       id: 3, // Amazonian Dark Earth
       name: "Biochar",
-      imageUrl: "/Biochar Product Texture Look.jpg",
+      imageUrl: "Biochar Product Texture Look.jpg",
+      texturePhotoUrl: "Biochar Product Texture Look.jpg",
       description: "BIOCHAR MINERAL",
       category: "Amendment",
     },
@@ -586,7 +590,7 @@ const Home = () => {
                           </div>
                         </div>
                         <img
-                          src={product.imageUrl}
+                          src={`/${product.imageUrl}`}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"

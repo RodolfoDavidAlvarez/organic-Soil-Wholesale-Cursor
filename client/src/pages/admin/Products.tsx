@@ -422,7 +422,7 @@ const AdminProducts = () => {
                       <div className="flex items-center gap-3">
                         {product.texturePhotoUrl || product.imageUrl ? (
                           <img
-                            src={product.texturePhotoUrl || product.imageUrl}
+                            src={`/${product.texturePhotoUrl || product.imageUrl}`}
                             alt={product.name}
                             className="w-12 h-12 rounded-lg object-cover"
                           />

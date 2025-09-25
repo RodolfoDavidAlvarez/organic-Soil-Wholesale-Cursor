@@ -45,7 +45,6 @@ const Header = () => {
 
   const navLinks = [
     { name: "Products", path: "/products" },
-    { name: "Why Organic", path: "/why-organic" },
     { name: "Landscapers", path: "/landscapers" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
@@ -156,7 +155,8 @@ const Header = () => {
                 <Phone className="h-4 w-4" />
                 <span className="font-medium">(928) 550-1649</span>
               </a>
-              {isAuthenticated ? (
+              {/* Authentication buttons temporarily hidden */}
+              {false && (isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="flex items-center gap-2">
@@ -202,7 +202,7 @@ const Header = () => {
                     </Button>
                   </Link>
                 </div>
-              )}
+              ))}
               <Link href="/order">
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
                   <ShoppingCart className="h-4 w-4" />
@@ -277,8 +277,8 @@ const Header = () => {
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 
-                    {/* Auth section in mobile menu */}
-                    {isAuthenticated ? (
+                    {/* Auth section in mobile menu - temporarily hidden */}
+                    {false && (isAuthenticated ? (
                       <div className="space-y-2">
                         <div className="py-3 px-4 text-sm text-gray-600">
                           Signed in as: {user?.email}
@@ -317,7 +317,7 @@ const Header = () => {
                           </Button>
                         </Link>
                       </div>
-                    )}
+                    ))}
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 

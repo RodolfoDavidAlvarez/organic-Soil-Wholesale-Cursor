@@ -350,7 +350,7 @@ const QuickOrder: React.FC = () => {
                     <div className="w-36 h-36 bg-gray-200 flex-shrink-0">
                       {product.texturePhotoUrl || product.imageUrl ? (
                         <img
-                          src={product.texturePhotoUrl || product.imageUrl}
+                          src={`/${product.texturePhotoUrl || product.imageUrl}`}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
