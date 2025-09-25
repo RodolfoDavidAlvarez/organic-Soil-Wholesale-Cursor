@@ -52,14 +52,14 @@ const TriviaGame: React.FC = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [showFact, setShowFact] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [formData, setFormData] = useState({ phone: '', email: '' });
-  const [phoneOnly, setPhoneOnly] = useState('');
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+  const [nameOnly, setNameOnly] = useState('');
   const [score, setScore] = useState(0);
 
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneOnly) {
-      setFormData({ ...formData, phone: phoneOnly });
+    if (nameOnly) {
+      setFormData({ ...formData, name: nameOnly });
       setStage('trivia');
     }
   };
@@ -99,8 +99,9 @@ const TriviaGame: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          name: formData.phone,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
           interests: selectedInterests,
           score,
           answers: selectedAnswers
@@ -144,18 +145,48 @@ const TriviaGame: React.FC = () => {
             5 expert questions. Win 20% off + Free Soil Kit.
           </p>
           
-          {/* Phone Input */}
+          {/* Name Input with Leaderboard */}
           <form onSubmit={handleStart} className="max-w-lg mx-auto mb-12">
+            {/* High Score Leaderboard */}
+            <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-6">
+              <p className="text-yellow-400 font-bold text-sm mb-3 text-center">🏆 TODAY'S LEADERBOARD 🏆</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-white/90">
+                  <span className="flex items-center gap-2">
+                    <span className="text-yellow-400">1st</span> Mike Rodriguez
+                  </span>
+                  <span className="font-bold">5/5 ⭐</span>
+                </div>
+                <div className="flex items-center justify-between text-white/80">
+                  <span className="flex items-center gap-2">
+                    <span className="text-gray-300">2nd</span> Sarah Chen
+                  </span>
+                  <span className="font-bold">5/5</span>
+                </div>
+                <div className="flex items-center justify-between text-white/70">
+                  <span className="flex items-center gap-2">
+                    <span className="text-orange-400">3rd</span> James Wilson
+                  </span>
+                  <span className="font-bold">4/5</span>
+                </div>
+              </div>
+            </div>
+            
             <div className="relative">
               <input
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={phoneOnly}
-                onChange={(e) => setPhoneOnly(e.target.value)}
+                type="text"
+                placeholder="Enter your name"
+                value={nameOnly}
+                onChange={(e) => setNameOnly(e.target.value)}
                 className="w-full px-8 py-7 text-2xl text-center bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl focus:outline-none focus:ring-4 focus:ring-green-400/50 placeholder-gray-400"
                 required
                 autoFocus
               />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
             </div>
             
             <button
@@ -164,6 +195,10 @@ const TriviaGame: React.FC = () => {
             >
               Start Quiz →
             </button>
+            
+            <p className="text-center mt-4 text-white/70 text-sm">
+              Beat the high score and win a bonus prize!
+            </p>
           </form>
           
           {/* Trust Indicators */}
@@ -199,34 +234,51 @@ const TriviaGame: React.FC = () => {
 
   if (stage === 'success') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-        <div className="bg-white rounded-lg shadow-sm p-16 max-w-2xl w-full text-center">
-          <h1 className="text-3xl font-light text-gray-900 mb-2">
-            Thank You
-          </h1>
-          <p className="text-lg text-gray-600 mb-8">
-            You scored {score} out of 5
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center p-8">
+        <div className="bg-white rounded-3xl shadow-2xl p-16 max-w-2xl w-full text-center">
+          {score === 5 ? (
+            <>
+              <div className="text-8xl mb-6">🏆</div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Perfect Score, {formData.name}!
+              </h1>
+              <p className="text-xl text-gray-600 mb-8">
+                You're a soil expert! Claim your special bonus.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-8xl mb-6">🎉</div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Great Job, {formData.name}!
+              </h1>
+              <p className="text-xl text-gray-600 mb-8">
+                You scored {score}/5 - Nice work!
+              </p>
+            </>
+          )}
           
-          <div className="bg-green-50 border border-green-200 rounded-lg p-8 mb-8">
-            <p className="text-sm text-gray-600 mb-2">Your discount code:</p>
-            <p className="text-3xl font-light text-green-700 tracking-wider">
-              SOIL20
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-8 mb-8">
+            <p className="text-lg font-medium text-gray-700 mb-3">Your Discount Code:</p>
+            <p className="text-5xl font-bold text-green-600 tracking-wide mb-4">
+              {score === 5 ? 'SOILPRO25' : 'SOIL20'}
             </p>
-            <p className="text-sm text-gray-600 mt-4">
-              Valid for 20% off your first order
+            <p className="text-lg text-gray-600">
+              {score === 5 ? '25% off + Free Soil Test Kit' : '20% off your first order'}
             </p>
           </div>
           
-          <p className="text-gray-600">
-            We've sent this code to your email
-          </p>
+          <div className="bg-gray-50 rounded-xl p-6 mb-8">
+            <p className="text-sm text-gray-600 mb-2">📱 We've sent your code to:</p>
+            <p className="font-medium">{formData.phone}</p>
+            <p className="font-medium">{formData.email}</p>
+          </div>
           
           <button
             onClick={() => window.location.reload()}
-            className="mt-8 text-gray-600 hover:text-gray-800 underline"
+            className="bg-gray-200 hover:bg-gray-300 px-8 py-4 rounded-xl text-gray-700 font-medium transition-colors"
           >
-            Start Over
+            Play Again
           </button>
         </div>
       </div>
@@ -259,18 +311,40 @@ const TriviaGame: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <input
-              type="email"
-              placeholder="Enter your email for discount code"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-8 py-6 text-xl text-center border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
-              required
-            />
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+              <p className="text-lg font-medium text-green-800 mb-2">
+                Great job, {formData.name}! You scored {score}/5
+              </p>
+              {score === 5 && (
+                <p className="text-sm text-green-600">
+                  🏆 Perfect score! You're eligible for the bonus prize!
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              <input
+                type="tel"
+                placeholder="Phone number"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                className="w-full px-6 py-5 text-lg text-center border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
+                required
+              />
+              
+              <input
+                type="email"
+                placeholder="Email address"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full px-6 py-5 text-lg text-center border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
+                required
+              />
+            </div>
 
             <button
               onClick={handleSubmit}
-              disabled={selectedInterests.length === 0 || !formData.email}
+              disabled={selectedInterests.length === 0 || !formData.email || !formData.phone}
               className="w-full bg-green-600 text-white py-6 text-2xl font-medium rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               Get My 20% Off
