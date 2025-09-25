@@ -56,13 +56,42 @@ const TriviaGame: React.FC = () => {
   const [nameOnly, setNameOnly] = useState('');
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<{name: string, score: number}[]>([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
   // Fetch leaderboard on component mount
   useEffect(() => {
-    fetchLeaderboard();
-  }, []);
+    let mounted = true;
+    
+    const loadLeaderboard = async () => {
+      if (!mounted || isLoadingLeaderboard) return;
+      
+      setIsLoadingLeaderboard(true);
+      try {
+        const response = await fetch('/api/trivia-leads/leaderboard');
+        const result = await response.json();
+        if (mounted && result.success && result.data) {
+          setLeaderboard(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+      } finally {
+        if (mounted) {
+          setIsLoadingLeaderboard(false);
+        }
+      }
+    };
+    
+    loadLeaderboard();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []); // Empty dependency array ensures this only runs once
 
   const fetchLeaderboard = async () => {
+    if (isLoadingLeaderboard) return;
+    
+    setIsLoadingLeaderboard(true);
     try {
       const response = await fetch('/api/trivia-leads/leaderboard');
       const result = await response.json();
@@ -71,6 +100,8 @@ const TriviaGame: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+    } finally {
+      setIsLoadingLeaderboard(false);
     }
   };
 
