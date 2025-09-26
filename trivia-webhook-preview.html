@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Webhook Preview</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #1f2937;
+            margin-top: 0;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .env-var {
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #fca5a5;
+            margin-bottom: 20px;
+        }
+        .email-preview {
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 10px;
+            background: #f9fafb;
+        }
+        .json-key {
+            color: #1e40af;
+            font-weight: 600;
+        }
+        .json-string {
+            color: #059669;
+        }
+        .json-number {
+            color: #dc2626;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Trivia Lead Webhook Integration</h1>
+    <p>This page shows how the trivia lead webhook works and what data is sent when a user completes the trivia game.</p>
+
+    <div class="env-var">
+        <strong>⚠️ Environment Variable Required:</strong><br>
+        Add your webhook URL to <code>server/.env</code>:<br>
+        <code>TRIVIA_WEBHOOK_URL="https://your-webhook-endpoint.com/webhook"</code>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2>📊 JSON Payload Structure</h2>
+            <p>The following JSON data will be sent to your webhook:</p>
+            <pre><code>{
+  <span class="json-key">"event"</span>: <span class="json-string">"trivia_lead_captured"</span>,
+  <span class="json-key">"timestamp"</span>: <span class="json-string">"2025-01-26T10:30:45.123Z"</span>,
+  <span class="json-key">"lead"</span>: {
+    <span class="json-key">"name"</span>: <span class="json-string">"John Smith"</span>,
+    <span class="json-key">"email"</span>: <span class="json-string">"john@example.com"</span>,
+    <span class="json-key">"interests"</span>: [
+      <span class="json-string">"Vegetables"</span>,
+      <span class="json-string">"Cannabis"</span>,
+      <span class="json-string">"Landscaping"</span>
+    ],
+    <span class="json-key">"score"</span>: <span class="json-number">4</span>,
+    <span class="json-key">"answers"</span>: [<span class="json-number">0</span>, <span class="json-number">2</span>, <span class="json-number">3</span>, <span class="json-number">1</span>, <span class="json-number">2</span>],
+    <span class="json-key">"submittedAt"</span>: <span class="json-string">"2025-01-26T10:30:45.123Z"</span>,
+    <span class="json-key">"eventName"</span>: <span class="json-string">"Trade Show 2025"</span>,
+    <span class="json-key">"prizeCode"</span>: <span class="json-string">"SOIL20"</span>,
+    <span class="json-key">"leadQuality"</span>: <span class="json-string">"hot"</span>,
+    <span class="json-key">"engagementLevel"</span>: <span class="json-string">"high"</span>
+  },
+  <span class="json-key">"emailHtml"</span>: <span class="json-string">"&lt;!DOCTYPE html&gt;..."</span>
+}</code></pre>
+        </div>
+
+        <div class="section">
+            <h2>📈 Lead Scoring Logic</h2>
+            <h3>Lead Quality:</h3>
+            <ul>
+                <li><span class="highlight">🔥 Hot Lead</span>: Score 4-5 out of 5</li>
+                <li><span class="highlight">🟡 Warm Lead</span>: Score 3 out of 5</li>
+                <li><span class="highlight">❄️ Cold Lead</span>: Score 0-2 out of 5</li>
+            </ul>
+            
+            <h3>Engagement Level:</h3>
+            <ul>
+                <li><span class="highlight">High</span>: Selected 4+ interests</li>
+                <li><span class="highlight">Medium</span>: Selected 2-3 interests</li>
+                <li><span class="highlight">Low</span>: Selected 0-1 interests</li>
+            </ul>
+
+            <h3>Available Interests:</h3>
+            <ul>
+                <li>🥬 Vegetables</li>
+                <li>🌿 Cannabis</li>
+                <li>🌳 Landscaping</li>
+                <li>🪴 Indoor Plants</li>
+                <li>🌱 Lawn Care</li>
+                <li>🍃 Native Plants</li>
+            </ul>
+        </div>
+
+        <div class="section full-width">
+            <h2>📧 HTML Email Preview</h2>
+            <p>The <code>emailHtml</code> field contains a fully-styled HTML email ready to send to administrators:</p>
+            <div class="email-preview">
+                <iframe srcdoc='<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Trivia Lead</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+            margin: -30px -30px 30px -30px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .lead-info {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-row {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .label {
+            font-weight: 600;
+            color: #4b5563;
+            width: 120px;
+        }
+        .value {
+            color: #1f2937;
+        }
+        .score-badge {
+            display: inline-block;
+            background: #059669;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .interests-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .interest-tag {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .cta-button {
+            background: #059669;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 New Trade Show Trivia Lead!</h1>
+        </div>
+        
+        <div class="lead-info">
+            <div class="info-row">
+                <span class="label">Name:</span>
+                <span class="value">John Smith</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Email:</span>
+                <span class="value"><a href="mailto:john@example.com">john@example.com</a></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Quiz Score:</span>
+                <span class="value">4/5</span>
+                <span class="score-badge">🏆 High Score!</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Submitted:</span>
+                <span class="value">1/26/2025, 10:30:45 AM</span>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #1f2937; margin-bottom: 10px;">Growing Interests:</h3>
+            <div class="interests-list">
+                <span class="interest-tag">Vegetables</span>
+                <span class="interest-tag">Cannabis</span>
+                <span class="interest-tag">Landscaping</span>
+            </div>
+        </div>
+        
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #4b5563;">
+                <strong>Lead Quality:</strong> 🔥 Hot Lead<br>
+                <strong>Engagement Level:</strong> High
+            </p>
+        </div>
+        
+        <a href="mailto:john@example.com" class="cta-button">Contact Lead</a>
+        
+        <div class="footer">
+            <p>This lead was captured at the Trade Show 2025 trivia game.</p>
+            <p style="color: #9ca3af;">Organic Soil Wholesale Lead Management System</p>
+        </div>
+    </div>
+</body>
+</html>'></iframe>
+            </div>
+        </div>
+
+        <div class="section full-width">
+            <h2>🔧 Webhook Integration Examples</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>Make.com (Integromat) Setup:</h3>
+                    <ol>
+                        <li>Create a new scenario</li>
+                        <li>Add a "Webhooks" trigger</li>
+                        <li>Copy the webhook URL</li>
+                        <li>Add to your .env file</li>
+                        <li>Process the JSON data as needed</li>
+                    </ol>
+                </div>
+                <div>
+                    <h3>Zapier Setup:</h3>
+                    <ol>
+                        <li>Create a new Zap</li>
+                        <li>Choose "Webhooks by Zapier" trigger</li>
+                        <li>Select "Catch Hook"</li>
+                        <li>Copy the webhook URL</li>
+                        <li>Add actions (email, CRM, etc.)</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="section full-width">
+            <h2>📝 Testing the Webhook</h2>
+            <p>To test the webhook integration:</p>
+            <ol>
+                <li>Add your webhook URL to <code>server/.env</code></li>
+                <li>Restart the server</li>
+                <li>Complete the trivia game at <code>/trivia</code></li>
+                <li>Check your webhook endpoint for the incoming data</li>
+            </ol>
+            
+            <p><strong>Test webhook services:</strong></p>
+            <ul>
+                <li><a href="https://webhook.site" target="_blank">webhook.site</a> - Free webhook testing</li>
+                <li><a href="https://requestbin.com" target="_blank">RequestBin</a> - Inspect HTTP requests</li>
+                <li><a href="https://ngrok.com" target="_blank">ngrok</a> - Local webhook testing</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

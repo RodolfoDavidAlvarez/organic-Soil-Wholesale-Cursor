@@ -55,7 +55,10 @@
       "mcp__ide__executeCode",
       "Bash(mv:*)",
       "Bash(git branch:*)",
-      "Bash(supabase status:*)"
+      "Bash(supabase status:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(NODE_ENV=development node --import tsx server/index.ts)",
+      "Bash(PGPASSWORD:*)"
     ],
     "deny": []
   }
