@@ -51,6 +51,7 @@ const TriviaGame: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [showFact, setShowFact] = useState(false);
+  const [canProceed, setCanProceed] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
   const [nameOnly, setNameOnly] = useState('');
@@ -201,14 +202,25 @@ const TriviaGame: React.FC = () => {
     }
     
     setShowFact(true);
+    setCanProceed(false);
+    
+    // Allow proceeding after 1.5 seconds
     setTimeout(() => {
-      setShowFact(false);
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-      } else {
-        setStage('interests');
-      }
-    }, 2500);
+      setCanProceed(true);
+    }, 1500);
+  };
+
+  const proceedToNext = () => {
+    if (!canProceed) return;
+    
+    setShowFact(false);
+    setCanProceed(false);
+    
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      setStage('interests');
+    }
   };
 
   const toggleInterest = (interest: string) => {
@@ -766,14 +778,19 @@ const TriviaGame: React.FC = () => {
                 </p>
               </div>
               
-              {/* Progress Timer */}
-              <div className="mt-8">
-                <div className="flex items-center justify-center gap-2 text-gray-500">
-                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm">Next question coming up...</span>
-                </div>
+              {/* Next Button */}
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={proceedToNext}
+                  disabled={!canProceed}
+                  className={`px-8 py-4 text-lg font-bold rounded-xl transition-all transform ${
+                    canProceed 
+                      ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg hover:scale-105 cursor-pointer' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {currentQuestion < questions.length - 1 ? 'Next Question →' : 'Continue →'}
+                </button>
               </div>
             </div>
           ) : (
