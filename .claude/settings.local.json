@@ -53,7 +53,9 @@
       "Bash(pkill:*)",
       "Bash(true)",
       "mcp__ide__executeCode",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git branch:*)",
+      "Bash(supabase status:*)"
     ],
     "deny": []
   }

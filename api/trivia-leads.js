@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         created_at: new Date().toISOString()
       };
 
-      // Try to save to database
+      // Always try to save to database first
       try {
         const { data, error } = await supabase
           .from('trivia_leads')

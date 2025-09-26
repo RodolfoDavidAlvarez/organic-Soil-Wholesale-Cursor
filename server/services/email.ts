@@ -43,7 +43,8 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
 
 // Email verification template
 export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email/${token}`;
+  const baseUrl = process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const verificationUrl = `${baseUrl}/verify-email/${token}`;
   
   const html = `
     <!DOCTYPE html>
@@ -94,7 +95,8 @@ export async function sendVerificationEmail(email: string, token: string) {
 
 // Password reset template
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${token}`;
+  const baseUrl = process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const resetUrl = `${baseUrl}/reset-password/${token}`;
   
   const html = `
     <!DOCTYPE html>
@@ -182,7 +184,7 @@ export async function sendWholesaleApprovalEmail(email: string, companyName: str
           
           <p>You can now log in to view wholesale pricing and place orders:</p>
           <center>
-            <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/signin" class="button">Sign In to Your Account</a>
+            <a href="${process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/signin" class="button">Sign In to Your Account</a>
           </center>
           
           <p>If you have any questions, please don't hesitate to contact us at ${COMPANY_PHONE}.</p>

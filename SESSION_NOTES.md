@@ -1,3 +1,26 @@
+# Session Notes - Trivia Game Fixes (September 25, 2025)
+
+## What We Did
+- Fixed trivia leaderboard sorting to show most recent entries first within same score groups
+- Implemented graceful fallback to in-memory storage when database is unavailable
+- Created Vercel serverless functions for API endpoints (/api/trivia-leads and /api/trivia-leads/leaderboard)
+- Added proper error handling for missing database table (PGRST205 error)
+- Tested sorting logic locally - works correctly now
+
+## Key Changes
+- `server/routes/triviaLeads.js` - Added in-memory fallback and fixed sorting logic
+- `api/trivia-leads.js` - New Vercel function for submissions
+- `api/trivia-leads/leaderboard.js` - New Vercel function for leaderboard
+- `vercel.json` - Updated configuration for API routes
+- `TRIVIA_SETUP.md` - Documentation for database setup
+
+## Next Steps
+- Create trivia_leads table in Supabase dashboard using SQL in TRIVIA_SETUP.md
+- Deploy to Vercel to test production functionality
+- Monitor logs to ensure fallback storage works correctly
+
+---
+
 # Session Notes - Admin System Complete (August 16, 2025)
 
 ## What We Did

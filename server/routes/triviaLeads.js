@@ -32,47 +32,56 @@ router.post('/trivia-leads', async (req, res) => {
       created_at: new Date().toISOString()
     };
 
-    // Try to save to database
+    // Always try to save to database first
     try {
-      if (dbAvailable) {
-        const { data, error } = await supabase
-          .from('trivia_leads')
-          .insert(leadData)
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('trivia_leads')
+        .insert(leadData)
+        .select()
+        .single();
 
-        if (error) {
-          console.error('Database insert error:', error);
-          // Fall back to in-memory storage
+      if (error) {
+        console.error('Database insert error:', error.code, error.message);
+        
+        // If table doesn't exist, show helpful message
+        if (error.code === 'PGRST204' || error.code === '42P01') {
+          console.log('📌 Trivia table not found. Run setup-trivia-table.sql in Supabase SQL editor');
+          // Also save to in-memory as backup
           inMemoryLeads.push(leadData);
           return res.json({ 
             success: true, 
             data: leadData,
-            message: 'Lead saved (using backup storage)' 
+            message: 'Lead saved locally (database table needs setup)' 
           });
         }
-
-        return res.json({ 
-          success: true, 
-          data: data || leadData,
-          message: 'Lead saved successfully' 
-        });
-      } else {
-        // Use in-memory storage
+        
+        // For other errors, still save to in-memory
         inMemoryLeads.push(leadData);
         return res.json({ 
           success: true, 
           data: leadData,
-          message: 'Lead saved (database pending setup)' 
+          message: 'Lead saved (backup storage)' 
         });
       }
+
+      // Success - data saved to Supabase!
+      console.log('✅ Lead saved to Supabase:', data.name, 'Score:', data.score);
+      // Also keep in memory for fast access
+      inMemoryLeads.push(data);
+      
+      return res.json({ 
+        success: true, 
+        data: data,
+        message: 'Lead saved to database successfully' 
+      });
     } catch (dbError) {
-      console.error('Database save failed:', dbError);
-      // Return success even if database fails to not break the user experience
+      console.error('Database connection error:', dbError);
+      // Save to in-memory storage as fallback
+      inMemoryLeads.push(leadData);
       return res.json({ 
         success: true, 
         data: leadData,
-        message: 'Lead saved (database unavailable)' 
+        message: 'Lead saved locally' 
       });
     }
   } catch (error) {
@@ -94,35 +103,19 @@ router.get('/trivia-leads/leaderboard', async (req, res) => {
     
     let leaderboardData = [];
     
-    if (dbAvailable) {
-      try {
-        // Try to get from database first
-        const { data, error } = await supabase
-          .from('trivia_leads')
-          .select('name, score, created_at')
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString())
-          .order('score', { ascending: false })
-          .order('created_at', { ascending: false }) // Most recent first for same scores
-          .limit(10);
+    // Always try database first
+    try {
+      const { data, error } = await supabase
+        .from('trivia_leads')
+        .select('name, score, created_at')
+        .gte('created_at', today.toISOString())
+        .lt('created_at', tomorrow.toISOString())
+        .order('score', { ascending: false })
+        .order('created_at', { ascending: false }) // Most recent first for same scores
+        .limit(10);
 
-        if (error) {
-          console.error('Database query error:', error);
-          // Fall back to in-memory data
-          leaderboardData = inMemoryLeads
-            .filter(lead => {
-              const leadDate = new Date(lead.created_at);
-              return leadDate >= today && leadDate < tomorrow;
-            })
-            .sort((a, b) => {
-              if (b.score !== a.score) return b.score - a.score;
-              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-            })
-            .slice(0, 10);
-        } else {
-          leaderboardData = data || [];
-        }
-      } catch (dbError) {
+      if (error) {
+        console.log('Database query error:', error.code);
         // Use in-memory fallback
         leaderboardData = inMemoryLeads
           .filter(lead => {
@@ -134,9 +127,26 @@ router.get('/trivia-leads/leaderboard', async (req, res) => {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           })
           .slice(0, 10);
+      } else {
+        // Combine database data with recent in-memory data (in case of recent submissions)
+        const dbIds = new Set(data.map(d => d.name + d.score + d.created_at));
+        const recentMemoryData = inMemoryLeads
+          .filter(lead => {
+            const leadDate = new Date(lead.created_at);
+            const key = lead.name + lead.score + lead.created_at;
+            return leadDate >= today && leadDate < tomorrow && !dbIds.has(key);
+          });
+        
+        leaderboardData = [...data, ...recentMemoryData]
+          .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          })
+          .slice(0, 10);
       }
-    } else {
-      // Use in-memory data
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      // Use in-memory fallback
       leaderboardData = inMemoryLeads
         .filter(lead => {
           const leadDate = new Date(lead.created_at);

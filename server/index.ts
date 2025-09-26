@@ -14,6 +14,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Trust proxy for Vercel deployment
+app.set('trust proxy', 1);
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -60,13 +63,15 @@ async function startServer() {
   });
 
   if (process.env.NODE_ENV === "production") {
+    const publicPath = process.env.VERCEL ? path.join(__dirname, "../../dist/public") : path.join(__dirname, "../dist/public");
+    
     // Serve static files from the public directory
-    app.use(express.static(path.join(__dirname, "../dist/public")));
+    app.use(express.static(publicPath));
 
     // Serve assets with proper caching headers
     app.use(
       "/assets",
-      express.static(path.join(__dirname, "../dist/public/assets"), {
+      express.static(path.join(publicPath, "assets"), {
         maxAge: "1y",
         immutable: true,
       })
@@ -75,7 +80,7 @@ async function startServer() {
     // Handle all other routes by serving index.html
     app.get("*", (req, res, next) => {
       if (!req.path.startsWith("/api")) {
-        res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+        res.sendFile(path.join(publicPath, "index.html"));
       } else {
         next();
       }

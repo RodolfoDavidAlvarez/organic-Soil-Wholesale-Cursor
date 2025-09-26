@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Source files (already built)
+client/src/
+server/
+
+# Development files
+*.log
+.env.local
+.env.development
+.env.development.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tests
+**/*.test.*
+**/*.spec.*
+__tests__/
+coverage/
+
+# Misc
+.DS_Store
+*.pem
+*.key
+*.crt
+
+# Keep only built files
+!dist/

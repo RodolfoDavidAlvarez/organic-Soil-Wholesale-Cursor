@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trivia Test</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Trivia Route Test</h1>
+    <p>If you can see this, the deployment is working.</p>
+    <p><a href="/trivia">Go to Trivia Game</a></p>
+    <script>
+        // Test if we can redirect to trivia
+        console.log('Current URL:', window.location.href);
+        console.log('Testing trivia route...');
+        
+        // Try to fetch the trivia route
+        fetch('/trivia')
+            .then(response => {
+                console.log('Trivia route status:', response.status);
+                if (response.ok) {
+                    console.log('✅ Trivia route is accessible!');
+                } else {
+                    console.log('❌ Trivia route blocked with status:', response.status);
+                }
+            })
+            .catch(error => {
+                console.log('❌ Error accessing trivia route:', error);
+            });
+    </script>
+</body>
+</html>

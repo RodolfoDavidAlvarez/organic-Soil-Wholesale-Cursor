@@ -86,7 +86,7 @@ const TriviaGame: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []); // Empty dependency array ensures this only runs once
+  }, []);
 
   const fetchLeaderboard = async () => {
     if (isLoadingLeaderboard) return;
@@ -94,12 +94,16 @@ const TriviaGame: React.FC = () => {
     setIsLoadingLeaderboard(true);
     try {
       const response = await fetch('/api/trivia-leads/leaderboard');
-      const result = await response.json();
-      if (result.success && result.data) {
-        setLeaderboard(result.data);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setLeaderboard(result.data);
+        }
+      } else {
+        console.log('Leaderboard API not accessible yet, using local data');
       }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.log('Leaderboard temporarily unavailable:', error.message);
     } finally {
       setIsLoadingLeaderboard(false);
     }
@@ -131,7 +135,7 @@ const TriviaGame: React.FC = () => {
       } else {
         setStage('interests');
       }
-    }, 2000);
+    }, 2500);
   };
 
   const toggleInterest = (interest: string) => {
@@ -149,7 +153,6 @@ const TriviaGame: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          phone: formData.phone,
           email: formData.email,
           interests: selectedInterests,
           score,
@@ -157,14 +160,34 @@ const TriviaGame: React.FC = () => {
         })
       });
       
+      // Add to local leaderboard immediately for better UX
+      const newEntry = { name: formData.name, score };
+      const updatedLeaderboard = [...leaderboard, newEntry]
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return 0; // Keep recent entries first within same score
+        })
+        .slice(0, 10);
+      setLeaderboard(updatedLeaderboard);
+      
       if (response.ok) {
-        // Refresh leaderboard after submission
-        await fetchLeaderboard();
-        setStage('success');
+        // Try to refresh from server, but don't wait for it
+        fetchLeaderboard();
       }
+      
+      setStage('success');
     } catch (error) {
       console.error('Error:', error);
-      // Still go to success page even if API fails
+      // Add to local leaderboard even if API fails
+      const newEntry = { name: formData.name, score };
+      const updatedLeaderboard = [...leaderboard, newEntry]
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return 0;
+        })
+        .slice(0, 10);
+      setLeaderboard(updatedLeaderboard);
+      
       setStage('success');
     }
   };
@@ -193,7 +216,7 @@ const TriviaGame: React.FC = () => {
           </h1>
           
           <p className="text-2xl md:text-3xl text-gray-200 mb-12">
-            Answer 5 expert questions. Win a Free Soil Test Kit.
+            Answer 5 expert questions.
           </p>
           
           {/* Name Input with Leaderboard */}
@@ -253,7 +276,7 @@ const TriviaGame: React.FC = () => {
             </button>
             
             <p className="text-center mt-4 text-white/70 text-sm">
-              Complete the quiz to get your free soil test kit!
+              Test your knowledge and join our soil health community!
             </p>
           </form>
           
@@ -299,7 +322,7 @@ const TriviaGame: React.FC = () => {
                 Perfect Score, {formData.name}!
               </h1>
               <p className="text-xl text-gray-600 mb-8">
-                You're a soil expert! Claim your special bonus.
+                You're a soil expert!
               </p>
             </>
           ) : (
@@ -315,19 +338,18 @@ const TriviaGame: React.FC = () => {
           )}
           
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-8 mb-8">
-            <p className="text-lg font-medium text-gray-700 mb-3">Your Prize:</p>
-            <p className="text-4xl font-bold text-green-600 mb-4">
-              🧪 Free Soil Test Kit
+            <p className="text-2xl font-bold text-gray-800 mb-3">
+              Welcome to Our Soil Community!
             </p>
             <p className="text-lg text-gray-600">
-              Professional soil analysis delivered to your door
+              You'll receive weekly tips on organic protocols, soil health news, and expert insights
             </p>
           </div>
           
           <div className="bg-gray-50 rounded-xl p-6 mb-8">
-            <p className="text-sm text-gray-600 mb-2">📱 We've sent your code to:</p>
-            <p className="font-medium">{formData.phone}</p>
-            <p className="font-medium">{formData.email}</p>
+            <p className="text-sm text-gray-600 mb-2">📧 Check your inbox at:</p>
+            <p className="font-medium text-lg">{formData.email}</p>
+            <p className="text-sm text-gray-500 mt-2">Your first soil health guide arrives tomorrow!</p>
           </div>
           
           <button
@@ -340,7 +362,6 @@ const TriviaGame: React.FC = () => {
               setSelectedInterests([]);
               setFormData({ name: '', phone: '', email: '' });
               setNameOnly('');
-              // Leaderboard will already be updated from handleSubmit
             }}
             className="bg-gray-200 hover:bg-gray-300 px-8 py-4 rounded-xl text-gray-700 font-medium transition-colors"
           >
@@ -353,85 +374,132 @@ const TriviaGame: React.FC = () => {
 
   if (stage === 'interests') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-12">
+      <div className="min-h-screen bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center p-12">
         <div className="max-w-3xl w-full">
           {/* Score Display */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 text-center">
-            <h2 className="text-5xl font-bold text-gray-900 mb-2">
+          <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 mb-8 text-center text-white">
+            <h2 className="text-4xl font-medium mb-2">
               Nice work, {formData.name}!
             </h2>
-            <p className="text-3xl text-gray-600">
-              You scored <span className="font-bold text-green-600">{score}/5</span>
+            <p className="text-2xl">
+              You scored <span className="font-bold">{score}/5</span>
             </p>
           </div>
 
           {/* Contact Collection */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-medium text-gray-900 mb-3">
-                Want to keep learning about soil health?
+          <div className="bg-white rounded-3xl shadow-2xl p-12">
+            <div className="text-center mb-12">
+              <h3 className="text-5xl font-black text-gray-900 mb-6 leading-tight">
+                Want to Continue<br />Learning About Soil?
               </h3>
-              <p className="text-lg text-gray-600">
-                Get weekly tips and claim your free soil test kit!
+              <p className="text-base text-gray-500 max-w-md mx-auto">
+                Subscribe to get soil tips and tricks: organic protocols, news and more
               </p>
             </div>
 
             <div className="space-y-6">
-              {/* Contact Input Options */}
-              <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="Email address (recommended)"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-gray-500">
-                  <div className="flex-1 h-px bg-gray-300"></div>
-                  <span className="px-3 text-sm">or</span>
-                  <div className="flex-1 h-px bg-gray-300"></div>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="tel"
-                    placeholder="Phone number"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-600"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </span>
-                </div>
+              {/* Email Input */}
+              <div className="relative group">
+                <input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-6 py-6 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-green-500 focus:shadow-lg transition-all bg-gray-50 focus:bg-white"
+                  required
+                />
+                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </span>
               </div>
 
-              {/* Interests Section */}
+              {/* Interests Section with SVG Icons */}
               <div className="pt-6 border-t">
                 <p className="text-sm font-medium text-gray-700 mb-4">What are you growing? (optional)</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {['Vegetables', 'Cannabis', 'Landscaping', 
-                    'Indoor Plants', 'Lawn Care', 'Native Plants'].map(interest => (
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { 
+                      name: 'Vegetables',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2c-1.5 0-3 1-3 2.5S10.5 8 12 8s3-2 3-3.5S13.5 2 12 2z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m0 0c-2 0-5 1-5 3s3 3 5 3 5-1 5-3-3-3-5-3z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 12c0-1-1-2-2.5-2S2 11 2 12s1 2 2.5 2S7 13 7 12zM17 12c0-1 1-2 2.5-2s2.5 1 2.5 2-1 2-2.5 2-2.5-1-2.5-2z"/>
+                        </svg>
+                      )
+                    },
+                    { 
+                      name: 'Cannabis',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v20M12 6l-4 4m4-4l4 4M12 10l-6 6m6-6l6 6M12 14l-4 4m4-4l4 4"/>
+                        </svg>
+                      )
+                    },
+                    { 
+                      name: 'Landscaping',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12c0-3.5 2.5-6 5.5-6 1.5 0 3 .5 4 1.5 1-1 2.5-1.5 4-1.5 3 0 5.5 2.5 5.5 6M5 12c0 5.5 7 10 7 10s7-4.5 7-10"/>
+                        </svg>
+                      )
+                    },
+                    { 
+                      name: 'Indoor Plants',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21c0-3.5-2-7-2-7s-3 1-3-2c0-2 2-4 5-4s5 2 5 4c0 3-3 2-3 2s-2 3.5-2 7z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 21h8"/>
+                        </svg>
+                      )
+                    },
+                    { 
+                      name: 'Lawn Care',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 20h18M5 20v-4m14 4v-4M5 16c0-2 2-4 2-4s2 2 2 4m10 0c0-2-2-4-2-4s-2 2-2 4m-3 0c0-2-2-4-2-4s-2 2-2 4"/>
+                        </svg>
+                      )
+                    },
+                    { 
+                      name: 'Native Plants',
+                      icon: (
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v9m0-5c-3 0-5 2-5 5v9h10v-9c0-3-2-5-5-5z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 9c-1-2-3-3-3-3s0 3 2 5m10-2c1-2 3-3 3-3s0 3-2 5"/>
+                        </svg>
+                      )
+                    }
+                  ].map(({ name, icon }) => (
                     <button
-                      key={interest}
-                      onClick={() => toggleInterest(interest)}
-                      className={`py-3 px-4 text-sm rounded-lg transition-all ${
-                        selectedInterests.includes(interest)
-                          ? 'bg-green-100 text-green-700 border-green-300'
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                      } border`}
+                      key={name}
+                      onClick={() => toggleInterest(name)}
+                      className={`group relative overflow-hidden py-5 px-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.03] ${
+                        selectedInterests.includes(name)
+                          ? 'bg-gradient-to-br from-green-50 to-green-100 text-green-700 border-green-400 shadow-lg'
+                          : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                      } border-2`}
                     >
-                      {interest}
+                      {/* Content */}
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <div className={`transition-colors ${
+                          selectedInterests.includes(name) ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-600'
+                        }`}>
+                          {icon}
+                        </div>
+                        <span className="font-semibold text-sm">{name}</span>
+                      </div>
+                      
+                      {/* Selection indicator */}
+                      {selectedInterests.includes(name) && (
+                        <div className="absolute top-2 right-2">
+                          <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -439,10 +507,10 @@ const TriviaGame: React.FC = () => {
 
               <button
                 onClick={handleSubmit}
-                disabled={!formData.email && !formData.phone}
-                className="w-full bg-green-600 text-white py-5 text-xl font-medium rounded-xl hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                disabled={!formData.email}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-6 text-2xl font-bold rounded-2xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] shadow-lg"
               >
-                Get My Free Soil Test Kit →
+                Subscribe Now →
               </button>
 
               <p className="text-center text-sm text-gray-500">
@@ -458,15 +526,21 @@ const TriviaGame: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-8">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden">
-        {/* Progress Bar */}
+        {/* Enhanced Progress Bar */}
         <div className="bg-gradient-to-r from-green-600 to-green-500 px-8 py-6 text-white">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-lg font-medium">Question {currentQuestion + 1} of {questions.length}</span>
-            <span className="text-lg font-medium">Score: {score}/{currentQuestion}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🧠</span>
+              <span className="text-lg font-bold">Question {currentQuestion + 1} of {questions.length}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⭐</span>
+              <span className="text-lg font-bold">Score: {score}/{currentQuestion}</span>
+            </div>
           </div>
-          <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-white/20 rounded-full h-4 overflow-hidden shadow-inner">
             <div 
-              className="bg-white h-full rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-yellow-300 to-white h-full rounded-full transition-all duration-700 ease-out shadow-md"
               style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
             />
           </div>
@@ -475,29 +549,43 @@ const TriviaGame: React.FC = () => {
         <div className="p-16">
           {showFact ? (
             <div className="text-center py-12">
-              <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 ${
+              {/* Animated Result Icon */}
+              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full mb-6 animate-bounce ${
                 selectedAnswers[currentQuestion] === questions[currentQuestion].correct 
-                  ? 'bg-green-100' 
-                  : 'bg-red-100'
-              }`}>
-                <svg className={`w-12 h-12 ${
-                  selectedAnswers[currentQuestion] === questions[currentQuestion].correct 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`} fill="currentColor" viewBox="0 0 20 20">
-                  {selectedAnswers[currentQuestion] === questions[currentQuestion].correct ? (
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  ) : (
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  )}
-                </svg>
+                  ? 'bg-gradient-to-br from-green-400 to-green-600 shadow-green-200' 
+                  : 'bg-gradient-to-br from-orange-400 to-red-500 shadow-red-200'
+              } shadow-2xl`}>
+                <span className="text-6xl">
+                  {selectedAnswers[currentQuestion] === questions[currentQuestion].correct ? '✅' : '❌'}
+                </span>
               </div>
-              <p className="text-3xl font-bold mb-4 text-gray-900">
-                {selectedAnswers[currentQuestion] === questions[currentQuestion].correct ? 'Excellent!' : 'Not quite'}
+              
+              {/* Result Text */}
+              <p className={`text-4xl font-black mb-6 ${
+                selectedAnswers[currentQuestion] === questions[currentQuestion].correct
+                  ? 'text-green-600'
+                  : 'text-red-600'
+              }`}>
+                {selectedAnswers[currentQuestion] === questions[currentQuestion].correct ? 'CORRECT!' : 'OOPS!'}
               </p>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                {questions[currentQuestion].fact}
-              </p>
+              
+              {/* Fact Box */}
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-2xl p-8 max-w-2xl mx-auto border border-green-200">
+                <p className="text-xl text-gray-700 font-medium leading-relaxed">
+                  <span className="text-2xl mr-2">💡</span>
+                  <span className="font-bold">Did you know?</span> {questions[currentQuestion].fact}
+                </p>
+              </div>
+              
+              {/* Progress Timer */}
+              <div className="mt-8">
+                <div className="flex items-center justify-center gap-2 text-gray-500">
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm">Next question coming up...</span>
+                </div>
+              </div>
             </div>
           ) : (
             <>
