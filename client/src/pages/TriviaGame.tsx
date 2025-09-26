@@ -371,7 +371,7 @@ const TriviaGame: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setAdminMode(!adminMode)}
-                  className="text-sm text-white/60 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-6 h-6 flex items-center justify-center transition-colors ml-2"
+                  className="text-sm font-bold bg-yellow-500 hover:bg-yellow-400 text-black rounded-full w-8 h-8 flex items-center justify-center transition-colors ml-2 shadow-lg"
                 >
                   {adminMode ? '✕' : '⚙'}
                 </button>
