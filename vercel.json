@@ -1,8 +1,7 @@
 {
-  "buildCommand": "npm install && cd client && npm install && npm run build -- --outDir ../dist",
+  "buildCommand": "echo 'Using pre-built dist folder'",
   "outputDirectory": "dist",
   "framework": null,
-  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/(.*)",
