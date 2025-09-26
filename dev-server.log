@@ -7,3 +7,11 @@
 Server is running on http://localhost:5001
 Webhook sent successfully to: https://hook.us1.make.com/g9vcrnuynwozkrtont4ptfte1pp89bno
 7:25:09 PM [express] POST /api/trivia-leads 200 in 750ms :: {"success":true,"message":"Lead captured…
+7:35:12 PM [express] GET /api/trivia-leads/leaderboard 200 in 1ms :: {"success":true,"data":[]}
+Webhook sent successfully to: https://hook.us1.make.com/g9vcrnuynwozkrtont4ptfte1pp89bno
+7:35:52 PM [express] POST /api/trivia-leads 200 in 339ms :: {"success":true,"message":"Lead captured…
+7:35:52 PM [express] GET /api/trivia-leads/leaderboard 304 in 2ms :: {"success":true,"data":[]}
+7:35:58 PM [express] GET /api/trivia-leads/leaderboard 304 in 0ms :: {"success":true,"data":[]}
+7:35:59 PM [express] GET /api/trivia-leads/leaderboard 304 in 0ms :: {"success":true,"data":[]}
+7:36:00 PM [express] GET /api/trivia-leads/leaderboard 304 in 1ms :: {"success":true,"data":[]}
+7:36:00 PM [express] GET /api/trivia-leads/leaderboard 304 in 2ms :: {"success":true,"data":[]}
