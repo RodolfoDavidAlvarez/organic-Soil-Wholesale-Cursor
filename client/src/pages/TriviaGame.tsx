@@ -57,6 +57,7 @@ const TriviaGame: React.FC = () => {
   const [score, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<{name: string, score: number}[]>([]);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   // Load leaderboard from localStorage on component mount
   useEffect(() => {
@@ -133,6 +134,45 @@ const TriviaGame: React.FC = () => {
     }
   };
 
+  const deleteLeaderboardEntry = (indexToDelete: number) => {
+    try {
+      const stored = localStorage.getItem('triviaLeaderboard');
+      const allEntries = stored ? JSON.parse(stored) : [];
+      
+      // Find today's entries
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayEntries = allEntries.filter((entry: any) => {
+        const entryDate = new Date(entry.timestamp);
+        entryDate.setHours(0, 0, 0, 0);
+        return entryDate.getTime() === today.getTime();
+      });
+      
+      // Remove the specific entry
+      if (indexToDelete < todayEntries.length) {
+        const entryToRemove = todayEntries[indexToDelete];
+        const updatedAllEntries = allEntries.filter((entry: any) => 
+          entry.timestamp !== entryToRemove.timestamp
+        );
+        
+        localStorage.setItem('triviaLeaderboard', JSON.stringify(updatedAllEntries));
+        
+        // Refresh leaderboard display
+        const newTodayEntries = todayEntries
+          .filter((_, index) => index !== indexToDelete)
+          .sort((a: any, b: any) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+          });
+        
+        setLeaderboard(newTodayEntries);
+      }
+    } catch (error) {
+      console.error('Error deleting leaderboard entry:', error);
+    }
+  };
+
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nameOnly) {
@@ -179,6 +219,73 @@ const TriviaGame: React.FC = () => {
       const webhookUrl = 'https://hook.us1.make.com/g9vcrnuynwozkrtont4ptfte1pp89bno';
       const submittedAt = new Date().toISOString();
       
+      // Create HTML email template
+      const emailHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New Trivia Lead</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #16a34a 0%, #059669 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; margin: -30px -30px 30px -30px; }
+        h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .lead-info { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .info-row { margin-bottom: 10px; display: flex; align-items: center; }
+        .label { font-weight: 600; color: #4b5563; width: 120px; }
+        .value { color: #1f2937; }
+        .score-badge { display: inline-block; background: #059669; color: white; padding: 5px 15px; border-radius: 20px; font-weight: 600; margin-left: 10px; }
+        .interests-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .interest-tag { background: #e5e7eb; color: #374151; padding: 4px 12px; border-radius: 15px; font-size: 14px; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px; }
+        .cta-button { background: #059669; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 New Trade Show Trivia Lead!</h1>
+        </div>
+        <div class="lead-info">
+            <div class="info-row">
+                <span class="label">Name:</span>
+                <span class="value">${formData.name}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Email:</span>
+                <span class="value"><a href="mailto:${formData.email}">${formData.email}</a></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Quiz Score:</span>
+                <span class="value">${score}/5</span>
+                <span class="score-badge">${score === 5 ? '⭐ Perfect Score!' : score >= 4 ? '🏆 High Score!' : score >= 3 ? '👍 Good Score' : '🌱 Learning'}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Submitted:</span>
+                <span class="value">${new Date(submittedAt).toLocaleString()}</span>
+            </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #1f2937; margin-bottom: 10px;">Growing Interests:</h3>
+            <div class="interests-list">
+                ${selectedInterests.map((interest: string) => `<span class="interest-tag">${interest}</span>`).join('')}
+            </div>
+        </div>
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #4b5563;">
+                <strong>Lead Quality:</strong> ${score >= 4 ? '🔥 Hot Lead' : score >= 3 ? '🟡 Warm Lead' : '❄️ Cold Lead'}<br>
+                <strong>Engagement Level:</strong> ${selectedInterests.length > 3 ? 'High' : selectedInterests.length > 1 ? 'Medium' : 'Low'}
+            </p>
+        </div>
+        <a href="mailto:${formData.email}" class="cta-button">Contact Lead</a>
+        <div class="footer">
+            <p>This lead was captured at the Trade Show 2025 trivia game.</p>
+            <p style="color: #9ca3af;">Organic Soil Wholesale Lead Management System</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
       // Create simplified webhook payload to avoid parsing issues
       const webhookPayload = {
         event: 'trivia_lead_captured',
@@ -195,7 +302,8 @@ const TriviaGame: React.FC = () => {
         prizeCode: 'SOIL20',
         leadQuality: score >= 4 ? 'hot' : score >= 3 ? 'warm' : 'cold',
         engagementLevel: selectedInterests.length > 3 ? 'high' : selectedInterests.length > 1 ? 'medium' : 'low',
-        scoreBadge: score === 5 ? 'Perfect Score!' : score >= 4 ? 'High Score!' : score >= 3 ? 'Good Score' : 'Learning'
+        scoreBadge: score === 5 ? 'Perfect Score!' : score >= 4 ? 'High Score!' : score >= 3 ? 'Good Score' : 'Learning',
+        emailHtml: emailHtml
       };
       
       // Send webhook with proper error handling
@@ -249,7 +357,16 @@ const TriviaGame: React.FC = () => {
           <form onSubmit={handleStart} className="max-w-lg mx-auto mb-12">
             {/* High Score Leaderboard */}
             <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-6">
-              <p className="text-yellow-400 font-bold text-sm mb-3 text-center">🏆 TODAY'S LEADERBOARD 🏆</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-yellow-400 font-bold text-sm text-center flex-1">🏆 TODAY'S LEADERBOARD 🏆</p>
+                <button
+                  type="button"
+                  onClick={() => setAdminMode(!adminMode)}
+                  className="text-xs text-white/40 hover:text-white/80 transition-colors"
+                >
+                  {adminMode ? '✕' : '⚙'}
+                </button>
+              </div>
               {leaderboard.length > 0 ? (
                 <div className="space-y-2">
                   {leaderboard.slice(0, 3).map((entry, index) => (
@@ -264,9 +381,19 @@ const TriviaGame: React.FC = () => {
                         </span>
                         {entry.name}
                       </span>
-                      <span className="font-bold">
-                        {entry.score}/5 {entry.score === 5 && '⭐'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">
+                          {entry.score}/5 {entry.score === 5 && '⭐'}
+                        </span>
+                        {adminMode && (
+                          <button
+                            onClick={() => deleteLeaderboardEntry(index)}
+                            className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -288,6 +415,18 @@ const TriviaGame: React.FC = () => {
                 autoFocus
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {nameOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setNameOnly('')}
+                    className="w-6 h-6 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center transition-colors opacity-60 hover:opacity-100"
+                    aria-label="Clear name"
+                  >
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
