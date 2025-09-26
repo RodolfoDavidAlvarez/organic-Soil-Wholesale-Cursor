@@ -1,0 +1,31 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Larger truck with plant logo optimized for favicon -->
+  <g transform="scale(1.4) translate(3, 4)">
+    <!-- Truck body -->
+    <path d="M2 10 L2 16 Q2 17 3 17 L4.5 17 Q5 15.5 6.5 15.5 Q8 15.5 8.5 17 L13.5 17 Q14 15.5 15.5 15.5 Q17 15.5 17.5 17 L19 17 Q20 17 20 16 L20 12 Q20 11 19 11 L16 11 L16 8 Q16 7 15 7 L12 7 L12 10 L2 10 Z" fill="#7BA05B"/>
+    
+    <!-- Truck cab -->
+    <path d="M12 7 L12 11 L19 11 Q20 11 20 10 L20 8 Q20 7 19 7 L12 7 Z" fill="#7BA05B"/>
+    
+    <!-- Truck window -->
+    <rect x="13" y="8" width="5" height="2" rx="0.5" fill="white"/>
+    
+    <!-- Wheels -->
+    <circle cx="6.5" cy="17" r="2" fill="white"/>
+    <circle cx="6.5" cy="17" r="1.2" fill="#D4B896"/>
+    <circle cx="15.5" cy="17" r="2" fill="white"/>
+    <circle cx="15.5" cy="17" r="1.2" fill="#D4B896"/>
+    
+    <!-- Plant growing from truck bed -->
+    <g transform="translate(4, 6)">
+      <!-- Stem -->
+      <rect x="3.5" y="0" width="1" height="5" fill="#6B8E5A"/>
+      
+      <!-- Left leaf -->
+      <ellipse cx="2.5" cy="1.5" rx="2" ry="1.2" fill="#7BA05B" transform="rotate(-25 2.5 1.5)"/>
+      
+      <!-- Right leaf -->
+      <ellipse cx="5.5" cy="1.5" rx="2" ry="1.2" fill="#7BA05B" transform="rotate(25 5.5 1.5)"/>
+    </g>
+  </g>
+</svg>
