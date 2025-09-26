@@ -58,7 +58,8 @@
       "Bash(supabase status:*)",
       "Bash(npm uninstall:*)",
       "Bash(NODE_ENV=development node --import tsx server/index.ts)",
-      "Bash(PGPASSWORD:*)"
+      "Bash(PGPASSWORD:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
