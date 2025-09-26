@@ -387,7 +387,12 @@ const TriviaGame: React.FC = () => {
                         </span>
                         {adminMode && (
                           <button
-                            onClick={() => deleteLeaderboardEntry(index)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deleteLeaderboardEntry(index);
+                            }}
                             className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
                           >
                             ✕
