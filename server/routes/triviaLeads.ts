@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { supabase } from '../db/supabase.js';
 
 const router = Router();
 
@@ -168,30 +167,6 @@ router.post('/trivia-leads', async (req: Request, res: Response) => {
 
     const submittedAt = new Date().toISOString();
 
-    // Insert lead into database
-    const { data, error } = await supabase
-      .from('trivia_leads')
-      .insert({
-        name,
-        email,
-        interests,
-        score,
-        answers,
-        event_name: 'Trade Show 2025',
-        prize_code: 'SOIL20',
-        created_at: submittedAt
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Database error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to save information' 
-      });
-    }
-
     // Prepare webhook payload
     const webhookPayload = {
       event: 'trivia_lead_captured',
@@ -225,19 +200,28 @@ router.post('/trivia-leads', async (req: Request, res: Response) => {
 
         if (!webhookResponse.ok) {
           console.error('Webhook failed:', webhookResponse.status, webhookResponse.statusText);
+          // Still return success to user even if webhook fails
         } else {
-          console.log('Webhook sent successfully');
+          console.log('Webhook sent successfully to:', webhookUrl);
         }
       } catch (webhookError) {
         console.error('Webhook error:', webhookError);
         // Don't fail the main request if webhook fails
       }
+    } else {
+      console.warn('TRIVIA_WEBHOOK_URL not configured in environment variables');
     }
 
+    // Return success to the client
     return res.json({ 
       success: true, 
-      data,
-      message: 'Lead saved successfully' 
+      message: 'Lead captured successfully',
+      data: {
+        name,
+        email,
+        score,
+        interests
+      }
     });
   } catch (error) {
     console.error('Server error:', error);
@@ -248,68 +232,13 @@ router.post('/trivia-leads', async (req: Request, res: Response) => {
   }
 });
 
-// Get leaderboard endpoint
+// Get leaderboard endpoint (using in-memory data for now)
 router.get('/trivia-leads/leaderboard', async (req: Request, res: Response) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const { data, error } = await supabase
-      .from('trivia_leads')
-      .select('name, score')
-      .gte('created_at', today.toISOString())
-      .order('score', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(10);
-
-    if (error) {
-      console.error('Database error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch leaderboard' 
-      });
-    }
-
-    return res.json({ 
-      success: true, 
-      data: data || []
-    });
-  } catch (error) {
-    console.error('Server error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Server error' 
-    });
-  }
-});
-
-// Get all trivia leads (admin only)
-router.get('/trivia-leads', async (req: Request, res: Response) => {
-  try {
-    const { data, error } = await supabase
-      .from('trivia_leads')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Database error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch leads' 
-      });
-    }
-
-    return res.json({ 
-      success: true, 
-      data 
-    });
-  } catch (error) {
-    console.error('Server error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Server error' 
-    });
-  }
+  // Return empty leaderboard for now since we're not using database
+  return res.json({ 
+    success: true, 
+    data: []
+  });
 });
 
 export default router;
