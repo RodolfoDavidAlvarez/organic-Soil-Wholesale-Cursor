@@ -15,3 +15,7 @@ Webhook sent successfully to: https://hook.us1.make.com/g9vcrnuynwozkrtont4ptfte
 7:35:59 PM [express] GET /api/trivia-leads/leaderboard 304 in 0ms :: {"success":true,"data":[]}
 7:36:00 PM [express] GET /api/trivia-leads/leaderboard 304 in 1ms :: {"success":true,"data":[]}
 7:36:00 PM [express] GET /api/trivia-leads/leaderboard 304 in 2ms :: {"success":true,"data":[]}
+7:50:43 PM [express] GET /api/trivia-leads/leaderboard 200 in 0ms :: {"success":true,"data":[]}
+7:55:30 PM [vite] hmr update /src/pages/TriviaGame.tsx, /src/index.css?v=v18pUufNmFR9zUP1_4-xp
+7:55:45 PM [vite] hmr update /src/pages/TriviaGame.tsx, /src/index.css?v=v18pUufNmFR9zUP1_4-xp
+7:56:09 PM [vite] hmr update /src/pages/TriviaGame.tsx, /src/index.css?v=v18pUufNmFR9zUP1_4-xp

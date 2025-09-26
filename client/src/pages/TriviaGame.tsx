@@ -58,54 +58,78 @@ const TriviaGame: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<{name: string, score: number}[]>([]);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
-  // Fetch leaderboard on component mount
+  // Load leaderboard from localStorage on component mount
   useEffect(() => {
-    let mounted = true;
-    
-    const loadLeaderboard = async () => {
-      if (!mounted || isLoadingLeaderboard) return;
-      
-      setIsLoadingLeaderboard(true);
+    const loadLeaderboard = () => {
       try {
-        const response = await fetch('/api/trivia-leads/leaderboard');
-        const result = await response.json();
-        if (mounted && result.success && result.data) {
-          setLeaderboard(result.data);
+        const stored = localStorage.getItem('triviaLeaderboard');
+        if (stored) {
+          const allEntries = JSON.parse(stored);
+          
+          // Filter for today's entries only
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const todayEntries = allEntries
+            .filter((entry: any) => {
+              const entryDate = new Date(entry.timestamp);
+              entryDate.setHours(0, 0, 0, 0);
+              return entryDate.getTime() === today.getTime();
+            })
+            .sort((a: any, b: any) => {
+              if (b.score !== a.score) return b.score - a.score;
+              return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+            })
+            .slice(0, 10);
+          
+          setLeaderboard(todayEntries);
         }
       } catch (error) {
-        console.error('Error fetching leaderboard:', error);
-      } finally {
-        if (mounted) {
-          setIsLoadingLeaderboard(false);
-        }
+        console.error('Error loading leaderboard:', error);
       }
     };
     
     loadLeaderboard();
-    
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  const fetchLeaderboard = async () => {
-    if (isLoadingLeaderboard) return;
-    
-    setIsLoadingLeaderboard(true);
+  const updateLeaderboard = (name: string, score: number) => {
     try {
-      const response = await fetch('/api/trivia-leads/leaderboard');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          setLeaderboard(result.data);
-        }
-      } else {
-        console.log('Leaderboard API not accessible yet, using local data');
+      const stored = localStorage.getItem('triviaLeaderboard');
+      const allEntries = stored ? JSON.parse(stored) : [];
+      
+      // Add new entry
+      allEntries.push({
+        name,
+        score,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Keep only last 100 entries
+      if (allEntries.length > 100) {
+        allEntries.splice(0, allEntries.length - 100);
       }
+      
+      localStorage.setItem('triviaLeaderboard', JSON.stringify(allEntries));
+      
+      // Update current leaderboard display
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayEntries = allEntries
+        .filter((entry: any) => {
+          const entryDate = new Date(entry.timestamp);
+          entryDate.setHours(0, 0, 0, 0);
+          return entryDate.getTime() === today.getTime();
+        })
+        .sort((a: any, b: any) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        })
+        .slice(0, 10);
+      
+      setLeaderboard(todayEntries);
     } catch (error) {
-      console.log('Leaderboard temporarily unavailable:', error.message);
-    } finally {
-      setIsLoadingLeaderboard(false);
+      console.error('Error updating leaderboard:', error);
     }
   };
 
@@ -147,49 +171,48 @@ const TriviaGame: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Update local leaderboard immediately
+    updateLeaderboard(formData.name, score);
+    
+    // Send to webhook (fire and forget)
     try {
-      const response = await fetch('/api/trivia-leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Try to send to your webhook URL directly
+      const webhookUrl = 'https://hook.us1.make.com/g9vcrnuynwozkrtont4ptfte1pp89bno';
+      
+      const submittedAt = new Date().toISOString();
+      const webhookPayload = {
+        event: 'trivia_lead_captured',
+        timestamp: submittedAt,
+        lead: {
           name: formData.name,
           email: formData.email,
           interests: selectedInterests,
           score,
-          answers: selectedAnswers
-        })
+          answers: selectedAnswers,
+          submittedAt,
+          eventName: 'Trade Show 2025',
+          prizeCode: 'SOIL20',
+          leadQuality: score >= 4 ? 'hot' : score >= 3 ? 'warm' : 'cold',
+          engagementLevel: selectedInterests.length > 3 ? 'high' : selectedInterests.length > 1 ? 'medium' : 'low'
+        }
+      };
+      
+      // Send webhook in background - don't wait for response
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+        mode: 'no-cors' // This allows the request to go through even with CORS issues
+      }).catch(err => {
+        console.log('Webhook error (non-blocking):', err);
       });
-      
-      // Add to local leaderboard immediately for better UX
-      const newEntry = { name: formData.name, score };
-      const updatedLeaderboard = [...leaderboard, newEntry]
-        .sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-          return 0; // Keep recent entries first within same score
-        })
-        .slice(0, 10);
-      setLeaderboard(updatedLeaderboard);
-      
-      if (response.ok) {
-        // Try to refresh from server, but don't wait for it
-        fetchLeaderboard();
-      }
-      
-      setStage('success');
     } catch (error) {
-      console.error('Error:', error);
-      // Add to local leaderboard even if API fails
-      const newEntry = { name: formData.name, score };
-      const updatedLeaderboard = [...leaderboard, newEntry]
-        .sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-          return 0;
-        })
-        .slice(0, 10);
-      setLeaderboard(updatedLeaderboard);
-      
-      setStage('success');
+      console.log('Webhook setup error:', error);
     }
+    
+    setStage('success');
   };
 
   if (stage === 'landing') {
