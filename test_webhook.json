@@ -1,0 +1,18 @@
+{
+  "event": "trivia_lead_captured",
+  "timestamp": "2025-09-26T03:20:00.000Z",
+  "name": "Sample Lead",
+  "email": "sample@example.com",
+  "interests": "Vegetables, Cannabis, Landscaping",
+  "interestsList": ["Vegetables", "Cannabis", "Landscaping"],
+  "score": 4,
+  "maxScore": 5,
+  "answers": [0, 2, 1, 1, 2],
+  "submittedAt": "2025-09-26T03:20:00.000Z",
+  "eventName": "Trade Show 2025",
+  "prizeCode": "SOIL20",
+  "leadQuality": "hot",
+  "engagementLevel": "high",
+  "scoreBadge": "High Score!",
+  "emailHtml": "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>New Trivia Lead</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;background-color:#f8f9fa}.container{background:white;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#16a34a 0%,#059669 100%);color:white;padding:20px;text-align:center;border-radius:10px 10px 0 0;margin:-30px -30px 30px -30px}h1{margin:0;font-size:24px;font-weight:600}.lead-info{background:#f3f4f6;padding:20px;border-radius:8px;margin-bottom:20px}.info-row{margin-bottom:10px;display:flex;align-items:center}.label{font-weight:600;color:#4b5563;width:120px}.value{color:#1f2937}.score-badge{display:inline-block;background:#059669;color:white;padding:5px 15px;border-radius:20px;font-weight:600;margin-left:10px}.interests-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:5px}.interest-tag{background:#e5e7eb;color:#374151;padding:4px 12px;border-radius:15px;font-size:14px}.footer{margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;color:#6b7280;font-size:14px}.cta-button{background:#059669;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin-top:20px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>🎯 New Trade Show Trivia Lead!</h1></div><div class=\"lead-info\"><div class=\"info-row\"><span class=\"label\">Name:</span><span class=\"value\">Sample Lead</span></div><div class=\"info-row\"><span class=\"label\">Email:</span><span class=\"value\"><a href=\"mailto:sample@example.com\">sample@example.com</a></span></div><div class=\"info-row\"><span class=\"label\">Quiz Score:</span><span class=\"value\">4/5</span><span class=\"score-badge\">🏆 High Score!</span></div><div class=\"info-row\"><span class=\"label\">Submitted:</span><span class=\"value\">Sep 26, 2025 3:20 AM</span></div></div><div style=\"margin-bottom:20px\"><h3 style=\"color:#1f2937;margin-bottom:10px\">Growing Interests:</h3><div class=\"interests-list\"><span class=\"interest-tag\">Vegetables</span><span class=\"interest-tag\">Cannabis</span><span class=\"interest-tag\">Landscaping</span></div></div><div style=\"background:#f9fafb;padding:15px;border-radius:8px;margin-bottom:20px\"><p style=\"margin:0;color:#4b5563\"><strong>Lead Quality:</strong> 🔥 Hot Lead<br><strong>Engagement Level:</strong> High</p></div><a href=\"mailto:sample@example.com\" class=\"cta-button\">Contact Lead</a><div class=\"footer\"><p>This lead was captured at the Trade Show 2025 trivia game.</p><p style=\"color:#9ca3af\">Organic Soil Wholesale Lead Management System</p></div></div></body></html>"
+}

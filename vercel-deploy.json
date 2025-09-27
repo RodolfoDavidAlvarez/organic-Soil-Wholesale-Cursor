@@ -1,0 +1,12 @@
+{
+  "name": "organic-soil-wholesale",
+  "outputDirectory": "dist",
+  "buildCommand": "echo 'Using pre-built dist folder'",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
