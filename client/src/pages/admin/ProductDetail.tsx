@@ -1026,7 +1026,7 @@ export default function AdminProductDetail() {
                   </div>
 
                 </div>
-                
+
                 <div className="space-y-4 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
                   <div className="space-y-1">
                     <h2 className="text-sm font-semibold text-foreground">Product Details</h2>
@@ -1540,6 +1540,7 @@ export default function AdminProductDetail() {
                       </p>
                     </div>
                   </div>
+                </div>
                 </div>
               </section>
             </div>

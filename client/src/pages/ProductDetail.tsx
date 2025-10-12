@@ -23,7 +23,7 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "");
 
 const ProductDetail = () => {
-  const { admin } = useAdminAuth();
+  const { admin, loading: adminLoading } = useAdminAuth();
   const [, params] = useRoute("/products/:slug");
   const [, navigate] = useLocation();
   const slug = params && (params as any).slug ? (params as any).slug : undefined;
@@ -38,6 +38,13 @@ const ProductDetail = () => {
   // Inline editing state
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!admin) {
+      setEditingField(null);
+      setEditValues({});
+    }
+  }, [admin]);
 
   const sizeCategories = useMemo(() => {
     const defaultCategories = SIZE_CATALOG.map((entry) => ({
@@ -183,13 +190,32 @@ const ProductDetail = () => {
 
         if (!fetchedProduct) {
           const allProducts = getProductsData();
-          const normalizedSlug = slug.toLowerCase();
-          fetchedProduct =
-            allProducts.find(
-              (p) =>
-                p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedSlug ||
-                p.productType?.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedSlug
-            ) || null;
+
+          if (!Number.isNaN(numericId)) {
+            fetchedProduct = allProducts.find((p: any) => Number(p.id) === numericId) || null;
+          }
+
+          if (!fetchedProduct) {
+            const normalizedSlug = slugify(String(slug));
+            fetchedProduct =
+              allProducts.find((p: any) => {
+                const slugCandidates = [
+                  p.slug,
+                  p.slug?.current,
+                  p.productSlug,
+                  p.product_slug,
+                  p.productType,
+                  p.product_type,
+                  p.displayTitle,
+                  p.display_title,
+                  p.name,
+                ]
+                  .filter(Boolean)
+                  .map((value) => slugify(String(value)));
+
+                return slugCandidates.includes(normalizedSlug);
+              }) || null;
+          }
         }
 
         if (fetchedProduct) {
@@ -238,21 +264,30 @@ const ProductDetail = () => {
   };
 
   const handleEditSave = async (field: string) => {
-    if (!product || !editValues[field]) return;
-    
+    if (!product || !admin) return;
+    const nextValue = editValues[field];
+    if (nextValue === undefined) return;
+
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      console.error("Admin token missing; unable to save product updates.");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/admin/products/${product.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          [field]: editValues[field]
+          [field]: nextValue
         }),
       });
 
       if (response.ok) {
-        setProduct({ ...product, [field]: editValues[field] });
+        setProduct({ ...product, [field]: nextValue });
         setEditingField(null);
         setEditValues({});
       } else {
@@ -329,6 +364,7 @@ const ProductDetail = () => {
             variant="ghost"
             className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
             onClick={() => handleEditStart(field, value)}
+            disabled={adminLoading}
           >
             <Edit2 className="h-3 w-3" />
           </Button>

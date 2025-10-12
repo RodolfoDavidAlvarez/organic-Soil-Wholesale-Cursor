@@ -561,78 +561,126 @@ router.get('/', async (req, res) => {
   }
 });
 
+const createRawProductFromFallback = (fallback: FallbackProduct, fallbackId?: number): RawProduct => {
+  const price =
+    typeof fallback.price === 'number'
+      ? Math.round(fallback.price * 100)
+      : typeof fallback.price === 'string'
+        ? Math.round(Number(fallback.price) * 100) || null
+        : null;
+
+  return {
+    id: fallback.id ?? fallbackId ?? 0,
+    name: fallback.name ?? '',
+    description: fallback.description ?? '',
+    category: fallback.category ?? '',
+    price,
+    stock_quantity: 0,
+    image_url: fallback.imageUrl ?? undefined,
+    texture_photo_url: fallback.texturePhotoUrl ?? undefined,
+    ingredients: fallback.ingredients ?? undefined,
+    target_audience: fallback.targetAudience ?? undefined,
+    recommended_uses: fallback.recommendedUses ?? undefined,
+    story: fallback.story ?? undefined,
+    usage: fallback.usage ?? undefined,
+    certifications: fallback.certifications ?? undefined,
+    features: fallback.features ?? undefined,
+    size_options: fallback.sizeOptions ?? undefined,
+    product_type: fallback.productType ?? undefined,
+    display_title: fallback.displayTitle ?? undefined,
+    marketing_title: fallback.marketingTitle ?? undefined,
+    seo_keywords: fallback.seoKeywords ?? undefined,
+    marketing_note: fallback.marketingNote ?? undefined,
+    product_video_url: fallback.productVideoUrl ?? undefined,
+    product_video_title: fallback.productVideoTitle ?? undefined,
+    is_wholesale_only: fallback.isWholesaleOnly ?? false,
+    additional_images: Array.isArray(fallback.additionalImages)
+      ? fallback.additionalImages
+      : undefined,
+    allow_bulk_pickup: fallback.allowBulkPickup ?? undefined,
+    available_size_options: Array.isArray(fallback.availableSizeOptions)
+      ? fallback.availableSizeOptions
+      : undefined,
+    min_order_quantity: fallback.minOrderQuantity ?? undefined,
+    max_order_quantity: fallback.maxOrderQuantity ?? undefined,
+    is_price_negotiable: fallback.isPriceNegotiable ?? undefined,
+    requires_quote: fallback.requiresQuote ?? undefined,
+    is_pay_and_pickup_enabled: fallback.isPayAndPickupEnabled ?? undefined,
+    pay_and_pickup_display_order: fallback.payAndPickupDisplayOrder ?? undefined,
+    pay_and_pickup_badge: fallback.payAndPickupBadge ?? undefined,
+    pay_and_pickup_description: fallback.payAndPickupDescription ?? undefined,
+    pay_and_pickup_hero_image: fallback.payAndPickupHeroImage ?? undefined,
+    is_catalog_enabled: fallback.isCatalogEnabled ?? true,
+    catalog_display_order: fallback.catalogDisplayOrder ?? undefined,
+    size_price_options: fallback.sizePriceOptions ?? undefined
+  };
+};
+
 // Get single product details
 router.get('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const rawId = req.params.id;
+    const numericId = Number(rawId);
     let productResponse;
 
-    try {
-      const { data, error } = await supabase
-        .from<RawProduct>('products')
-        .select('*')
-        .eq('id', Number(id))
-        .single();
+    if (!Number.isNaN(numericId)) {
+      try {
+        const { data, error } = await supabase
+          .from<RawProduct>('products')
+          .select('*')
+          .eq('id', numericId)
+          .single();
 
-      if (error) {
-        throw error;
-      }
+        if (error) {
+          throw error;
+        }
 
-      if (data) {
-        productResponse = toPublicProduct(data);
+        if (data) {
+          productResponse = toPublicProduct(data);
+        }
+      } catch (databaseError) {
+        console.warn('Falling back to static product data:', databaseError);
       }
-    } catch (databaseError) {
-      console.warn('Falling back to static product data:', databaseError);
     }
 
     if (!productResponse) {
-      const fallbackProducts = getFallbackProducts();
-      const fallback = fallbackProducts.find(
-        (_product: any, index: number) => index + 1 === Number(id)
-      );
+      const cache = ensureFallbackCache();
+      let fallback: FallbackProduct | undefined;
+
+      if (!Number.isNaN(numericId)) {
+        fallback = cache.byId.get(numericId);
+      }
+
+      if (!fallback) {
+        const normalizedSlug = slugify(rawId);
+        if (normalizedSlug) {
+          const slugMatch = cache.entries.find((entry) =>
+            entry.slugValues.includes(normalizedSlug)
+          );
+          fallback = slugMatch?.product;
+        }
+      }
+
+      if (!fallback) {
+        const normalizedValue = normalizeValue(rawId);
+        if (normalizedValue) {
+          const valueMatch = cache.entries.find((entry) =>
+            entry.normalizedValues.includes(normalizedValue)
+          );
+          fallback = valueMatch?.product;
+        }
+      }
 
       if (!fallback) {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      productResponse = toPublicProduct(
-        {
-          id: Number(id),
-          name: fallback.name,
-          description: fallback.description,
-          category: fallback.category,
-          price: Math.round((fallback.price ?? 0) * 100),
-          image_url: fallback.imageUrl,
-          texture_photo_url: fallback.texturePhotoUrl,
-          ingredients: fallback.ingredients,
-          target_audience: fallback.targetAudience,
-          recommended_uses: fallback.recommendedUses,
-          story: fallback.story,
-          usage: fallback.usage,
-          certifications: fallback.certifications,
-          features: fallback.features,
-          size_options: fallback.sizeOptions,
-          product_type: fallback.productType,
-          display_title: fallback.displayTitle,
-          marketing_title: fallback.marketingTitle,
-          seo_keywords: fallback.seoKeywords,
-          marketing_note: fallback.marketingNote,
-          product_video_url: fallback.productVideoUrl,
-          product_video_title: fallback.productVideoTitle,
-          is_wholesale_only: fallback.isWholesaleOnly,
-          additional_images: fallback.additionalImages,
-          allow_bulk_pickup: fallback.allowBulkPickup,
-          available_size_options: fallback.availableSizeOptions,
-          size_price_options: fallback.sizePriceOptions,
-          min_order_quantity: fallback.minOrderQuantity,
-          max_order_quantity: fallback.maxOrderQuantity,
-          is_price_negotiable: fallback.isPriceNegotiable,
-          requires_quote: fallback.requiresQuote,
-          is_catalog_enabled: fallback.isCatalogEnabled ?? true,
-          catalog_display_order: fallback.catalogDisplayOrder ?? Number(id) - 1
-        },
-        Number(id)
+      const fallbackRecord = createRawProductFromFallback(
+        fallback,
+        Number.isNaN(numericId) ? fallback.id : numericId
       );
+
+      productResponse = toPublicProduct(fallbackRecord, fallback.id ?? numericId);
     }
 
     res.json(productResponse);

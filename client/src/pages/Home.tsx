@@ -399,7 +399,7 @@ const Home = () => {
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             {/* Left Column - Title, Availability Checker, and Size Categories */}
-            <div className="order-1 lg:order-1 lg:col-span-4 flex flex-col gap-6">
+            <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-6 mt-8 lg:mt-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -499,14 +499,15 @@ const Home = () => {
             </div>
 
             {/* Right Column - Featured Products */}
-            <div className="order-2 lg:order-2 lg:col-span-8 mt-8 lg:mt-0">
+            <div className="order-1 lg:order-2 lg:col-span-8 mt-0 lg:mt-0">
+              <h2 className="mb-4 text-3xl font-heading font-bold text-primary lg:hidden text-center">Featured Products</h2>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
                 className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
               >
-                <h2 className="text-xl font-bold mb-4">Featured Products</h2>
+                <h2 className="hidden text-xl font-bold mb-4 lg:block">Featured Products</h2>
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                   {featuredProducts.map((product, index) => (
                     <motion.div
