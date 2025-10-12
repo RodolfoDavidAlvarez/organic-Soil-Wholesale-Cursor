@@ -864,8 +864,22 @@ const PayAndPickup: React.FC = () => {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="p-4 bg-gray-50 border-t border-gray-100">
-                                <div className="space-y-3">
+                              <div className="p-6 bg-gray-50 border-t border-gray-100">
+                                {/* Product Description */}
+                                {product.description && (
+                                  <div className="mb-6">
+                                    <h4 className="font-semibold text-gray-900 text-lg mb-2">Product Details</h4>
+                                    <p className="text-gray-600 text-base leading-relaxed">{product.description}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Size Options */}
+                                <div className="space-y-1 mb-4">
+                                  <h4 className="font-semibold text-gray-900 text-lg">Select Size & Quantity</h4>
+                                  <p className="text-sm text-gray-500">Choose from available options below</p>
+                                </div>
+                                
+                                <div className="space-y-4">
                                   {product.sizeOptions && product.sizeOptions.map((size) => {
                                     const uniqueKey = `${product.id}-${size}`;
                                     const cartItem = cart.find(item => item.uniqueKey === uniqueKey);
@@ -875,20 +889,22 @@ const PayAndPickup: React.FC = () => {
                                     const inventory = inventoryData.find(inv => inv.sizeOption === size);
                                     
                                     return (
-                                      <div key={uniqueKey} className={`bg-white rounded-lg p-3 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
-                                        <div className="flex items-center justify-between">
+                                      <div key={uniqueKey} className={`bg-white rounded-lg p-4 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
+                                        <div className="flex items-center justify-between gap-4">
                                           <div className="flex-1">
-                                            <span className="font-medium text-gray-900">{size}</span>
-                                            {price > 0 && (
-                                              <span className="ml-3 text-lg font-bold text-green-700">
-                                                ${price.toFixed(2)}
-                                              </span>
-                                            )}
-                                            {inventory && (
-                                              <span className="ml-2 text-xs text-gray-500">
-                                                ({inventory.quantityAvailable} available)
-                                              </span>
-                                            )}
+                                            <div className="flex flex-wrap items-baseline gap-2">
+                                              <span className="font-medium text-gray-900 text-lg">{size}</span>
+                                              {price > 0 && (
+                                                <span className="text-xl font-bold text-green-700">
+                                                  ${price.toFixed(2)}
+                                                </span>
+                                              )}
+                                              {inventory && (
+                                                <span className="text-sm text-gray-500">
+                                                  ({inventory.quantityAvailable} available)
+                                                </span>
+                                              )}
+                                            </div>
                                           </div>
                                           
                                           {inStock ? (
@@ -899,33 +915,33 @@ const PayAndPickup: React.FC = () => {
                                                     e.stopPropagation();
                                                     updateQuantity(product.id, size, -1);
                                                   }}
-                                                  className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                  className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
                                                 >
-                                                  <Minus className="w-3 h-3" />
+                                                  <Minus className="w-4 h-4" />
                                                 </button>
-                                                <span className="w-12 text-center font-bold text-lg">{cartItem.quantity}</span>
+                                                <span className="w-16 text-center font-bold text-lg">{cartItem.quantity}</span>
                                                 <button
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     updateQuantity(product.id, size, 1);
                                                   }}
-                                                  className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                  className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
                                                   disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
                                                 >
-                                                  <Plus className="w-3 h-3" />
+                                                  <Plus className="w-4 h-4" />
                                                 </button>
                                               </div>
                                             ) : (
                                               <Button
-                                                size="sm"
+                                                size="default"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   addToCart(product, size);
                                                 }}
-                                                className="bg-green-600 hover:bg-green-700 text-white"
+                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
                                               >
                                                 <Plus className="w-4 h-4 mr-1" />
-                                                Add
+                                                Add to Cart
                                               </Button>
                                             )
                                           ) : (
@@ -939,10 +955,10 @@ const PayAndPickup: React.FC = () => {
                                 
                                 {/* Total in Cart for this Product */}
                                 {totalInCart > 0 && (
-                                  <div className="mt-3 pt-3 border-t border-gray-200">
-                                    <div className="flex items-center justify-between text-sm">
-                                      <span className="text-gray-600">Total in cart:</span>
-                                      <span className="font-bold text-green-700">
+                                  <div className="mt-6 pt-4 border-t border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600 text-base">Total in cart:</span>
+                                      <span className="font-bold text-green-700 text-lg">
                                         {totalInCart} units
                                       </span>
                                     </div>
