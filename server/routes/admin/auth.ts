@@ -1,267 +1,165 @@
 import { Router } from 'express';
-import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.SUPABASE_URL || 'https://govktyrtmwzbzqkmzmrf.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc2OTU2NiwiZXhwIjoyMDcwMzQ1NTY2fQ.Zf6HI1O9ROsRersiYukXzwznHVXALs2EDYiSGLchyVI';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import bcrypt from 'bcrypt';
+import { supabase } from '../../supabaseClient';
+import { createAdminToken, adminAuthMiddleware, AdminRequest } from '../../middleware/adminAuth';
 
 const router = Router();
 
-// Health check endpoint
-router.get('/check', async (req, res) => {
-  try {
-    // Check if admin tables exist
-    const tableCheck = await db.execute(sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'admin_users'
-      ) as admin_users_exists,
-      EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'admin_sessions'
-      ) as admin_sessions_exists
-    `);
-    
-    // Count admin users
-    let adminCount = 0;
-    try {
-      const admins = await db.select({ count: sql<number>`count(*)` }).from(adminUsers);
-      adminCount = admins[0]?.count || 0;
-    } catch (e) {
-      // Table might not exist
-    }
-    
-    res.json({
-      tablesExist: tableCheck.rows[0],
-      adminCount,
-      setupRequired: adminCount === 0
-    });
-  } catch (error) {
-    res.json({
-      error: error.message,
-      setupRequired: true
-    });
-  }
-});
-
-// Login schema
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-// Login endpoint
+// Admin login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const { email, password } = req.body;
 
-    // For initial setup, check if this is the first login
-    const admins = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Get admin user
+    console.log('Login attempt for email:', email);
     
-    if (admins.length === 0) {
-      console.log('Admin not found for email:', email);
+    const { data: admin, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    console.log('Admin query result:', { admin: admin ? 'found' : 'not found', error });
+
+    if (error || !admin) {
+      console.log('Admin user not found or query error');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const admin = admins[0];
-    console.log('Found admin:', admin.email, 'Active:', admin.isActive);
-
-    // For initial setup with temporary password
-    if (email === 'ralvarez@soilseedandwater.com' && password === 'Admin2024!Soil') {
-      // Create a session
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-      await db.insert(adminSessions).values({
-        adminId: admin.id,
-        token,
-        expiresAt,
-      });
-
-      // Update last login
-      await db
-        .update(adminUsers)
-        .set({ lastLogin: new Date() })
-        .where(eq(adminUsers.id, admin.id));
-
-      // Log the action
-      await db.insert(auditLogs).values({
-        adminId: admin.id,
-        action: 'admin_login',
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
-      });
-
-      return res.json({
-        token,
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          role: admin.role,
-          permissions: admin.permissions,
-        },
-        requirePasswordChange: true, // Flag to force password change
-      });
+    console.log('Admin user found, checking password...');
+    console.log('Has password hash:', !!admin.password_hash);
+    
+    // Verify password
+    const validPassword = await bcrypt.compare(password, admin.password_hash);
+    console.log('Password validation result:', validPassword);
+    
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // For future: implement proper password hashing
-    // const isValidPassword = await bcrypt.compare(password, admin.passwordHash);
-    // if (!isValidPassword) {
-    //   return res.status(401).json({ error: 'Invalid credentials' });
-    // }
-
-    res.status(401).json({ error: 'Invalid credentials' });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ 
-      error: 'Login failed', 
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    // Create token
+    const token = createAdminToken({
+      id: admin.id,
+      email: admin.email,
+      role: admin.role
     });
-  }
-});
-
-// Logout endpoint
-router.post('/logout', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (token) {
-      await db.delete(adminSessions).where(eq(adminSessions.token, token));
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ error: 'Logout failed' });
-  }
-});
-
-// Check session endpoint
-router.get('/session', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const sessions = await db
-      .select({
-        session: adminSessions,
-        admin: adminUsers,
-      })
-      .from(adminSessions)
-      .innerJoin(adminUsers, eq(adminSessions.adminId, adminUsers.id))
-      .where(eq(adminSessions.token, token));
-
-    if (sessions.length === 0) {
-      return res.status(401).json({ error: 'Invalid session' });
-    }
-
-    const { session, admin } = sessions[0];
-
-    if (session.expiresAt < new Date()) {
-      await db.delete(adminSessions).where(eq(adminSessions.id, session.id));
-      return res.status(401).json({ error: 'Session expired' });
-    }
 
     res.json({
+      token,
       admin: {
         id: admin.id,
         email: admin.email,
-        role: admin.role,
-        permissions: admin.permissions,
-      },
+        full_name: admin.full_name,
+        role: admin.role
+      }
     });
   } catch (error) {
-    console.error('Session check error:', error);
-    res.status(500).json({ error: 'Session check failed' });
+    console.error('Admin login error:', error);
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
-// Temporary setup endpoint - REMOVE IN PRODUCTION
-router.post('/setup-initial', async (req, res) => {
+// Create initial admin user (should be run once)
+router.post('/create-admin', async (req, res) => {
   try {
-    const { setupKey } = req.body;
-    
-    if (setupKey !== 'initial-setup-2024') {
-      return res.status(403).json({ error: 'Invalid setup key' });
+    const { email, password, full_name } = req.body;
+
+    // Check if any admin exists
+    const { count } = await supabase
+      .from('admin_users')
+      .select('*', { count: 'exact', head: true });
+
+    if (count && count > 0) {
+      // Only allow if authenticated as admin
+      if (!req.headers.authorization) {
+        return res.status(403).json({ error: 'Admin already exists' });
+      }
     }
 
-    // Create admin tables (will fail silently if they exist)
-    try {
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS admin_users (
-          id SERIAL PRIMARY KEY,
-          email VARCHAR(255) UNIQUE NOT NULL,
-          role VARCHAR(50) DEFAULT 'admin',
-          permissions JSONB DEFAULT '{}',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          last_login TIMESTAMP,
-          is_active BOOLEAN DEFAULT true
-        )
-      `);
+    // Hash password
+    const password_hash = await bcrypt.hash(password, 10);
 
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS admin_sessions (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          admin_id INTEGER REFERENCES admin_users(id) ON DELETE CASCADE,
-          token TEXT UNIQUE NOT NULL,
-          expires_at TIMESTAMP NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS audit_logs (
-          id SERIAL PRIMARY KEY,
-          admin_id INTEGER REFERENCES admin_users(id),
-          action VARCHAR(100) NOT NULL,
-          entity_type VARCHAR(50),
-          entity_id INTEGER,
-          old_values JSONB,
-          new_values JSONB,
-          ip_address INET,
-          user_agent TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-    } catch (error) {
-      console.log('Tables might already exist, continuing...');
-    }
-
-    // Check if admin exists
-    const existingAdmin = await db
+    // Create admin
+    const { data: newAdmin, error } = await supabase
+      .from('admin_users')
+      .insert({
+        email,
+        password_hash,
+        full_name,
+        role: 'admin'
+      })
       .select()
-      .from(adminUsers)
-      .where(eq(adminUsers.email, 'ralvarez@soilseedandwater.com'))
-      .limit(1);
+      .single();
 
-    if (existingAdmin.length === 0) {
-      // Create admin user
-      await db.insert(adminUsers).values({
-        email: 'ralvarez@soilseedandwater.com',
-        role: 'super_admin',
-        permissions: { all: true },
-        isActive: true
-      });
+    if (error) {
+      throw error;
+    }
 
-      return res.json({
-        success: true,
-        message: 'Admin user created successfully'
-      });
-    } else {
-      return res.json({
-        success: true,
-        message: 'Admin user already exists'
+    res.json({
+      message: 'Admin created successfully',
+      admin: {
+        id: newAdmin.id,
+        email: newAdmin.email,
+        full_name: newAdmin.full_name
+      }
+    });
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({ error: 'Failed to create admin' });
+  }
+});
+
+// Validate token
+router.get('/validate', adminAuthMiddleware, async (req: AdminRequest, res) => {
+  if (req.admin) {
+    res.json({ admin: req.admin });
+  } else {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Test endpoint to check password
+router.post('/test-password', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Get admin user
+    const { data: admin, error } = await supabase
+      .from('admin_users')
+      .select('email, password_hash, role')
+      .eq('email', email)
+      .single();
+    
+    if (error || !admin) {
+      return res.json({ 
+        found: false, 
+        error: error?.message || 'User not found' 
       });
     }
+    
+    // Test password
+    const testHash = await bcrypt.hash(password, 10);
+    const isValid = await bcrypt.compare(password, admin.password_hash);
+    
+    res.json({
+      found: true,
+      email: admin.email,
+      hasPasswordHash: !!admin.password_hash,
+      passwordHashLength: admin.password_hash?.length || 0,
+      passwordValid: isValid,
+      testInfo: {
+        inputPassword: password,
+        inputLength: password.length,
+        hashStartsWith: admin.password_hash?.substring(0, 7),
+        testHashStartsWith: testHash.substring(0, 7)
+      }
+    });
   } catch (error) {
-    console.error('Setup error:', error);
-    res.status(500).json({ error: 'Setup failed', details: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 

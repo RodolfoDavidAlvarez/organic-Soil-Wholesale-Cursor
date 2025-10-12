@@ -8,9 +8,9 @@ const router = Router();
 router.get('/location/:locationId', async (req, res) => {
   try {
     const { locationId } = req.params;
-    const { customerType = 'regular', includeOutOfStock = 'false' } = req.query;
+    const { customerType = 'regular', includeOutOfStock = 'false', payAndPickup = 'false' } = req.query;
     
-    const query = supabase
+    let query = supabase
       .from('inventory')
       .select(`
         *,
@@ -20,11 +20,7 @@ router.get('/location/:locationId', async (req, res) => {
           description,
           category,
           image_url,
-          texture_photo_url,
-          size_options,
-          display_title,
-          brief_overview,
-          available_size_options
+          texture_photo_url
         )
       `)
       .eq('location_id', locationId);
@@ -33,6 +29,11 @@ router.get('/location/:locationId', async (req, res) => {
     if (includeOutOfStock !== 'true') {
       query.gt('quantity_available', 0);
     }
+
+    // Skip payAndPickup filtering for now - column doesn't exist
+    // if (payAndPickup === 'true') {
+    //   query = query.eq('products.is_pay_and_pickup_enabled', true);
+    // }
 
     const { data, error } = await query;
 
@@ -106,6 +107,7 @@ router.post('/transaction', async (req, res) => {
       productId, 
       locationId, 
       quantity, 
+      sizeOption,
       posTransactionId,
       notes 
     } = req.body;
@@ -116,6 +118,7 @@ router.post('/transaction', async (req, res) => {
       .select('id, quantity_available')
       .eq('product_id', productId)
       .eq('location_id', locationId)
+      .eq('size_option', sizeOption)
       .single();
 
     if (invError) throw invError;
@@ -196,7 +199,7 @@ router.get('/sync/:locationId', async (req, res) => {
 router.get('/products/:locationId', async (req, res) => {
   try {
     const { locationId } = req.params;
-    const { category, customerType = 'regular' } = req.query;
+    const { category, customerType = 'regular', payAndPickup = 'false' } = req.query;
     
     let query = supabase
       .from('inventory')
@@ -208,17 +211,7 @@ router.get('/products/:locationId', async (req, res) => {
           description,
           category,
           image_url,
-          texture_photo_url,
-          display_title,
-          marketing_title,
-          brief_overview,
-          ingredients,
-          target_audience,
-          recommended_uses,
-          certifications,
-          features,
-          product_type,
-          available_size_options
+          texture_photo_url
         )
       `)
       .eq('location_id', locationId)
@@ -228,6 +221,11 @@ router.get('/products/:locationId', async (req, res) => {
     if (category) {
       query = query.eq('products.category', category);
     }
+
+    // Skip payAndPickup filtering for now - column doesn't exist
+    // if (payAndPickup === 'true') {
+    //   query = query.eq('products.is_pay_and_pickup_enabled', true);
+    // }
 
     const { data, error } = await query;
 
@@ -270,7 +268,11 @@ router.get('/products/:locationId', async (req, res) => {
       });
     }
 
-    const products = Array.from(productMap.values());
+    const products = Array.from(productMap.values()).sort((a: any, b: any) => {
+      const orderA = a.pay_and_pickup_display_order ?? 0;
+      const orderB = b.pay_and_pickup_display_order ?? 0;
+      return orderA - orderB;
+    });
 
     res.json({
       success: true,

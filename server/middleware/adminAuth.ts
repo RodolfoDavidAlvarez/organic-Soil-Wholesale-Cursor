@@ -1,93 +1,51 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+import { supabase } from '../supabaseClient';
 
-const supabaseUrl = 'https://govktyrtmwzbzqkmzmrf.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc2OTU2NiwiZXhwIjoyMDcwMzQ1NTY2fQ.Zf6HI1O9ROsRersiYukXzwznHVXALs2EDYiSGLchyVI';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export interface AdminRequest extends Request {
   admin?: {
-    id: number;
+    id: string; // Changed to string for UUID
     email: string;
     role: string;
-    permissions: any;
+    permissions?: any;
   };
 }
 
-export const adminAuth = async (req: AdminRequest, res: Response, next: NextFunction) => {
+export async function adminAuthMiddleware(req: AdminRequest, res: Response, next: NextFunction) {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (!token) {
-      return res.status(401).json({ error: 'No authorization token provided' });
+      return res.status(401).json({ error: 'No token provided' });
     }
 
-    // Verify token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired session' });
+    // Verify admin exists in database
+    const { data: admin, error } = await supabase
+      .from('admin_users')
+      .select('id, email, role')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !admin) {
+      return res.status(401).json({ error: 'Invalid admin credentials' });
     }
 
-    // For now, accept any authenticated user as admin
-    // In production, you'd check against an admin_profiles table
-    req.admin = {
-      id: user.id as any,
-      email: user.email!,
-      role: 'admin',
-      permissions: { all: true }
-    };
-
+    req.admin = admin;
     next();
   } catch (error) {
     console.error('Admin auth error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(401).json({ error: 'Invalid or expired token' });
   }
-};
+}
 
-export const requireRole = (roles: string[]) => {
-  return (req: AdminRequest, res: Response, next: NextFunction) => {
-    if (!req.admin) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    if (!roles.includes(req.admin.role) && req.admin.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
-    next();
-  };
-};
-
-export const logAdminAction = async (
-  adminId: string,
-  action: string,
-  entityType?: string,
-  entityId?: number,
-  oldValues?: any,
-  newValues?: any,
-  req?: Request
-) => {
-  try {
-    // Log to Supabase admin_audit_logs table if it exists
-    const { error } = await supabase
-      .from('admin_audit_logs')
-      .insert({
-        admin_id: adminId,
-        action,
-        entity_type: entityType,
-        entity_id: entityId?.toString(),
-        old_values: oldValues,
-        new_values: newValues,
-        ip_address: req?.ip,
-        user_agent: req?.headers['user-agent']
-      });
-    
-    if (error) {
-      console.error('Failed to log admin action:', error);
-    }
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
-  }
-};
+export function createAdminToken(admin: { id: string; email: string; role: string }) {
+  return jwt.sign(
+    { id: admin.id, email: admin.email, role: admin.role },
+    JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+}

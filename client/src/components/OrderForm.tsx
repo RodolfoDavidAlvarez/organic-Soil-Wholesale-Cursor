@@ -22,6 +22,7 @@ import {
 import { productsData } from "../data/productData";
 import { PRODUCT_CATEGORIES, ProductCategory } from "../data/categories";
 import { generateCustomerEmail, generateAdminEmail, generateOrderMarkdown } from "../lib/emailTemplates";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 // Group products by "Type" field (Amendment, Potting, Specialty) from product information
 const productsByCategory: Record<string, typeof productsData> = {};
@@ -383,15 +384,14 @@ export const OrderForm: React.FC = () => {
           <div className="flex p-4 items-center gap-4">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-neutral-100 rounded-md relative overflow-hidden flex-shrink-0">
               {featuredProduct.additionalImages?.[0] ? (
-                <img
-                  src={`/${featuredProduct.additionalImages[0]}`}
+                <OptimizedImage
+                  src={featuredProduct.additionalImages[0]}
                   alt={`${featuredProduct.productType} texture`}
                   className="w-full h-full object-cover"
-                  loading="lazy"
                 />
               ) : (
                 featuredProduct.imageUrl && (
-                  <img src={`/${featuredProduct.imageUrl}`} alt={featuredProduct.productType} className="w-full h-full object-cover" loading="lazy" />
+                  <OptimizedImage src={featuredProduct.imageUrl} alt={featuredProduct.productType} className="w-full h-full object-cover" />
                 )
               )}
             </div>
@@ -428,15 +428,14 @@ export const OrderForm: React.FC = () => {
                   <div className="flex p-3 items-center gap-3">
                     <div className="w-16 h-16 bg-neutral-100 rounded-md relative overflow-hidden flex-shrink-0">
                       {product.additionalImages?.[0] ? (
-                        <img
-                          src={`/${product.additionalImages[0]}`}
+                        <OptimizedImage
+                          src={product.additionalImages[0]}
                           alt={`${product.productType} texture`}
                           className="w-full h-full object-cover"
-                          loading="lazy"
                         />
                       ) : (
                         product.imageUrl && (
-                          <img src={`/${product.imageUrl}`} alt={product.productType} className="w-full h-full object-cover" loading="lazy" />
+                          <OptimizedImage src={product.imageUrl} alt={product.productType} className="w-full h-full object-cover" />
                         )
                       )}
                     </div>
@@ -521,7 +520,7 @@ export const OrderForm: React.FC = () => {
                         <div key={product.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
                             {productData?.imageUrl && (
-                              <img src={`/${productData.imageUrl}`} alt={productData.productType} className="w-full h-full object-cover" loading="lazy" />
+                              <OptimizedImage src={productData.imageUrl} alt={productData.productType} className="w-full h-full object-cover" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -848,7 +847,9 @@ export const OrderForm: React.FC = () => {
 
                 return (
                   <div key={product.id} className="flex flex-col sm:flex-row items-start gap-4 border-b pb-4 last:border-0 last:pb-0">
-                    {productData && <img src={`/${productData.imageUrl}`} alt={productData.productType} className="w-16 h-16 object-cover rounded-md" />}
+                    {productData && (
+                      <OptimizedImage src={productData.imageUrl} alt={productData.productType} className="w-16 h-16 object-cover rounded-md" />
+                    )}
                     <div className="flex-1">
                       <p className="font-medium text-green-800 mb-2">{productData?.productType}</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">

@@ -1,53 +1,86 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import React, { useState, ReactNode } from 'react';
+import { useNavigate, useLocation } from 'wouter';
 import {
+  LayoutDashboard,
   Package,
-  BarChart3,
   ShoppingCart,
   Users,
+  TrendingUp,
   Settings,
   LogOut,
   Menu,
   X,
-  Home,
-  Truck,
-  Warehouse,
-  FileText,
-  AlertCircle
+  AlertCircle,
+  BarChart3
 } from 'lucide-react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+interface NavItem {
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+}
+
+const navItems: NavItem[] = [
+  {
+    label: 'Dashboard',
+    icon: <LayoutDashboard className="w-5 h-5" />,
+    href: '/admin'
+  },
+  {
+    label: 'Products',
+    icon: <Package className="w-5 h-5" />,
+    href: '/admin/products'
+  },
+  {
+    label: 'Orders',
+    icon: <ShoppingCart className="w-5 h-5" />,
+    href: '/admin/orders'
+  },
+  {
+    label: 'Customers',
+    icon: <Users className="w-5 h-5" />,
+    href: '/admin/customers'
+  },
+  {
+    label: 'Inventory',
+    icon: <AlertCircle className="w-5 h-5" />,
+    href: '/admin/inventory'
+  },
+  {
+    label: 'Analytics',
+    icon: <BarChart3 className="w-5 h-5" />,
+    href: '/admin/analytics'
+  },
+  {
+    label: 'Settings',
+    icon: <Settings className="w-5 h-5" />,
+    href: '/admin/settings'
+  }
+];
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const AdminLayout = ({ children }: AdminLayoutProps) => {
+export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [location] = useLocation();
-  const { admin, logout } = useAdminAuth();
+  const [location, navigate] = useLocation();
+  const { admin, signOut } = useAdminAuth();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
-    { name: 'Products', href: '/admin/products', icon: Package },
-    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'Drive-Through', href: '/admin/drive-through', icon: Truck },
-    { name: 'Customers', href: '/admin/customers', icon: Users },
-    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-    { name: 'Reports', href: '/admin/reports', icon: FileText },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
-
-  const isActive = (href: string) => location === href;
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/admin/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -55,101 +88,102 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed left-0 top-0 bottom-0 w-64 bg-white shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-full flex-col">
+        <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Admin Panel</h2>
-              <p className="text-sm text-gray-500">Organic Soil Wholesale</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
+            <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
+            <button
               className="lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="h-5 w-5" />
-            </Button>
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Admin info */}
+          <div className="p-4 border-b">
+            <p className="text-sm text-gray-600">Welcome back,</p>
+            <p className="font-medium">{admin?.full_name || admin?.email}</p>
+            <p className="text-xs text-gray-500 capitalize">{admin?.role?.replace('_', ' ')}</p>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              return (
-                <Link key={item.name} href={item.href}>
-                  <a
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      active
-                        ? "bg-primary text-white"
-                        : "text-gray-700 hover:bg-gray-100"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {item.name}
-                  </a>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 p-4 space-y-2">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(item.href);
+                  setSidebarOpen(false);
+                }}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors',
+                  location === item.href
+                    ? 'bg-green-50 text-green-800 font-medium'
+                    : 'hover:bg-gray-100'
+                )}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </a>
+            ))}
           </nav>
 
-          {/* User info */}
-          <div className="border-t p-4">
-            <div className="mb-3">
-              <p className="text-sm font-medium text-gray-900">{admin?.email}</p>
-              <p className="text-xs text-gray-500 capitalize">{admin?.role?.replace('_', ' ')}</p>
-            </div>
+          {/* Sign out */}
+          <div className="p-4 border-t">
             <Button
               variant="outline"
-              className="w-full justify-start"
-              onClick={logout}
+              className="w-full justify-start gap-3"
+              onClick={handleSignOut}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              <LogOut className="w-5 h-5" />
+              Sign Out
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white border-b">
-          <div className="flex items-center justify-between px-4 py-3">
-            <Button
-              variant="ghost"
-              size="icon"
+        <header className="bg-white shadow-sm border-b">
+          <div className="flex items-center justify-between p-4">
+            <button
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
-              <Menu className="h-5 w-5" />
-            </Button>
+              <Menu className="w-6 h-6" />
+            </button>
 
             <div className="flex items-center gap-4 ml-auto">
-              {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative">
-                <AlertCircle className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-              </Button>
+              {/* Quick stats */}
+              <div className="hidden sm:flex items-center gap-6">
+                <div className="text-sm">
+                  <span className="text-gray-500">Today's Revenue:</span>
+                  <span className="ml-2 font-semibold">$0.00</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-500">Pending Orders:</span>
+                  <span className="ml-2 font-semibold">0</span>
+                </div>
+              </div>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="container mx-auto p-4 lg:p-6">
             {children}
           </div>
         </main>
       </div>
     </div>
   );
-};
-
-export default AdminLayout;
+}

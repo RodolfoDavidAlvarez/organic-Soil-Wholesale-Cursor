@@ -146,11 +146,6 @@ const Footer = () => {
               </Link>
             </div>
           </div>
-          <div className="mt-6 text-center">
-            <Link href="/admin" className="text-primary-foreground/50 hover:text-primary-foreground/70 text-xs transition-colors duration-200">
-              Admin
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

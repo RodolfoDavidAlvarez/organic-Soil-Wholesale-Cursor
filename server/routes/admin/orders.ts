@@ -1,246 +1,120 @@
-import { Router } from 'express';
-import { supabase } from '../../db/supabase.js';
-import { adminAuth as requireAdminAuth } from '../../middleware/adminAuth.js';
+import { Router } from "express";
+import { supabase } from "../../supabaseClient";
+import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
 
 const router = Router();
 
-// Get all orders with optional filters
-router.get('/', requireAdminAuth, async (req, res) => {
+// Apply admin auth to all routes
+router.use(tempAdminAuthMiddleware);
+
+// Get orders with filters
+router.get("/", async (req: AdminRequest, res) => {
   try {
-    const { order_type, status, date_from, date_to, limit = 50, offset = 0 } = req.query;
-    
+    const { status, limit = 50, offset = 0 } = req.query;
+
     let query = supabase
-      .from('orders')
-      .select(`
+      .from("orders")
+      .select(
+        `
         *,
-        customer:customer_id(
+        customers (
           id,
+          name,
           email,
-          full_name,
           phone
         ),
-        items:order_items(
+        order_items (
           id,
-          product_id,
-          product_name,
           quantity,
-          size,
-          price_per_unit,
-          total_price
+          price,
+          products (
+            id,
+            name,
+            sku
+          )
         )
-      `)
-      .order('created_at', { ascending: false });
+      `
+      )
+      .order("created_at", { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
 
-    // Apply filters
-    if (order_type) {
-      query = query.eq('order_type', order_type);
-    }
-    
     if (status) {
-      query = query.eq('status', status);
-    }
-    
-    if (date_from) {
-      query = query.gte('created_at', date_from);
-    }
-    
-    if (date_to) {
-      query = query.lte('created_at', date_to);
+      query = query.eq("status", status);
     }
 
-    // Apply pagination
-    query = query.range(Number(offset), Number(offset) + Number(limit) - 1);
+    const { data: orders, error } = await query;
 
-    const { data, error, count } = await query;
+    if (error) throw error;
 
-    if (error) {
-      console.error('Error fetching orders:', error);
-      return res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+    // Calculate item count for each order
+    const ordersWithCount = orders?.map((order) => ({
+      ...order,
+      item_count: order.order_items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0,
+      customer_name: order.customers?.name,
+      customer_email: order.customers?.email,
+    }));
 
-    res.json({
-      orders: data || [],
-      total: count || 0
-    });
+    res.json(ordersWithCount || []);
   } catch (error) {
-    console.error('Error in orders endpoint:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get single order by ID
-router.get('/:id', requireAdminAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        customer:customer_id(
-          id,
-          email,
-          full_name,
-          phone,
-          address
-        ),
-        items:order_items(
-          id,
-          product_id,
-          product_name,
-          quantity,
-          size,
-          price_per_unit,
-          total_price
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Error fetching order:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Update order status
-router.patch('/:id/status', requireAdminAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const validStatuses = ['pending', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    // Update order
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ 
-        status,
-        ...(status === 'picked_up' ? { pickup_time: new Date().toISOString() } : {}),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating order status:', error);
-      return res.status(500).json({ error: 'Failed to update order status' });
-    }
-
-    // If order is ready, send notification (placeholder for actual implementation)
-    if (status === 'ready') {
-      // TODO: Implement SMS/email notification
-      console.log(`Order ${id} is ready for pickup - send notification`);
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Error updating order:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Add notes to order
-router.post('/:id/notes', requireAdminAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { notes } = req.body;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ 
-        admin_notes: notes,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating order notes:', error);
-      return res.status(500).json({ error: 'Failed to update order notes' });
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Error updating notes:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Cancel order
-router.post('/:id/cancel', requireAdminAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ 
-        status: 'cancelled',
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error cancelling order:', error);
-      return res.status(500).json({ error: 'Failed to cancel order' });
-    }
-
-    // TODO: Process refund if payment was made
-    // TODO: Send cancellation notification
-
-    res.json(data);
-  } catch (error) {
-    console.error('Error cancelling order:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Get orders error:", error);
+    res.status(500).json({ error: "Failed to fetch orders" });
   }
 });
 
 // Get order statistics
-router.get('/stats/summary', requireAdminAuth, async (req, res) => {
+router.get("/stats", async (req: AdminRequest, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get order counts by status
+    const { data: statusCounts, error: statusError } = await supabase.from("orders").select("status").order("status");
 
-    // Get today's stats
-    const { data: todayOrders, error: todayError } = await supabase
-      .from('orders')
-      .select('id, status, total_amount, order_type')
-      .gte('created_at', today.toISOString());
+    if (statusError) throw statusError;
 
-    if (todayError) {
-      throw todayError;
-    }
+    // Group by status
+    const orderStats = statusCounts?.reduce(
+      (acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const stats = {
-      totalToday: todayOrders?.length || 0,
-      pending: todayOrders?.filter(o => o.status === 'pending').length || 0,
-      preparing: todayOrders?.filter(o => o.status === 'preparing').length || 0,
-      ready: todayOrders?.filter(o => o.status === 'ready').length || 0,
-      completed: todayOrders?.filter(o => o.status === 'picked_up' || o.status === 'delivered').length || 0,
-      revenue: todayOrders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0,
-      driveThruCount: todayOrders?.filter(o => o.order_type === 'drive_thru').length || 0,
-      avgWaitTime: 15 // Placeholder - would calculate from actual data
-    };
-
-    res.json(stats);
+    res.json({
+      statusCounts: orderStats || {},
+      total: statusCounts?.length || 0,
+    });
   } catch (error) {
-    console.error('Error fetching order stats:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Get order stats error:", error);
+    res.status(500).json({ error: "Failed to fetch order statistics" });
+  }
+});
+
+// Update order status
+router.put("/:id/status", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const { data: order, error } = await supabase
+      .from("orders")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Log status change
+    await supabase.from("order_status_history").insert({
+      order_id: id,
+      status,
+      changed_by: req.admin?.id,
+      changed_at: new Date().toISOString(),
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Update order status error:", error);
+    res.status(500).json({ error: "Failed to update order status" });
   }
 });
 

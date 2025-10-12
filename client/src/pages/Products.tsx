@@ -1,38 +1,61 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/shared/schema";
 import { Button } from "@/components/ui/button";
-import { Award, Leaf, ChevronRight, Loader2, Package, Filter } from "lucide-react";
+import { Package } from "lucide-react";
 import ProductShowcase from "@/components/ProductShowcase";
 import { productsData } from "@/data/productData";
 import SEO from "@/components/layout/SEO";
 
 const Products = () => {
-  const [, setLocation] = useLocation();
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchParams] = useState(new URLSearchParams(window.location.search));
   const initialCategory = searchParams.get("category") || "all";
 
-  // Load products with IDs
-  useEffect(() => {
-    // Add IDs to the products
-    const productsWithIds = productsData.map((product, index) => ({
-      ...product,
-      id: index + 1,
-      // Add any missing required fields with defaults
-      story: product.story || null,
-      usage: product.usage || null,
-      productType: product.productType || null,
-      safetyPrecautions: product.safetyPrecautions || null,
-      warranty: product.warranty || null,
-      additionalImages: product.additionalImages || null,
-    }));
+  const fallbackProducts = useMemo(
+    () =>
+      productsData.map((product, index) => ({
+        ...product,
+        id: product.id ?? index + 1,
+        story: product.story || null,
+        usage: product.usage || null,
+        productType: product.productType || null,
+        safetyPrecautions: product.safetyPrecautions || null,
+        warranty: product.warranty || null,
+        additionalImages: product.additionalImages || [],
+      })),
+    []
+  );
 
-    setProducts(productsWithIds);
-    setIsLoading(false);
-  }, []);
+  const { data: apiProducts, isLoading: apiLoading } = useQuery({
+    queryKey: ["publicProducts"],
+    queryFn: async () => {
+      const response = await fetch("/api/products");
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+      const body = await response.json();
+      const fetchedProducts = (body?.products || []) as any[];
+      return fetchedProducts.map((product, index) => ({
+        ...product,
+        id: product.id ?? index + 1,
+      }));
+    },
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (apiProducts && apiProducts.length > 0) {
+      setProducts(apiProducts);
+      setIsLoading(false);
+    } else if (!apiLoading) {
+      setProducts(fallbackProducts);
+      setIsLoading(false);
+    }
+  }, [apiProducts, apiLoading, fallbackProducts]);
 
   return (
     <>

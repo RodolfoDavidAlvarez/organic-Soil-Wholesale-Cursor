@@ -1,58 +1,55 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { HelmetProvider } from 'react-helmet-async';
-import NotFound from "@/pages/not-found";
+import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import FloatingCTA from "@/components/layout/FloatingCTA";
-import Home from "@/pages/Home";
-import Products from "@/pages/Products";
-import ProductDetail from "@/pages/ProductDetail";
-import MulchDetail from "@/pages/MulchDetail";
-import About from "@/pages/About";
-import Contact from "@/pages/Contact";
-import FAQ from "@/pages/FAQ";
-import Order from "@/pages/Order";
-import SpecialRequest from "@/pages/SpecialRequest";
-import Landscapers from "@/pages/Landscapers";
-import Wholesale from "@/pages/Wholesale";
-import Terms from "@/pages/Terms";
-import Privacy from "@/pages/Privacy";
-import StoreLocator from "@/pages/StoreLocator";
-import StoreLocatorMapbox from "@/pages/StoreLocatorMapbox";
-import StoreLocatorWithRouting from "@/pages/StoreLocatorWithRouting";
-import StoreLocatorEnhanced from "@/pages/StoreLocatorEnhanced";
-import QRLanding from "@/pages/QRLanding";
-import Checkout from "@/pages/Checkout";
-import OrderConfirmation from "@/pages/OrderConfirmation";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import TriviaGame from "@/pages/TriviaGame";
-
-// Customer Auth imports
-import SignIn from "@/pages/SignIn";
-import SignUp from "@/pages/SignUp";
-import SignUpSuccess from "@/pages/SignUpSuccess";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import VerifyEmail from "@/pages/VerifyEmail";
 import { AuthProvider } from "@/contexts/AuthContext";
-
-// Admin imports
-import AdminLogin from "@/pages/admin/Login";
-import AdminDashboard from "@/pages/admin/Dashboard";
-import AdminProducts from "@/pages/admin/Products";
-import AdminProductEdit from "@/pages/admin/ProductEdit";
-import AdminInventory from "@/pages/admin/Inventory";
-import AdminCustomers from "@/pages/admin/Customers";
-import AdminAnalytics from "@/pages/admin/Analytics";
-import AdminDriveThrough from "@/pages/admin/DriveThrough";
-import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
 import { AdminAuthProvider } from "@/hooks/useAdminAuth";
+
+const Home = lazy(() => import("@/pages/Home"));
+const Products = lazy(() => import("@/pages/Products"));
+const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
+const MulchDetail = lazy(() => import("@/pages/MulchDetail"));
+const About = lazy(() => import("@/pages/About"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const FAQ = lazy(() => import("@/pages/FAQ"));
+const Order = lazy(() => import("@/pages/Order"));
+const SpecialRequest = lazy(() => import("@/pages/SpecialRequest"));
+const Landscapers = lazy(() => import("@/pages/Landscapers"));
+const Wholesale = lazy(() => import("@/pages/Wholesale"));
+const Terms = lazy(() => import("@/pages/Terms"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
+const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
+const TriviaGame = lazy(() => import("@/pages/TriviaGame"));
+const Checkout = lazy(() => import("@/pages/Checkout"));
+const OrderConfirmation = lazy(() => import("@/pages/OrderConfirmation"));
+const DriveThruAdmin = lazy(() => import("@/pages/DriveThruAdmin"));
+const SignIn = lazy(() => import("@/pages/SignIn"));
+const SignUp = lazy(() => import("@/pages/SignUp"));
+const SignUpSuccess = lazy(() => import("@/pages/SignUpSuccess"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Admin Pages
+const AdminLogin = lazy(() => import("@/pages/admin/Login"));
+const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
+const AdminProducts = lazy(() => import("@/pages/admin/Products"));
+const AdminOrders = lazy(() => import("@/pages/admin/Orders"));
+const AdminCustomers = lazy(() => import("@/pages/admin/Customers"));
+const AdminInventory = lazy(() => import("@/pages/admin/Inventory"));
+const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
+const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
+const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
 
 // ScrollToTop component to handle auto-scrolling
 const ScrollToTop = () => {
@@ -70,57 +67,65 @@ const ScrollToTop = () => {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/products" component={Products} />
-      <Route path="/products/mulch/:id" component={MulchDetail} />
-      <Route path="/products/:slug" component={ProductDetail} />
-      <Route path="/about" component={About} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/faq" component={FAQ} />
-      <Route path="/order" component={Order} />
-      <Route path="/special-request" component={SpecialRequest} />
-      <Route path="/landscapers" component={Landscapers} />
-      <Route path="/wholesale" component={Wholesale} />
-      <Route path="/terms" component={Terms} />
-      <Route path="/privacy" component={Privacy} />
-      <Route path="/store-locator" component={StoreLocatorEnhanced} />
-      <Route path="/qr" component={QRLanding} />
-      <Route path="/trivia" component={TriviaGame} />
-      <Route path="/checkout" component={Checkout} />
-      <Route path="/order-confirmation" component={OrderConfirmation} />
-      
-      {/* Customer Auth Routes */}
-      <Route path="/signin" component={SignIn} />
-      <Route path="/signup" component={SignUp} />
-      <Route path="/signup-success" component={SignUpSuccess} />
-      <Route path="/forgot-password" component={ForgotPassword} />
-      <Route path="/reset-password/:token" component={ResetPassword} />
-      <Route path="/verify-email/:token" component={VerifyEmail} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-      <Route path="/admin/dashboard" component={() => <ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-      <Route path="/admin/products" component={() => <ProtectedAdminRoute><AdminProducts /></ProtectedAdminRoute>} />
-      <Route path="/admin/products/new" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
-      <Route path="/admin/products/:id/edit" component={() => <ProtectedAdminRoute><AdminProductEdit /></ProtectedAdminRoute>} />
-      <Route path="/admin/inventory" component={() => <ProtectedAdminRoute><AdminInventory /></ProtectedAdminRoute>} />
-      <Route path="/admin/customers" component={() => <ProtectedAdminRoute><AdminCustomers /></ProtectedAdminRoute>} />
-      <Route path="/admin/analytics" component={() => <ProtectedAdminRoute><AdminAnalytics /></ProtectedAdminRoute>} />
-      <Route path="/admin/drive-through" component={() => <ProtectedAdminRoute><AdminDriveThrough /></ProtectedAdminRoute>} />
-      
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
+          Loading...
+        </div>
+      }
+    >
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/products" component={Products} />
+        <Route path="/products/mulch/:id" component={MulchDetail} />
+        <Route path="/products/:slug" component={ProductDetail} />
+        <Route path="/about" component={About} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/faq" component={FAQ} />
+        <Route path="/order" component={Order} />
+        <Route path="/special-request" component={SpecialRequest} />
+        <Route path="/landscapers" component={Landscapers} />
+        <Route path="/wholesale" component={Wholesale} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/store-locator" component={StoreLocatorEnhanced} />
+        <Route path="/pay-and-pickup" component={PayAndPickup} />
+        <Route path="/drive-through" component={PayAndPickup} />
+        <Route path="/trivia" component={TriviaGame} />
+        <Route path="/checkout" component={Checkout} />
+        <Route path="/drive-thru/admin" component={DriveThruAdmin} />
+        <Route path="/order-confirmation" component={OrderConfirmation} />
+
+        {/* Customer Auth Routes */}
+        <Route path="/signin" component={SignIn} />
+        <Route path="/signup" component={SignUp} />
+        <Route path="/signup-success" component={SignUpSuccess} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password/:token" component={ResetPassword} />
+        <Route path="/verify-email/:token" component={VerifyEmail} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/login" component={AdminLogin} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/products" component={AdminProducts} />
+        <Route path="/admin/orders" component={AdminOrders} />
+        <Route path="/admin/customers" component={AdminCustomers} />
+        <Route path="/admin/inventory" component={AdminInventory} />
+        <Route path="/admin/analytics" component={AdminAnalytics} />
+
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
 function App() {
   const [location] = useLocation();
-  const isQRLanding = location === '/qr';
-  const isTriviaGame = location === '/trivia';
-  const isCheckoutFlow = location === '/checkout' || location === '/order-confirmation' || location === '/quick-order';
-  const isAdminRoute = location.startsWith('/admin');
+  const isPayAndPickup = location === "/pay-and-pickup" || location === "/drive-through";
+  const isTriviaGame = location === "/trivia";
+  const isCheckoutFlow = location === "/checkout" || location === "/order-confirmation" || location === "/quick-order";
+  const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
+  const isAdminPanel = location.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -129,16 +134,16 @@ function App() {
           <AuthProvider>
             <AdminAuthProvider>
               <TooltipProvider>
-                <div className="min-h-screen flex flex-col">
-                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <Header />}
-                  <main className={`flex-grow ${!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute ? 'pt-20' : ''}`}>
+                  <div className="min-h-screen flex flex-col">
+                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Header />}
+                  <main className={`flex-grow ${!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel ? "pt-20" : ""}`}>
                     <Router />
                   </main>
-                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <Footer />}
+                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Footer />}
                   <Toaster />
                   <ScrollToTop />
                   <Analytics />
-                  {!isQRLanding && !isTriviaGame && !isCheckoutFlow && !isAdminRoute && <FloatingCTA />}
+                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <FloatingCTA />}
                 </div>
               </TooltipProvider>
             </AdminAuthProvider>

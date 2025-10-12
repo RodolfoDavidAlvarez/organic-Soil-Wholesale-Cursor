@@ -97,63 +97,6 @@ router.get('/tiers/:productId/:sizeOption', async (req, res) => {
   }
 });
 
-// Admin: Create pricing tier
-router.post('/admin/tier', async (req, res) => {
-  try {
-    // TODO: Add admin authentication check
-    const tier = req.body;
-    const result = await pricingService.setPricingTier(tier);
-
-    if (result) {
-      res.json({
-        success: true,
-        tier: result
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: 'Failed to create pricing tier'
-      });
-    }
-  } catch (error) {
-    console.error('Error creating pricing tier:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create pricing tier'
-    });
-  }
-});
-
-// Admin: Bulk import pricing from CSV
-router.post('/admin/import-csv', async (req, res) => {
-  try {
-    // TODO: Add admin authentication check
-    const { csvData } = req.body;
-
-    if (!csvData || !Array.isArray(csvData)) {
-      return res.status(400).json({
-        success: false,
-        error: 'CSV data array is required'
-      });
-    }
-
-    const result = await pricingService.importPricingFromCSV(csvData);
-
-    res.json({
-      success: true,
-      imported: result.success,
-      errors: result.errors,
-      total: csvData.length
-    });
-  } catch (error) {
-    console.error('Error importing CSV pricing:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to import CSV pricing'
-    });
-  }
-});
-
 // Get pricing comparison for different customer types
 router.get('/compare/:productId/:sizeOption', async (req, res) => {
   try {

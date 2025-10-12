@@ -1,128 +1,120 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useLocation } from 'wouter';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface AdminUser {
   id: number;
   email: string;
+  full_name: string;
   role: string;
-  permissions: Record<string, any>;
+  permissions?: any;
 }
 
 interface AdminAuthContextType {
-  isAuthenticated: boolean;
   admin: AdminUser | null;
-  token: string | null;
-  login: (token: string, admin: AdminUser) => void;
-  logout: () => void;
-  checkSession: () => Promise<boolean>;
+  loading: boolean;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [, navigate] = useLocation();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for stored token on mount
-    const storedToken = localStorage.getItem('adminToken');
-    const storedAdmin = localStorage.getItem('adminUser');
-
-    if (storedToken && storedAdmin) {
-      setToken(storedToken);
-      try {
-        setAdmin(JSON.parse(storedAdmin));
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Error parsing stored admin data:', error);
-        logout();
-      }
+    // Check for stored admin token
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      // Validate token and get admin info
+      validateToken(token);
+    } else {
+      setLoading(false);
     }
   }, []);
 
-  const checkSession = async (): Promise<boolean> => {
-    const currentToken = token || localStorage.getItem('adminToken');
-    
-    if (!currentToken) {
-      logout();
-      return false;
-    }
-
+  const validateToken = async (token: string) => {
     try {
-      const response = await fetch('/api/admin/auth/session', {
+      const response = await fetch('/api/admin/auth/validate', {
         headers: {
-          'Authorization': `Bearer ${currentToken}`,
-        },
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      if (!response.ok) {
-        logout();
-        return false;
+      if (response.ok) {
+        const data = await response.json();
+        setAdmin(data.admin);
+      } else {
+        localStorage.removeItem('adminToken');
       }
-
-      const data = await response.json();
-      setAdmin(data.admin);
-      setIsAuthenticated(true);
-      return true;
     } catch (error) {
-      console.error('Session check failed:', error);
-      logout();
-      return false;
+      console.error('Token validation error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const login = (newToken: string, newAdmin: AdminUser) => {
-    localStorage.setItem('adminToken', newToken);
-    localStorage.setItem('adminUser', JSON.stringify(newAdmin));
-    setToken(newToken);
-    setAdmin(newAdmin);
-    setIsAuthenticated(true);
-  };
+  const signIn = async (email: string, password: string) => {
+    setError(null);
+    setLoading(true);
 
-  const logout = async () => {
-    const currentToken = token || localStorage.getItem('adminToken');
-    
-    if (currentToken) {
-      try {
-        await fetch('/api/admin/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${currentToken}`,
-          },
-        });
-      } catch (error) {
-        console.error('Logout error:', error);
+    try {
+      console.log('Attempting login with:', { email });
+      
+      const response = await fetch('/api/admin-login-temp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      console.log('Login response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Login response data:', data);
+
+      if (response.ok) {
+        localStorage.setItem('adminToken', data.token);
+        setAdmin(data.admin);
+      } else {
+        setError(data.error || 'Login failed');
+        throw new Error(data.error || 'Login failed');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error instanceof Error ? error.message : 'Login failed');
+      throw error;
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const signOut = async () => {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    setToken(null);
     setAdmin(null);
-    setIsAuthenticated(false);
-    navigate('/admin/login');
   };
 
   return (
-    <AdminAuthContext.Provider value={{
-      isAuthenticated,
-      admin,
-      token,
-      login,
-      logout,
-      checkSession,
-    }}>
+    <AdminAuthContext.Provider
+      value={{
+        admin,
+        loading,
+        error,
+        signIn,
+        signOut
+      }}
+    >
       {children}
     </AdminAuthContext.Provider>
   );
-};
+}
 
-export const useAdminAuth = () => {
+export function useAdminAuth() {
   const context = useContext(AdminAuthContext);
   if (context === undefined) {
     throw new Error('useAdminAuth must be used within an AdminAuthProvider');
   }
   return context;
-};
+}

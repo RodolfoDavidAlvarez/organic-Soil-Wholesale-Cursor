@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface ProductCarouselProps {
   mainImage: string;
@@ -35,7 +36,7 @@ const ProductCarousel = ({ mainImage, thumbnailImages, productName, productId, b
     <div className="relative w-full">
       {/* Main Image */}
       <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-4 group">
-        <img src={allImages[currentIndex]} alt={`${productName} - Image ${currentIndex + 1}`} className="w-full h-full object-cover" />
+        <OptimizedImage src={allImages[currentIndex]} alt={`${productName} - Image ${currentIndex + 1}`} className="w-full h-full object-cover" />
         {/* Navigation Buttons */}
         <Button
           variant="ghost"
@@ -77,7 +78,7 @@ const ProductCarousel = ({ mainImage, thumbnailImages, productName, productId, b
             onClick={() => setCurrentIndex(index)}
             className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden ${index === currentIndex ? "ring-2 ring-green-500" : ""}`}
           >
-            <img src={image} alt={`${productName} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+            <OptimizedImage src={image} alt={`${productName} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
           </button>
         ))}
       </div>

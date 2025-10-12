@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { productsData } from "@/data/productData";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "potting-soil.jpg";
@@ -191,11 +191,10 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                     View Details
                   </div>
                 </div>
-                <img
-                  src={`/${product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}`}
+                <OptimizedImage
+                  src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
                   decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
@@ -210,11 +209,10 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                           <div className="h-8 w-8 text-neutral-400 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
                         </div>
                       )}
-                      <img
-                        src={`/${product.imageUrl}`}
+                      <OptimizedImage
+                        src={product.imageUrl}
                         alt={`${product.name} 9lb bag preview`}
                         className={`w-full h-full object-cover transition-all duration-700 ${textureLoaded[product.id] ? "opacity-100 blur-0" : "opacity-0 blur-sm"}`}
-                        loading="lazy"
                         sizes="100px"
                         onLoad={() => setTextureLoaded((prev) => ({ ...prev, [product.id]: true }))}
                       />

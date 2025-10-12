@@ -1,0 +1,121 @@
+-- Complete Admin Database Setup Script
+-- Run this in your Supabase SQL editor
+
+-- 1. Ensure admin_users table has all required columns
+ALTER TABLE admin_users 
+ADD COLUMN IF NOT EXISTS password_hash TEXT,
+ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+
+-- 2. Create order_status_history table if it doesn't exist
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER REFERENCES orders(id),
+  status TEXT NOT NULL,
+  changed_by INTEGER REFERENCES admin_users(id),
+  changed_at TIMESTAMP DEFAULT NOW(),
+  notes TEXT
+);
+
+-- 3. Create inventory_alerts table if it doesn't exist
+CREATE TABLE IF NOT EXISTS inventory_alerts (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id),
+  alert_type TEXT NOT NULL,
+  threshold INTEGER,
+  current_level INTEGER,
+  created_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP
+);
+
+-- 4. Add min_stock_level to products if it doesn't exist
+ALTER TABLE products 
+ADD COLUMN IF NOT EXISTS min_stock_level INTEGER DEFAULT 10;
+
+-- 4b. Add Pay & Pickup specific columns to products
+ALTER TABLE products
+ADD COLUMN IF NOT EXISTS is_pay_and_pickup_enabled BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS pay_and_pickup_display_order INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS pay_and_pickup_badge TEXT,
+ADD COLUMN IF NOT EXISTS pay_and_pickup_description TEXT,
+ADD COLUMN IF NOT EXISTS pay_and_pickup_hero_image TEXT;
+
+-- 5. Add missing columns to orders table
+ALTER TABLE orders
+ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- 6. Create order_items table if it doesn't exist
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+  product_id INTEGER REFERENCES products(id),
+  quantity INTEGER NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 7. Add missing columns to customers table
+ALTER TABLE customers
+ADD COLUMN IF NOT EXISTS order_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS total_spent DECIMAL(10,2) DEFAULT 0;
+
+-- 8. Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
+CREATE INDEX IF NOT EXISTS idx_inventory_alerts_resolved ON inventory_alerts(resolved_at);
+
+-- 9. Insert the admin user with password
+INSERT INTO admin_users (email, password_hash, full_name, role, permissions)
+VALUES (
+  'admin@organicsoilwholesale.com', 
+  '$2b$10$TkNeJMvq/pCSNzRiRIHO1.VeczIS2N0dDhlznjFqi7f6L03ooL07S', 
+  'Admin User', 
+  'super_admin', 
+  '{"all": true}'::jsonb
+)
+ON CONFLICT (email) DO UPDATE
+SET 
+  password_hash = EXCLUDED.password_hash,
+  full_name = EXCLUDED.full_name,
+  role = EXCLUDED.role,
+  permissions = EXCLUDED.permissions;
+
+-- 10. Update existing admin if present
+UPDATE admin_users 
+SET 
+  password_hash = '$2b$10$TkNeJMvq/pCSNzRiRIHO1.VeczIS2N0dDhlznjFqi7f6L03ooL07S',
+  full_name = 'Rodolfo Alvarez'
+WHERE email = 'ralvarez@soilseedandwater.com';
+
+-- 11. Set some initial inventory alerts for testing
+INSERT INTO inventory_alerts (product_id, alert_type, threshold, current_level)
+SELECT id, 'low_stock', min_stock_level, stock
+FROM products
+WHERE stock < min_stock_level AND active = true
+ON CONFLICT DO NOTHING;
+
+-- 12. Update order statistics for existing customers
+UPDATE customers c
+SET 
+  order_count = (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id),
+  total_spent = (SELECT COALESCE(SUM(total), 0) FROM orders o WHERE o.customer_id = c.id);
+
+-- Verification queries
+SELECT 'Admin users:' as info;
+SELECT id, email, full_name, role, (password_hash IS NOT NULL) as has_password FROM admin_users;
+
+SELECT 'Products with low stock:' as info;
+SELECT name, stock, min_stock_level FROM products WHERE stock < min_stock_level;
+
+SELECT 'Recent orders:' as info;
+SELECT id, status, total, created_at FROM orders ORDER BY created_at DESC LIMIT 5;
+
+-- Success message
+SELECT 'Database setup complete! You can now login with:' as message
+UNION ALL
+SELECT 'Email: admin@organicsoilwholesale.com' as message
+UNION ALL
+SELECT 'Password: admin123' as message;

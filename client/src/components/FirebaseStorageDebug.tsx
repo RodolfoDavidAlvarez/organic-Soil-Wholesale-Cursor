@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { storage } from '@/lib/firebase';
-import { ref, listAll, getDownloadURL } from 'firebase/storage';
+import { useEffect, useState } from "react";
+import { storage } from "@/lib/firebase";
+import { ref, listAll, getDownloadURL } from "firebase/storage";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 
 export default function FirebaseStorageDebug() {
   const [loading, setLoading] = useState(true);
@@ -65,13 +67,13 @@ export default function FirebaseStorageDebug() {
             {images.map((image, index) => (
               <div key={index} className="border rounded-md p-2">
                 <p className="text-sm mb-2 truncate">{image.name}</p>
-                <img 
-                  src={image.url} 
-                  alt={image.name} 
+                <OptimizedImage
+                  src={image.url}
+                  alt={image.name}
                   className="w-full h-40 object-cover rounded"
                   onError={(e) => {
                     console.error(`Failed to load image: ${image.name}`);
-                    e.currentTarget.src = "potting-soil.jpg";
+                    e.currentTarget.src = getOptimizedImageSrc("potting-soil.jpg");
                   }}
                 />
               </div>

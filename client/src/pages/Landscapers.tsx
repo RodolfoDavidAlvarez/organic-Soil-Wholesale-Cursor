@@ -7,6 +7,8 @@ import React from "react";
 import { productsData } from "@/data/productData";
 import ProductShowcase from "@/components/ProductShowcase";
 import SEO from "@/components/layout/SEO";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
@@ -74,21 +76,13 @@ const Landscapers = () => {
 
   // Size category images for dynamic switching
   const sizeImages = {
-    bags: [
-      "2cf-bag-pallet.png",
-      "plantpal-with-veggies.png",
-      "raised-garden-bed-soil.jpg"
-    ],
-    tote: [
-      "tote-supersack.png",
-      "nursery-blend.jpg",
-      "potting-soil.jpg"
-    ],
+    bags: ["2cf-bag-pallet.png", "plantpal-with-veggies.png", "raised-garden-bed-soil.jpg"].map(getOptimizedImageSrc),
+    tote: ["tote-supersack.png", "nursery-blend.jpg", "potting-soil.jpg"].map(getOptimizedImageSrc),
     bulk: [
       "truckload-bulk-delivery.png",
       "Dark Mulck Truckload Delivery.jpeg",
-      "Raw Golden Looking Mulch Commercial Application look.jpeg"
-    ]
+      "Raw Golden Looking Mulch Commercial Application look.jpeg",
+    ].map(getOptimizedImageSrc),
   };
 
   // Dynamic image switching effect
@@ -109,24 +103,24 @@ const Landscapers = () => {
     {
       src: "plantpal-with-veggies.png",
       alt: "Plant Pal - Multi-Purpose Organic Soil with Fresh Vegetables",
-      title: "Premium Organic Soil"
+      title: "Premium Organic Soil",
     },
     {
       src: "raised-garden-bed-soil.jpg",
       alt: "Plant Pal in raised garden beds",
-      title: "Raised Garden Beds"
+      title: "Raised Garden Beds",
     },
     {
       src: "potting-soil.jpg",
       alt: "Plant Pal for container potting",
-      title: "Container Gardens"
+      title: "Container Gardens",
     },
     {
       src: "nursery-blend.jpg",
       alt: "Plant Pal as nursery blend",
-      title: "Professional Nursery"
-    }
-  ];
+      title: "Professional Nursery",
+    },
+  ].map((image) => ({ ...image, src: getOptimizedImageSrc(image.src) }));
 
   const mulchApplications = [
     {
@@ -162,7 +156,10 @@ const Landscapers = () => {
       ],
       benefits: ["Cost-effective", "Project efficiency", "Consistent quality", "Timely delivery"],
     },
-  ];
+  ].map((application) => ({
+    ...application,
+    images: application.images.map(getOptimizedImageSrc),
+  }));
 
   return (
     <>
@@ -215,10 +212,10 @@ const Landscapers = () => {
               <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
             </button>
             
-            <img 
-              src={plantPalImages[selectedImage].src} 
-              alt={plantPalImages[selectedImage].alt} 
-              className="max-w-full max-h-[90vh] object-contain w-full" 
+            <OptimizedImage
+              src={plantPalImages[selectedImage].src}
+              alt={plantPalImages[selectedImage].alt}
+              className="max-w-full max-h-[90vh] object-contain w-full"
             />
             
             <button
@@ -260,7 +257,7 @@ const Landscapers = () => {
               <div className="w-full lg:w-1/2 flex flex-col items-center justify-center">
                 <div className="bg-white rounded-3xl shadow-2xl p-1 w-full max-w-lg relative mb-4 group">
                   <div className="rounded-2xl overflow-hidden bg-gray-50">
-                    <img
+                    <OptimizedImage
                       src="hero-main-photo-v2-optimized.jpg"
                       alt="Organic Soil Wholesale - Premium Bulk Soil Products"
                       className="w-full h-full object-cover"
@@ -272,7 +269,7 @@ const Landscapers = () => {
                   </div>
                   {/* Large Overlapping Pickup Photo */}
                   <div className="absolute -bottom-8 -left-8 sm:-bottom-12 sm:-left-12 w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-white transform -rotate-6 hover:rotate-0 transition-transform duration-300 z-10">
-                    <img
+                    <OptimizedImage
                       src="organic-wholesale-pickup.png"
                       alt="Call and Pick Up service"
                       className="w-full h-full object-cover"
@@ -312,7 +309,7 @@ const Landscapers = () => {
                 <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 animate-fade-in delay-700">
                   {/* Soil Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
+                    <OptimizedImage
                       src="dairy-compost.jpg"
                       alt="Organic Soil"
                       className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
@@ -323,7 +320,7 @@ const Landscapers = () => {
                   </div>
                   {/* Amendments Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
+                    <OptimizedImage
                       src="worm-castings.jpg"
                       alt="Premium Amendments"
                       className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
@@ -334,7 +331,7 @@ const Landscapers = () => {
                   </div>
                   {/* Dark Beautiful Mulch Card */}
                   <div className="relative rounded-xl overflow-hidden shadow-lg group cursor-pointer transition-transform hover:-translate-y-1 bg-white/10">
-                    <img
+                    <OptimizedImage
                       src="Dark Mulk Applied in outside of office showcase.jpeg"
                       alt="Dark Beautiful Mulch Application"
                       className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
@@ -361,19 +358,19 @@ const Landscapers = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6">
               <h3 className="text-sm sm:text-lg font-semibold text-gray-700 mb-2 sm:mb-0">Certified By</h3>
               <div className="flex items-center gap-2 sm:gap-4 animate-pulse">
-                  <img 
-                    src="omri-logo.png" 
-                    alt="OMRI Certified" 
+                  <OptimizedImage
+                    src="omri-logo.png"
+                    alt="OMRI Certified"
                     className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
-                  <img 
-                    src="uscc-logo.png" 
-                    alt="USCC Certified" 
+                  <OptimizedImage
+                    src="uscc-logo.png"
+                    alt="USCC Certified"
                     className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
-                  <img 
-                    src="made-in-usa.png" 
-                    alt="Made in USA" 
+                  <OptimizedImage
+                    src="made-in-usa.png"
+                    alt="Made in USA"
                     className="h-8 sm:h-12 w-auto hover:scale-110 transition-transform duration-300"
                   />
               </div>
@@ -403,7 +400,7 @@ const Landscapers = () => {
                     </button>
 
                     {/* Main Image */}
-                    <img
+                    <OptimizedImage
                       src={plantPalImages[selectedImage].src}
                       alt={plantPalImages[selectedImage].alt}
                       className="w-full max-w-[300px] sm:max-w-[450px] h-[250px] sm:h-[400px] object-contain cursor-pointer"
@@ -422,7 +419,7 @@ const Landscapers = () => {
                     {/* Overlapping Healthy Soil Image - only show on first image */}
                     {selectedImage === 0 && (
                       <div className="absolute top-1 right-1 w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white">
-                        <img
+                        <OptimizedImage
                           src="healthy-soil-hands.jpg"
                           alt="Premium quality soil in hands"
                           className="w-full h-full object-cover"
@@ -450,11 +447,7 @@ const Landscapers = () => {
                         }`}
                         aria-label={`View ${image.alt}`}
                       >
-                        <img
-                          src={image.src}
-                          alt={image.alt}
-                          className="w-full h-full object-cover"
-                        />
+                        <OptimizedImage src={image.src} alt={image.alt} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -466,7 +459,7 @@ const Landscapers = () => {
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
                           {sizeImages.bags.map((img, idx) => (
-                            <img
+                            <OptimizedImage
                               key={img}
                               src={img}
                               alt="2 ft³ bags"
@@ -484,7 +477,7 @@ const Landscapers = () => {
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
                           {sizeImages.tote.map((img, idx) => (
-                            <img
+                            <OptimizedImage
                               key={img}
                               src={img}
                               alt="2.2 cubic yard tote"
@@ -501,7 +494,7 @@ const Landscapers = () => {
                       <div className="bg-white rounded-lg p-2 text-center shadow-sm">
                         <div className="relative w-full h-20 rounded mb-2 overflow-hidden">
                           {sizeImages.bulk.map((img, idx) => (
-                            <img
+                            <OptimizedImage
                               key={img}
                               src={img}
                               alt="Truckload bulk delivery"
@@ -660,7 +653,7 @@ const Landscapers = () => {
               {mulchApplications.map((application) => (
                 <div key={application.id} className="space-y-4">
                   <div className="relative aspect-[4/3] rounded-lg overflow-hidden shadow-xl group">
-                    <img
+                    <OptimizedImage
                       src={application.images[0]}
                       alt={application.title}
                       className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
@@ -672,7 +665,7 @@ const Landscapers = () => {
                   <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     {application.images.slice(1, 3).map((image, index) => (
                       <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-lg group">
-                        <img
+                        <OptimizedImage
                           src={image}
                           alt={`${application.title} detail ${index + 1}`}
                           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"

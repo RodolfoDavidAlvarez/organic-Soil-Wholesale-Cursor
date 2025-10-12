@@ -2,18 +2,19 @@
 > rest-express@1.0.0 dev
 > NODE_ENV=development tsx --conditions=node server/index.ts
 
-
-node:internal/process/esm_loader:48
-      internalBinding('errors').triggerUncaughtException(
-                                ^
-TypeError [Error]: s.split is not a function
-    at mapTsExtensions (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/register-C3TE0KFF.mjs:2:1919)
-    at resolveExtensions (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:2880)
-    at resolveBase (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:3330)
-    at async resolveDirectory (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:3578)
-    at async resolve (file:///Users/rodolfoalvarez/Documents/Soil%20Seed%20and%20Water/Organic%20Soil%20Wholesale/Organic%20Soil%20Wholesale%20Website/node_modules/tsx/dist/esm/index.mjs?1758775771629:2:4441)
-    at async nextResolve (node:internal/modules/esm/hooks:832:22)
-    at async Hooks.resolve (node:internal/modules/esm/hooks:277:24)
-    at async handleMessage (node:internal/modules/esm/worker:168:18)
-
-Node.js v20.7.0
+[dotenv@17.2.1] injecting env (10) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.1] injecting env (4) from server/.env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+Server is running on http://localhost:5001
+Error recording POS transaction: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.inventory_alerts'",
+  message: "Could not find the table 'public.inventory_transactions' in the schema cache"
+}
+11:05:26 PM [express] POST /api/inventory/transaction 500 in 610ms :: {"error":"Failed to record tran…
+11:05:36 PM [express] GET /api/inventory/location/1 200 in 1339ms :: [{"id":314,"product_id":99,"loca…
+11:05:46 PM [express] POST /api/inventory/reserve 200 in 587ms :: {"success":true,"reservations":[{"p…
+11:05:53 PM [express] GET /api/inventory/location/1 200 in 964ms :: [{"id":309,"product_id":98,"locat…
+11:06:02 PM [express] POST /api/inventory/release 200 in 283ms :: {"success":true}
+11:06:10 PM [express] GET /api/inventory/location/1 200 in 755ms :: [{"id":314,"product_id":99,"locat…

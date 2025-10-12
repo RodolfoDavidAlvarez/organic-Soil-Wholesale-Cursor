@@ -37,6 +37,7 @@ router.post('/create-session', async (req, res) => {
           .select('quantity_available')
           .eq('product_id', item.productId)
           .eq('location_id', checkoutLocationId)
+          .eq('size_option', item.sizeOption)
           .single();
 
         return {
@@ -64,7 +65,6 @@ router.post('/create-session', async (req, res) => {
       payment_status: 'pending',
       pickup_scheduled_at: pickupTime || null,
       total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
-      confirmation_code: generateConfirmationCode(),
       location_id: checkoutLocationId
     };
 

@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 
 // Load environment variables from server/.env
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') });
@@ -16,6 +17,31 @@ app.use(express.urlencoded({ extended: false }));
 
 // Trust proxy for Vercel deployment
 app.set('trust proxy', 1);
+
+// Simple admin login endpoint - TEMPORARY
+app.post("/api/admin-login-temp", (req, res) => {
+  const { email, password } = req.body;
+  
+  if (email === 'ralvarez@soilseedandwater.com' && password === 'admin123') {
+    const token = jwt.sign(
+      { id: '1', email: email, role: 'super_admin' },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '8h' }
+    );
+    
+    res.json({
+      token,
+      admin: {
+        id: '1',
+        email: email,
+        full_name: 'Admin User',
+        role: 'super_admin'
+      }
+    });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

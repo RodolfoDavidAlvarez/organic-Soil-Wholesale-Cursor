@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Edit2, Trash2, Package, Search } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -12,489 +13,318 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Filter,
-  Download,
-  Upload,
-  Package,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 
-interface Product {
-  id: number;
-  name: string;
-  productType?: string;
-  category: string;
-  price: number;
-  stockQuantity: number;
-  imageUrl?: string;
-  texturePhotoUrl?: string;
-  isWholesaleOnly: boolean;
-  allowBulkPickup: boolean;
-  certifications?: string;
-}
-
-const AdminProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [stockFilter, setStockFilter] = useState('all');
-  const [importing, setImporting] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const formatPrice = (price?: number | null) => {
+    if (price === null || price === undefined) return '0.00';
+    return (Number(price) / 100).toFixed(2);
+  };
 
-  useEffect(() => {
-    filterProducts();
-  }, [products, searchTerm, categoryFilter, stockFilter]);
-
-  const fetchProducts = async () => {
-    try {
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['adminProducts'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/products', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-        },
+          'Authorization': `Bearer ${token}`
+        }
       });
-
-      if (!response.ok) throw new Error('Failed to fetch products');
-
-      const data = await response.json();
-      setProducts(data.products || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load products',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterProducts = () => {
-    let filtered = [...products];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.productType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(product => product.category === categoryFilter);
-    }
-
-    // Stock filter
-    if (stockFilter === 'low') {
-      filtered = filtered.filter(product => product.stockQuantity < 50);
-    } else if (stockFilter === 'out') {
-      filtered = filtered.filter(product => product.stockQuantity === 0);
-    }
-
-    setFilteredProducts(filtered);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-
-    try {
-      const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to delete product');
-
-      toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
-      });
-
-      fetchProducts();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete product',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const categories = [...new Set(products.map(p => p.category))];
-
-  const getStockBadge = (quantity: number) => {
-    if (quantity === 0) {
-      return <Badge variant="destructive">Out of Stock</Badge>;
-    } else if (quantity < 50) {
-      return <Badge variant="warning">Low Stock</Badge>;
-    }
-    return <Badge variant="success">In Stock</Badge>;
-  };
-
-  const handleExport = async () => {
-    try {
-      const response = await fetch('/api/admin/products/export', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to export products');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `products-export-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: 'Success',
-        description: 'Products exported successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to export products',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImporting(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await fetch('/api/admin/products/import', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to import products');
+        throw new Error('Failed to fetch products');
       }
 
-      toast({
-        title: 'Success',
-        description: data.message || 'Products imported successfully',
-      });
-
-      fetchProducts();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to import products',
-        variant: 'destructive',
-      });
-    } finally {
-      setImporting(false);
-      event.target.value = '';
+      return response.json();
     }
-  };
+  });
 
-  const downloadTemplate = () => {
-    fetch('/api/admin/products/template', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-      },
-    })
-      .then(response => response.blob())
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'products-import-template.csv';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      })
-      .catch(() => {
-        toast({
-          title: 'Error',
-          description: 'Failed to download template',
-          variant: 'destructive',
-        });
+  const deleteMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
-  };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading products...</p>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Product deleted',
+        description: 'The product has been deleted successfully.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+    }
+  });
+
+  const togglePayAndPickupMutation = useMutation({
+    mutationFn: async ({ productId, isEnabled }: { productId: number; isEnabled: boolean }) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_pay_and_pickup_enabled: isEnabled })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update Pay & Pickup availability');
+      }
+
+      return response.json();
+    },
+    onSuccess: (updatedProduct: any) => {
+      toast({
+        title: updatedProduct.is_pay_and_pickup_enabled ? 'Pay & Pickup enabled' : 'Pay & Pickup disabled',
+        description: `${updatedProduct.name} has been updated.`
+      });
+      setSelectedProduct(updatedProduct);
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Update failed',
+        description: 'We could not update the Pay & Pickup status. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const filteredProducts = products?.filter((product: any) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+    <ProtectedAdminRoute>
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-            <p className="text-gray-600 mt-1">Manage your product catalog</p>
-          </div>
-          <div className="flex gap-3">
-            <input
-              type="file"
-              id="import-file"
-              accept=".csv"
-              onChange={handleImport}
-              className="hidden"
-              disabled={importing}
-            />
-            <Button
-              variant="outline"
-              onClick={() => document.getElementById('import-file')?.click()}
-              disabled={importing}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {importing ? 'Importing...' : 'Import CSV'}
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button variant="outline" onClick={downloadTemplate}>
-              <FileText className="mr-2 h-4 w-4" />
-              Template
-            </Button>
-            <Button onClick={() => navigate('/admin/products/new')}>
+            <Button>
               <Plus className="mr-2 h-4 w-4" />
               Add Product
             </Button>
           </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold">{products.length}</p>
-              </div>
-              <Package className="h-8 w-8 text-gray-400" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Categories</p>
-                <p className="text-2xl font-bold">{categories.length}</p>
-              </div>
-              <Filter className="h-8 w-8 text-gray-400" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Low Stock</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {products.filter(p => p.stockQuantity > 0 && p.stockQuantity < 50).length}
-                </p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-orange-400" />
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Out of Stock</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {products.filter(p => p.stockQuantity === 0).length}
-                </p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-red-400" />
-            </div>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={stockFilter} onValueChange={setStockFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Stock Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stock</SelectItem>
-                <SelectItem value="low">Low Stock</SelectItem>
-                <SelectItem value="out">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center space-x-2">
+            <Search className="w-5 h-5 text-gray-400" />
+            <Input
+              placeholder="Search products by name or SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
-        </Card>
 
-        {/* Products Table */}
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length === 0 ? (
+          <div className="bg-white shadow-sm rounded-lg">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    No products found
-                  </TableCell>
+                  <TableHead>Image</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Pay & Pickup</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {product.texturePhotoUrl || product.imageUrl ? (
-                          <img
-                            src={`/${product.texturePhotoUrl || product.imageUrl}`}
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
-                            <Package className="h-6 w-6 text-gray-400" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          {product.productType && (
-                            <p className="text-sm text-gray-500">{product.productType}</p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{product.stockQuantity}</span>
-                        {getStockBadge(product.stockQuantity)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {product.isWholesaleOnly && (
-                          <Badge variant="outline" className="text-xs">Wholesale</Badge>
-                        )}
-                        {product.allowBulkPickup && (
-                          <Badge variant="outline" className="text-xs">Bulk Pickup</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {product.certifications?.includes('OMRI') && (
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          OMRI
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/products/${product.id}`}>
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Link href={`/admin/products/${product.id}/edit`}>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      Loading products...
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
-    </AdminLayout>
-  );
-};
+                ) : filteredProducts?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      No products found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts?.map((product: any) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <Package className="w-6 h-6 text-gray-400" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>{product.sku || '-'}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>${formatPrice(product.price)}</TableCell>
+                      <TableCell>
+                        <span className={(product.stock_quantity ?? 0) < 10 ? 'text-red-600 font-medium' : ''}>
+                          {product.stock_quantity ?? 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
+                          {product.is_pay_and_pickup_enabled ? 'Enabled' : 'Hidden'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this product?')) {
+                                deleteMutation.mutate(product.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </AdminLayout>
+      <Dialog
+        open={isDialogOpen && Boolean(selectedProduct)}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setSelectedProduct(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          {selectedProduct && (
+            <div className="space-y-6">
+              <DialogHeader>
+                <DialogTitle>{selectedProduct.display_title || selectedProduct.name}</DialogTitle>
+                <DialogDescription>
+                  Preview product details and control its Pay & Pickup availability.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                    {selectedProduct.texture_photo_url || selectedProduct.image_url ? (
+                      <img
+                        src={selectedProduct.texture_photo_url || selectedProduct.image_url}
+                        alt={selectedProduct.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                        No image available
+                      </div>
+                    )}
+                  </div>
+                  {Array.isArray(selectedProduct.additional_images) && selectedProduct.additional_images.length > 0 && (
+                    <div className="flex gap-3 overflow-x-auto">
+                      {selectedProduct.additional_images.slice(0, 4).map((image: string, index: number) => (
+                        <img
+                          key={`${image}-${index}`}
+                          src={image}
+                          alt={`${selectedProduct.name} alternate ${index + 1}`}
+                          className="h-20 w-20 rounded-md object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-5">
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Pay &amp; Pickup availability</p>
+                        <p className="text-xs text-muted-foreground">
+                          Enable to surface this product in the Pay &amp; Pickup storefront.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={Boolean(selectedProduct.is_pay_and_pickup_enabled)}
+                        disabled={togglePayAndPickupMutation.isPending}
+                        onCheckedChange={(value) =>
+                          togglePayAndPickupMutation.mutate({
+                            productId: selectedProduct.id,
+                            isEnabled: value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
 
-export default AdminProducts;
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">Description</h3>
+                      <p className="text-sm leading-relaxed text-gray-600">
+                        {selectedProduct.pay_and_pickup_description || selectedProduct.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">Size options</h3>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {Array.isArray(selectedProduct.available_size_options) && selectedProduct.available_size_options.length > 0 ? (
+                          selectedProduct.available_size_options.map((size: string) => (
+                            <Badge key={size} variant="outline">
+                              {size}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500">No size options configured.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">Pricing</h3>
+                      <p className="text-sm text-gray-600">${formatPrice(selectedProduct.price)} per unit</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </ProtectedAdminRoute>
+  );
+}

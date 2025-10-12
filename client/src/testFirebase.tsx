@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { storage } from './lib/firebase';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
+import { OptimizedImage } from '@/components/OptimizedImage';
+import { getOptimizedImageSrc } from '@/utils/getOptimizedImageSrc';
 
 interface FileItem {
   name: string;
@@ -85,10 +87,13 @@ const TestFirebase: React.FC = () => {
                 {file.url && (
                   <div className="mt-2">
                     <p><strong>Preview:</strong></p>
-                    <img 
-                      src={file.url} 
-                      alt={file.name} 
+                    <OptimizedImage
+                      src={file.url}
+                      alt={file.name}
                       className="h-40 object-contain border mt-1"
+                      onError={(e) => {
+                        e.currentTarget.src = getOptimizedImageSrc('potting-soil.jpg');
+                      }}
                     />
                   </div>
                 )}

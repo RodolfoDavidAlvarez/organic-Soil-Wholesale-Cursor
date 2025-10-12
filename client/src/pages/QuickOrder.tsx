@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { ShoppingCart, Plus, Minus, Loader2, MapPin, Package, User, Phone, Mail, ArrowRight, Check } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useLocation } from 'wouter';
@@ -349,8 +350,8 @@ const QuickOrder: React.FC = () => {
                     {/* Product Image */}
                     <div className="w-36 h-36 bg-gray-200 flex-shrink-0">
                       {product.texturePhotoUrl || product.imageUrl ? (
-                        <img
-                          src={`/${product.texturePhotoUrl || product.imageUrl}`}
+                        <OptimizedImage
+                          src={product.texturePhotoUrl || product.imageUrl}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />

@@ -79,6 +79,11 @@ interface DatabaseProduct {
   max_order_quantity?: number;
   is_price_negotiable: boolean;
   requires_quote: boolean;
+  is_pay_and_pickup_enabled: boolean;
+  pay_and_pickup_display_order: number;
+  pay_and_pickup_badge?: string;
+  pay_and_pickup_description?: string;
+  pay_and_pickup_hero_image?: string;
 }
 
 // Parse CSV data (simplified parser for the specific format)
@@ -208,7 +213,12 @@ function mergeProductData(csvProducts: CSVProduct[], jsonProducts: JSONProduct[]
       min_order_quantity: 1,
       max_order_quantity: csvProduct.title.includes('Concentrated') ? 20 : 100,
       is_price_negotiable: false,
-      requires_quote: false
+      requires_quote: false,
+      is_pay_and_pickup_enabled: false,
+      pay_and_pickup_display_order: index,
+      pay_and_pickup_badge: undefined,
+      pay_and_pickup_description: matchingJSON?.["Brief Overview"] || description,
+      pay_and_pickup_hero_image: csvProduct.pictureToAdd || matchingJSON?.["Product Texture Photo URL"]
     };
 
     products.push(product);
@@ -249,7 +259,12 @@ function mergeProductData(csvProducts: CSVProduct[], jsonProducts: JSONProduct[]
         min_order_quantity: 1,
         max_order_quantity: 50,
         is_price_negotiable: false,
-        requires_quote: false
+        requires_quote: false,
+        is_pay_and_pickup_enabled: false,
+        pay_and_pickup_display_order: products.length,
+        pay_and_pickup_badge: undefined,
+        pay_and_pickup_description: jsonProduct["Brief Overview"],
+        pay_and_pickup_hero_image: jsonProduct["Product Texture Photo URL"] || jsonProduct["9lb Bag Photo URL"]
       };
 
       products.push(product);

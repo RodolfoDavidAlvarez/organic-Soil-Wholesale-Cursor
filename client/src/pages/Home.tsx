@@ -27,6 +27,10 @@ import {
   ShoppingBag,
   ArrowUpRight,
   Building2,
+  Clock,
+  ShieldCheck,
+  CreditCard,
+  Compass,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { productsData } from "@/data/productData";
@@ -40,6 +44,7 @@ import SidebarCarousel from "@/components/layout/SidebarCarousel";
 import ProductShowcase from "@/components/ProductShowcase";
 import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 // Temporary local Product type to resolve linter error
 type Product = {
@@ -57,6 +62,8 @@ type Product = {
   certifications?: { name: string }[];
   sizeOptions?: { name: string; price: number }[];
 };
+
+type FeaturedProduct = Product & { productName?: string };
 
 // Add type definitions
 interface Certificate {
@@ -173,6 +180,10 @@ const Home = () => {
     { name: "Congress", zip: "85332", deliverable: true, coordinates: { lat: 34.1625, lng: -112.8507 } },
     { name: "Phoenix, AZ", zip: "85001", deliverable: true, coordinates: { lat: 33.4484, lng: -112.074 } },
   ];
+
+  const PHOENIX_COORDINATES = { lat: 33.467944, lng: -112.100944 };
+  const PHOENIX_MAP_EMBED_URL = `https://www.google.com/maps?q=${PHOENIX_COORDINATES.lat},${PHOENIX_COORDINATES.lng}&z=13&output=embed`;
+  const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("1634 N 19th Ave, Phoenix AZ 85009")}`;
 
   // Size categories data
   const sizeCategories = [
@@ -409,10 +420,11 @@ const Home = () => {
   };
 
   // Featured products data
-  const featuredProducts = [
+  const featuredProducts: FeaturedProduct[] = [
     {
       id: 1, // Dan's Gold Dairy Compost
       name: "Dairy Compost",
+      productName: "Dan's Gold",
       imageUrl: "Compost Texture Look.jpg",
       texturePhotoUrl: "Compost Texture Look.jpg",
       description: "ALL NATURAL DAIRY COMPOST",
@@ -421,6 +433,7 @@ const Home = () => {
     {
       id: 2, // Mikey's Worm Poop
       name: "Worm Castings",
+      productName: "Mikey's Worm Poop",
       imageUrl: "Worm castting product texture.png",
       texturePhotoUrl: "Worm castting product texture.png",
       description: "ALL NATURAL VERMICOMPOST",
@@ -429,6 +442,7 @@ const Home = () => {
     {
       id: 23, // SuperBooster (corrected ID)
       name: "Organic Concentrated Blend",
+      productName: "SuperBooster",
       imageUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       texturePhotoUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       description: "ORGANIC CONCENTRATED AMENDMENT",
@@ -437,6 +451,7 @@ const Home = () => {
     {
       id: 3, // Amazonian Dark Earth
       name: "Biochar",
+      productName: "Amazonian Dark Earth",
       imageUrl: "Biochar Product Texture Look.jpg",
       texturePhotoUrl: "Biochar Product Texture Look.jpg",
       description: "BIOCHAR MINERAL",
@@ -470,12 +485,12 @@ const Home = () => {
         <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
       </SEO>
       {/* Hero Section with Title */}
-      <section className="relative py-16 bg-white overflow-hidden min-h-[60vh]">
+      <section className="relative pt-10 md:pt-16 pb-16 bg-white overflow-hidden min-h-[60vh]">
         <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             {/* Left Column - Title, Availability Checker, and Size Categories */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -499,24 +514,32 @@ const Home = () => {
                   <MapPin className="h-6 w-6 text-primary" />
                   <h2 className="text-lg font-bold text-primary">Pickup & Distribution</h2>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-5">
                   <p className="text-muted-foreground flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-primary/70" />
-                    <span>1634 N 19th Ave, Phoenix AZ, 85009</span>
+                    <span>1634 N 19th Ave, Phoenix AZ 85009</span>
                   </p>
-                  <div className="text-sm text-muted-foreground/90 space-y-3">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                            <MapPin className="h-3.5 w-3.5 text-green-600" />
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-green-800 text-sm font-medium">Organic Soil Wholesale Available within a 300 mile radius</p>
-                        </div>
-                      </div>
+                  <div className="rounded-2xl overflow-hidden border border-primary/10 shadow-inner h-56">
+                    <iframe
+                      title="Organic Soil Wholesale Phoenix Distribution Center Map"
+                      src={PHOENIX_MAP_EMBED_URL}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="h-full w-full border-0"
+                    ></iframe>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Compass className="h-4 w-4 text-primary" />
+                      <span>33&deg;28&apos;04.6&quot;N | 112&deg;06&apos;03.4&quot;W</span>
                     </div>
+                    <Button asChild size="sm" className="gap-2">
+                      <a href={PHOENIX_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
+                        Open directions
+                        <ArrowUpRight className="h-4 w-4" />
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -539,13 +562,15 @@ const Home = () => {
                   className="w-full"
                 >
                   <CarouselContent>
-                    {sizeCategories.map((category) => (
+                    {sizeCategories.map((category, index) => (
                       <CarouselItem key={category.id}>
                         <div className="relative aspect-[4/3] rounded-lg overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300">
-                          <img
+                          <OptimizedImage
                             src={category.image}
                             alt={category.name}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            priority={index === 0}
+                            sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 28vw"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-4 flex flex-col justify-end">
                             <div className="flex items-center gap-2 mb-2">
@@ -565,7 +590,7 @@ const Home = () => {
             </div>
 
             {/* Right Column - Featured Products */}
-            <div className="lg:col-span-8">
+            <div className="order-1 lg:order-2 lg:col-span-8 mt-8 lg:mt-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -573,8 +598,8 @@ const Home = () => {
                 className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
               >
                 <h2 className="text-xl font-bold mb-4">Featured Products</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {featuredProducts.map((product) => (
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {featuredProducts.map((product, index) => (
                     <motion.div
                       key={product.id}
                       className="group cursor-pointer"
@@ -589,17 +614,23 @@ const Home = () => {
                             View Details
                           </div>
                         </div>
-                        <img
-                          src={`/${product.imageUrl}`}
+                        <OptimizedImage
+                          src={product.imageUrl}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
+                          priority={index < 2}
+                          sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 25vw"
                         />
                       </div>
                       <div className="mt-4 text-center">
                         <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors duration-200">
                           {product.name}
                         </h3>
+                        {product.productName && (
+                          <p className="text-sm font-semibold text-muted-foreground mt-1">
+                            {product.productName}
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   ))}
@@ -617,6 +648,101 @@ const Home = () => {
                 </div>
               </motion.div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pay & Pickup Promotion */}
+      <section className="py-16 px-4 md:px-8 bg-muted/40">
+        <div className="max-w-6xl mx-auto rounded-3xl border border-border shadow-lg bg-white">
+          <div className="grid gap-10 lg:grid-cols-[1fr,0.9fr] items-stretch">
+            <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="space-y-5"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Truck className="h-4 w-4" />
+                  Pay & Pickup
+                </div>
+                <h2 className="text-[clamp(2rem,3.6vw,2.75rem)] font-bold text-foreground">
+                  Pay & Pickup in Phoenix
+                </h2>
+                <p className="text-base md:text-lg text-muted-foreground">
+                  Order online, choose a pickup window, and collect from our Phoenix yard. The crew stages pallets, totes, or bulk before you pull in.
+                </p>
+                <ul className="space-y-3 text-sm md:text-base text-muted-foreground">
+                  <li className="flex items-start gap-3">
+                    <Clock className="mt-0.5 h-4 w-4 text-primary" />
+                    <span>Pickup windows run 8:00&nbsp;AM–4:30&nbsp;PM, Monday through Friday.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                    <span>Location: 1634&nbsp;N&nbsp;19th Ave, Phoenix AZ 85009.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
+                    <span>Stripe checkout with QR confirmation keeps loading quick.</span>
+                  </li>
+                </ul>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link href="/pay-and-pickup">
+                    <Button size="lg" className="w-full sm:w-auto">
+                      View pickup details
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    <a href={PHOENIX_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
+                      Open directions
+                    </a>
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+              className="relative flex items-center justify-center px-6 pb-10 pt-6 lg:pb-0"
+            >
+              <div className="w-full max-w-md">
+                <Card className="border border-muted-foreground/10 bg-white shadow-lg">
+                  <CardHeader className="space-y-2 pb-3">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span className="text-sm font-semibold uppercase tracking-wide">Next window</span>
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-[clamp(1.35rem,2.4vw,1.8rem)] text-foreground">
+                      Today · 2:30 – 4:30 PM
+                    </CardTitle>
+                    <CardDescription className="text-sm md:text-base">
+                      1634 N 19th Ave, Phoenix AZ
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-3 rounded-xl border border-muted-foreground/15 px-4 py-3">
+                      <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">Pay online</p>
+                        <p>Invoices clear through Stripe and trigger your pickup QR code.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-muted-foreground/15 px-4 py-3">
+                      <Truck className="mt-0.5 h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">Arrive during your slot</p>
+                        <p>Pull into the loading lane and show the QR code on your phone.</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -715,9 +841,11 @@ const Home = () => {
                               )}
                             </div>
                           ) : (
-                            <img
+                            <OptimizedImage
                               src={image.url}
                               alt={image.alt}
+                              priority={index === 0}
+                              sizes="(max-width: 768px) 95vw, (max-width: 1024px) 45vw, 30vw"
                               className="w-full h-[300px] object-cover hover:scale-105 transition-transform duration-500"
                             />
                           )}

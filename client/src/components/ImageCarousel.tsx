@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface ImageCarouselProps {
   images: {
@@ -44,11 +45,10 @@ const ImageCarousel = ({ images, autoPlay = true, interval = 5000, aspectRatio =
         {images.map((image, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-500 ${index === currentIndex ? "opacity-100" : "opacity-0"}`}>
             {!isLoaded[index] && <div className="absolute inset-0 bg-neutral-200 animate-pulse" />}
-            <img
+            <OptimizedImage
               src={image.url}
               alt={image.alt}
               className="w-full h-full object-cover"
-              loading="lazy"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 60vw"
               onLoad={() => setIsLoaded((prev) => ({ ...prev, [index]: true }))}
             />

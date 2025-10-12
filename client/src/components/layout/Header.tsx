@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, X, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut } from "lucide-react";
+import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, Truck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,7 +16,7 @@ const PRODUCT_CATEGORIES = [
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
 
@@ -39,13 +39,14 @@ const Header = () => {
   };
 
   const handleCategorySelect = (category: string) => {
-    // Navigate to products page with category parameter
-    window.location.href = `/products?category=${category}`;
+    setIsMobileMenuOpen(false);
+    const encodedCategory = encodeURIComponent(category);
+    setLocation(`/products?category=${encodedCategory}`);
   };
 
   const navLinks = [
     { name: "Products", path: "/products" },
-    { name: "Landscapers", path: "/landscapers" },
+    { name: "Pay & Pickup", path: "/pay-and-pickup" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
@@ -110,7 +111,10 @@ const Header = () => {
                   className="w-56 p-2 bg-white/95 backdrop-blur-sm border border-neutral-200/50 shadow-lg rounded-xl"
                 >
                   <DropdownMenuItem
-                    onClick={() => window.location.href = '/products'}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setLocation("/products");
+                    }}
                     className="flex items-center gap-3 px-4 py-3 text-sm cursor-pointer rounded-lg hover:bg-primary/5 hover:text-primary transition-colors duration-200 font-medium"
                   >
                     <span>All Products</span>
@@ -203,12 +207,25 @@ const Header = () => {
                   </Link>
                 </div>
               ))}
-              <Link href="/order">
-                <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>Request a Quote</span>
-                </Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href="/pay-and-pickup">
+                  <Button className="group h-auto min-h-[3.25rem] flex flex-col items-start gap-1 rounded-xl bg-gradient-to-r from-primary via-primary to-emerald-500 px-5 py-3 text-left text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                    <span className="flex items-center gap-2 text-base font-semibold leading-tight">
+                      <Truck className="h-4 w-4" />
+                      Pay & Pickup Now
+                    </span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-white/80">
+                      Phoenix Yard
+                    </span>
+                  </Button>
+                </Link>
+                <Link href="/order">
+                  <Button variant="outline" className="flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300">
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>Request a Quote</span>
+                  </Button>
+                </Link>
+              </div>
             </div>
           </nav>
 
@@ -222,7 +239,7 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center mb-6">
                     <Link href="/">
                       <div className="flex items-center space-x-2 cursor-pointer">
                         <span className="text-lg font-heading font-bold">
@@ -230,9 +247,6 @@ const Header = () => {
                         </span>
                       </div>
                     </Link>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMobileMenuOpen(false)}>
-                      <X className="h-5 w-5" />
-                    </Button>
                   </div>
 
                   <nav className="flex flex-col space-y-2">
@@ -274,6 +288,16 @@ const Header = () => {
                         </div>
                       </Link>
                     ))}
+
+                    <div className="bg-primary/10 border border-primary/20 rounded-xl p-5 flex flex-col gap-3">
+                      <div className="text-sm font-semibold text-primary uppercase tracking-wide">Now Available</div>
+                      <p className="text-sm text-foreground/80">
+                        Schedule your <span className="font-semibold text-primary">Pay & Pickup</span> order and check out securely with Stripe for a faster, contactless experience.
+                      </p>
+                      <Link href="/pay-and-pickup">
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-white">Start Pay & Pickup</Button>
+                      </Link>
+                    </div>
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 

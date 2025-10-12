@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase.js';
+import { supabase } from '../db/supabase.js';
 
 export interface PricingTier {
   id: number;

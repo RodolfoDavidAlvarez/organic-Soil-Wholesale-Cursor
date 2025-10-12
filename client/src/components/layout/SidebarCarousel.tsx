@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface ImageCarouselProps {
   images: {
@@ -62,7 +63,7 @@ const SidebarCarousel = ({ images, autoPlay = true, interval = 5000 }: ImageCaro
             key={index}
             className={`absolute w-full h-full transition-opacity duration-500 ${index === currentIndex ? "opacity-100" : "opacity-0"}`}
           >
-            <img src={image.url} alt={image.alt} className="w-full h-full object-cover" />
+            <OptimizedImage src={image.url} alt={image.alt} className="w-full h-full object-cover" />
           </div>
         ))}
       </div>

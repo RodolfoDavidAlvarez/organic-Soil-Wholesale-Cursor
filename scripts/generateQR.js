@@ -3,7 +3,7 @@
 import qrcode from 'qrcode-terminal';
 
 // Get URL from command line or use default
-const url = process.argv[2] || 'http://192.168.0.169:3000/qr';
+const url = process.argv[2] || 'http://192.168.0.169:3000/pay-and-pickup';
 
 console.log('\n📱 Scan this QR code with your phone:\n');
 qrcode.generate(url, { small: true });

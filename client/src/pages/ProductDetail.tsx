@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight, ZoomIn, Package, Truck, Shield, PlayCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { getProductByIndex, getProductsData } from "@/data/productData";
+import { getProductsData } from "@/data/productData";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import SEO from "@/components/layout/SEO";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 
 // Size category images and labels from adminInputs.txt
 const SIZE_CATEGORIES = [
@@ -46,6 +48,15 @@ const ProductDetail = () => {
   const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
+  const sizeCategories = useMemo(
+    () =>
+      SIZE_CATEGORIES.map((category) => ({
+        ...category,
+        image: getOptimizedImageSrc(category.image),
+      })),
+    []
+  );
+
   // Add history handling
   const handleBack = () => {
     window.history.back();
@@ -58,35 +69,47 @@ const ProductDetail = () => {
         setIsLoading(false);
         return;
       }
+
+      setIsLoading(true);
       try {
-        // First try to see if the slug is a number (for backward compatibility)
-        const productId = parseInt(slug);
-        if (!isNaN(productId)) {
-          const foundProduct = await getProductByIndex(productId - 1);
-          if (foundProduct) {
-            setProduct(foundProduct);
-            return;
+        let fetchedProduct: any | null = null;
+        const numericId = Number(slug);
+
+        if (!Number.isNaN(numericId)) {
+          const response = await fetch(`/api/products/${numericId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data) {
+              fetchedProduct = data;
+            }
           }
         }
-        
-        // If not a number or product not found by ID, try to find by name
-        const allProducts = getProductsData();
-        const foundProduct = allProducts.find(
-          (p) => p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug.toLowerCase() ||
-                p.productType?.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug.toLowerCase()
-        );
-        
-        if (foundProduct) {
-          setProduct(foundProduct);
+
+        if (!fetchedProduct) {
+          const allProducts = getProductsData();
+          const normalizedSlug = slug.toLowerCase();
+          fetchedProduct =
+            allProducts.find(
+              (p) =>
+                p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedSlug ||
+                p.productType?.toLowerCase().replace(/[^a-z0-9]+/g, "-") === normalizedSlug
+            ) || null;
+        }
+
+        if (fetchedProduct) {
+          setProduct(fetchedProduct);
+          setError(false);
         } else {
           setError(true);
         }
       } catch (err) {
+        console.error("Failed to load product", err);
         setError(true);
       } finally {
         setIsLoading(false);
       }
     };
+
     loadProductData();
   }, [slug]);
 
@@ -96,7 +119,7 @@ const ProductDetail = () => {
     
     const interval = setInterval(() => {
       setCurrentSizeIndex((prev) => {
-        const maxIndex = window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2;
+        const maxIndex = window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2;
         if (prev >= maxIndex) {
           return 0;
         }
@@ -105,13 +128,19 @@ const ProductDetail = () => {
     }, 3000); // Change every 3 seconds
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, sizeCategories.length]);
 
-  const allImages: string[] = [
-    ...(product?.texturePhotoUrl ? [`/${product.texturePhotoUrl}`] : []),
-    ...(product?.additionalImages || []).filter(img => img !== product?.texturePhotoUrl).map(img => `/${img}`),
-    ...(product?.imageUrl ? [`/${product.imageUrl}`] : [])
-  ];
+  const allImages: string[] = Array.from(
+    new Set(
+      [
+        ...(product?.texturePhotoUrl ? [product.texturePhotoUrl] : []),
+        ...((product?.additionalImages || []).filter((img) => img && img !== product?.texturePhotoUrl)),
+        ...(product?.imageUrl ? [product.imageUrl] : []),
+      ]
+        .map((img) => getOptimizedImageSrc(img))
+        .filter((img): img is string => Boolean(img))
+    )
+  );
 
   // Add video as the last item if it exists
   const hasVideo = product?.productVideoUrl;
@@ -247,10 +276,12 @@ const ProductDetail = () => {
                       </div>
                     ) : (
                       <>
-                        <img 
-                          src={allImages[currentImageIndex]} 
-                          alt={product.name} 
-                          className="w-full h-full object-contain p-4 sm:p-8 transition-transform duration-500 group-hover:scale-105" 
+                        <OptimizedImage
+                          src={allImages[currentImageIndex]}
+                          alt={product.name}
+                          className="w-full h-full object-contain p-4 sm:p-8 transition-transform duration-500 group-hover:scale-105"
+                          priority
+                          sizes="(max-width: 1024px) 100vw, 50vw"
                         />
                         {/* Zoom Indicator */}
                         <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
@@ -299,7 +330,7 @@ const ProductDetail = () => {
                       >
                         {media === 'video' && product.productVideoUrl ? (
                           <div className="relative w-full h-full group bg-black rounded overflow-hidden">
-                            <img 
+                            <OptimizedImage
                               src={getYouTubeThumbnail(getYouTubeVideoId(product.productVideoUrl) || '')}
                               alt="Product Video"
                               className="w-full h-full object-contain"
@@ -315,10 +346,10 @@ const ProductDetail = () => {
                           </div>
                         ) : (
                           <>
-                            <img 
-                              src={allImages[index]} 
-                              alt={`${product.name} - View ${index + 1}`} 
-                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-200" 
+                            <OptimizedImage
+                              src={allImages[index]}
+                              alt={`${product.name} - View ${index + 1}`}
+                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-200"
                             />
                             {currentImageIndex === index && (
                               <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
@@ -393,9 +424,9 @@ const ProductDetail = () => {
                       className="h-10 w-10 sm:h-8 sm:w-8"
                       onClick={() => {
                         setIsAutoPlaying(false);
-                        setCurrentSizeIndex(Math.min(window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2, currentSizeIndex + 1));
+                        setCurrentSizeIndex(Math.min(window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2, currentSizeIndex + 1));
                       }}
-                      disabled={currentSizeIndex >= (window.innerWidth < 640 ? SIZE_CATEGORIES.length - 1 : SIZE_CATEGORIES.length - 2)}
+                      disabled={currentSizeIndex >= (window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2)}
                     >
                       <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
                     </Button>
@@ -410,20 +441,21 @@ const ProductDetail = () => {
                     className="flex transition-transform duration-500 ease-in-out gap-3"
                     style={{ transform: `translateX(-${currentSizeIndex * (window.innerWidth < 640 ? 85 : 50)}%)` }}
                   >
-                    {SIZE_CATEGORIES.map((cat) => (
+                    {sizeCategories.map((cat) => (
                       <Card 
                         key={cat.name} 
                         className="flex-shrink-0 w-[calc(85%-0.5rem)] sm:w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
                         onClick={() => {
+                          const optimizedUrl = getOptimizedImageSrc(cat.image);
                           const img = new Image();
-                          img.src = cat.image;
+                          img.src = optimizedUrl;
                           const newWindow = window.open('', '_blank');
                           if (newWindow) {
                             newWindow.document.write(`
                               <html>
                                 <head><title>${cat.name}</title></head>
                                 <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;">
-                                  <img src="${cat.image}" style="max-width:100%;height:auto;" alt="${cat.name}"/>
+                                  <img src="${optimizedUrl}" style="max-width:100%;height:auto;" alt="${cat.name}"/>
                                 </body>
                               </html>
                             `);
@@ -431,10 +463,10 @@ const ProductDetail = () => {
                         }}
                       >
                         <div className="aspect-[4/3] relative bg-neutral-50">
-                          <img 
-                            src={cat.image} 
-                            alt={cat.name} 
-                            className="w-full h-full object-contain p-3" 
+                          <OptimizedImage
+                            src={cat.image}
+                            alt={cat.name}
+                            className="w-full h-full object-contain p-3"
                           />
                           <div className="absolute top-2 right-2 bg-white/90 p-2 rounded-full opacity-0 hover:opacity-100 transition-opacity">
                             <ZoomIn className="h-4 w-4 text-neutral-600" />
@@ -450,7 +482,7 @@ const ProductDetail = () => {
                 </div>
                 {/* Carousel Indicators */}
                 <div className="flex justify-center mt-3 gap-1">
-                  {Array.from({ length: window.innerWidth < 640 ? SIZE_CATEGORIES.length : Math.ceil(SIZE_CATEGORIES.length / 2) }).map((_, index) => (
+                  {Array.from({ length: window.innerWidth < 640 ? sizeCategories.length : Math.ceil(sizeCategories.length / 2) }).map((_, index) => (
                     <button
                       key={index}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -603,10 +635,10 @@ const ProductDetail = () => {
                     />
                   </div>
                 ) : (
-                  <img 
-                    src={allImages[currentImageIndex]} 
-                    alt={product?.name} 
-                    className="max-w-full max-h-full object-contain" 
+                  <OptimizedImage
+                    src={allImages[currentImageIndex]}
+                    alt={product?.name || "Product image"}
+                    className="max-w-full max-h-full object-contain"
                   />
                 )}
                 
@@ -649,7 +681,7 @@ const ProductDetail = () => {
                       >
                         {media === 'video' && product?.productVideoUrl ? (
                           <div className="relative w-full h-full group">
-                            <img 
+                            <OptimizedImage
                               src={getYouTubeThumbnail(getYouTubeVideoId(product.productVideoUrl) || '')}
                               alt="Product Video"
                               className="w-full h-full object-contain bg-black"
@@ -663,11 +695,7 @@ const ProductDetail = () => {
                             <PlayCircle className="h-6 w-6 text-white" />
                           </div>
                         ) : (
-                          <img 
-                            src={allImages[index]} 
-                            alt={`View ${index + 1}`} 
-                            className="w-full h-full object-cover" 
-                          />
+                          <OptimizedImage src={allImages[index]} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
                         )}
                       </button>
                     ))}

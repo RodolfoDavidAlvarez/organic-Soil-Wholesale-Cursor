@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const About = () => {
   return (
@@ -64,7 +65,7 @@ const About = () => {
             </div>
           </div>
           <div className="lg:w-1/2">
-            <img
+            <OptimizedImage
               src="Organic Wholesale Pickup.png"
               alt="Soil Seed and Water operations"
               className="rounded-lg shadow-xl w-full h-auto"

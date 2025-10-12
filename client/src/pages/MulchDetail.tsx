@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getMulchProducts } from "@/data/productData";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 
 // Size category images and labels
 const SIZE_CATEGORIES = [
@@ -46,6 +48,15 @@ const MulchDetail = () => {
   const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
+  const sizeCategories = useMemo(
+    () =>
+      SIZE_CATEGORIES.map((category) => ({
+        ...category,
+        image: getOptimizedImageSrc(category.image),
+      })),
+    []
+  );
+
   useEffect(() => {
     const loadMulchData = async () => {
       try {
@@ -69,7 +80,7 @@ const MulchDetail = () => {
     
     const interval = setInterval(() => {
       setCurrentSizeIndex((prev) => {
-        if (prev >= SIZE_CATEGORIES.length - 2) {
+        if (prev >= sizeCategories.length - 2) {
           return 0;
         }
         return prev + 1;
@@ -77,14 +88,22 @@ const MulchDetail = () => {
     }, 3000); // Change every 3 seconds
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, sizeCategories.length]);
 
-  const allImages: string[] = selectedVariant
-    ? [
-        ...(selectedVariant.additionalImages || []),
-        ...(selectedVariant["Product Texture Photo URL"] ? [selectedVariant["Product Texture Photo URL"]] : []),
-      ]
-    : [];
+  const allImages: string[] = Array.from(
+    new Set(
+      (
+        selectedVariant
+          ? [
+              ...(selectedVariant.additionalImages || []),
+              ...(selectedVariant["Product Texture Photo URL"] ? [selectedVariant["Product Texture Photo URL"]] : []),
+            ]
+          : []
+      )
+        .map((img: string) => getOptimizedImageSrc(img))
+        .filter((img): img is string => Boolean(img))
+    )
+  );
 
   // Navigation handlers
   const handleNextImage = () => {
@@ -149,10 +168,12 @@ const MulchDetail = () => {
                     className="relative aspect-square cursor-zoom-in overflow-hidden"
                     onClick={() => setIsGalleryOpen(true)}
                   >
-                    <img 
-                      src={allImages[currentImageIndex]} 
-                      alt={selectedVariant?.name} 
-                      className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105" 
+                    <OptimizedImage
+                      src={allImages[currentImageIndex]}
+                      alt={selectedVariant?.name || "Mulch photo"}
+                      className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                     {/* Zoom Indicator */}
                     <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
@@ -197,10 +218,10 @@ const MulchDetail = () => {
                         }`}
                         onClick={() => handleThumbnailClick(index)}
                       >
-                        <img 
-                          src={image} 
-                          alt={`${selectedVariant?.name} - View ${index + 1}`} 
-                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-200" 
+                        <OptimizedImage
+                          src={image}
+                          alt={`${selectedVariant?.name || "Mulch"} - View ${index + 1}`}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-200"
                         />
                         {currentImageIndex === index && (
                           <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
@@ -296,9 +317,9 @@ const MulchDetail = () => {
                       className="h-7 w-7"
                       onClick={() => {
                         setIsAutoPlaying(false);
-                        setCurrentSizeIndex(Math.min(SIZE_CATEGORIES.length - 2, currentSizeIndex + 1));
+                        setCurrentSizeIndex(Math.min(sizeCategories.length - 2, currentSizeIndex + 1));
                       }}
-                      disabled={currentSizeIndex >= SIZE_CATEGORIES.length - 2}
+                      disabled={currentSizeIndex >= sizeCategories.length - 2}
                     >
                       <ChevronRight className="h-3 w-3" />
                     </Button>
@@ -313,20 +334,21 @@ const MulchDetail = () => {
                     className="flex transition-transform duration-500 ease-in-out gap-3"
                     style={{ transform: `translateX(-${currentSizeIndex * 50}%)` }}
                   >
-                    {SIZE_CATEGORIES.map((cat) => (
+                    {sizeCategories.map((cat) => (
                       <Card 
                         key={cat.name} 
                         className="flex-shrink-0 w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
                         onClick={() => {
+                          const optimizedUrl = getOptimizedImageSrc(cat.image);
                           const img = new Image();
-                          img.src = cat.image;
+                          img.src = optimizedUrl;
                           const newWindow = window.open('', '_blank');
                           if (newWindow) {
                             newWindow.document.write(`
                               <html>
                                 <head><title>${cat.name}</title></head>
                                 <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;">
-                                  <img src="${cat.image}" style="max-width:100%;height:auto;" alt="${cat.name}"/>
+                                  <img src="${optimizedUrl}" style="max-width:100%;height:auto;" alt="${cat.name}"/>
                                 </body>
                               </html>
                             `);
@@ -334,10 +356,10 @@ const MulchDetail = () => {
                         }}
                       >
                         <div className="aspect-[4/3] relative bg-neutral-50">
-                          <img 
-                            src={cat.image} 
-                            alt={cat.name} 
-                            className="w-full h-full object-contain p-3" 
+                          <OptimizedImage
+                            src={cat.image}
+                            alt={cat.name}
+                            className="w-full h-full object-contain p-3"
                           />
                           <div className="absolute top-2 right-2 bg-white/90 p-1 rounded-full opacity-0 hover:opacity-100 transition-opacity">
                             <ZoomIn className="h-3 w-3 text-neutral-600" />
@@ -353,7 +375,7 @@ const MulchDetail = () => {
                 </div>
                 {/* Carousel Indicators */}
                 <div className="flex justify-center mt-3 gap-1">
-                  {Array.from({ length: Math.ceil(SIZE_CATEGORIES.length / 2) }).map((_, index) => (
+                  {Array.from({ length: Math.ceil(sizeCategories.length / 2) }).map((_, index) => (
                     <button
                       key={index}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -477,10 +499,10 @@ const MulchDetail = () => {
               
               {/* Main Image Display */}
               <div className="flex-1 relative flex items-center justify-center p-4">
-                <img 
-                  src={allImages[currentImageIndex]} 
-                  alt={selectedVariant?.name} 
-                  className="max-w-full max-h-full object-contain" 
+                <OptimizedImage
+                  src={allImages[currentImageIndex]}
+                  alt={selectedVariant?.name || "Mulch photo"}
+                  className="max-w-full max-h-full object-contain"
                 />
                 
                 {/* Navigation Arrows */}
@@ -520,11 +542,7 @@ const MulchDetail = () => {
                         }`}
                         onClick={() => handleThumbnailClick(index)}
                       >
-                        <img 
-                          src={image} 
-                          alt={`View ${index + 1}`} 
-                          className="w-full h-full object-cover" 
-                        />
+                        <OptimizedImage src={image} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>

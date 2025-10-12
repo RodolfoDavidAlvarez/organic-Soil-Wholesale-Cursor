@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
@@ -99,7 +100,7 @@ const Checkout: React.FC = () => {
           <CardContent className="text-center py-12">
             <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add some products before checking out</p>
-            <Button onClick={() => navigate('/qr')}>
+            <Button onClick={() => navigate('/pay-and-pickup')}>
               Browse Products
             </Button>
           </CardContent>
@@ -147,7 +148,7 @@ const Checkout: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/qr')}
+              onClick={() => navigate('/pay-and-pickup')}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -168,8 +169,8 @@ const Checkout: React.FC = () => {
               <div className="space-y-4">
                 {items.map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <img
-                      src={item.imageUrl || '/placeholder.png'}
+                    <OptimizedImage
+                      src={item.imageUrl || 'placeholder.png'}
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded"
                     />
