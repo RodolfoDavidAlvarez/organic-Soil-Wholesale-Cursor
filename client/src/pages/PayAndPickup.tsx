@@ -34,7 +34,8 @@ import {
   ArrowRight,
   ChevronDown,
   Trash2,
-  CreditCard
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 
 interface InventoryOption {
@@ -848,6 +849,15 @@ const PayAndPickup: React.FC = () => {
               )}
             </div>
           </div>
+      </div>
+      </div>
+
+      <div className="bg-amber-100 border-b border-amber-200">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-start gap-3 text-amber-900">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+          <p className="text-sm lg:text-base font-medium">
+            Under construction, coming soon.
+          </p>
         </div>
       </div>
 

@@ -399,7 +399,7 @@ const Home = () => {
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             {/* Left Column - Title, Availability Checker, and Size Categories */}
-            <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-6">
+            <div className="order-1 lg:order-1 lg:col-span-4 flex flex-col gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -499,7 +499,7 @@ const Home = () => {
             </div>
 
             {/* Right Column - Featured Products */}
-            <div className="order-1 lg:order-2 lg:col-span-8 mt-8 lg:mt-0">
+            <div className="order-2 lg:order-2 lg:col-span-8 mt-8 lg:mt-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
