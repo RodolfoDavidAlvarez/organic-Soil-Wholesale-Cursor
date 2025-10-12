@@ -1179,7 +1179,6 @@ export default function AdminProductDetail() {
                   </div>
                 </div>
 
-              <section className="space-y-6">
                 <div className="space-y-5 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
                   <div className="space-y-1">
                     <h2 className="text-sm font-semibold text-foreground">Catalog visibility</h2>
