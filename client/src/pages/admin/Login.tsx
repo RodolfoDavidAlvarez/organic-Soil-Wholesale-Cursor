@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,7 +20,8 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function AdminLogin() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [, navigate] = useLocation();
   const { signIn } = useAdminAuth();
@@ -28,29 +30,33 @@ export default function AdminLogin() {
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors, isSubmitting }
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'ralvarez@soilseedandwater.com',
-      password: 'admin123'
+      email: '',
+      password: ''
     }
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
+    setStatusMessage('Signing you in...');
+    setLoginError(null);
 
     try {
-      await signIn(data.email, data.password);
+      const normalizedEmail = data.email.trim();
+      await signIn(normalizedEmail, data.password);
+      setStatusMessage('Login successful! Redirecting...');
       navigate('/admin');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid credentials';
+      setStatusMessage(null);
+      setLoginError(message);
       toast({
         title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Invalid credentials',
+        description: message,
         variant: 'destructive'
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -77,6 +83,8 @@ export default function AdminLogin() {
                 type="email"
                 placeholder="admin@example.com"
                 autoComplete="email"
+                autoFocus
+                disabled={isSubmitting}
                 {...register('email')}
               />
               {errors.email && (
@@ -91,12 +99,14 @@ export default function AdminLogin() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
+                  disabled={isSubmitting}
                   {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:text-gray-300"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -109,9 +119,10 @@ export default function AdminLogin() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...
@@ -120,6 +131,21 @@ export default function AdminLogin() {
                 'Sign In'
               )}
             </Button>
+
+            {(statusMessage || loginError) && (
+              <div className="space-y-2" aria-live="polite">
+                {statusMessage && (
+                  <Alert className="border-green-200 bg-green-50 text-green-800">
+                    <AlertDescription>{statusMessage}</AlertDescription>
+                  </Alert>
+                )}
+                {loginError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{loginError}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

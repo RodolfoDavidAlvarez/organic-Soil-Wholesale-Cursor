@@ -72,6 +72,8 @@ interface DatabaseProduct {
   seo_keywords?: string;
   marketing_note?: string;
   is_wholesale_only: boolean;
+  is_catalog_enabled: boolean;
+  catalog_display_order: number;
   additional_images?: string[];
   allow_bulk_pickup: boolean;
   available_size_options?: string[];
@@ -191,6 +193,8 @@ function mergeProductData(csvProducts: CSVProduct[], jsonProducts: JSONProduct[]
       category: category,
       price: Math.round(csvProduct.price * 100), // Convert to cents for database
       stock_quantity: 100, // Default stock
+      is_catalog_enabled: true,
+      catalog_display_order: index,
       image_url: csvProduct.pictureToAdd || `${csvProduct.sku.toLowerCase()}-bag.jpg`,
       texture_photo_url: matchingJSON?.["Product Texture Photo URL"] || `${csvProduct.sku.toLowerCase()}-texture.jpg`,
       ingredients: matchingJSON?.["Ingredients"],
@@ -237,6 +241,8 @@ function mergeProductData(csvProducts: CSVProduct[], jsonProducts: JSONProduct[]
         category: jsonProduct["Product Category"] || 'Potting Soil',
         price: 2500, // Default $25.00 in cents
         stock_quantity: 100,
+        is_catalog_enabled: true,
+        catalog_display_order: products.length,
         image_url: jsonProduct["9lb Bag Photo URL"] || `${jsonProduct["Product name"].toLowerCase().replace(/\s+/g, '-')}-bag.jpg`,
         texture_photo_url: jsonProduct["Product Texture Photo URL"],
         ingredients: jsonProduct["Ingredients"],

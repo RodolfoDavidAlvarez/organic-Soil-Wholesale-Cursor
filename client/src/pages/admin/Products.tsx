@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,17 +27,32 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Product, formatPrice, getPrimaryImage } from './product-utils';
 
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'payPickup'>('catalog');
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const getDisplayOrder = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const parsed = Number.parseInt(trimmed, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+    return null;
+  };
 
   const {
     data: products = [],
@@ -60,6 +75,79 @@ export default function AdminProducts() {
     },
   });
 
+  const catalogSortedProducts = useMemo(() => {
+    return [...products].sort((productA, productB) => {
+      const orderA = getDisplayOrder(productA.catalog_display_order) ?? Number.MAX_SAFE_INTEGER;
+      const orderB = getDisplayOrder(productB.catalog_display_order) ?? Number.MAX_SAFE_INTEGER;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      const nameA = (productA.display_title || productA.name || '').toLowerCase();
+      const nameB = (productB.display_title || productB.name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [products]);
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const catalogFilteredProducts = useMemo(() => {
+    if (!normalizedSearch) {
+      return catalogSortedProducts;
+    }
+
+    return catalogSortedProducts.filter((product) => {
+      const nameMatch = product.name?.toLowerCase().includes(normalizedSearch);
+      const skuMatch = product.sku?.toLowerCase().includes(normalizedSearch);
+      const categoryMatch = product.category?.toLowerCase().includes(normalizedSearch);
+      return Boolean(nameMatch || skuMatch || categoryMatch);
+    });
+  }, [catalogSortedProducts, normalizedSearch]);
+
+  const payPickupSortedProducts = useMemo(() => {
+    return [...products].sort((productA, productB) => {
+      const orderA = getDisplayOrder(productA.pay_and_pickup_display_order) ?? Number.MAX_SAFE_INTEGER;
+      const orderB = getDisplayOrder(productB.pay_and_pickup_display_order) ?? Number.MAX_SAFE_INTEGER;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      const nameA = (productA.display_title || productA.name || '').toLowerCase();
+      const nameB = (productB.display_title || productB.name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [products]);
+
+  const payPickupFilteredProducts = useMemo(() => {
+    if (!normalizedSearch) {
+      return payPickupSortedProducts;
+    }
+
+    return payPickupSortedProducts.filter((product) => {
+      const nameMatch = product.name?.toLowerCase().includes(normalizedSearch);
+      const skuMatch = product.sku?.toLowerCase().includes(normalizedSearch);
+      const categoryMatch = product.category?.toLowerCase().includes(normalizedSearch);
+      return Boolean(nameMatch || skuMatch || categoryMatch);
+    });
+  }, [payPickupSortedProducts, normalizedSearch]);
+
+  const displayedProducts =
+    activeTab === 'catalog' ? catalogFilteredProducts : payPickupFilteredProducts;
+
+  const catalogCount = catalogFilteredProducts.length;
+  const payPickupCount = payPickupFilteredProducts.length;
+  const totalCount = displayedProducts.length;
+  const contextLabel = activeTab === 'catalog' ? 'Catalog' : 'Pay & Pickup';
+  const secondaryContextLabel = activeTab === 'catalog' ? 'Pay & Pickup' : 'Catalog';
+  const headerDescription =
+    activeTab === 'catalog'
+      ? 'Manage the public Products page catalog: visibility, ordering, and media.'
+      : 'Visual management for Pay & Pickup availability, pricing, and presentation.';
+  const showLabel = activeTab === 'catalog' ? 'Show in Catalog' : 'Show in Pay & Pickup';
+  const hideLabel = activeTab === 'catalog' ? 'Hide from Catalog' : 'Hide from Pay & Pickup';
+
   const updateProductRequest = async (productId: number, data: Record<string, unknown>) => {
     const token = localStorage.getItem('adminToken');
     const response = await fetch(`/api/admin/products/${productId}`, {
@@ -78,12 +166,23 @@ export default function AdminProducts() {
     return response.json();
   };
 
-  const togglePayAndPickupMutation = useMutation({
-    mutationFn: ({ productId, isEnabled }: { productId: number; isEnabled: boolean }) =>
-      updateProductRequest(productId, { is_pay_and_pickup_enabled: isEnabled }),
-    onSuccess: (updatedProduct: Product) => {
+  type VisibilityField = 'is_pay_and_pickup_enabled' | 'is_catalog_enabled';
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: ({
+      productId,
+      field,
+      isEnabled,
+    }: {
+      productId: number;
+      field: VisibilityField;
+      isEnabled: boolean;
+    }) => updateProductRequest(productId, { [field]: isEnabled }),
+    onSuccess: (updatedProduct: Product, variables) => {
+      const contextLabel =
+        variables.field === 'is_pay_and_pickup_enabled' ? 'Pay & Pickup' : 'Catalog';
       toast({
-        title: updatedProduct.is_pay_and_pickup_enabled ? 'Pay & Pickup enabled' : 'Pay & Pickup hidden',
+        title: variables.isEnabled ? `${contextLabel} enabled` : `${contextLabel} hidden`,
         description: `${updatedProduct.display_title || updatedProduct.name} has been updated.`,
       });
 
@@ -91,17 +190,25 @@ export default function AdminProducts() {
         existing?.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)) ?? []
       );
     },
-    onError: () => {
+    onError: (_error, variables) => {
+      const contextLabel =
+        variables.field === 'is_pay_and_pickup_enabled' ? 'Pay & Pickup' : 'Catalog';
       toast({
         title: 'Update failed',
-        description: 'We could not update the Pay & Pickup status. Please try again.',
+        description: `We could not update the ${contextLabel.toLowerCase()} status. Please try again.`,
         variant: 'destructive',
       });
     },
   });
 
+  type BulkUpdatePayload = {
+    productIds: number[];
+    updates: Record<string, unknown>;
+    context: 'catalog' | 'payPickup';
+  };
+
   const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ productIds, updates }: { productIds: number[]; updates: Record<string, unknown> }) => {
+    mutationFn: async ({ productIds, updates }: BulkUpdatePayload) => {
       const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/products/bulk-update', {
         method: 'POST',
@@ -118,38 +225,26 @@ export default function AdminProducts() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const contextLabel = variables.context === 'catalog' ? 'Catalog' : 'Pay & Pickup';
       toast({
-        title: 'Products updated',
-        description: `Successfully updated ${selectedProductIds.size} products.`,
+        title: `${contextLabel} updated`,
+        description: `Successfully updated ${variables.productIds.length} products.`,
       });
       queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
       setSelectedProductIds(new Set());
       setIsBulkUpdating(false);
     },
-    onError: () => {
+    onError: (_error, variables) => {
+      const contextLabel = variables.context === 'catalog' ? 'Catalog' : 'Pay & Pickup';
       toast({
         title: 'Bulk update failed',
-        description: 'We could not update the selected products. Please try again.',
+        description: `We could not update the ${contextLabel.toLowerCase()} status for the selected products. Please try again.`,
         variant: 'destructive',
       });
       setIsBulkUpdating(false);
     },
   });
-
-  const filteredProducts = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    if (!normalizedSearch) {
-      return products;
-    }
-
-    return products.filter((product) => {
-      const nameMatch = product.name?.toLowerCase().includes(normalizedSearch);
-      const skuMatch = product.sku?.toLowerCase().includes(normalizedSearch);
-      const categoryMatch = product.category?.toLowerCase().includes(normalizedSearch);
-      return Boolean(nameMatch || skuMatch || categoryMatch);
-    });
-  }, [products, searchTerm]);
 
   const handleCardClick = (productId: number) => {
     navigate(`/admin/products/${productId}`);
@@ -167,8 +262,12 @@ export default function AdminProducts() {
     });
   };
 
+  useEffect(() => {
+    setSelectedProductIds(new Set());
+  }, [activeTab]);
+
   const selectAllProducts = () => {
-    setSelectedProductIds(new Set(filteredProducts.map((product) => product.id)));
+    setSelectedProductIds(new Set(displayedProducts.map((product) => product.id)));
   };
 
   const clearSelection = () => {
@@ -180,18 +279,23 @@ export default function AdminProducts() {
 
     setIsBulkUpdating(true);
     const productIds = Array.from(selectedProductIds);
+    const visibilityField: VisibilityField =
+      activeTab === 'catalog' ? 'is_catalog_enabled' : 'is_pay_and_pickup_enabled';
+    const contextKey = activeTab === 'catalog' ? 'catalog' : 'payPickup';
 
     switch (action) {
       case 'show':
         await bulkUpdateMutation.mutateAsync({
           productIds,
-          updates: { is_pay_and_pickup_enabled: true },
+          updates: { [visibilityField]: true },
+          context: contextKey,
         });
         break;
       case 'hide':
         await bulkUpdateMutation.mutateAsync({
           productIds,
-          updates: { is_pay_and_pickup_enabled: false },
+          updates: { [visibilityField]: false },
+          context: contextKey,
         });
         break;
       case 'delete':
@@ -204,7 +308,7 @@ export default function AdminProducts() {
     }
   };
 
-  const isAllSelected = selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0;
+  const isAllSelected = selectedProductIds.size === displayedProducts.length && displayedProducts.length > 0;
 
   return (
     <ProtectedAdminRoute>
@@ -213,14 +317,24 @@ export default function AdminProducts() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-              <p className="text-sm text-muted-foreground">
-                Visual management for Pay &amp; Pickup inventory, photos, and availability.
-              </p>
+              <p className="text-sm text-muted-foreground">{headerDescription}</p>
             </div>
-            <Button className="self-start md:self-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as 'catalog' | 'payPickup')}
+                className="w-full md:w-auto"
+              >
+                <TabsList className="grid w-full grid-cols-2 md:inline-flex md:w-auto">
+                  <TabsTrigger value="catalog">Catalog ({catalogCount})</TabsTrigger>
+                  <TabsTrigger value="payPickup">Pay &amp; Pickup ({payPickupCount})</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <Button className="self-start md:self-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -235,7 +349,7 @@ export default function AdminProducts() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">
-                  {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}
+                  {totalCount} {contextLabel.toLowerCase()} product{totalCount === 1 ? '' : 's'}
                 </div>
                 <Separator orientation="vertical" className="h-5" />
                 <div className="flex items-center gap-1 rounded-lg border p-1">
@@ -267,7 +381,7 @@ export default function AdminProducts() {
                     onCheckedChange={(checked) => (checked ? selectAllProducts() : clearSelection())}
                   />
                   <span className="text-sm font-medium">
-                    {selectedProductIds.size} of {filteredProducts.length} selected
+                    {selectedProductIds.size} of {totalCount} selected
                   </span>
                   <Button size="sm" variant="link" onClick={clearSelection} className="text-xs">
                     Clear selection
@@ -284,11 +398,11 @@ export default function AdminProducts() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleBulkAction('show')}>
                         <Eye className="mr-2 h-4 w-4" />
-                        Show in Pay & Pickup
+                        {showLabel}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleBulkAction('hide')}>
                         <EyeOff className="mr-2 h-4 w-4" />
-                        Hide from Pay & Pickup
+                        {hideLabel}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleBulkAction('delete')} className="text-red-600">
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -307,19 +421,27 @@ export default function AdminProducts() {
                 <div key={index} className="h-[360px] animate-pulse rounded-2xl border border-border bg-muted/30" />
               ))}
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : displayedProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 py-16 text-center">
               <Package className="mb-4 h-12 w-12 text-muted-foreground" />
               <h2 className="text-lg font-semibold text-foreground">No products found</h2>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Try adjusting your search terms or add a new product to start managing Pay &amp; Pickup availability.
+                Try adjusting your search terms or add a new product to manage {contextLabel.toLowerCase()} settings.
               </p>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => {
+              {displayedProducts.map((product) => {
                 const primaryImage = getPrimaryImage(product);
                 const isSelected = selectedProductIds.has(product.id);
+                const catalogOrder = getDisplayOrder(product.catalog_display_order);
+                const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
+                const catalogVisible = Boolean(product.is_catalog_enabled);
+                const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
+                const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
+                const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
+                const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
+                const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
 
                 return (
                   <article
@@ -350,9 +472,12 @@ export default function AdminProducts() {
                           <Package className="h-10 w-10" />
                         </div>
                       )}
-                      <div className="absolute left-4 top-4 flex gap-2">
-                        <Badge variant={product.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                          {product.is_pay_and_pickup_enabled ? 'Pay & Pickup' : 'Hidden'}
+                      <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                        <Badge variant={primaryVisibility ? 'default' : 'secondary'}>
+                          {primaryVisibility ? `${contextLabel} Visible` : `${contextLabel} Hidden`}
+                        </Badge>
+                        <Badge variant="outline">
+                          {contextLabel} {primaryOrder !== null ? `#${primaryOrder}` : '—'}
                         </Badge>
                       </div>
                     </div>
@@ -393,17 +518,25 @@ export default function AdminProducts() {
                         onClick={(event) => event.stopPropagation()}
                       >
                         <div>
-                          <p className="text-xs text-muted-foreground">Pay &amp; Pickup</p>
+                          <p className="text-xs text-muted-foreground">{contextLabel}</p>
                           <p className="text-sm font-medium">
-                            {product.is_pay_and_pickup_enabled ? 'Enabled' : 'Hidden'}
+                            {primaryVisibility ? 'Visible' : 'Hidden'}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {secondaryContextLabel}: {secondaryVisibility ? 'Visible' : 'Hidden'}
+                            {secondaryVisibility && secondaryOrder !== null ? ` (#${secondaryOrder})` : ''}
                           </p>
                         </div>
                         <Switch
-                          checked={Boolean(product.is_pay_and_pickup_enabled)}
-                          disabled={togglePayAndPickupMutation.isPending}
+                          checked={primaryVisibility}
+                          disabled={toggleVisibilityMutation.isPending}
                           onCheckedChange={(value) =>
-                            togglePayAndPickupMutation.mutate({
+                            toggleVisibilityMutation.mutate({
                               productId: product.id,
+                              field:
+                                activeTab === 'catalog'
+                                  ? 'is_catalog_enabled'
+                                  : 'is_pay_and_pickup_enabled',
                               isEnabled: value,
                             })
                           }
@@ -433,18 +566,27 @@ export default function AdminProducts() {
                       <Checkbox checked={isAllSelected} onCheckedChange={(checked) => (checked ? selectAllProducts() : clearSelection())} />
                     </th>
                     <th className="p-4 text-left text-sm font-medium">Product</th>
+                    <th className="p-4 text-left text-sm font-medium">{contextLabel}</th>
+                    <th className="p-4 text-left text-sm font-medium">{secondaryContextLabel}</th>
                     <th className="p-4 text-left text-sm font-medium">Category</th>
                     <th className="p-4 text-left text-sm font-medium">SKU</th>
                     <th className="p-4 text-center text-sm font-medium">Price</th>
                     <th className="p-4 text-center text-sm font-medium">Stock</th>
-                    <th className="p-4 text-center text-sm font-medium">Pay & Pickup</th>
                     <th className="p-4 text-center text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product, index) => {
+                  {displayedProducts.map((product, index) => {
                     const primaryImage = getPrimaryImage(product);
                     const isSelected = selectedProductIds.has(product.id);
+                    const catalogOrder = getDisplayOrder(product.catalog_display_order);
+                    const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
+                    const catalogVisible = Boolean(product.is_catalog_enabled);
+                    const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
+                    const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
+                    const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
+                    const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
+                    const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
 
                     return (
                       <tr
@@ -479,6 +621,44 @@ export default function AdminProducts() {
                             </div>
                           </div>
                         </td>
+                        <td className="p-4" onClick={(event) => event.stopPropagation()}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs text-muted-foreground">{contextLabel}</p>
+                              <p className="text-sm font-medium">
+                                {primaryVisibility ? 'Visible' : 'Hidden'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Order {primaryOrder !== null ? `#${primaryOrder}` : '—'}
+                              </p>
+                            </div>
+                            <Switch
+                              checked={primaryVisibility}
+                              disabled={toggleVisibilityMutation.isPending}
+                              onCheckedChange={(value) =>
+                                toggleVisibilityMutation.mutate({
+                                  productId: product.id,
+                                  field:
+                                    activeTab === 'catalog'
+                                      ? 'is_catalog_enabled'
+                                      : 'is_pay_and_pickup_enabled',
+                                  isEnabled: value,
+                                })
+                              }
+                            />
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm" onClick={(event) => event.stopPropagation()}>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">{secondaryContextLabel}</p>
+                            <p className="text-sm font-medium">
+                              {secondaryVisibility ? 'Visible' : 'Hidden'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Order {secondaryOrder !== null ? `#${secondaryOrder}` : '—'}
+                            </p>
+                          </div>
+                        </td>
                         <td className="p-4 text-sm">{product.category || '-'}</td>
                         <td className="p-4 text-sm font-mono">{product.sku || '-'}</td>
                         <td className="p-4 text-center text-sm font-medium">${formatPrice(product.price)}</td>
@@ -490,18 +670,6 @@ export default function AdminProducts() {
                           >
                             {product.stock_quantity ?? 0}
                           </span>
-                        </td>
-                        <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
-                          <Switch
-                            checked={Boolean(product.is_pay_and_pickup_enabled)}
-                            disabled={togglePayAndPickupMutation.isPending}
-                            onCheckedChange={(value) =>
-                              togglePayAndPickupMutation.mutate({
-                                productId: product.id,
-                                isEnabled: value,
-                              })
-                            }
-                          />
                         </td>
                         <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
                           <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>

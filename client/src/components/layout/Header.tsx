@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, Truck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 
 // Define the main product categories with icons
 const PRODUCT_CATEGORIES = [
@@ -46,10 +47,10 @@ const Header = () => {
 
   const navLinks = [
     { name: "Products", path: "/products" },
-    { name: "Pay & Pickup", path: "/pay-and-pickup" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
+    ...(GROK_ASSISTANT_ENABLED ? [{ name: "AI Assistant", path: "/grok" }] : []),
   ];
 
   return (
@@ -160,53 +161,45 @@ const Header = () => {
                 <span className="font-medium">(928) 550-1649</span>
               </a>
               {/* Authentication buttons temporarily hidden */}
-              {false && (isAuthenticated ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <span>{user?.email}</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
-                      <Link href="/account/orders">
-                        <a className="flex items-center w-full">
-                          Order History
-                        </a>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/account/profile">
-                        <a className="flex items-center w-full">
-                          My Profile
-                        </a>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => signOut()}
-                      className="flex items-center cursor-pointer text-red-600"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Link href="/signin">
-                    <Button variant="outline" className="border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button>
-                      Sign Up
-                    </Button>
-                  </Link>
-                </div>
-              ))}
+              {false &&
+                (isAuthenticated ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>{user?.email}</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link href="/account/orders">
+                          <a className="flex items-center w-full">Order History</a>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/account/profile">
+                          <a className="flex items-center w-full">My Profile</a>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => signOut()} className="flex items-center cursor-pointer text-red-600">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Link href="/signin">
+                      <Button variant="outline" className="border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link href="/signup">
+                      <Button>Sign Up</Button>
+                    </Link>
+                  </div>
+                ))}
               <div className="flex items-center gap-3">
                 <Link href="/pay-and-pickup">
                   <Button className="group h-auto min-h-[3.25rem] flex flex-col items-start gap-1 rounded-xl bg-gradient-to-r from-primary via-primary to-emerald-500 px-5 py-3 text-left text-white shadow-lg hover:shadow-xl transition-all duration-300">
@@ -214,13 +207,14 @@ const Header = () => {
                       <Truck className="h-4 w-4" />
                       Pay & Pickup Now
                     </span>
-                    <span className="text-xs font-medium uppercase tracking-wide text-white/80">
-                      Phoenix Yard
-                    </span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-white/80">Phoenix Yard</span>
                   </Button>
                 </Link>
                 <Link href="/order">
-                  <Button variant="outline" className="flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300">
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300"
+                  >
                     <ShoppingCart className="h-4 w-4" />
                     <span>Request a Quote</span>
                   </Button>
@@ -292,7 +286,8 @@ const Header = () => {
                     <div className="bg-primary/10 border border-primary/20 rounded-xl p-5 flex flex-col gap-3">
                       <div className="text-sm font-semibold text-primary uppercase tracking-wide">Now Available</div>
                       <p className="text-sm text-foreground/80">
-                        Schedule your <span className="font-semibold text-primary">Pay & Pickup</span> order and check out securely with Stripe for a faster, contactless experience.
+                        Schedule your <span className="font-semibold text-primary">Pay & Pickup</span> order and check out securely with Stripe for a
+                        faster, contactless experience.
                       </p>
                       <Link href="/pay-and-pickup">
                         <Button className="w-full bg-primary hover:bg-primary/90 text-white">Start Pay & Pickup</Button>
@@ -302,46 +297,45 @@ const Header = () => {
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 
                     {/* Auth section in mobile menu - temporarily hidden */}
-                    {false && (isAuthenticated ? (
-                      <div className="space-y-2">
-                        <div className="py-3 px-4 text-sm text-gray-600">
-                          Signed in as: {user?.email}
-                        </div>
-                        <Link href="/account/orders">
-                          <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">
-                            Order History
+                    {false &&
+                      (isAuthenticated ? (
+                        <div className="space-y-2">
+                          <div className="py-3 px-4 text-sm text-gray-600">Signed in as: {user?.email}</div>
+                          <Link href="/account/orders">
+                            <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">Order History</div>
+                          </Link>
+                          <Link href="/account/profile">
+                            <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">My Profile</div>
+                          </Link>
+                          <div
+                            onClick={() => {
+                              signOut();
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className="py-3 px-4 rounded-md text-red-600 hover:bg-red-50 cursor-pointer flex items-center"
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign Out
                           </div>
-                        </Link>
-                        <Link href="/account/profile">
-                          <div className="py-3 px-4 rounded-md text-foreground hover:bg-primary/5 hover:text-primary">
-                            My Profile
-                          </div>
-                        </Link>
-                        <div
-                          onClick={() => {
-                            signOut();
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className="py-3 px-4 rounded-md text-red-600 hover:bg-red-50 cursor-pointer flex items-center"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sign Out
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Link href="/signin">
-                          <Button variant="outline" className="w-full border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900" size="lg">
-                            Sign In
-                          </Button>
-                        </Link>
-                        <Link href="/signup">
-                          <Button className="w-full" size="lg">
-                            Sign Up
-                          </Button>
-                        </Link>
-                      </div>
-                    ))}
+                      ) : (
+                        <div className="space-y-2">
+                          <Link href="/signin">
+                            <Button
+                              variant="outline"
+                              className="w-full border-gray-600 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              size="lg"
+                            >
+                              Sign In
+                            </Button>
+                          </Link>
+                          <Link href="/signup">
+                            <Button className="w-full" size="lg">
+                              Sign Up
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 

@@ -14,18 +14,46 @@ const Products = () => {
   const [searchParams] = useState(new URLSearchParams(window.location.search));
   const initialCategory = searchParams.get("category") || "all";
 
+  const prepareCatalogProducts = (list: any[]) =>
+    list
+      .filter((product) => {
+        const catalogEnabled =
+          product?.catalog?.isEnabled ?? product?.isCatalogEnabled ?? true;
+        return catalogEnabled !== false;
+      })
+      .sort((productA, productB) => {
+        const orderA =
+          productA?.catalog?.displayOrder ??
+          productA?.catalogDisplayOrder ??
+          Number.MAX_SAFE_INTEGER;
+        const orderB =
+          productB?.catalog?.displayOrder ??
+          productB?.catalogDisplayOrder ??
+          Number.MAX_SAFE_INTEGER;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+
+        const nameA = (productA.displayTitle || productA.name || "").toLowerCase();
+        const nameB = (productB.displayTitle || productB.name || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
   const fallbackProducts = useMemo(
     () =>
-      productsData.map((product, index) => ({
-        ...product,
-        id: product.id ?? index + 1,
-        story: product.story || null,
-        usage: product.usage || null,
-        productType: product.productType || null,
-        safetyPrecautions: product.safetyPrecautions || null,
-        warranty: product.warranty || null,
-        additionalImages: product.additionalImages || [],
-      })),
+      prepareCatalogProducts(
+        productsData.map((product, index) => ({
+          ...product,
+          id: product.id ?? index + 1,
+          story: product.story || null,
+          usage: product.usage || null,
+          productType: product.productType || null,
+          safetyPrecautions: product.safetyPrecautions || null,
+          warranty: product.warranty || null,
+          additionalImages: product.additionalImages || [],
+        }))
+      ),
     []
   );
 
@@ -38,10 +66,12 @@ const Products = () => {
       }
       const body = await response.json();
       const fetchedProducts = (body?.products || []) as any[];
-      return fetchedProducts.map((product, index) => ({
-        ...product,
-        id: product.id ?? index + 1,
-      }));
+      return prepareCatalogProducts(
+        fetchedProducts.map((product, index) => ({
+          ...product,
+          id: product.id ?? index + 1,
+        }))
+      );
     },
     staleTime: 60 * 1000,
     retry: 1,

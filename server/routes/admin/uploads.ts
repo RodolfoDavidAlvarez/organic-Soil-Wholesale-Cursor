@@ -16,6 +16,19 @@ const upload = multer({
 
 const bucketName = process.env.SUPABASE_PRODUCT_IMAGES_BUCKET || "product-images";
 
+// Local file system fallback
+import fs from "fs";
+import { fileURLToPath } from "url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const ensureUploadDir = () => {
+  const uploadDir = path.join(__dirname, "../../../client/public/uploads");
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  return uploadDir;
+};
+
 const sanitizeSegment = (segment: string) =>
   segment
     .split("/")
@@ -76,25 +89,49 @@ router.post(
       const filename = `${uniqueId}${extension}`;
       const objectPath = path.posix.join(folder, filename);
 
-      const { error: uploadError } = await supabase.storage.from(bucketName).upload(objectPath, file.buffer, {
-        contentType: file.mimetype,
-        cacheControl: "3600",
-        upsert: false,
-      });
+      // Try Supabase first, fall back to local storage
+      try {
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(objectPath, file.buffer, {
+          contentType: file.mimetype,
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-      if (uploadError) {
-        console.error("Supabase upload error:", uploadError);
-        return res.status(500).json({ error: "Failed to store image", details: uploadError.message });
+        if (!uploadError) {
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(bucketName).getPublicUrl(objectPath);
+
+          return res.status(201).json({
+            url: publicUrl,
+            path: objectPath,
+            bucket: bucketName,
+          });
+        }
+
+        console.warn("Supabase upload failed, falling back to local storage:", uploadError.message);
+      } catch (supabaseError) {
+        console.warn("Supabase unavailable, using local storage:", supabaseError.message);
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucketName).getPublicUrl(objectPath);
+      // Fallback to local file system
+      const uploadDir = ensureUploadDir();
+      const folderPath = path.join(uploadDir, folder);
+      
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
 
+      const localFilePath = path.join(folderPath, filename);
+      fs.writeFileSync(localFilePath, file.buffer);
+
+      // Return local URL
+      const localUrl = `/uploads/${folder}/${filename}`;
+      
       return res.status(201).json({
-        url: publicUrl,
-        path: objectPath,
-        bucket: bucketName,
+        url: localUrl,
+        path: `uploads/${folder}/${filename}`,
+        bucket: "local",
       });
     } catch (error) {
       console.error("Upload route error:", error);

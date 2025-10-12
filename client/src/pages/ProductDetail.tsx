@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight, ZoomIn, Package, Truck, Shield, PlayCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight, ZoomIn, Package, Truck, Shield, PlayCircle, Edit2, Save, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getProductsData } from "@/data/productData";
 import { SIZE_CATALOG, SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const slugify = (value: string) =>
   value
@@ -20,6 +23,7 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "");
 
 const ProductDetail = () => {
+  const { admin } = useAdminAuth();
   const [, params] = useRoute("/products/:slug");
   const [, navigate] = useLocation();
   const slug = params && (params as any).slug ? (params as any).slug : undefined;
@@ -30,6 +34,10 @@ const ProductDetail = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  
+  // Inline editing state
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
 
   const sizeCategories = useMemo(() => {
     const defaultCategories = SIZE_CATALOG.map((entry) => ({
@@ -218,6 +226,119 @@ const ProductDetail = () => {
     return () => clearInterval(interval);
   }, [isAutoPlaying, sizeCategories.length]);
 
+  // Inline editing functions
+  const handleEditStart = (field: string, currentValue: string) => {
+    setEditingField(field);
+    setEditValues({ ...editValues, [field]: currentValue || '' });
+  };
+
+  const handleEditCancel = () => {
+    setEditingField(null);
+    setEditValues({});
+  };
+
+  const handleEditSave = async (field: string) => {
+    if (!product || !editValues[field]) return;
+    
+    try {
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          [field]: editValues[field]
+        }),
+      });
+
+      if (response.ok) {
+        setProduct({ ...product, [field]: editValues[field] });
+        setEditingField(null);
+        setEditValues({});
+      } else {
+        console.error('Failed to save product update');
+      }
+    } catch (error) {
+      console.error('Error saving product update:', error);
+    }
+  };
+
+  // Inline editing component
+  const InlineEditField = ({ 
+    field, 
+    value, 
+    multiline = false, 
+    className = "", 
+    placeholder = "",
+    children 
+  }: { 
+    field: string;
+    value: string;
+    multiline?: boolean;
+    className?: string;
+    placeholder?: string;
+    children: React.ReactNode;
+  }) => {
+    if (editingField === field) {
+      return (
+        <div className="group relative">
+          {multiline ? (
+            <Textarea
+              value={editValues[field] || ''}
+              onChange={(e) => setEditValues({ ...editValues, [field]: e.target.value })}
+              className={`${className} border-primary`}
+              placeholder={placeholder}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') handleEditCancel();
+              }}
+              autoFocus
+            />
+          ) : (
+            <Input
+              value={editValues[field] || ''}
+              onChange={(e) => setEditValues({ ...editValues, [field]: e.target.value })}
+              className={`${className} border-primary`}
+              placeholder={placeholder}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleEditSave(field);
+                if (e.key === 'Escape') handleEditCancel();
+              }}
+              autoFocus
+            />
+          )}
+          <div className="flex gap-1 mt-1">
+            <Button size="sm" onClick={() => handleEditSave(field)} className="h-7 px-2">
+              <Save className="h-3 w-3 mr-1" />
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleEditCancel} className="h-7 px-2">
+              <XCircle className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (admin) {
+      return (
+        <div className="group relative">
+          {children}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+            onClick={() => handleEditStart(field, value)}
+          >
+            <Edit2 className="h-3 w-3" />
+          </Button>
+        </div>
+      );
+    }
+
+    return <>{children}</>;
+  };
+
   const allImages: string[] = Array.from(
     new Set(
       [
@@ -305,11 +426,22 @@ const ProductDetail = () => {
         />
       )}
       <div className="container mx-auto px-4">
-        {/* Mobile-optimized back button */}
-        <div className="mb-4 sm:mb-8">
+        {/* Mobile-optimized back button and admin edit */}
+        <div className="mb-4 sm:mb-8 flex items-center justify-between">
           <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer p-2 -ml-2">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </div>
+          {admin && product && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/products/${product.id}/edit`)}
+              className="gap-2"
+            >
+              <Edit2 className="h-4 w-4" />
+              Advanced Edit
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <div className="flex flex-col lg:flex-row">
@@ -464,11 +596,33 @@ const ProductDetail = () => {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">{product.displayTitle || product.productType || product.name}</h1>
+                <InlineEditField 
+                  field="displayTitle" 
+                  value={product.displayTitle || product.productType || product.name}
+                  className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3"
+                  placeholder="Enter display title"
+                >
+                  <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">{product.displayTitle || product.productType || product.name}</h1>
+                </InlineEditField>
                 {product.name && product.name !== (product.displayTitle || product.productType) && (
-                  <p className="text-lg text-neutral-500 mb-2">{product.name}</p>
+                  <InlineEditField 
+                    field="name" 
+                    value={product.name}
+                    className="text-lg text-neutral-500 mb-2"
+                    placeholder="Enter product name"
+                  >
+                    <p className="text-lg text-neutral-500 mb-2">{product.name}</p>
+                  </InlineEditField>
                 )}
-                <p className="text-base sm:text-xl text-neutral-600 leading-relaxed">{product.description}</p>
+                <InlineEditField 
+                  field="description" 
+                  value={product.description}
+                  multiline={true}
+                  className="text-base sm:text-xl text-neutral-600 leading-relaxed"
+                  placeholder="Enter product description"
+                >
+                  <p className="text-base sm:text-xl text-neutral-600 leading-relaxed">{product.description}</p>
+                </InlineEditField>
               </div>
 
               {/* Key Benefits - Mobile optimized */}
@@ -608,10 +762,18 @@ const ProductDetail = () => {
                   
                   <div className="mt-4 sm:mt-6 bg-neutral-50 rounded-lg sm:rounded-xl p-4 sm:p-6">
                     <TabsContent value="details" className="mt-0 space-y-6">
-                      {product.story && (
+                      {(product.story || admin) && (
                         <div>
                           <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Our Story</h4>
-                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.story}</p>
+                          <InlineEditField 
+                            field="story" 
+                            value={product.story || ''}
+                            multiline={true}
+                            className="text-sm sm:text-base text-neutral-700 leading-relaxed"
+                            placeholder="Enter product story"
+                          >
+                            <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.story || (admin ? 'Click to add story...' : '')}</p>
+                          </InlineEditField>
                         </div>
                       )}
                       {product.targetAudience && (
@@ -626,10 +788,18 @@ const ProductDetail = () => {
                           </div>
                         </div>
                       )}
-                      {product.recommendedUses && (
+                      {(product.recommendedUses || admin) && (
                         <div>
                           <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Recommended Uses</h4>
-                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{product.recommendedUses}</p>
+                          <InlineEditField 
+                            field="recommendedUses" 
+                            value={product.recommendedUses || ''}
+                            multiline={true}
+                            className="text-sm sm:text-base text-neutral-700 leading-relaxed"
+                            placeholder="Enter recommended uses"
+                          >
+                            <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{product.recommendedUses || (admin ? 'Click to add recommended uses...' : '')}</p>
+                          </InlineEditField>
                         </div>
                       )}
                       {product.features && product.features.includes('|') && (
@@ -645,9 +815,17 @@ const ProductDetail = () => {
                           </ul>
                         </div>
                       )}
-                      {product.marketingNote && (
+                      {(product.marketingNote || admin) && (
                         <div className="mt-4 p-4 bg-primary/10 rounded-lg">
-                          <p className="text-sm text-neutral-700 italic">{product.marketingNote}</p>
+                          <InlineEditField 
+                            field="marketingNote" 
+                            value={product.marketingNote || ''}
+                            multiline={true}
+                            className="text-sm text-neutral-700 italic"
+                            placeholder="Enter marketing note"
+                          >
+                            <p className="text-sm text-neutral-700 italic">{product.marketingNote || (admin ? 'Click to add marketing note...' : '')}</p>
+                          </InlineEditField>
                         </div>
                       )}
                     </TabsContent>
@@ -655,14 +833,30 @@ const ProductDetail = () => {
                     <TabsContent value="usage" className="mt-0">
                       <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Usage Instructions</h4>
                       <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
-                        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.usage || "Usage instructions will be provided with your order."}</p>
+                        <InlineEditField 
+                          field="usage" 
+                          value={product.usage || ''}
+                          multiline={true}
+                          className="text-sm sm:text-base text-neutral-700 leading-relaxed"
+                          placeholder="Enter usage instructions"
+                        >
+                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.usage || (admin ? 'Click to add usage instructions...' : "Usage instructions will be provided with your order.")}</p>
+                        </InlineEditField>
                       </div>
                     </TabsContent>
                     
                     <TabsContent value="ingredients" className="mt-0">
                       <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Ingredients</h4>
                       <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
-                        <p className="text-sm sm:text-base text-neutral-700 font-medium">{product.ingredients || "Ingredient information available upon request."}</p>
+                        <InlineEditField 
+                          field="ingredients" 
+                          value={product.ingredients || ''}
+                          multiline={true}
+                          className="text-sm sm:text-base text-neutral-700 font-medium"
+                          placeholder="Enter ingredients"
+                        >
+                          <p className="text-sm sm:text-base text-neutral-700 font-medium">{product.ingredients || (admin ? 'Click to add ingredients...' : "Ingredient information available upon request.")}</p>
+                        </InlineEditField>
                       </div>
                     </TabsContent>
                     

@@ -12,10 +12,13 @@ import { lazy, Suspense, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminAuthProvider } from "@/hooks/useAdminAuth";
+import { GrokWidget } from "@/components/GrokWidget";
+import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Products = lazy(() => import("@/pages/Products"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
+const ProductEdit = lazy(() => import("@/pages/ProductEdit"));
 const MulchDetail = lazy(() => import("@/pages/MulchDetail"));
 const About = lazy(() => import("@/pages/About"));
 const Contact = lazy(() => import("@/pages/Contact"));
@@ -38,6 +41,8 @@ const SignUpSuccess = lazy(() => import("@/pages/SignUpSuccess"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const GrokAssistant = lazy(() => import("@/pages/GrokAssistant"));
+const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Admin Pages
@@ -52,6 +57,14 @@ const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
+
+const PAY_AND_PICKUP_STEP_SEGMENTS = ["pickup-options", "menu", "cart", "customer-info", "payment", "checkout", "notify-arrival"] as const;
+const PAY_AND_PICKUP_PATHS = [
+  "/pay-and-pickup",
+  ...PAY_AND_PICKUP_STEP_SEGMENTS.map((segment) => `/pay-and-pickup/${segment}`),
+  "/drive-through",
+  ...PAY_AND_PICKUP_STEP_SEGMENTS.map((segment) => `/drive-through/${segment}`),
+] as const;
 
 // ScrollToTop component to handle auto-scrolling
 const ScrollToTop = () => {
@@ -69,17 +82,12 @@ const ScrollToTop = () => {
 
 function Router() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/products" component={Products} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
+        <Route path="/products/:id/edit" component={ProductEdit} />
         <Route path="/products/:slug" component={ProductDetail} />
         <Route path="/about" component={About} />
         <Route path="/contact" component={Contact} />
@@ -91,12 +99,15 @@ function Router() {
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/store-locator" component={StoreLocatorEnhanced} />
-        <Route path="/pay-and-pickup" component={PayAndPickup} />
-        <Route path="/drive-through" component={PayAndPickup} />
+        {PAY_AND_PICKUP_PATHS.map((path) => (
+          <Route key={path} path={path} component={PayAndPickup} />
+        ))}
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/drive-thru/admin" component={DriveThruAdmin} />
         <Route path="/order-confirmation" component={OrderConfirmation} />
+        {GROK_ASSISTANT_ENABLED && <Route path="/grok" component={GrokAssistant} />}
+        <Route path="/video-demo" component={VideoDemo} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />
@@ -125,7 +136,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const isPayAndPickup = location === "/pay-and-pickup" || location === "/drive-through";
+  const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through");
   const isTriviaGame = location === "/trivia";
   const isCheckoutFlow = location === "/checkout" || location === "/order-confirmation" || location === "/quick-order";
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
@@ -138,9 +149,11 @@ function App() {
           <AuthProvider>
             <AdminAuthProvider>
               <TooltipProvider>
-                  <div className="min-h-screen flex flex-col">
+                <div className="min-h-screen flex flex-col">
                   {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Header />}
-                  <main className={`flex-grow ${!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel ? "pt-20" : ""}`}>
+                  <main
+                    className={`flex-grow ${!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel ? "pt-20" : ""}`}
+                  >
                     <Router />
                   </main>
                   {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Footer />}
@@ -148,6 +161,7 @@ function App() {
                   <ScrollToTop />
                   <Analytics />
                   {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <FloatingCTA />}
+                  {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                 </div>
               </TooltipProvider>
             </AdminAuthProvider>

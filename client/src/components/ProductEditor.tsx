@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { X, Save, Upload } from "lucide-react";
+import { X, Save, Upload, Lock } from "lucide-react";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 // Extended Product interface that includes texturePhotoUrl
 interface ExtendedProduct {
@@ -46,11 +47,58 @@ interface ProductEditorProps {
 }
 
 export function ProductEditor({ product, onSave, onCancel }: ProductEditorProps) {
+  const { admin, loading } = useAdminAuth();
   const [editedProduct, setEditedProduct] = useState<ExtendedProduct>({ ...product });
   const [imagePreview, setImagePreview] = useState({
     texturePhoto: editedProduct.texturePhotoUrl || "",
     bagPhoto: editedProduct.imageUrl || "",
   });
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin mx-auto mb-4 h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <p>Checking permissions...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show access denied if not authenticated
+  if (!admin) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Access Restricted
+            </CardTitle>
+            <Button variant="ghost" size="icon" onClick={onCancel} className="rounded-full">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Admin authentication is required to edit products.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onCancel} className="flex-1">
+                Cancel
+              </Button>
+              <Button asChild className="flex-1">
+                <a href="/admin">Admin Login</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleFieldChange = (field: keyof ExtendedProduct, value: any) => {
     setEditedProduct((prev) => ({ ...prev, [field]: value }));

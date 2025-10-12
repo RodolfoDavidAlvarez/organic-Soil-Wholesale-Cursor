@@ -10,11 +10,23 @@ export type Product = {
   category?: string | null;
   price?: number | null;
   stock_quantity?: number | null;
+  is_catalog_enabled?: boolean | null;
+  catalog_display_order?: number | null;
   is_pay_and_pickup_enabled?: boolean | null;
+  pay_and_pickup_display_order?: number | null;
   pay_and_pickup_description?: string | null;
   pay_and_pickup_hero_image?: string | null;
   texture_photo_url?: string | null;
   image_url?: string | null;
+  marketing_title?: string | null;
+  marketing_note?: string | null;
+  seo_keywords?: string | null;
+  ingredients?: string | null;
+  target_audience?: string | null;
+  recommended_uses?: string | null;
+  features?: string | null;
+  story?: string | null;
+  usage?: string | null;
   additional_images?: string[] | string | null;
   available_size_options?: string[] | string | null;
   size_price_options?: ProductSizePriceOption[] | string | null;
@@ -28,8 +40,21 @@ export type EditFormData = {
   display_title: string;
   sku: string;
   category: string;
+  marketing_title: string;
+  marketing_note: string;
+  seo_keywords: string;
+  description: string;
+  ingredients: string;
+  target_audience: string;
+  recommended_uses: string;
+  features: string;
+  story: string;
+  usage: string;
+  catalog_display_order: string;
+  pay_and_pickup_display_order: string;
   price: string;
   stock_quantity: string;
+  is_catalog_enabled: boolean;
   is_pay_and_pickup_enabled: boolean;
   pay_and_pickup_description: string;
   pay_and_pickup_hero_image: string;
@@ -162,10 +187,11 @@ const normalizeSizeOptionRecord = (input: Record<string, unknown>): ProductSizeP
   let label = rawLabel?.trim();
 
   if (!key && label) {
+    const normalizedLabel = label.toLowerCase();
     const catalogMatch = SIZE_CATALOG.find(
-      (entry) => entry.label.toLowerCase() === label.toLowerCase(),
+      (entry) => entry.label.toLowerCase() === normalizedLabel,
     );
-    key = catalogMatch?.key ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    key = catalogMatch?.key ?? normalizedLabel.replace(/[^a-z0-9]+/g, '-');
   }
 
   if (key && !label) {
@@ -489,6 +515,18 @@ const CATEGORY_KEYS = combineCandidates(
   ['collection']
 );
 
+const PAY_PICKUP_ORDER_KEYS = combineCandidates(
+  createFieldCandidates('pay_and_pickup_display_order'),
+  createFieldCandidates('display_order'),
+  ['payAndPickupDisplayOrder', 'displayOrder', 'sort_order', 'sortOrder', 'order']
+);
+
+const CATALOG_ORDER_KEYS = combineCandidates(
+  createFieldCandidates('catalog_display_order'),
+  createFieldCandidates('catalogDisplayOrder'),
+  ['catalog_order', 'catalogOrder', 'catalog_sort', 'catalogSort', 'display_order', 'displayOrder']
+);
+
 const PRICE_KEYS = combineCandidates(
   createFieldCandidates('price'),
   createFieldCandidates('price_cents'),
@@ -503,12 +541,73 @@ const STOCK_KEYS = combineCandidates(
   ['quantityAvailable', 'qty']
 );
 
+const CATALOG_ENABLED_KEYS = combineCandidates(
+  createFieldCandidates('is_catalog_enabled'),
+  createFieldCandidates('catalog_enabled'),
+  ['catalogVisible', 'isCatalogVisible', 'show_in_catalog', 'showInCatalog', 'display_in_catalog', 'displayInCatalog']
+);
+
 const PAY_PICKUP_DESCRIPTION_KEYS = combineCandidates(
   createFieldCandidates('pay_and_pickup_description'),
   createFieldCandidates('payAndPickupDescription'),
   createFieldCandidates('pickup_description'),
   createFieldCandidates('description'),
   ['overview', 'summary']
+);
+
+const DESCRIPTION_KEYS = combineCandidates(
+  createFieldCandidates('description'),
+  ['briefOverview', 'overview', 'summary', 'long_description', 'productDescription']
+);
+
+const MARKETING_TITLE_KEYS = combineCandidates(
+  createFieldCandidates('marketing_title'),
+  createFieldCandidates('marketingTitle'),
+  ['headline', 'campaignTitle', 'heroTitle']
+);
+
+const MARKETING_NOTE_KEYS = combineCandidates(
+  createFieldCandidates('marketing_note'),
+  createFieldCandidates('marketingNote'),
+  ['promo_note', 'tagline', 'highlight']
+);
+
+const SEO_KEYWORDS_KEYS = combineCandidates(
+  createFieldCandidates('seo_keywords'),
+  createFieldCandidates('seoKeywords'),
+  ['keywords', 'search_terms', 'searchTerms']
+);
+
+const INGREDIENTS_KEYS = combineCandidates(
+  createFieldCandidates('ingredients'),
+  ['composition', 'components', 'inputs']
+);
+
+const TARGET_AUDIENCE_KEYS = combineCandidates(
+  createFieldCandidates('target_audience'),
+  createFieldCandidates('targetAudience'),
+  ['ideal_customer', 'bestFor', 'targets']
+);
+
+const RECOMMENDED_USES_KEYS = combineCandidates(
+  createFieldCandidates('recommended_uses'),
+  createFieldCandidates('recommendedUses'),
+  ['bestUses', 'use_cases', 'applications']
+);
+
+const FEATURES_KEYS = combineCandidates(
+  createFieldCandidates('features'),
+  ['benefits', 'key_features', 'highlights']
+);
+
+const STORY_KEYS = combineCandidates(
+  createFieldCandidates('story'),
+  ['origin_story', 'background', 'narrative']
+);
+
+const USAGE_KEYS = combineCandidates(
+  createFieldCandidates('usage'),
+  ['instructions', 'how_to_use', 'application']
 );
 
 const PAY_PICKUP_ENABLED_KEYS = combineCandidates(
@@ -597,7 +696,8 @@ const buildProductImageCandidates = (product: Product): string[] => {
   const base = getStringField(product, IMAGE_URL_KEYS);
   const gallery = getArrayField(product, ADDITIONAL_IMAGES_KEYS);
 
-  const orderedSources = [hero, texture, base, ...gallery];
+  // Order: texture first (highest priority), then hero, then base, then gallery
+  const orderedSources = [texture, hero, base, ...gallery];
   const result: string[] = [];
 
   for (const source of orderedSources) {
@@ -617,18 +717,30 @@ export const buildEditForm = (product: Product): EditFormData => {
     getNumberField(product, PRICE_KEYS) ??
     (typeof product.price === 'number' ? product.price : null);
 
+  const catalogOrderValue =
+    getNumberField(product, CATALOG_ORDER_KEYS) ??
+    (typeof product.catalog_display_order === 'number' ? product.catalog_display_order : null);
+
+  const displayOrderValue =
+    getNumberField(product, PAY_PICKUP_ORDER_KEYS) ??
+    (typeof product.pay_and_pickup_display_order === 'number' ? product.pay_and_pickup_display_order : null);
+
   const stockValue =
     getNumberField(product, STOCK_KEYS) ??
     (typeof product.stock_quantity === 'number' ? product.stock_quantity : null);
 
-  const payPickupDescription =
-    getStringField(product, PAY_PICKUP_DESCRIPTION_KEYS) ||
+  const generalDescription =
+    getStringField(product, DESCRIPTION_KEYS) ||
     (typeof product.description === 'string' ? product.description : '');
+
+  const payPickupDescription =
+    getStringField(product, PAY_PICKUP_DESCRIPTION_KEYS) || generalDescription;
 
   const heroImageRaw = getStringField(product, HERO_IMAGE_KEYS);
   const textureImageRaw = getStringField(product, TEXTURE_IMAGE_KEYS);
   const baseImageRaw = getStringField(product, IMAGE_URL_KEYS);
   const galleryImagesRaw = getArrayField(product, ADDITIONAL_IMAGES_KEYS);
+
   const heroImage = selectBestImageCandidate(heroImageRaw, baseImageRaw, galleryImagesRaw[0]);
   const textureImage = selectBestImageCandidate(textureImageRaw, heroImageRaw, baseImageRaw);
   const baseImage = selectBestImageCandidate(baseImageRaw, heroImageRaw, textureImageRaw);
@@ -663,6 +775,7 @@ export const buildEditForm = (product: Product): EditFormData => {
     const existing = findSizeOptionByCatalog(entry);
     const priceCents = getProductSizePriceCents(existing);
     const image = existing?.image ?? entry.image;
+    
     const isActive =
       existing?.is_active != null
         ? Boolean(existing.is_active)
@@ -678,7 +791,7 @@ export const buildEditForm = (product: Product): EditFormData => {
     };
   });
 
-  const catalogKeys = new Set(SIZE_CATALOG.map((entry) => entry.key));
+  const catalogKeys = new Set<string>(SIZE_CATALOG.map((entry) => entry.key));
 
   const extraSizePriceFormValues: SizePriceOptionFormValue[] = sizePriceOptions
     .filter((option) => !catalogKeys.has(option.key))
@@ -708,14 +821,32 @@ export const buildEditForm = (product: Product): EditFormData => {
 
   const productVideoUrl = getStringField(product, VIDEO_URL_KEYS);
   const productVideoTitle = getStringField(product, VIDEO_TITLE_KEYS);
+  const catalogEnabled = getBooleanField(
+    product,
+    CATALOG_ENABLED_KEYS,
+    product.is_catalog_enabled != null ? Boolean(product.is_catalog_enabled) : true
+  );
 
   return {
     name: getStringField(product, NAME_KEYS) || '',
     display_title: getStringField(product, DISPLAY_TITLE_KEYS) || '',
     sku: getStringField(product, SKU_KEYS) || '',
     category: getStringField(product, CATEGORY_KEYS) || '',
+    marketing_title: getStringField(product, MARKETING_TITLE_KEYS) || '',
+    marketing_note: getStringField(product, MARKETING_NOTE_KEYS) || '',
+    seo_keywords: getStringField(product, SEO_KEYWORDS_KEYS) || '',
+    description: generalDescription,
+    ingredients: getStringField(product, INGREDIENTS_KEYS) || '',
+    target_audience: getStringField(product, TARGET_AUDIENCE_KEYS) || '',
+    recommended_uses: getStringField(product, RECOMMENDED_USES_KEYS) || '',
+    features: getStringField(product, FEATURES_KEYS) || '',
+    story: getStringField(product, STORY_KEYS) || '',
+    usage: getStringField(product, USAGE_KEYS) || '',
+    catalog_display_order: catalogOrderValue !== null ? String(catalogOrderValue) : '0',
+    pay_and_pickup_display_order: displayOrderValue !== null ? String(displayOrderValue) : '0',
     price: priceValue !== null ? formatPrice(priceValue) : '',
     stock_quantity: stockValue !== null ? String(stockValue) : '',
+    is_catalog_enabled: catalogEnabled,
     is_pay_and_pickup_enabled: getBooleanField(
       product,
       PAY_PICKUP_ENABLED_KEYS,

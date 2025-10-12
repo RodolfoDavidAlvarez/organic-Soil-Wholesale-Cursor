@@ -48,7 +48,7 @@ const parseProductId = (param?: string | number | null) => {
 export default function AdminProductDetail() {
   const [, params] = useRoute('/admin/products/:productId');
   const [, navigate] = useLocation();
-  const productId = parseProductId(params?.productId);
+  const productId = parseProductId(params?.productId ?? null);
   const isValidProductId = Number.isInteger(productId) && productId > 0;
 
   const { toast } = useToast();
@@ -322,10 +322,12 @@ export default function AdminProductDetail() {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-  const getCatalogEntry = (key: string) =>
-    Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, key)
-      ? SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY]
+  const getCatalogEntry = (key: string) => {
+    const catalogKey = key as keyof typeof SIZE_CATALOG_BY_KEY;
+    return Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, catalogKey)
+      ? SIZE_CATALOG_BY_KEY[catalogKey]
       : undefined;
+  };
 
   const handleStandardSizeToggle = (key: string, isActive: boolean) => {
     updateSizePriceOptions((options) =>
@@ -409,6 +411,59 @@ export default function AdminProductDetail() {
     setIsSaving(true);
 
     try {
+      const displayOrderInput = editForm.pay_and_pickup_display_order.trim();
+      let parsedDisplayOrder: number | null = null;
+      const catalogOrderInput = editForm.catalog_display_order.trim();
+      let parsedCatalogOrder: number | null = null;
+
+      if (displayOrderInput.length > 0) {
+        const candidate = Number.parseInt(displayOrderInput, 10);
+        if (Number.isNaN(candidate) || candidate < 0) {
+          toast({
+            title: 'Invalid display order',
+            description: 'Enter a whole number zero or greater to control the product order.',
+            variant: 'destructive',
+          });
+          setIsSaving(false);
+          return;
+        }
+        parsedDisplayOrder = candidate;
+      }
+
+      if (parsedDisplayOrder !== null && !Number.isInteger(parsedDisplayOrder)) {
+        toast({
+          title: 'Invalid display order',
+          description: 'Enter a whole number zero or greater to control the product order.',
+          variant: 'destructive',
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      if (catalogOrderInput.length > 0) {
+        const candidate = Number.parseInt(catalogOrderInput, 10);
+        if (Number.isNaN(candidate) || candidate < 0) {
+          toast({
+            title: 'Invalid catalog order',
+            description: 'Enter a whole number zero or greater to control the catalog product ordering.',
+            variant: 'destructive',
+          });
+          setIsSaving(false);
+          return;
+        }
+        parsedCatalogOrder = candidate;
+      }
+
+      if (parsedCatalogOrder !== null && !Number.isInteger(parsedCatalogOrder)) {
+        toast({
+          title: 'Invalid catalog order',
+          description: 'Enter a whole number zero or greater to control the catalog product ordering.',
+          variant: 'destructive',
+        });
+        setIsSaving(false);
+        return;
+      }
+
       let heroImageUrl = editForm.pay_and_pickup_hero_image;
       if (heroUpload) {
         heroImageUrl = await uploadImage(heroUpload, `${PRODUCT_IMAGE_FOLDER}/${productId}`);
@@ -435,6 +490,8 @@ export default function AdminProductDetail() {
         if (!Number.isFinite(parsed)) return null;
         return Math.round(parsed * 100);
       };
+
+      const supportsSizePriceOptions = product && Object.prototype.hasOwnProperty.call(product, 'size_price_options');
 
       const sizePriceOptionsPayload = editForm.size_price_options
         .filter((option) => option.label.trim().length > 0)
@@ -466,13 +523,25 @@ export default function AdminProductDetail() {
         ),
       );
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: editForm.name.trim(),
         display_title: editForm.display_title.trim() || null,
-        sku: editForm.sku.trim() || null,
         category: editForm.category.trim() || null,
+        marketing_title: editForm.marketing_title.trim() || null,
+        marketing_note: editForm.marketing_note.trim() || null,
+        seo_keywords: editForm.seo_keywords.trim() || null,
+        description: editForm.description.trim() || null,
+        ingredients: editForm.ingredients.trim() || null,
+        target_audience: editForm.target_audience.trim() || null,
+        recommended_uses: editForm.recommended_uses.trim() || null,
+        features: editForm.features.trim() || null,
+        story: editForm.story.trim() || null,
+        usage: editForm.usage.trim() || null,
+        catalog_display_order: parsedCatalogOrder ?? 0,
+        pay_and_pickup_display_order: parsedDisplayOrder ?? 0,
         price: priceInCents,
         stock_quantity: editForm.stock_quantity.trim() ? Number(editForm.stock_quantity) : null,
+        is_catalog_enabled: editForm.is_catalog_enabled,
         is_pay_and_pickup_enabled: editForm.is_pay_and_pickup_enabled,
         pay_and_pickup_description: editForm.pay_and_pickup_description.trim() || null,
         pay_and_pickup_hero_image: heroImageUrl || null,
@@ -481,10 +550,17 @@ export default function AdminProductDetail() {
         image_url: editForm.image_url.trim() || heroImageUrl || null,
         additional_images: galleryImages,
         available_size_options: availableSizeOptions,
-        size_price_options: sizePriceOptionsPayload,
         product_video_url: editForm.product_video_url.trim() || null,
         product_video_title: editForm.product_video_title.trim() || null,
       };
+
+      if (product && Object.prototype.hasOwnProperty.call(product, 'sku')) {
+        payload.sku = editForm.sku.trim() || null;
+      }
+
+      if (supportsSizePriceOptions) {
+        payload.size_price_options = sizePriceOptionsPayload;
+      }
 
       await updateProductMutation.mutateAsync({ productId, data: payload });
     } catch (mutationError) {
@@ -538,10 +614,10 @@ export default function AdminProductDetail() {
               </Button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {editForm?.display_title || editForm?.name || product?.name || 'Product details'}
+                  Product Manager: {editForm?.display_title || editForm?.name || product?.name || 'Product'}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Manage Pay &amp; Pickup presentation, availability, and imagery for this product.
+                  Control how this product appears on the main catalog and in Pay &amp; Pickup ordering, including content, media, and availability.
                 </p>
               </div>
             </div>
@@ -760,8 +836,17 @@ export default function AdminProductDetail() {
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
+                          {editForm.is_catalog_enabled ? 'Shown in Catalog' : 'Catalog Hidden'}
+                        </Badge>
+                        <Badge variant="outline">
+                          Catalog #{editForm.catalog_display_order || '0'}
+                        </Badge>
                         <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                          {editForm.is_pay_and_pickup_enabled ? 'Live in Pay & Pickup' : 'Hidden'}
+                          {editForm.is_pay_and_pickup_enabled ? 'Pay & Pickup Live' : 'Pay & Pickup Hidden'}
+                        </Badge>
+                        <Badge variant="outline">
+                          Pickup #{editForm.pay_and_pickup_display_order || '0'}
                         </Badge>
                         {editForm.sku && (
                           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -798,7 +883,7 @@ export default function AdminProductDetail() {
                     </div>
                   </div>
                   <Separator />
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-4">
                     <div className="grid gap-2">
                       <Label htmlFor="product-name">Product name</Label>
                       <Input
@@ -812,19 +897,40 @@ export default function AdminProductDetail() {
                         }
                       />
                     </div>
+                    
                     <div className="grid gap-2">
-                      <Label htmlFor="display-title">Display title</Label>
-                      <Input
-                        id="display-title"
-                        value={editForm.display_title}
+                      <Label htmlFor="product-description">Product Description</Label>
+                      <Textarea
+                        id="product-description"
+                        value={editForm.description || ''}
                         onChange={(event) =>
                           setEditForm({
                             ...editForm,
-                            display_title: event.target.value,
+                            description: event.target.value,
                           })
                         }
+                        rows={6}
+                        placeholder="Enter detailed product description that will appear on product pages and Pay & Pickup"
                       />
+                      <p className="text-right text-xs text-muted-foreground">
+                        {(editForm.description || '').length} characters
+                      </p>
                     </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-2">
+                        <Label htmlFor="display-title">Display title</Label>
+                        <Input
+                          id="display-title"
+                          value={editForm.display_title}
+                          onChange={(event) =>
+                            setEditForm({
+                              ...editForm,
+                              display_title: event.target.value,
+                            })
+                          }
+                        />
+                      </div>
                     <div className="grid gap-2">
                       <Label htmlFor="sku">SKU</Label>
                       <Input
@@ -850,6 +956,44 @@ export default function AdminProductDetail() {
                           })
                         }
                       />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pay-pickup-order">Pay &amp; Pickup order</Label>
+                      <Input
+                        id="pay-pickup-order"
+                        type="number"
+                        min={0}
+                        value={editForm.pay_and_pickup_display_order}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            pay_and_pickup_display_order: event.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Controls sorting inside the Pay &amp; Pickup menu. Lower numbers appear first.
+                      </p>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="catalog-order">Catalog order</Label>
+                      <Input
+                        id="catalog-order"
+                        type="number"
+                        min={0}
+                        value={editForm.catalog_display_order}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            catalog_display_order: event.target.value,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Controls sorting on the Products page. Lower numbers appear first for customers.
+                      </p>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="price">Price (USD)</Label>
@@ -880,6 +1024,188 @@ export default function AdminProductDetail() {
                       />
                     </div>
                   </div>
+
+                </div>
+                
+                <div className="space-y-4 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
+                  <div className="space-y-1">
+                    <h2 className="text-sm font-semibold text-foreground">Product Details</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Additional product information for better customer understanding.
+                    </p>
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="marketing-title">Marketing Title</Label>
+                      <Input
+                        id="marketing-title"
+                        value={editForm.marketing_title || ''}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            marketing_title: event.target.value,
+                          })
+                        }
+                        placeholder="Catchy marketing headline"
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="marketing-note">Marketing Note</Label>
+                      <Input
+                        id="marketing-note"
+                        value={editForm.marketing_note || ''}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            marketing_note: event.target.value,
+                          })
+                        }
+                        placeholder="Short promotional text"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="ingredients">Ingredients</Label>
+                    <Textarea
+                      id="ingredients"
+                      value={editForm.ingredients || ''}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          ingredients: event.target.value,
+                        })
+                      }
+                      rows={3}
+                      placeholder="List key ingredients and materials"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="story">Product Story</Label>
+                    <Textarea
+                      id="story"
+                      value={editForm.story || ''}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          story: event.target.value,
+                        })
+                      }
+                      rows={4}
+                      placeholder="Tell the story behind this product"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="usage">Usage Instructions</Label>
+                    <Textarea
+                      id="usage"
+                      value={editForm.usage || ''}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          usage: event.target.value,
+                        })
+                      }
+                      rows={4}
+                      placeholder="How to use this product effectively"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="features">Key Features</Label>
+                    <Textarea
+                      id="features"
+                      value={editForm.features || ''}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          features: event.target.value,
+                        })
+                      }
+                      rows={3}
+                      placeholder="List main product features and benefits"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="target-audience">Target Audience</Label>
+                      <Input
+                        id="target-audience"
+                        value={editForm.target_audience || ''}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            target_audience: event.target.value,
+                          })
+                        }
+                        placeholder="Who is this product for?"
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="recommended-uses">Recommended Uses</Label>
+                      <Input
+                        id="recommended-uses"
+                        value={editForm.recommended_uses || ''}
+                        onChange={(event) =>
+                          setEditForm({
+                            ...editForm,
+                            recommended_uses: event.target.value,
+                          })
+                        }
+                        placeholder="Best use cases"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="seo-keywords">SEO Keywords</Label>
+                    <Input
+                      id="seo-keywords"
+                      value={editForm.seo_keywords || ''}
+                      onChange={(event) =>
+                        setEditForm({
+                          ...editForm,
+                          seo_keywords: event.target.value,
+                        })
+                      }
+                      placeholder="Comma-separated keywords for search optimization"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-5 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
+                  <div className="space-y-1">
+                    <h2 className="text-sm font-semibold text-foreground">Catalog visibility</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Decide if this product appears on the public Products page.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Products Page</p>
+                      <p className="text-sm font-medium">
+                        {editForm.is_catalog_enabled ? 'Visible to customers' : 'Hidden from catalog'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editForm.is_catalog_enabled}
+                      onCheckedChange={(value) =>
+                        setEditForm({
+                          ...editForm,
+                          is_catalog_enabled: value,
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Current catalog order: #{editForm.catalog_display_order || '0'} (lower numbers appear first).
+                  </p>
                 </div>
 
                 <div className="space-y-5 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
@@ -952,44 +1278,67 @@ export default function AdminProductDetail() {
                           <div
                             key={entry.key}
                             className={`flex flex-col gap-3 rounded-xl border p-4 transition ${
-                              option.isActive ? 'border-primary/60 bg-primary/5' : 'border-border/60 bg-muted/10'
+                              option.isActive ? 'border-primary/60 bg-primary/5 shadow-sm' : 'border-border/60 bg-muted/10'
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className="h-20 w-28 overflow-hidden rounded-lg bg-white shadow-sm">
+                              <div className="h-20 w-28 overflow-hidden rounded-lg bg-white shadow-sm border">
                                 <img
                                   src={option.image || entry.image}
                                   alt={entry.label}
                                   className="h-full w-full object-cover"
                                 />
                               </div>
-                              <div className="flex-1 space-y-2">
+                              <div className="flex-1 space-y-3">
                                 <div className="flex items-start justify-between gap-3">
-                                  <div>
+                                  <div className="flex-1">
                                     <p className="text-sm font-semibold text-foreground">{entry.label}</p>
-                                    <p className="text-xs text-muted-foreground">{entry.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{entry.description}</p>
+                                    {option.isActive && option.price && (
+                                      <p className="text-sm font-medium text-green-600 mt-1">
+                                        ${parseFloat(option.price || '0').toFixed(2)}
+                                      </p>
+                                    )}
                                   </div>
-                                  <Switch
-                                    checked={Boolean(option.isActive)}
-                                    onCheckedChange={(value) => handleStandardSizeToggle(entry.key, value)}
-                                  />
+                                  <div className="flex flex-col items-end gap-2">
+                                    <Switch
+                                      checked={Boolean(option.isActive)}
+                                      onCheckedChange={(value) => handleStandardSizeToggle(entry.key, value)}
+                                    />
+                                    {option.isActive && (
+                                      <span className="text-xs font-medium text-primary">Available</span>
+                                    )}
+                                  </div>
                                 </div>
                                 {option.isActive && (
-                                  <div className="space-y-1">
-                                    <Label
-                                      htmlFor={priceInputId}
-                                      className="text-xs uppercase tracking-wide text-muted-foreground"
-                                    >
-                                      Price (USD)
-                                    </Label>
-                                    <Input
-                                      id={priceInputId}
-                                      placeholder="e.g. 129.99"
-                                      value={option.price}
-                                      onChange={(event) =>
-                                        handleStandardPriceChange(entry.key, event.target.value)
-                                      }
-                                    />
+                                  <div className="space-y-2">
+                                    <div className="grid gap-1">
+                                      <Label
+                                        htmlFor={priceInputId}
+                                        className="text-xs uppercase tracking-wide text-muted-foreground"
+                                      >
+                                        Price (USD) *
+                                      </Label>
+                                      <Input
+                                        id={priceInputId}
+                                        placeholder="e.g. 129.99"
+                                        value={option.price}
+                                        onChange={(event) =>
+                                          handleStandardPriceChange(entry.key, event.target.value)
+                                        }
+                                        className="text-sm"
+                                      />
+                                    </div>
+                                    {entry.key === 'bulk-pickup' && (
+                                      <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border">
+                                        💡 Bulk pickup pricing is per cubic yard. Consider location-based variations.
+                                      </p>
+                                    )}
+                                    {entry.key === 'bulk-delivery' && (
+                                      <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded border">
+                                        🚚 Bulk delivery includes transport. Price may vary by distance.
+                                      </p>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -999,17 +1348,22 @@ export default function AdminProductDetail() {
                       })}
                     </div>
 
-                    <div className="space-y-3 rounded-xl border border-dashed border-border/60 bg-muted/20 p-4">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-4 rounded-xl border border-dashed border-border/60 bg-muted/20 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-sm font-semibold text-foreground">Custom size options</p>
                           <p className="text-xs text-muted-foreground">
-                            Add product-specific sizes. Leave the price blank if it varies by location.
+                            Add product-specific sizes beyond the standard options. Leave price blank if it varies by location.
                           </p>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {editForm.available_size_options.length} size
-                          {editForm.available_size_options.length === 1 ? '' : 's'} active
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="text-xs text-muted-foreground">
+                            {editForm.available_size_options.length} size
+                            {editForm.available_size_options.length === 1 ? '' : 's'} active
+                          </div>
+                          <div className="text-xs font-medium text-primary">
+                            {editForm.size_price_options.filter(o => !SIZE_CATALOG.some(e => e.key === o.key) && o.isActive).length} custom active
+                          </div>
                         </div>
                       </div>
 

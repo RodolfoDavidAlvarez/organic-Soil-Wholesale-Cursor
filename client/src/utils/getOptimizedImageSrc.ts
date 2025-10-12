@@ -40,6 +40,16 @@ export const getOptimizedImageSrc = (source?: string | null) => {
 
   if (isExternalSource(source)) return source;
 
+  // Handle new upload paths - return as-is
+  if (source.startsWith('/uploads/')) {
+    return source;
+  }
+
+  // Handle paths that already start with /images/optimized/
+  if (source.startsWith('/images/optimized/')) {
+    return source;
+  }
+
   const [pathPart, queryPart] = source.split("?", 2);
   const normalizedPath = normalizeKey(pathPart);
   const optimized = normalizedMap.get(normalizedPath);
@@ -49,16 +59,21 @@ export const getOptimizedImageSrc = (source?: string | null) => {
     return queryPart ? `${optimized}?${queryPart}` : optimized;
   }
   
-  // For images that should be in the optimized directory but aren't in the map,
-  // try to find them by normalizing the name
-  const cleanedName = pathPart.trim().replace(/^\/+/, "");
-  const baseName = cleanedName.toLowerCase()
+  // For bare filenames, try to find them in the optimized images map
+  const filename = pathPart.trim().replace(/^\/+/, "");
+  const filenameNormalized = normalizeKey(filename);
+  const optimizedByFilename = normalizedMap.get(filenameNormalized);
+  
+  if (optimizedByFilename) {
+    return queryPart ? `${optimizedByFilename}?${queryPart}` : optimizedByFilename;
+  }
+  
+  // Fallback: try to construct optimized path
+  const baseName = filename.toLowerCase()
     .replace(/\.(jpg|jpeg|png)$/i, "")
     .replace(/\s+/g, "-")
     .replace(/[()]/g, "");
   const optimizedPath = `/images/optimized/${baseName}.jpg`;
   
-  // Return the optimized path as a fallback, which will trigger the error handler
-  // in OptimizedImage if it doesn't exist
   return optimizedPath;
 };

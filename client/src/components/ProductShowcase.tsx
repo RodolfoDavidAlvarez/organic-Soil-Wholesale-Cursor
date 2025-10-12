@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProductEditor } from "@/components/ProductEditor";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "potting-soil.jpg";
@@ -64,11 +64,11 @@ const getProductDisplayName = (product: Product): string => {
 };
 
 export default function ProductShowcase({ products, loading = false, onProductSelect, initialCategory = "all" }: ProductShowcaseProps) {
+  const { admin } = useAdminAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [, navigate] = useLocation();
   const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [localProducts, setLocalProducts] = useState(products);
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -91,13 +91,6 @@ export default function ProductShowcase({ products, loading = false, onProductSe
         product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Handle save from editor
-  const handleSaveProduct = (updatedProduct: Product) => {
-    setLocalProducts((prevProducts) =>
-      prevProducts.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-    );
-    setEditingProduct(null);
-  };
 
   // Handle product click
   const handleProductClick = (product: Product) => {
@@ -143,17 +136,19 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Edit Mode Toggle */}
-      <div className="flex justify-end mb-4">
-        <Button
-          variant={isEditMode ? "default" : "outline"}
-          onClick={() => setIsEditMode(!isEditMode)}
-          className="gap-2"
-        >
-          <Edit className="h-4 w-4" />
-          {isEditMode ? "Exit Edit Mode" : "Edit Products"}
-        </Button>
-      </div>
+      {/* Edit Mode Toggle - Admin Only */}
+      {admin && (
+        <div className="flex justify-end mb-4">
+          <Button
+            variant={isEditMode ? "default" : "outline"}
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="gap-2"
+          >
+            <Edit className="h-4 w-4" />
+            {isEditMode ? "Exit Edit Mode" : "Edit Products"}
+          </Button>
+        </div>
+      )}
 
       {/* Search and Filter Section */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -212,14 +207,14 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               key={product.id}
               className="overflow-hidden transition-all duration-300 border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group relative"
             >
-              {/* Edit button overlay */}
-              {isEditMode && (
+              {/* Edit button overlay - Admin Only */}
+              {isEditMode && admin && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setEditingProduct(product);
+                    navigate(`/products/${product.id}/edit`);
                   }}
                   className="absolute top-2 right-2 z-30 gap-1"
                 >
@@ -248,26 +243,6 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
 
-                {/* 9-pound Bag Preview Thumbnail */}
-                {product.imageUrl && (
-                  <div className="absolute bottom-3 right-3 flex flex-col items-end z-20">
-                    <span className="mb-1 text-xs sm:text-sm bg-white px-2 py-0.5 rounded-full shadow-md text-primary font-semibold">9lb Bag</span>
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-neutral-200 relative transform transition-transform duration-300 group-hover:scale-110 hover:scale-125">
-                      {!textureLoaded[product.id] && (
-                        <div className="absolute inset-0 bg-neutral-200 animate-pulse flex items-center justify-center">
-                          <div className="h-8 w-8 text-neutral-400 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
-                        </div>
-                      )}
-                      <OptimizedImage
-                        src={product.imageUrl}
-                        alt={`${product.name} 9lb bag preview`}
-                        className={`w-full h-full object-cover transition-all duration-700 ${textureLoaded[product.id] ? "opacity-100 blur-0" : "opacity-0 blur-sm"}`}
-                        sizes="100px"
-                        onLoad={() => setTextureLoaded((prev) => ({ ...prev, [product.id]: true }))}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="p-6">
@@ -305,15 +280,6 @@ export default function ProductShowcase({ products, loading = false, onProductSe
             </Card>
           ))}
         </div>
-      )}
-      
-      {/* Product Editor Modal */}
-      {editingProduct && (
-        <ProductEditor
-          product={editingProduct}
-          onSave={handleSaveProduct}
-          onCancel={() => setEditingProduct(null)}
-        />
       )}
     </div>
   );

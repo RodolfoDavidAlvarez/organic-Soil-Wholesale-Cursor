@@ -12,7 +12,17 @@ dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.use(express.json());
+
+// Apply JSON middleware to all routes except uploads
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/admin/uploads')) {
+    // Skip JSON parsing for upload routes
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: false }));
 
 // Trust proxy for Vercel deployment

@@ -47,6 +47,8 @@ export const products = pgTable("products", {
   warranty: text("warranty"),
   isWholesaleOnly: boolean("is_wholesale_only").default(false).notNull(),
   additionalImages: text("additional_images").array(),
+  isCatalogEnabled: boolean("is_catalog_enabled").default(true),
+  catalogDisplayOrder: integer("catalog_display_order").default(0),
 });
 
 export const onboardingRequests = pgTable("onboarding_requests", {

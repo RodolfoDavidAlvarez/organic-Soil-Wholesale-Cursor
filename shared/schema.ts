@@ -47,6 +47,7 @@ export const products = pgTable("products", {
   productVideoTitle: text("product_video_title"),
   isWholesaleOnly: boolean("is_wholesale_only").default(false).notNull(),
   additionalImages: text("additional_images").array(),
+  payAndPickupDisplayOrder: integer("pay_and_pickup_display_order").default(0),
   allowBulkPickup: boolean("allow_bulk_pickup").default(false),
   availableSizeOptions: text("available_size_options").array(),
   sizePriceOptions: jsonb("size_price_options").$type<

@@ -144,6 +144,9 @@ const Footer = () => {
               <Link href="/store-locator" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
                 Store Locator
               </Link>
+              <Link href="/admin" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+                Admin
+              </Link>
             </div>
           </div>
         </div>

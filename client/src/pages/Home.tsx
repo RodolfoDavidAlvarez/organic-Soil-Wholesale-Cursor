@@ -12,7 +12,6 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   Loader2,
   Filter,
   DollarSign,
@@ -32,7 +31,7 @@ import {
   CreditCard,
   Compass,
 } from "lucide-react";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState } from "react";
 import { productsData } from "@/data/productData";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SidebarCarousel from "@/components/layout/SidebarCarousel";
 import ProductShowcase from "@/components/ProductShowcase";
 import { motion } from "framer-motion";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
 
 // Temporary local Product type to resolve linter error
@@ -93,34 +92,7 @@ const Home = () => {
     { id: "landscaping", name: "Landscaping", icon: <Filter className="h-6 w-6" /> },
   ];
 
-  // Carousel images
-  const carouselImages = [
-    {
-      url: "/Healthy soil in hands.jpeg",
-      alt: "Healthy Soil in Hands",
-      type: "image",
-    },
-    {
-      url: "/Raise Garden Bed Soil.jpeg",
-      alt: "Raised Garden Bed Soil",
-      type: "image",
-    },
-    {
-      url: "/plantpal showcase.png",
-      alt: "Plant Pal Showcase",
-      type: "image",
-    },
-    {
-      url: "/V2 Hero Page Photo.png",
-      alt: "Premium Organic Soil",
-      type: "image",
-    },
-    {
-      url: "https://www.youtube.com/shorts/HxbpgFEyc6U",
-      alt: "Watch our process in action",
-      type: "video",
-    },
-  ];
+  const showcaseVideoUrl = "https://www.youtube.com/embed/HxbpgFEyc6U?rel=0";
 
   // State for products showcase
   const [products, setProducts] = useState<Product[]>([]);
@@ -216,37 +188,6 @@ const Home = () => {
       icon: <Container className="h-6 w-6" />,
     },
   ];
-
-  // Add state for carousel API
-  const [api, setApi] = useState<CarouselApi>();
-  const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
-  const [isHovering, setIsHovering] = useState(false);
-
-  // Add useEffect for auto-rotation and state sync
-  useEffect(() => {
-    if (!api) return;
-
-    const onSelect = () => {
-      setCurrentSizeIndex(api.selectedScrollSnap());
-    };
-
-    api.on("select", onSelect);
-
-    if (!isHovering) {
-      const interval = setInterval(() => {
-        api.scrollNext();
-      }, 1500); // Change image every 1.5 seconds
-
-      return () => {
-        clearInterval(interval);
-        api.off("select", onSelect);
-      };
-    }
-
-    return () => {
-      api.off("select", onSelect);
-    };
-  }, [api, isHovering]);
 
   // Target audience data
   const targetAudiences = [
@@ -386,38 +327,6 @@ const Home = () => {
     );
   };
 
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
-  const videoRef = useRef<HTMLIFrameElement>(null);
-
-  const handleVideoClick = () => {
-    setIsVideoExpanded(!isVideoExpanded);
-    if (videoRef.current) {
-      const videoUrl = videoRef.current.src;
-      if (isVideoPlaying) {
-        videoRef.current.src = videoUrl.replace("autoplay=1", "autoplay=0");
-      } else {
-        videoRef.current.src = videoUrl + (videoUrl.includes("?") ? "&" : "?") + "autoplay=1";
-      }
-      setIsVideoPlaying(!isVideoPlaying);
-    }
-  };
-
-  const handleVideoHover = (isHovering: boolean) => {
-    if (videoRef.current && !isVideoExpanded) {
-      const videoUrl = videoRef.current.src;
-      if (isHovering) {
-        // Pause video on hover
-        videoRef.current.src = videoUrl.replace("autoplay=1", "autoplay=0");
-        setIsVideoPlaying(false);
-      } else {
-        // Resume video if it was playing before
-        if (isVideoPlaying) {
-          videoRef.current.src = videoUrl + (videoUrl.includes("?") ? "&" : "?") + "autoplay=1";
-        }
-      }
-    }
-  };
 
   // Featured products data
   const featuredProducts: FeaturedProduct[] = [
@@ -767,108 +676,33 @@ const Home = () => {
               Discover our premium organic soil products in action across various applications
             </p>
           </motion.div>
-          <div className="relative">
-            <Carousel
-              setApi={setApi}
-              className="w-full"
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-            >
-              <CarouselContent>
-                {carouselImages.map((image, index) => (
-                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="p-1"
-                      onMouseEnter={() => setIsHovering(true)}
-                      onMouseLeave={() => setIsHovering(false)}
-                    >
-                      <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                        <CardContent className="p-0">
-                          {image.type === "video" ? (
-                            <div
-                              className="relative group"
-                              onMouseEnter={() => {
-                                setIsHovering(true);
-                                handleVideoHover(true);
-                              }}
-                              onMouseLeave={() => {
-                                setIsHovering(false);
-                                handleVideoHover(false);
-                              }}
-                            >
-                              <div
-                                className={`relative w-full bg-black cursor-pointer transition-all duration-300 ${
-                                  isVideoExpanded ? "fixed inset-0 z-50 m-auto max-w-[400px] h-[80vh]" : "h-[300px]"
-                                }`}
-                                onClick={handleVideoClick}
-                              >
-                                <iframe
-                                  ref={videoRef}
-                                  src="https://www.youtube.com/embed/HxbpgFEyc6U"
-                                  title="YouTube video player"
-                                  className="absolute inset-0 w-full h-full"
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                ></iframe>
-                                {!isVideoExpanded && (
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <div className="w-16 h-16 bg-primary/90 rounded-full flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">
-                                      <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M8 5v14l11-7z" />
-                                      </svg>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              {isVideoExpanded && (
-                                <>
-                                  <div className="fixed inset-0 bg-black/80 z-40" onClick={handleVideoClick} />
-                                  <button
-                                    className="absolute top-4 right-4 z-50 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-200"
-                                    onClick={handleVideoClick}
-                                  >
-                                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <OptimizedImage
-                              src={image.url}
-                              alt={image.alt}
-                              priority={index === 0}
-                              sizes="(max-width: 768px) 95vw, (max-width: 1024px) 45vw, 30vw"
-                              className="w-full h-[300px] object-cover hover:scale-105 transition-transform duration-500"
-                            />
-                          )}
-                        </CardContent>
-                        <CardFooter className="p-4 bg-white">
-                          <div className="flex items-center gap-2">
-                            {image.type === "video" && (
-                              <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            )}
-                            <p className="text-sm font-semibold text-primary tracking-wide">{image.alt}</p>
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    </motion.div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-4" />
-              <CarouselNext className="right-4" />
-            </Carousel>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex justify-center"
+          >
+            <Card className="w-full max-w-sm sm:max-w-md border border-muted-foreground/10 bg-white shadow-xl overflow-hidden">
+              <CardContent className="p-0 bg-black">
+                <div className="relative aspect-[9/16] w-full">
+                  <iframe
+                    src={showcaseVideoUrl}
+                    title="Urban Farm Video"
+                    className="absolute inset-0 h-full w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              </CardContent>
+              <CardFooter className="flex items-center justify-center gap-2 bg-white p-6">
+                <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <p className="text-sm font-semibold text-primary tracking-wide">Watch our process in action</p>
+              </CardFooter>
+            </Card>
+          </motion.div>
         </div>
       </section>
 

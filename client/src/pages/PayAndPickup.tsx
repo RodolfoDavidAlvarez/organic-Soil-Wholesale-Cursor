@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'wouter';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductsData } from '../data/productData';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,6 @@ import {
   Phone,
   Check,
   Truck,
-  Package,
   ChevronRight,
   Home,
   X,
@@ -116,6 +115,72 @@ interface OrderSummary {
   }>;
 }
 
+type Step = 'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'payment' | 'checkout' | 'notify-arrival';
+
+const STEP_SEGMENTS: Record<Step, string | null> = {
+  welcome: null,
+  'pickup-options': 'pickup-options',
+  menu: 'menu',
+  cart: 'cart',
+  'customer-info': 'customer-info',
+  payment: 'payment',
+  checkout: 'checkout',
+  'notify-arrival': 'notify-arrival',
+};
+
+const SEGMENT_TO_STEP: Record<string, Step> = Object.entries(STEP_SEGMENTS).reduce(
+  (acc, [key, segment]) => {
+    if (segment) {
+      acc[segment] = key as Step;
+    }
+    return acc;
+  },
+  {} as Record<string, Step>,
+);
+
+const stripQueryAndHash = (path: string) => path.split(/[?#]/)[0];
+
+const normalizePath = (path: string) => {
+  if (!path) return '/';
+  const stripped = stripQueryAndHash(path);
+  const ensuredLeadingSlash = stripped.startsWith('/') ? stripped : `/${stripped}`;
+  if (ensuredLeadingSlash.length > 1 && ensuredLeadingSlash.endsWith('/')) {
+    return ensuredLeadingSlash.replace(/\/+$/, '');
+  }
+  return ensuredLeadingSlash;
+};
+
+const getBasePath = (path: string): '/pay-and-pickup' | '/drive-through' => {
+  const normalized = normalizePath(path);
+  if (normalized.startsWith('/drive-through')) {
+    return '/drive-through';
+  }
+  return '/pay-and-pickup';
+};
+
+const getStepFromLocation = (path: string): Step => {
+  const normalized = normalizePath(path);
+  if (normalized === '/pay-and-pickup' || normalized === '/drive-through') {
+    return 'welcome';
+  }
+
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts.length >= 2 && (parts[0] === 'pay-and-pickup' || parts[0] === 'drive-through')) {
+    const candidate = parts[1];
+    return SEGMENT_TO_STEP[candidate] ?? 'welcome';
+  }
+
+  return 'welcome';
+};
+
+const buildPathForStep = (basePath: string, step: Step) => {
+  const segment = STEP_SEGMENTS[step];
+  if (!segment) {
+    return basePath;
+  }
+  return `${basePath}/${segment}`;
+};
+
 const TAX_RATE = 0.08;
 
 const slugify = (value: string) =>
@@ -125,7 +190,19 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '');
 
 const PayAndPickup: React.FC = () => {
-  const [step, setStep] = useState<'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'payment' | 'checkout' | 'notify-arrival'>('welcome');
+  const [location, setLocation] = useLocation();
+  const normalizedLocation = normalizePath(location);
+  const basePath = getBasePath(normalizedLocation);
+  const step = useMemo(() => getStepFromLocation(normalizedLocation), [normalizedLocation]);
+  const goToStep = useCallback(
+    (nextStep: Step) => {
+      const nextPath = buildPathForStep(basePath, nextStep);
+      if (nextPath !== normalizedLocation) {
+        setLocation(nextPath);
+      }
+    },
+    [basePath, normalizedLocation, setLocation],
+  );
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '' });
   const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
@@ -382,6 +459,9 @@ const PayAndPickup: React.FC = () => {
     });
   }, [products]);
 
+  const getCartSubtotal = () =>
+    cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0);
+
   const cartSubtotal = useMemo(() => Number(getCartSubtotal().toFixed(2)), [cart]);
   const estimatedTax = useMemo(() => Number((cartSubtotal * TAX_RATE).toFixed(2)), [cartSubtotal]);
   const cartTotal = useMemo(() => Number((cartSubtotal + estimatedTax).toFixed(2)), [cartSubtotal, estimatedTax]);
@@ -418,8 +498,6 @@ const PayAndPickup: React.FC = () => {
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
-  const getCartSubtotal = () =>
-    cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0);
 
   const toggleProductExpansion = (productId: number) => {
     setExpandedProducts(prev => {
@@ -458,6 +536,18 @@ const PayAndPickup: React.FC = () => {
     const digits = value.replace(/\D/g, '').slice(0, 4);
     if (digits.length <= 2) return digits;
     return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
+
+  const handleGoHome = () => {
+    if (cart.length > 0) {
+      const shouldLeave = window.confirm(
+        `You have ${getTotalItems()} items in your cart. Are you sure you want to leave? Your cart will be saved for your next visit.`
+      );
+      if (!shouldLeave) {
+        return;
+      }
+    }
+    window.location.href = '/';
   };
 
   const validatePaymentInfo = (): boolean => {
@@ -543,7 +633,7 @@ const PayAndPickup: React.FC = () => {
     }
     if (!validateCustomerInfo()) return;
     setPaymentErrors({});
-    setStep('payment');
+    goToStep('payment');
   };
 
   const handleCompletePayment = async () => {
@@ -638,7 +728,7 @@ const PayAndPickup: React.FC = () => {
       setPaymentErrors({});
       setCart([]);
       setPaymentInfo({ cardNumber: '', expiry: '', cvv: '' });
-      setStep('checkout');
+      goToStep('checkout');
     } catch (error) {
       console.error('Order error:', error);
       alert('There was an error placing your order. Please try again.');
@@ -700,17 +790,17 @@ const PayAndPickup: React.FC = () => {
                   className="text-white hover:bg-white/20 -ml-2"
                   onClick={() => {
                     if (step === 'pickup-options' || step === 'menu') {
-                      setStep('welcome');
+                      goToStep('welcome');
                     } else if (step === 'cart') {
-                      setStep('menu');
+                      goToStep('menu');
                     } else if (step === 'customer-info') {
-                      setStep('cart');
+                      goToStep('cart');
                     } else if (step === 'payment') {
-                      setStep('customer-info');
+                      goToStep('customer-info');
                     } else if (step === 'checkout') {
-                      setStep('customer-info');
+                      goToStep('customer-info');
                     } else if (step === 'notify-arrival') {
-                      setStep('pickup-options');
+                      goToStep('pickup-options');
                     }
                   }}
                 >
@@ -719,58 +809,41 @@ const PayAndPickup: React.FC = () => {
                   </svg>
                 </Button>
               )}
-              <Package className="w-8 h-8" />
-              <div>
-                <h1 className="text-xl font-bold">
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded"
+              >
+                <h1 className="text-xl font-black tracking-tight text-white">
                   <span>Organic </span>
-                  <span className="text-[hsl(43,85%,55%)]">Soil</span>
-                  <span> Wholesale</span>
+                  <span className="text-[hsl(43,85%,55%)]">Soil </span>
+                  <span className="text-accent">Wholesale</span>
                 </h1>
-                <p className="text-xs opacity-90">Drive-Thru Order System</p>
-              </div>
+              </button>
             </div>
             <div className="flex items-center gap-2">
-              {step === 'welcome' && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-white hover:bg-white/20"
-                  onClick={() => {
-                    if (cart.length > 0) {
-                      if (confirm(`You have ${getTotalItems()} items in your cart. Are you sure you want to leave? Your cart will be saved for your next visit.`)) {
-                        window.location.href = '/';
-                      }
-                    } else {
-                      window.location.href = '/';
-                    }
-                  }}
-                >
-                  <Home className="w-4 h-4 mr-1" />
-                  <span className="text-xs">Main Site</span>
-                </Button>
-              )}
               {step !== 'welcome' && (
                 <div className="flex items-center gap-3">
-                {cart.length > 0 && (
-                  <>
-                    <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">
-                      {getTotalItems()} items
-                    </Badge>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-white relative"
-                      onClick={() => step === 'cart' ? setStep('menu') : setStep('cart')}
-                    >
-                      <ShoppingCart className="w-5 h-5" />
-                      {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {getTotalItems()}
-                        </span>
-                      )}
-                    </Button>
-                  </>
-                )}
+                  {cart.length > 0 && (
+                    <>
+                      <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">
+                        {getTotalItems()} items
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-white relative"
+                        onClick={() => (step === 'cart' ? goToStep('menu') : goToStep('cart'))}
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        {cart.length > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {getTotalItems()}
+                          </span>
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -798,10 +871,10 @@ const PayAndPickup: React.FC = () => {
               <h1 className="text-2xl lg:text-3xl text-gray-600 mb-3">
                 Welcome to
               </h1>
-              <h2 className="text-5xl lg:text-7xl font-bold mb-8">
+              <h2 className="text-5xl lg:text-7xl font-black tracking-tight mb-8">
                 <span>Organic </span>
-                <span className="text-primary">Soil</span>
-                <span className="text-accent italic"> Wholesale</span>
+                <span className="text-primary">Soil </span>
+                <span className="text-accent italic">Wholesale</span>
               </h2>
               <p className="text-xl lg:text-2xl text-gray-700 mb-8">
                 How can I help you today?
@@ -817,7 +890,7 @@ const PayAndPickup: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-xl" />
                   <button
                     className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => setStep('pickup-options')}
+                    onClick={() => goToStep('pickup-options')}
                   >
                     <div className="flex-shrink-0">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -841,7 +914,7 @@ const PayAndPickup: React.FC = () => {
                 >
                   <button
                     className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => setStep('menu')}
+                    onClick={() => goToStep('menu')}
                   >
                     <div className="flex-shrink-0">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-accent/10 to-accent/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -869,7 +942,7 @@ const PayAndPickup: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setSelectedCategory('potting');
-                    setStep('menu');
+                    goToStep('menu');
                   }}
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
@@ -891,7 +964,7 @@ const PayAndPickup: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setSelectedCategory('amendment');
-                    setStep('menu');
+                    goToStep('menu');
                   }}
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
@@ -913,7 +986,7 @@ const PayAndPickup: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setSelectedCategory('mulch');
-                    setStep('menu');
+                    goToStep('menu');
                   }}
                   className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
@@ -993,7 +1066,7 @@ const PayAndPickup: React.FC = () => {
                 >
                   <button
                     className="w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => setStep('menu')}
+                    onClick={() => goToStep('menu')}
                   >
                     <div className="flex-shrink-0">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1015,7 +1088,7 @@ const PayAndPickup: React.FC = () => {
                 >
                   <button
                     className="w-full bg-gradient-to-r from-accent to-accent/90 text-white rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => setStep('notify-arrival')}
+                    onClick={() => goToStep('notify-arrival')}
                   >
                     <div className="flex-shrink-0">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1297,7 +1370,7 @@ const PayAndPickup: React.FC = () => {
                 <Button
                   className="mt-4"
                   variant="outline"
-                  onClick={() => setStep('menu')}
+                  onClick={() => goToStep('menu')}
                 >
                   Back to Menu
                 </Button>
@@ -1370,7 +1443,7 @@ const PayAndPickup: React.FC = () => {
                 <Button
                   size="lg"
                   className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-                  onClick={() => setStep('customer-info')}
+                  onClick={() => goToStep('customer-info')}
                 >
                   Continue to Checkout
                   <ChevronRight className="ml-2 w-5 h-5" />
@@ -1379,7 +1452,7 @@ const PayAndPickup: React.FC = () => {
                 <Button
                   variant="ghost"
                   className="w-full mt-3"
-                  onClick={() => setStep('menu')}
+                  onClick={() => goToStep('menu')}
                 >
                   Add More Items
                 </Button>
@@ -1590,7 +1663,7 @@ const PayAndPickup: React.FC = () => {
                 size="lg"
                 variant="outline"
                 className="w-full"
-                onClick={() => setStep('customer-info')}
+                onClick={() => goToStep('customer-info')}
                 disabled={isProcessing}
               >
                 Back to Details
@@ -1784,7 +1857,7 @@ const PayAndPickup: React.FC = () => {
                 size="lg"
                 variant="outline"
                 className="w-full"
-                onClick={() => setStep('menu')}
+                onClick={() => goToStep('menu')}
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Browse Products Instead
@@ -1805,7 +1878,7 @@ const PayAndPickup: React.FC = () => {
             <Button
               size="lg"
               className="w-full bg-green-600 hover:bg-green-700 text-white py-6 lg:text-lg"
-              onClick={() => setStep('cart')}
+              onClick={() => goToStep('cart')}
             >
               <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 mr-2" />
               View Cart ({getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'})

@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS inventory_alerts (
 
 -- 4. Add Pay & Pickup specific columns to products
 ALTER TABLE products
+ADD COLUMN IF NOT EXISTS is_catalog_enabled BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS catalog_display_order INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS is_pay_and_pickup_enabled BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS pay_and_pickup_display_order INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS pay_and_pickup_badge TEXT,

@@ -24,6 +24,12 @@ export const OptimizedImage = forwardRef<HTMLImageElement, OptimizedImageProps>(
           return;
         }
 
+        // If both optimized and fallback fail, try a generic texture image
+        if (!event.currentTarget.src.includes('/images/optimized/default-potting-soil-texture.jpg')) {
+          event.currentTarget.src = '/images/optimized/default-potting-soil-texture.jpg';
+          return;
+        }
+
         onError?.(event);
       },
       [fallbackSrc, onError]

@@ -7,6 +7,142 @@ const { loadProductData } = require('../loadProducts.js');
 
 const router = Router();
 
+type FallbackProduct = ReturnType<typeof loadProductData>[number];
+
+type FallbackCacheEntry = {
+  product: FallbackProduct;
+  normalizedValues: string[];
+  slugValues: string[];
+};
+
+type FallbackCache = {
+  products: FallbackProduct[];
+  entries: FallbackCacheEntry[];
+  byId: Map<number, FallbackProduct>;
+};
+
+const normalizeValue = (value?: string | null) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : undefined;
+
+const slugify = (value?: string | null) => {
+  if (!value) return undefined;
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || undefined;
+};
+
+let fallbackProductCache: FallbackCache | null = null;
+
+const ensureFallbackCache = (): FallbackCache => {
+  if (!fallbackProductCache) {
+    const products = (loadProductData() ?? []) as FallbackProduct[];
+    const byId = new Map<number, FallbackProduct>();
+    const entries: FallbackCacheEntry[] = products.map((product) => {
+      if (typeof product?.id === 'number') {
+        byId.set(product.id, product);
+      }
+
+      const values = [
+        product?.name,
+        product?.productType,
+        product?.displayTitle,
+        product?.marketingTitle
+      ] as Array<string | undefined>;
+
+      const normalizedValues = values
+        .map(normalizeValue)
+        .filter((value): value is string => Boolean(value));
+
+      const slugValues = values
+        .map(slugify)
+        .filter((value): value is string => Boolean(value));
+
+      return {
+        product,
+        normalizedValues,
+        slugValues
+      };
+    });
+
+    fallbackProductCache = { products, entries, byId };
+  }
+
+  return fallbackProductCache;
+};
+
+const getFallbackProducts = () => ensureFallbackCache().products;
+
+const hasLooseMatch = (recordValues: string[], fallbackValues: string[]) => {
+  for (const recordValue of recordValues) {
+    for (const fallbackValue of fallbackValues) {
+      if (!recordValue || !fallbackValue) {
+        continue;
+      }
+
+      if (recordValue === fallbackValue) {
+        return true;
+      }
+
+      const minLength = Math.min(recordValue.length, fallbackValue.length);
+      if (
+        minLength >= 5 &&
+        (recordValue.includes(fallbackValue) || fallbackValue.includes(recordValue))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+const findFallbackProduct = (record: RawProduct, fallbackId?: number) => {
+  const cache = ensureFallbackCache();
+
+  if (typeof record.id === 'number') {
+    const directMatch = cache.byId.get(record.id);
+    if (directMatch) {
+      return directMatch;
+    }
+  }
+
+  if (typeof fallbackId === 'number') {
+    const fallbackIdMatch = cache.byId.get(fallbackId);
+    if (fallbackIdMatch) {
+      return fallbackIdMatch;
+    }
+  }
+
+  const recordValues = [
+    record?.name,
+    record?.product_type,
+    record?.display_title,
+    record?.marketing_title
+  ] as Array<string | undefined>;
+
+  const recordNormalized = recordValues
+    .map(normalizeValue)
+    .filter((value): value is string => Boolean(value));
+
+  const recordSlugs = recordValues
+    .map(slugify)
+    .filter((value): value is string => Boolean(value));
+
+  for (const entry of cache.entries) {
+    if (
+      hasLooseMatch(recordNormalized, entry.normalizedValues) ||
+      hasLooseMatch(recordSlugs, entry.slugValues)
+    ) {
+      return entry.product;
+    }
+  }
+
+  return undefined;
+};
+
 type PublicSizePriceOption = {
   key: string;
   label: string;
@@ -207,6 +343,8 @@ type RawProduct = {
   pay_and_pickup_badge?: string | null;
   pay_and_pickup_description?: string | null;
   pay_and_pickup_hero_image?: string | null;
+  is_catalog_enabled?: boolean | null;
+  catalog_display_order?: number | null;
   size_price_options?: unknown;
 };
 
@@ -214,38 +352,97 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
   const priceInDollars =
     typeof record.price === 'number' ? record.price / 100 : record.price;
 
+  const fallbackProduct = findFallbackProduct(record, fallbackId);
+
+  const primaryImageUrl =
+    (typeof record.texture_photo_url === 'string' && record.texture_photo_url.trim().length > 0
+      ? record.texture_photo_url
+      : undefined) ??
+    (typeof record.image_url === 'string' && record.image_url.trim().length > 0
+      ? record.image_url
+      : undefined) ??
+    (typeof fallbackProduct?.texturePhotoUrl === 'string' &&
+    fallbackProduct.texturePhotoUrl.trim().length > 0
+      ? fallbackProduct.texturePhotoUrl
+      : undefined) ??
+    (typeof fallbackProduct?.imageUrl === 'string' && fallbackProduct.imageUrl.trim().length > 0
+      ? fallbackProduct.imageUrl
+      : undefined);
+
+  const textureImageUrl =
+    (typeof record.texture_photo_url === 'string' && record.texture_photo_url.trim().length > 0
+      ? record.texture_photo_url
+      : undefined) ??
+    (typeof fallbackProduct?.texturePhotoUrl === 'string' &&
+    fallbackProduct.texturePhotoUrl.trim().length > 0
+      ? fallbackProduct.texturePhotoUrl
+      : undefined);
+
+  const resolvedAdditionalImages =
+    Array.isArray(record.additional_images) && record.additional_images.length > 0
+      ? record.additional_images
+      : Array.isArray(fallbackProduct?.additionalImages)
+        ? fallbackProduct.additionalImages
+        : [];
+
+  const primarySizePriceOptions = normalizeSizePriceOptions(record.size_price_options);
+  const sizePriceOptions =
+    primarySizePriceOptions.length > 0
+      ? primarySizePriceOptions
+      : normalizeSizePriceOptions(fallbackProduct?.sizePriceOptions);
+
   return {
     id: record.id ?? fallbackId ?? 0,
-    name: record.name,
-    description: record.description,
-    category: record.category,
+    name: record.name ?? fallbackProduct?.name ?? '',
+    description: record.description ?? fallbackProduct?.description ?? undefined,
+    category: record.category ?? fallbackProduct?.category,
     price: priceInDollars ?? 0,
-    imageUrl: record.image_url ?? undefined,
-    texturePhotoUrl: record.texture_photo_url ?? undefined,
-    ingredients: record.ingredients ?? undefined,
-    targetAudience: record.target_audience ?? undefined,
-    recommendedUses: record.recommended_uses ?? undefined,
-    story: record.story ?? undefined,
-    usage: record.usage ?? undefined,
-    certifications: record.certifications ?? undefined,
-    features: record.features ?? undefined,
-    sizeOptions: record.size_options ?? undefined,
-    productType: record.product_type ?? undefined,
-    displayTitle: record.display_title ?? undefined,
-    marketingTitle: record.marketing_title ?? undefined,
-    seoKeywords: record.seo_keywords ?? undefined,
-    marketingNote: record.marketing_note ?? undefined,
-    productVideoUrl: record.product_video_url ?? undefined,
-    productVideoTitle: record.product_video_title ?? undefined,
+    imageUrl: primaryImageUrl,
+    texturePhotoUrl: textureImageUrl,
+    ingredients: record.ingredients ?? fallbackProduct?.ingredients ?? undefined,
+    targetAudience: record.target_audience ?? fallbackProduct?.targetAudience ?? undefined,
+    recommendedUses: record.recommended_uses ?? fallbackProduct?.recommendedUses ?? undefined,
+    story: record.story ?? fallbackProduct?.story ?? undefined,
+    usage: record.usage ?? fallbackProduct?.usage ?? undefined,
+    certifications: record.certifications ?? fallbackProduct?.certifications ?? undefined,
+    features: record.features ?? fallbackProduct?.features ?? undefined,
+    sizeOptions: record.size_options ?? fallbackProduct?.sizeOptions ?? undefined,
+    productType: record.product_type ?? fallbackProduct?.productType ?? undefined,
+    displayTitle: record.display_title ?? fallbackProduct?.displayTitle ?? undefined,
+    marketingTitle: record.marketing_title ?? fallbackProduct?.marketingTitle ?? undefined,
+    seoKeywords: record.seo_keywords ?? fallbackProduct?.seoKeywords ?? undefined,
+    marketingNote: record.marketing_note ?? fallbackProduct?.marketingNote ?? undefined,
+    productVideoUrl: record.product_video_url ?? fallbackProduct?.productVideoUrl ?? undefined,
+    productVideoTitle:
+      record.product_video_title ?? fallbackProduct?.productVideoTitle ?? undefined,
     isWholesaleOnly: Boolean(record.is_wholesale_only),
-    additionalImages: record.additional_images ?? [],
+    additionalImages: resolvedAdditionalImages,
     allowBulkPickup: Boolean(record.allow_bulk_pickup),
-    availableSizeOptions: record.available_size_options ?? [],
-    sizePriceOptions: normalizeSizePriceOptions(record.size_price_options),
-    minOrderQuantity: record.min_order_quantity ?? 1,
-    maxOrderQuantity: record.max_order_quantity ?? undefined,
-    isPriceNegotiable: Boolean(record.is_price_negotiable),
-    requiresQuote: Boolean(record.requires_quote),
+    availableSizeOptions:
+      record.available_size_options ?? fallbackProduct?.availableSizeOptions ?? [],
+    sizePriceOptions,
+    minOrderQuantity: record.min_order_quantity ?? fallbackProduct?.minOrderQuantity ?? 1,
+    maxOrderQuantity: record.max_order_quantity ?? fallbackProduct?.maxOrderQuantity ?? undefined,
+    isPriceNegotiable:
+      record.is_price_negotiable !== undefined
+        ? Boolean(record.is_price_negotiable)
+        : Boolean(fallbackProduct?.isPriceNegotiable),
+    requiresQuote:
+      record.requires_quote !== undefined
+        ? Boolean(record.requires_quote)
+        : Boolean(fallbackProduct?.requiresQuote),
+    catalog: {
+      isEnabled:
+        record.is_catalog_enabled !== undefined
+          ? Boolean(record.is_catalog_enabled)
+          : fallbackProduct?.isCatalogEnabled ?? true,
+      displayOrder: record.catalog_display_order ?? fallbackProduct?.catalogDisplayOrder ?? 0,
+    },
+    isCatalogEnabled:
+      record.is_catalog_enabled !== undefined
+        ? Boolean(record.is_catalog_enabled)
+        : fallbackProduct?.isCatalogEnabled ?? true,
+    catalogDisplayOrder: record.catalog_display_order ?? fallbackProduct?.catalogDisplayOrder ?? 0,
     payAndPickup: {
       isEnabled: Boolean(record.is_pay_and_pickup_enabled),
       displayOrder: record.pay_and_pickup_display_order ?? 0,
@@ -262,18 +459,22 @@ async function getProductsFromDatabase(params: {
 }) {
   const { category, payAndPickup } = params;
 
-  let query = supabase
-    .from<RawProduct>('products')
-    .select('*')
-    .order('pay_and_pickup_display_order', { ascending: true })
-    .order('name', { ascending: true });
+  let query = supabase.from<RawProduct>('products').select('*');
 
   if (category && category !== 'all') {
     query = query.eq('category', category as string);
   }
 
   if (payAndPickup === 'true') {
-    query = query.eq('is_pay_and_pickup_enabled', true);
+    query = query
+      .eq('is_pay_and_pickup_enabled', true)
+      .order('pay_and_pickup_display_order', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true });
+  } else {
+    query = query
+      .eq('is_catalog_enabled', true)
+      .order('catalog_display_order', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true });
   }
 
   const { data, error } = await query;
@@ -286,7 +487,7 @@ async function getProductsFromDatabase(params: {
 }
 
 function getProductsFromFallback(category?: string | string[]) {
-  const fallbackData = loadProductData();
+  const fallbackData = getFallbackProducts();
 
   let products = fallbackData.map((product: any, index: number) =>
     toPublicProduct(
@@ -321,7 +522,9 @@ function getProductsFromFallback(category?: string | string[]) {
         min_order_quantity: product.minOrderQuantity,
         max_order_quantity: product.maxOrderQuantity,
         is_price_negotiable: product.isPriceNegotiable,
-        requires_quote: product.requiresQuote
+        requires_quote: product.requiresQuote,
+        is_catalog_enabled: product.isCatalogEnabled ?? true,
+        catalog_display_order: product.catalogDisplayOrder ?? index
       },
       index + 1
     )
@@ -383,7 +586,7 @@ router.get('/:id', async (req, res) => {
     }
 
     if (!productResponse) {
-      const fallbackProducts = loadProductData();
+      const fallbackProducts = getFallbackProducts();
       const fallback = fallbackProducts.find(
         (_product: any, index: number) => index + 1 === Number(id)
       );
@@ -424,7 +627,9 @@ router.get('/:id', async (req, res) => {
           min_order_quantity: fallback.minOrderQuantity,
           max_order_quantity: fallback.maxOrderQuantity,
           is_price_negotiable: fallback.isPriceNegotiable,
-          requires_quote: fallback.requiresQuote
+          requires_quote: fallback.requiresQuote,
+          is_catalog_enabled: fallback.isCatalogEnabled ?? true,
+          catalog_display_order: fallback.catalogDisplayOrder ?? Number(id) - 1
         },
         Number(id)
       );
