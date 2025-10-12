@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   AlertCircle,
-  BarChart3
+  BarChart3,
+  Bell
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,11 @@ const navItems: NavItem[] = [
     href: '/admin/analytics'
   },
   {
+    label: 'Notifications',
+    icon: <Bell className="w-5 h-5" />,
+    href: '/admin/notifications'
+  },
+  {
     label: 'Settings',
     icon: <Settings className="w-5 h-5" />,
     href: '/admin/settings'
@@ -69,6 +75,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location, navigate] = useLocation();
   const { admin, signOut } = useAdminAuth();
+
+  const normalizedLocation = location.split('?')[0];
 
   const handleSignOut = async () => {
     await signOut();
@@ -92,28 +100,44 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
-            <button
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
+              <button
               className="lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="w-6 h-6" />
             </button>
-          </div>
+            </div>
 
-          {/* Admin info */}
-          <div className="p-4 border-b">
-            <p className="text-sm text-gray-600">Welcome back,</p>
-            <p className="font-medium">{admin?.full_name || admin?.email}</p>
-            <p className="text-xs text-gray-500 capitalize">{admin?.role?.replace('_', ' ')}</p>
-          </div>
+            {/* Admin info */}
+            <div className="p-4 border-b space-y-1">
+              <p className="text-sm text-gray-600">Welcome back,</p>
+              <div className="min-w-0">
+                <p
+                  className="font-medium text-gray-900 truncate"
+                  title={admin?.full_name || admin?.email || undefined}
+                >
+                  {admin?.full_name || admin?.email || 'Admin'}
+                </p>
+                {admin?.full_name && admin?.email && (
+                  <p className="text-xs text-gray-500 truncate" title={admin.email}>
+                    {admin.email}
+                  </p>
+                )}
+              </div>
+              {admin?.role && (
+                <p className="text-xs text-gray-500 capitalize">
+                  {admin.role.replace('_', ' ')}
+                </p>
+              )}
+            </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            {navItems.map((item) => (
+            {/* Navigation */}
+            <nav className="flex-1 p-4 space-y-2">
+              {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -124,7 +148,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 }}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors',
-                  location === item.href
+                  (item.href === '/admin'
+                    ? normalizedLocation === item.href
+                    : normalizedLocation.startsWith(item.href))
                     ? 'bg-green-50 text-green-800 font-medium'
                     : 'hover:bg-gray-100'
                 )}

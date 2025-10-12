@@ -9,6 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { getOptimizedImageSrc } from '@/utils/getOptimizedImageSrc';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { 
   ShoppingCart, 
   Plus, 
@@ -27,7 +34,8 @@ import {
   Loader2,
   ArrowRight,
   ChevronDown,
-  Trash2
+  Trash2,
+  CreditCard
 } from 'lucide-react';
 
 interface InventoryOption {
@@ -36,6 +44,15 @@ interface InventoryOption {
   quantityReserved?: number;
   price: number;
   displayPrice: number;
+}
+
+interface ProductSizePriceOption {
+  key: string;
+  label: string;
+  price?: number;
+  priceCents?: number;
+  image?: string;
+  displayOrder?: number;
 }
 
 interface PayAndPickupProduct {
@@ -61,6 +78,7 @@ interface PayAndPickupProduct {
     description?: string;
     heroImage?: string;
   };
+  sizePriceOptions?: ProductSizePriceOption[];
   inventory: InventoryOption[];
 }
 
@@ -77,16 +95,48 @@ interface CustomerInfo {
   email?: string;
 }
 
+interface PaymentInfo {
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+}
+
+interface OrderSummary {
+  orderId: number;
+  orderNumber?: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  estimatedReadyTime?: string;
+  items: Array<{
+    name: string;
+    size: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
+const TAX_RATE = 0.08;
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const PayAndPickup: React.FC = () => {
-  const [step, setStep] = useState<'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'checkout' | 'notify-arrival'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'payment' | 'checkout' | 'notify-arrival'>('welcome');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '' });
   const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({ cardNumber: '', expiry: '', cvv: '' });
+  const [paymentErrors, setPaymentErrors] = useState<Partial<PaymentInfo>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
   const [products, setProducts] = useState<PayAndPickupProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
 
   const findProductById = (productId: number) =>
     products.find((product) => product.id === productId);
@@ -100,7 +150,29 @@ const PayAndPickup: React.FC = () => {
     const inventoryOption = getProductInventory(productId).find(
       (option) => option.sizeOption === sizeOption
     );
-    return inventoryOption?.displayPrice ?? inventoryOption?.price ?? 0;
+    if (inventoryOption?.displayPrice != null) {
+      return inventoryOption.displayPrice;
+    }
+    if (inventoryOption?.price != null) {
+      return inventoryOption.price;
+    }
+
+    const product = findProductById(productId);
+    const normalizedSize = sizeOption.toLowerCase();
+    const sizePriceOption = product?.sizePriceOptions?.find((option) => {
+      const labelMatch = option.label?.toLowerCase() === normalizedSize;
+      const keyMatch = option.key ? option.key === slugify(sizeOption) : false;
+      return labelMatch || keyMatch;
+    });
+
+    if (sizePriceOption?.price != null) {
+      return sizePriceOption.price;
+    }
+    if (sizePriceOption?.priceCents != null) {
+      return sizePriceOption.priceCents / 100;
+    }
+
+    return 0;
   };
 
   const isInStock = (productId: number, sizeOption: string, quantity = 1): boolean => {
@@ -140,8 +212,71 @@ const PayAndPickup: React.FC = () => {
                 displayPrice: inv.pricing?.final_price ?? inv.price,
               }));
 
-              const sizeOptions = (product.available_size_options || []).length > 0
-                ? product.available_size_options
+              const sizePriceOptionsRaw = Array.isArray(product.size_price_options)
+                ? product.size_price_options
+                : Array.isArray(product.sizePriceOptions)
+                  ? product.sizePriceOptions
+                  : [];
+
+              const sizePriceOptions: ProductSizePriceOption[] = sizePriceOptionsRaw
+                .map((option: any) => {
+                  if (!option) return null;
+
+                  const rawLabel = (option.label ?? option.name ?? '').toString().trim();
+                  const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
+                  if (!rawLabel || !keyCandidate) {
+                    return null;
+                  }
+
+                  const activeValue =
+                    option.is_active ?? option.isActive ?? option.active ?? option.enabled ?? option.visible;
+                  const isActive = activeValue === undefined ? true : Boolean(activeValue);
+                  if (!isActive) {
+                    return null;
+                  }
+
+                  let priceCents: number | undefined;
+                  if (typeof option.price_cents === 'number' && Number.isFinite(option.price_cents)) {
+                    priceCents = option.price_cents;
+                  } else if (typeof option.priceCents === 'number' && Number.isFinite(option.priceCents)) {
+                    priceCents = option.priceCents;
+                  } else if (typeof option.price === 'number' && Number.isFinite(option.price)) {
+                    priceCents = Math.round(option.price * 100);
+                  }
+
+                  const displayOrder =
+                    typeof option.display_order === 'number'
+                      ? option.display_order
+                      : typeof option.displayOrder === 'number'
+                        ? option.displayOrder
+                        : undefined;
+
+                  return {
+                    key: keyCandidate,
+                    label: rawLabel,
+                    priceCents,
+                    price: priceCents !== undefined ? priceCents / 100 : undefined,
+                    image: typeof option.image === 'string' ? option.image : undefined,
+                    displayOrder,
+                  } as ProductSizePriceOption;
+                })
+                .filter((option): option is ProductSizePriceOption => Boolean(option))
+                .sort(
+                  (a, b) =>
+                    (a.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+                    (b.displayOrder ?? Number.MAX_SAFE_INTEGER),
+                );
+
+              const configuredSizeOptions = sizePriceOptions.length > 0
+                ? sizePriceOptions.map((option) => option.label)
+                : Array.isArray(product.available_size_options)
+                  ? product.available_size_options
+                  : [];
+
+              const uniqueConfiguredSizes = Array.from(new Set(configuredSizeOptions.filter(Boolean)));
+
+              const fallbackSizes = uniqueConfiguredSizes.length > 0
+                ? uniqueConfiguredSizes
                 : inventory.map((inv: InventoryOption) => inv.sizeOption);
 
               return {
@@ -156,17 +291,19 @@ const PayAndPickup: React.FC = () => {
                 ingredients: product.ingredients,
                 recommendedUses: product.recommended_uses,
                 targetAudience: product.target_audience,
-                story: product.brief_overview || product.story,
+                story: product.story,
                 usage: product.usage,
                 certifications: product.certifications,
                 features: product.features,
                 additionalImages: product.additional_images || [],
-                sizeOptions: sizeOptions && sizeOptions.length > 0 ? sizeOptions : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
+                sizeOptions:
+                  fallbackSizes.length > 0 ? fallbackSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
                 payAndPickup: {
                   badge: product.pay_and_pickup_badge,
                   description: product.pay_and_pickup_description,
                   heroImage: product.pay_and_pickup_hero_image,
                 },
+                sizePriceOptions,
                 inventory,
               };
             });
@@ -179,29 +316,42 @@ const PayAndPickup: React.FC = () => {
         console.error('Error fetching pay & pickup products:', error);
       } finally {
         if (!loaded) {
-          const fallbackProducts: PayAndPickupProduct[] = getProductsData().map((product, index) => ({
-            id: (product as any).id ?? index + 1,
-            name: product.name,
-            description: product.description,
-            category: product.category,
-            imageUrl: (product as any).imageUrl,
-            texturePhotoUrl: (product as any).texturePhotoUrl,
-            displayTitle: (product as any).displayTitle,
-            marketingTitle: (product as any).marketingTitle,
-            ingredients: (product as any).ingredients,
-            recommendedUses: (product as any).recommendedUses,
-            targetAudience: (product as any).targetAudience,
-            story: (product as any).story,
-            usage: (product as any).usage,
-            certifications: (product as any).certifications,
-            features: (product as any).features,
-            additionalImages: (product as any).additionalImages || [],
-            sizeOptions: (product as any).sizeOptions
-              ? (product as any).sizeOptions.split(',').map((s: string) => s.trim())
-              : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
-            payAndPickup: undefined,
-            inventory: [],
-          }));
+          const fallbackProducts: PayAndPickupProduct[] = getProductsData().map((product, index) => {
+            const fallbackSizeOptions = (product as any).sizeOptions
+              ? (product as any).sizeOptions.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'];
+
+            const fallbackSizePriceOptions: ProductSizePriceOption[] = fallbackSizeOptions.map(
+              (label: string, order: number) => ({
+                key: slugify(label),
+                label,
+                displayOrder: order,
+              }),
+            );
+
+            return {
+              id: (product as any).id ?? index + 1,
+              name: product.name,
+              description: product.description,
+              category: product.category,
+              imageUrl: (product as any).imageUrl,
+              texturePhotoUrl: (product as any).texturePhotoUrl,
+              displayTitle: (product as any).displayTitle,
+              marketingTitle: (product as any).marketingTitle,
+              ingredients: (product as any).ingredients,
+              recommendedUses: (product as any).recommendedUses,
+              targetAudience: (product as any).targetAudience,
+              story: (product as any).story,
+              usage: (product as any).usage,
+              certifications: (product as any).certifications,
+              features: (product as any).features,
+              additionalImages: (product as any).additionalImages || [],
+              sizeOptions: fallbackSizeOptions,
+              payAndPickup: undefined,
+              sizePriceOptions: fallbackSizePriceOptions,
+              inventory: [],
+            };
+          });
 
           setProducts(fallbackProducts);
         }
@@ -217,20 +367,27 @@ const PayAndPickup: React.FC = () => {
   const productsWithInventory = useMemo(() => {
     return products.map((product) => {
       const inventory = getProductInventory(product.id);
-      const availableSizes = inventory.map((inv) => inv.sizeOption);
+      const inventorySizes = inventory.map((inv) => inv.sizeOption).filter(Boolean);
+      const configuredSizes = Array.isArray(product.sizeOptions) && product.sizeOptions.length > 0
+        ? product.sizeOptions
+        : product.sizePriceOptions?.map((option) => option.label).filter(Boolean) ?? [];
+
+      const mergedSizes = configuredSizes.length > 0 ? configuredSizes : inventorySizes;
 
       return {
         ...product,
-        sizeOptions: availableSizes.length > 0 ? availableSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
+        sizeOptions: mergedSizes.length > 0 ? mergedSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
         inventory,
       };
     });
   }, [products]);
 
+  const cartSubtotal = useMemo(() => Number(getCartSubtotal().toFixed(2)), [cart]);
+  const estimatedTax = useMemo(() => Number((cartSubtotal * TAX_RATE).toFixed(2)), [cartSubtotal]);
+  const cartTotal = useMemo(() => Number((cartSubtotal + estimatedTax).toFixed(2)), [cartSubtotal, estimatedTax]);
+
   const addToCart = (product: PayAndPickupProduct, size: string) => {
     const uniqueKey = `${product.id}-${size}`;
-    console.log('Adding to cart:', product.name, product.id, size, uniqueKey);
-    
     const existingItem = cart.find(item => item.uniqueKey === uniqueKey);
 
     if (existingItem) {
@@ -261,6 +418,8 @@ const PayAndPickup: React.FC = () => {
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
+  const getCartSubtotal = () =>
+    cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0);
 
   const toggleProductExpansion = (productId: number) => {
     setExpandedProducts(prev => {
@@ -284,10 +443,76 @@ const PayAndPickup: React.FC = () => {
   };
 
   const formatPhoneInput = (value: string) => {
-    const phone = value.replace(/\D/g, '');
-    if (phone.length <= 3) return phone;
-    if (phone.length <= 6) return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
-    return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+   const phone = value.replace(/\D/g, '');
+   if (phone.length <= 3) return phone;
+   if (phone.length <= 6) return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
+   return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+  };
+
+  const formatCardNumberInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+  };
+
+  const formatExpiryInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
+
+  const validatePaymentInfo = (): boolean => {
+    const newErrors: Partial<PaymentInfo> = {};
+
+    const cardDigits = paymentInfo.cardNumber.replace(/\D/g, '');
+    if (cardDigits.length !== 16) {
+      newErrors.cardNumber = 'Enter a 16-digit card number';
+    }
+
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(paymentInfo.expiry)) {
+      newErrors.expiry = 'Use MM/YY format';
+    }
+
+    const cvvDigits = paymentInfo.cvv.replace(/\D/g, '');
+    if (cvvDigits.length < 3 || cvvDigits.length > 4) {
+      newErrors.cvv = 'Enter a 3 or 4 digit CVV';
+    }
+
+    setPaymentErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const formatReadyTime = (timestamp?: string) => {
+    if (!timestamp) return 'Ready in ~15 min';
+    try {
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) {
+        return 'Ready in ~15 min';
+      }
+      return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    } catch {
+      return 'Ready in ~15 min';
+    }
+  };
+
+  const getLatestOrderNumber = () => {
+    if (orderSummary?.orderNumber) return orderSummary.orderNumber;
+    if (typeof window !== 'undefined') {
+      const storedNumber = localStorage.getItem('lastOrderNumber');
+      if (storedNumber) return storedNumber;
+    }
+    if (orderSummary?.orderId) return `#${orderSummary.orderId}`;
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('lastOrderId');
+      if (storedId) return `#${storedId}`;
+    }
+    return `OSW-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+  };
+
+  const getLatestItemCount = () => {
+    if (orderSummary?.items?.length) {
+      return orderSummary.items.reduce((sum, item) => sum + item.quantity, 0);
+    }
+    return getTotalItems();
   };
 
   const validateCustomerInfo = (): boolean => {
@@ -311,23 +536,43 @@ const PayAndPickup: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePlaceOrder = async () => {
+  const handleContinueToPayment = () => {
+    if (cart.length === 0) {
+      alert('Your cart is empty. Please add items before continuing.');
+      return;
+    }
     if (!validateCustomerInfo()) return;
-    
+    setPaymentErrors({});
+    setStep('payment');
+  };
+
+  const handleCompletePayment = async () => {
+    if (cart.length === 0) {
+      alert('Your cart is empty. Please add items before checking out.');
+      return;
+    }
+
+    if (!validatePaymentInfo()) return;
+
     setIsProcessing(true);
     try {
+      const itemsSnapshot = cart.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        size: item.size,
+        quantity: item.quantity,
+        unitPrice: getProductPrice(item.product.id, item.size),
+        locationId: 1
+      }));
+
       const orderPayload = {
-        items: cart.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          size: item.size,
-          quantity: item.quantity,
-          unitPrice: getProductPrice(item.product.id, item.size),
-          locationId: 1
-        })),
+        items: itemsSnapshot,
         customerInfo,
         orderType: 'drive_through',
-        locationId: 1
+        locationId: 1,
+        pickupLocation: 'Phoenix Warehouse',
+        paymentMethod: 'mock_card',
+        paymentStatus: 'paid'
       };
 
       const response = await fetch('/api/pay-and-pickup/create-order', {
@@ -348,8 +593,51 @@ const PayAndPickup: React.FC = () => {
       if (result.orderId) {
         localStorage.setItem('lastOrderId', result.orderId);
       }
+      if (result.orderNumber) {
+        localStorage.setItem('lastOrderNumber', result.orderNumber);
+      }
 
+      const orderItemsForSummary = itemsSnapshot.map(item => ({
+        name: item.productName,
+        size: item.size,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice
+      }));
+
+      const summary: OrderSummary = {
+        orderId: result.orderId,
+        orderNumber: result.orderNumber,
+        subtotal: result.subtotal,
+        tax: result.tax,
+        total: result.totalAmount,
+        estimatedReadyTime: result.estimatedReadyTime,
+        items: orderItemsForSummary
+      };
+
+      setOrderSummary(summary);
+      try {
+        localStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+      } catch (storageError) {
+        console.warn('Unable to persist order summary:', storageError);
+      }
+
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'pay_pickup_mock_payment_success', {
+          event_category: 'ecommerce',
+          event_label: 'pay_pickup_order',
+          value: result.totalAmount,
+          items: orderItemsForSummary.map(item => ({
+            item_name: item.name,
+            item_variant: item.size,
+            quantity: item.quantity,
+            price: item.unitPrice
+          }))
+        });
+      }
+
+      setPaymentErrors({});
       setCart([]);
+      setPaymentInfo({ cardNumber: '', expiry: '', cvv: '' });
       setStep('checkout');
     } catch (error) {
       console.error('Order error:', error);
@@ -375,6 +663,16 @@ const PayAndPickup: React.FC = () => {
         setCart(parsedCart);
       } catch (e) {
         console.error('Error loading cart:', e);
+      }
+    }
+
+    const savedSummary = localStorage.getItem('lastOrderSummary');
+    if (savedSummary) {
+      try {
+        const parsedSummary = JSON.parse(savedSummary);
+        setOrderSummary(parsedSummary);
+      } catch (e) {
+        console.error('Error loading order summary:', e);
       }
     }
   }, []);
@@ -407,6 +705,8 @@ const PayAndPickup: React.FC = () => {
                       setStep('menu');
                     } else if (step === 'customer-info') {
                       setStep('cart');
+                    } else if (step === 'payment') {
+                      setStep('customer-info');
                     } else if (step === 'checkout') {
                       setStep('customer-info');
                     } else if (step === 'notify-arrival') {
@@ -809,7 +1109,7 @@ const PayAndPickup: React.FC = () => {
                                     {product.displayTitle || product.name}
                                   </h4>
                                   <p className="text-sm lg:text-base text-gray-600 mt-1 line-clamp-2">
-                                    {product.briefOverview || product.description}
+                                    {product.story || product.description}
                                   </p>
                                 </div>
                                 <ChevronDown 
@@ -1170,18 +1470,132 @@ const PayAndPickup: React.FC = () => {
             <Button
               size="lg"
               className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-              onClick={handlePlaceOrder}
+              onClick={handleContinueToPayment}
               disabled={isProcessing}
             >
-              {isProcessing ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  Place Order
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </>
-              )}
+              Continue to Payment
+              <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
+          </motion.div>
+        )}
+
+        {/* Payment Screen */}
+        {step === 'payment' && (
+          <motion.div
+            key="payment"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            className="px-4 py-6 max-w-2xl mx-auto"
+          >
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-6 lg:mb-8">Payment Details</h2>
+
+            <Card className="p-6 mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Mock Payment</h3>
+                  <p className="text-sm text-gray-600">Enter any card details to simulate payment.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input
+                    id="cardNumber"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    value={paymentInfo.cardNumber}
+                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: formatCardNumberInput(e.target.value) }))}
+                    placeholder="4242 4242 4242 4242"
+                    className={paymentErrors.cardNumber ? 'border-red-500' : ''}
+                  />
+                  {paymentErrors.cardNumber && <p className="text-red-500 text-sm mt-1">{paymentErrors.cardNumber}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="expiry">Expiration</Label>
+                    <Input
+                      id="expiry"
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                      value={paymentInfo.expiry}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiry: formatExpiryInput(e.target.value) }))}
+                      placeholder="MM/YY"
+                      className={paymentErrors.expiry ? 'border-red-500' : ''}
+                    />
+                    {paymentErrors.expiry && <p className="text-red-500 text-sm mt-1">{paymentErrors.expiry}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input
+                      id="cvv"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      value={paymentInfo.cvv}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                      placeholder="123"
+                      className={paymentErrors.cvv ? 'border-red-500' : ''}
+                    />
+                    {paymentErrors.cvv && <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <div className="bg-gray-100 rounded-xl p-4 mb-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-semibold">${cartSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Tax (8%)</span>
+                <span className="font-semibold">${estimatedTax.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between text-lg">
+                <span className="text-gray-800 font-semibold">Total Due</span>
+                <span className="font-bold">${cartTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-blue-900">
+                This is a mock payment flow for testing. The order will be recorded and the admin team will be notified immediately.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                size="lg"
+                className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
+                onClick={handleCompletePayment}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    Complete Payment
+                    <Check className="ml-2 w-5 h-5" />
+                  </>
+                )}
+              </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={() => setStep('customer-info')}
+                disabled={isProcessing}
+              >
+                Back to Details
+              </Button>
+            </div>
           </motion.div>
         )}
 
@@ -1210,16 +1624,58 @@ const PayAndPickup: React.FC = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-600">Order #</span>
-                <span className="font-mono font-semibold">{localStorage.getItem('lastOrderId') || `OSW-${Math.random().toString(36).substr(2, 6).toUpperCase()}`}</span>
+                <span className="font-mono font-semibold">{getLatestOrderNumber()}</span>
               </div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-600">Pickup Time</span>
-                <span className="font-semibold text-green-600">Ready in ~15 min</span>
+                <span className="font-semibold text-green-600">{formatReadyTime(orderSummary?.estimatedReadyTime)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Total Items</span>
-                <span className="font-semibold">{getTotalItems()} items</span>
+                <span className="font-semibold">{getLatestItemCount()} items</span>
               </div>
+              {orderSummary && (
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span className="font-medium">${orderSummary.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Tax</span>
+                    <span className="font-medium">${orderSummary.tax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-base">
+                    <span className="text-gray-700 font-semibold">Total Paid</span>
+                    <span className="font-semibold">${orderSummary.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {orderSummary?.items?.length ? (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Items in Your Order</h3>
+                <div className="space-y-3">
+                  {orderSummary.items.map((item, index) => (
+                    <div key={`${item.name}-${item.size}-${index}`} className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-medium text-gray-800">{item.name}</p>
+                        <p className="text-gray-500">{item.size}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-500">Qty {item.quantity}</p>
+                        <p className="font-semibold">${(item.unitPrice * item.quantity).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="bg-green-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-green-900">
+                Our yard crew has been alerted and the admin dashboard shows your order. We'll stage everything so it's ready when you arrive.
+              </p>
             </div>
 
             <div className="bg-blue-50 rounded-xl p-4 mb-6">

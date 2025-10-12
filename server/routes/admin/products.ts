@@ -102,4 +102,37 @@ router.post("/bulk-stock-update", async (req: AdminRequest, res) => {
   }
 });
 
+// Bulk update products
+router.post("/bulk-update", async (req: AdminRequest, res) => {
+  try {
+    const { productIds, updates } = req.body;
+
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ error: "Invalid product IDs" });
+    }
+
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ error: "Invalid updates" });
+    }
+
+    // Update all products with the given IDs
+    const { data, error } = await supabase
+      .from("products")
+      .update(updates)
+      .in("id", productIds)
+      .select();
+
+    if (error) throw error;
+
+    res.json({ 
+      success: true, 
+      updated: data?.length || 0,
+      products: data 
+    });
+  } catch (error) {
+    console.error("Bulk update error:", error);
+    res.status(500).json({ error: "Failed to bulk update products" });
+  }
+});
+
 export default router;

@@ -7,6 +7,169 @@ const { loadProductData } = require('../loadProducts.js');
 
 const router = Router();
 
+type PublicSizePriceOption = {
+  key: string;
+  label: string;
+  price: number;
+  priceCents: number;
+  image?: string;
+  description?: string;
+  isActive: boolean;
+  displayOrder?: number;
+};
+
+const toMoneyCents = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (Number.isInteger(value) && Math.abs(value) >= 100) {
+      return value;
+    }
+    return Math.round(value * 100);
+  }
+
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    if (!cleaned) return null;
+    const numeric = Number(cleaned);
+    if (Number.isNaN(numeric)) return null;
+    if (cleaned.includes('.')) {
+      return Math.round(numeric * 100);
+    }
+    if (numeric >= 1000) {
+      return numeric;
+    }
+    return Math.round(numeric * 100);
+  }
+
+  return null;
+};
+
+const extractOptionPriceCents = (option: Record<string, unknown>): number | null => {
+  const fields = ['price_cents', 'priceCents', 'price', 'amount', 'value', 'unit_price'];
+  for (const field of fields) {
+    if (!(field in option)) continue;
+    const cents = toMoneyCents(option[field]);
+    if (cents !== null) {
+      return cents;
+    }
+  }
+  return null;
+};
+
+const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
+  if (input === null || input === undefined) {
+    return [];
+  }
+
+  let parsed: unknown = input;
+
+  if (typeof input === 'string') {
+    try {
+      parsed = JSON.parse(input);
+    } catch {
+      return [];
+    }
+  }
+
+  const toNormalized = (value: unknown): PublicSizePriceOption | null => {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const rawKeyCandidates = [record.key, record.size_key, record.slug, record.id, record.code];
+    const rawLabelCandidates = [record.label, record.name, record.title, record.display_name];
+
+    const rawKey = rawKeyCandidates.find(
+      (candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0,
+    );
+    const rawLabel = rawLabelCandidates.find(
+      (candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0,
+    );
+
+    let key = rawKey?.trim();
+    let label = rawLabel?.trim();
+
+    if (!key && label) {
+      key = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    }
+
+    if (!label && key) {
+      label = key;
+    }
+
+    if (!key && !label) {
+      return null;
+    }
+
+    const priceCents = extractOptionPriceCents(record);
+    if (priceCents === null) {
+      return null;
+    }
+
+    const image =
+      typeof record.image === 'string'
+        ? record.image
+        : typeof record.image_url === 'string'
+          ? record.image_url
+          : undefined;
+
+    const description =
+      typeof record.description === 'string' ? record.description : undefined;
+
+    const displayOrder =
+      typeof record.display_order === 'number'
+        ? record.display_order
+        : typeof record.order === 'number'
+          ? record.order
+          : undefined;
+
+    const activeField =
+      'is_active' in record
+        ? record.is_active
+        : 'active' in record
+          ? record.active
+          : 'enabled' in record
+            ? record.enabled
+            : 'visible' in record
+              ? record.visible
+              : undefined;
+
+    let isActive = true;
+    if (typeof activeField === 'boolean') {
+      isActive = activeField;
+    } else if (typeof activeField === 'string') {
+      isActive = !['false', '0', 'no', 'off', 'hidden', 'inactive'].includes(activeField.toLowerCase());
+    } else if (typeof activeField === 'number') {
+      isActive = activeField !== 0;
+    }
+
+    return {
+      key: key ?? label ?? '',
+      label: label ?? key ?? '',
+      priceCents,
+      price: priceCents / 100,
+      image,
+      description,
+      isActive,
+      displayOrder,
+    };
+  };
+
+  if (Array.isArray(parsed)) {
+    return parsed
+      .map(toNormalized)
+      .filter((item): item is PublicSizePriceOption => Boolean(item));
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    return Object.values(parsed)
+      .map(toNormalized)
+      .filter((item): item is PublicSizePriceOption => Boolean(item));
+  }
+
+  return [];
+};
+
 type RawProduct = {
   id: number;
   name: string;
@@ -44,6 +207,7 @@ type RawProduct = {
   pay_and_pickup_badge?: string | null;
   pay_and_pickup_description?: string | null;
   pay_and_pickup_hero_image?: string | null;
+  size_price_options?: unknown;
 };
 
 const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
@@ -77,6 +241,7 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
     additionalImages: record.additional_images ?? [],
     allowBulkPickup: Boolean(record.allow_bulk_pickup),
     availableSizeOptions: record.available_size_options ?? [],
+    sizePriceOptions: normalizeSizePriceOptions(record.size_price_options),
     minOrderQuantity: record.min_order_quantity ?? 1,
     maxOrderQuantity: record.max_order_quantity ?? undefined,
     isPriceNegotiable: Boolean(record.is_price_negotiable),
@@ -152,6 +317,7 @@ function getProductsFromFallback(category?: string | string[]) {
         additional_images: product.additionalImages,
         allow_bulk_pickup: product.allowBulkPickup,
         available_size_options: product.availableSizeOptions,
+        size_price_options: product.sizePriceOptions,
         min_order_quantity: product.minOrderQuantity,
         max_order_quantity: product.maxOrderQuantity,
         is_price_negotiable: product.isPriceNegotiable,
@@ -254,6 +420,7 @@ router.get('/:id', async (req, res) => {
           additional_images: fallback.additionalImages,
           allow_bulk_pickup: fallback.allowBulkPickup,
           available_size_options: fallback.availableSizeOptions,
+          size_price_options: fallback.sizePriceOptions,
           min_order_quantity: fallback.minOrderQuantity,
           max_order_quantity: fallback.maxOrderQuantity,
           is_price_negotiable: fallback.isPriceNegotiable,

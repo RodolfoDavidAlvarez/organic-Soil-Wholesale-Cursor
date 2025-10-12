@@ -26,6 +26,10 @@ export interface CustomerType {
   discount_multiplier: number;
 }
 
+export interface PriceCalculationOptions {
+  basePrice?: number | null;
+}
+
 // Enhanced pricing service with dynamic tiers and customer types
 export class PricingService {
   
@@ -133,9 +137,17 @@ export class PricingService {
     sizeOption: string,
     quantity: number,
     customerType: CustomerType['type'] = 'regular',
-    locationId: number = 1
+    locationId: number = 1,
+    options: PriceCalculationOptions = {}
   ): Promise<PriceCalculation> {
-    const basePrice = await this.getBasePrice(productId, sizeOption, locationId);
+    let basePrice =
+      typeof options.basePrice === 'number' && !Number.isNaN(options.basePrice)
+        ? options.basePrice
+        : await this.getBasePrice(productId, sizeOption, locationId);
+
+    if (basePrice == null || Number.isNaN(basePrice)) {
+      basePrice = 0;
+    }
     const tier = await this.getPricingTier(productId, sizeOption, quantity, customerType);
     
     let discountAmount = 0;

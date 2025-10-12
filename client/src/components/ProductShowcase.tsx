@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProductEditor } from "@/components/ProductEditor";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "potting-soil.jpg";
@@ -67,20 +68,36 @@ export default function ProductShowcase({ products, loading = false, onProductSe
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [, navigate] = useLocation();
   const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [localProducts, setLocalProducts] = useState(products);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Update selected category when initialCategory changes
   useEffect(() => {
     setSelectedCategory(initialCategory);
   }, [initialCategory]);
 
+  // Update local products when prop changes
+  useEffect(() => {
+    setLocalProducts(products);
+  }, [products]);
+
   // Filter products based on search term and category
-  const filteredProducts = products.filter(
+  const filteredProducts = localProducts.filter(
     (product) =>
       (selectedCategory === "all" || product.category === selectedCategory) &&
       (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Handle save from editor
+  const handleSaveProduct = (updatedProduct: Product) => {
+    setLocalProducts((prevProducts) =>
+      prevProducts.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+    setEditingProduct(null);
+  };
 
   // Handle product click
   const handleProductClick = (product: Product) => {
@@ -126,6 +143,18 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Edit Mode Toggle */}
+      <div className="flex justify-end mb-4">
+        <Button
+          variant={isEditMode ? "default" : "outline"}
+          onClick={() => setIsEditMode(!isEditMode)}
+          className="gap-2"
+        >
+          <Edit className="h-4 w-4" />
+          {isEditMode ? "Exit Edit Mode" : "Edit Products"}
+        </Button>
+      </div>
+
       {/* Search and Filter Section */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="flex-1">
@@ -181,15 +210,35 @@ export default function ProductShowcase({ products, loading = false, onProductSe
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
-              className="overflow-hidden transition-all duration-300 cursor-pointer border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group"
-              onClick={() => handleProductClick(product)}
+              className="overflow-hidden transition-all duration-300 border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group relative"
             >
-              <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+              {/* Edit button overlay */}
+              {isEditMode && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingProduct(product);
+                  }}
+                  className="absolute top-2 right-2 z-30 gap-1"
+                >
+                  <Edit className="h-3 w-3" />
+                  Edit
+                </Button>
+              )}
+              
+              <div 
+                className="relative aspect-[4/3] overflow-hidden rounded-t-2xl cursor-pointer"
+                onClick={() => !isEditMode && handleProductClick(product)}
+              >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                  <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                    View Details
-                  </div>
+                  {!isEditMode && (
+                    <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                      View Details
+                    </div>
+                  )}
                 </div>
                 <OptimizedImage
                   src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
@@ -256,6 +305,15 @@ export default function ProductShowcase({ products, loading = false, onProductSe
             </Card>
           ))}
         </div>
+      )}
+      
+      {/* Product Editor Modal */}
+      {editingProduct && (
+        <ProductEditor
+          product={editingProduct}
+          onSave={handleSaveProduct}
+          onCancel={() => setEditingProduct(null)}
+        />
       )}
     </div>
   );

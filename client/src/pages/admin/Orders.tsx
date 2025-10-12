@@ -70,6 +70,23 @@ export default function AdminOrders() {
     }
   };
 
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-emerald-100 text-emerald-800';
+      case 'pending':
+      case 'pending_payment':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatStatusLabel = (value: string) =>
+    value ? value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()) : 'Unknown';
+
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
@@ -95,6 +112,7 @@ export default function AdminOrders() {
                       <TableHead>Date</TableHead>
                       <TableHead>Items</TableHead>
                       <TableHead>Total</TableHead>
+                      <TableHead>Payment</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -115,7 +133,13 @@ export default function AdminOrders() {
                     ) : (
                       orders?.map((order: any) => (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">#{order.id}</TableCell>
+                          <TableCell className="font-medium">
+                            {order.order_number ? (
+                              <span className="font-mono">{order.order_number}</span>
+                            ) : (
+                              <>#{order.id}</>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium">{order.customer_name || 'Guest'}</p>
@@ -128,10 +152,15 @@ export default function AdminOrders() {
                           <TableCell>{order.item_count || 0} items</TableCell>
                           <TableCell>${(order.total || 0).toFixed(2)}</TableCell>
                           <TableCell>
+                            <Badge className={getPaymentStatusColor(order.payment_status)}>
+                              {formatStatusLabel(order.payment_status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <Badge className={getStatusColor(order.status)}>
                               <span className="flex items-center gap-1">
                                 {getStatusIcon(order.status)}
-                                {order.status}
+                                {formatStatusLabel(order.status)}
                               </span>
                             </Badge>
                           </TableCell>

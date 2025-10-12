@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
+// const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e"; // Deprecated - using internal API now
 
 const generateAdminEmail = (data: FormValues) => `
 <!DOCTYPE html>
@@ -121,36 +121,20 @@ const Contact = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      const contactData = {
-        formType: "Contact us form",
-        formIdentifier: "contact-form",
-        data: {
-          ...data,
-          submittedAt: new Date().toISOString(),
-        },
-        emails: {
-          admin: {
-            subject: `New Contact Form Submission from ${data.name}`,
-            html: generateAdminEmail(data),
-          },
-          customer: {
-            subject: "Thank You for Contacting Organic Soil Wholesale",
-            html: generateCustomerEmail(data),
-          },
-        },
-      };
-
-      const response = await fetch(WEBHOOK_URL, {
+      const response = await fetch('/api/contact/submit', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(contactData),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit contact form");
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit contact form");
       }
+
+      const result = await response.json();
 
       toast({
         title: "Message Sent",

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase } from "../db/supabase.js";
 import Stripe from "stripe";
+import { sendAdminOrderNotification, sendAdminArrivalNotification } from "../services/email.js";
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -32,7 +33,15 @@ router.get("/menu", async (req, res) => {
 // Create order from Pay & Pickup landing page
 router.post("/create-order", async (req, res) => {
   try {
-    const { items, customerInfo, orderType = "drive_through", locationId = 1, pickupLocation } = req.body;
+    const {
+      items,
+      customerInfo,
+      orderType = "drive_through",
+      locationId = 1,
+      pickupLocation,
+      paymentMethod = "mock_card",
+      paymentStatus = "paid",
+    } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "No items in order" });
@@ -114,6 +123,10 @@ router.post("/create-order", async (req, res) => {
     const taxRate = 0.08; // 8% sales tax
     const taxCents = Math.round(subtotalCents * taxRate);
     const totalCents = subtotalCents + taxCents;
+    const subtotal = subtotalCents / 100;
+    const tax = taxCents / 100;
+    const total = totalCents / 100;
+    const orderStatus = paymentStatus === "paid" ? "processing" : "pending";
 
     // Look up or create customer profile if email provided
     let customerId: string | number | null = null;
@@ -158,17 +171,17 @@ router.post("/create-order", async (req, res) => {
       delivery_type: "pickup",
       pickup_location: pickupLocation || "Phoenix Warehouse",
       order_items: orderItemsJson,
-      subtotal: subtotalCents,
+      subtotal,
       discount: 0,
-      total: totalCents,
-      status: "pending",
+      total,
+      status: orderStatus,
       notes: customerInfo.notes ?? null,
       order_type: orderType,
       customer_name: customerInfo.name,
       customer_email: customerInfo.email ?? null,
       estimated_ready_time: estimatedReadyTime,
-      payment_method: "on_site",
-      payment_status: "pending",
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
     };
 
     const { data: order, error: orderError } = await supabase.from("orders").insert(orderPayload).select("*").single();
@@ -207,14 +220,47 @@ router.post("/create-order", async (req, res) => {
 
     await Promise.all(inventoryUpdates);
 
+    const resolvedPaymentMethod = paymentMethod === "mock_card" ? "Mock Card (Test)" : paymentMethod;
+    const resolvedPaymentStatus = paymentStatus ? paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1) : undefined;
+
+    // Send admin notification email
+    try {
+      await sendAdminOrderNotification({
+        orderNumber: order.order_number,
+        customerName: customerInfo.name,
+        customerEmail: customerInfo.email || undefined,
+        customerPhone: customerInfo.phone,
+        orderType: 'pay_and_pickup',
+        items: inventorySnapshots.map(snapshot => ({
+          name: snapshot.productName,
+          quantity: snapshot.quantity,
+          price: snapshot.unitPrice * snapshot.quantity,
+          size: snapshot.size_option
+        })),
+        subtotal,
+        tax,
+        total,
+        deliveryMethod: 'Pickup',
+        pickupLocation: pickupLocation || 'Phoenix Warehouse',
+        estimatedReadyTime: estimatedReadyTime,
+        notes: customerInfo.notes || undefined,
+        paymentMethod: resolvedPaymentMethod,
+        paymentStatus: resolvedPaymentStatus,
+      });
+      console.log('Admin notification email sent for Pay & Pickup order:', order.order_number);
+    } catch (emailError) {
+      console.error('Failed to send admin notification email:', emailError);
+      // Don't fail the order if email fails
+    }
+
     res.json({
       success: true,
       orderId: order.id,
       orderNumber: order.order_number,
-      totalAmount: totalCents / 100,
+      totalAmount: total,
       estimatedReadyTime,
-      subtotal: subtotalCents / 100,
-      tax: taxCents / 100,
+      subtotal,
+      tax,
     });
   } catch (error) {
     console.error("Error creating order:", error);
@@ -319,8 +365,20 @@ router.post("/notify-arrival", async (req, res) => {
       return res.status(500).json({ error: "Failed to notify arrival" });
     }
 
-    // TODO: Send real-time notification to admin dashboard
-    // TODO: Send SMS notification to staff
+    // Send admin notification email
+    try {
+      await sendAdminArrivalNotification({
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        vehicleInfo: vehicleInfo,
+        arrivalTime: data.arrival_time,
+        notificationId: data.id
+      });
+      console.log('Admin arrival notification email sent for:', customerInfo.name);
+    } catch (emailError) {
+      console.error('Failed to send admin arrival notification email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.json({
       success: true,

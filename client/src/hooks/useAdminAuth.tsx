@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface AdminUser {
   id: number;
@@ -25,7 +25,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for stored admin token
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem("adminToken");
     if (token) {
       // Validate token and get admin info
       validateToken(token);
@@ -36,20 +36,27 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const validateToken = async (token: string) => {
     try {
-      const response = await fetch('/api/admin/auth/validate', {
+      const response = await fetch("/api/admin/simple/validate", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
         setAdmin(data.admin);
+        setError(null);
       } else {
-        localStorage.removeItem('adminToken');
+        // Token is invalid, remove it and clear admin state
+        localStorage.removeItem("adminToken");
+        setAdmin(null);
+        setError(null);
       }
     } catch (error) {
-      console.error('Token validation error:', error);
+      console.error("Token validation error:", error);
+      // On network error, keep the token but clear admin state
+      setAdmin(null);
+      setError("Network error during authentication");
     } finally {
       setLoading(false);
     }
@@ -60,31 +67,26 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', { email });
-      
-      const response = await fetch('/api/admin-login-temp', {
-        method: 'POST',
+      const response = await fetch("/api/admin/simple/simple-login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
-      console.log('Login response status:', response.status);
-      
       const data = await response.json();
-      console.log('Login response data:', data);
 
       if (response.ok) {
-        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem("adminToken", data.token);
         setAdmin(data.admin);
       } else {
-        setError(data.error || 'Login failed');
-        throw new Error(data.error || 'Login failed');
+        setError(data.error || "Login failed");
+        throw new Error(data.error || "Login failed");
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError(error instanceof Error ? error.message : 'Login failed');
+      console.error("Login error:", error);
+      setError(error instanceof Error ? error.message : "Login failed");
       throw error;
     } finally {
       setLoading(false);
@@ -92,8 +94,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('adminToken');
+    localStorage.removeItem("adminToken");
     setAdmin(null);
+    setError(null);
   };
 
   return (
@@ -103,7 +106,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         loading,
         error,
         signIn,
-        signOut
+        signOut,
       }}
     >
       {children}
@@ -114,7 +117,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 export function useAdminAuth() {
   const context = useContext(AdminAuthContext);
   if (context === undefined) {
-    throw new Error('useAdminAuth must be used within an AdminAuthProvider');
+    throw new Error("useAdminAuth must be used within an AdminAuthProvider");
   }
   return context;
 }

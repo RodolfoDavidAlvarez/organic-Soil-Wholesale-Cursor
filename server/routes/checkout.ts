@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
-import { sendOrderConfirmationEmail } from '../services/email';
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
 
 const router = Router();
 
@@ -208,10 +208,24 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // Get order details including location_id
+  const { data: orderData, error: orderDataError } = await supabase
+    .from('orders')
+    .select('location_id')
+    .eq('id', orderId)
+    .single();
+
+  if (orderDataError || !orderData) {
+    console.error('Error fetching order data:', orderDataError);
+    return;
+  }
+
+  const locationId = orderData.location_id || 1; // Default to location 1 if not set
+
   // Get order items to reserve inventory
   const { data: orderItems, error: itemsError } = await supabase
     .from('order_items')
-    .select('product_id, quantity')
+    .select('product_id, quantity, size_option')
     .eq('order_id', orderId);
 
   if (itemsError || !orderItems) {
@@ -226,7 +240,8 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
       .from('inventory')
       .select('id, quantity_available, quantity_reserved')
       .eq('product_id', item.product_id)
-      .eq('location_id', checkoutLocationId)
+      .eq('location_id', locationId)
+      .eq('size_option', item.size_option)
       .single();
 
     if (inventory) {
@@ -302,6 +317,34 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
       console.log(`Confirmation email sent for order ${orderId}`);
     } catch (emailError) {
       console.error('Failed to send order confirmation email:', emailError);
+      // Don't fail the order process if email fails
+    }
+
+    // Send admin notification email
+    try {
+      await sendAdminOrderNotification({
+        orderNumber: fullOrder.order_number,
+        customerName: fullOrder.business_name || 'Customer',
+        customerEmail: fullOrder.email || undefined,
+        customerPhone: fullOrder.phone || 'Not provided',
+        orderType: fullOrder.order_type || 'standard',
+        items: fullOrder.order_items.map((item: any) => ({
+          name: item.products.name,
+          quantity: item.quantity,
+          price: item.total_price,
+          size: item.size_option
+        })),
+        subtotal: fullOrder.subtotal || 0,
+        tax: fullOrder.tax_amount || 0,
+        total: fullOrder.total_amount || fullOrder.total || 0,
+        deliveryMethod: fullOrder.order_type === 'pickup' ? 'Pickup' : 'Delivery',
+        pickupLocation: fullOrder.pickup_location,
+        estimatedReadyTime: fullOrder.pickup_scheduled_at,
+        notes: fullOrder.notes
+      });
+      console.log(`Admin notification email sent for order ${orderId}`);
+    } catch (adminEmailError) {
+      console.error('Failed to send admin notification email:', adminEmailError);
       // Don't fail the order process if email fails
     }
   }

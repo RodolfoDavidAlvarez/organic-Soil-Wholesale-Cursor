@@ -44,10 +44,12 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminLogin = lazy(() => import("@/pages/admin/Login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
 const AdminProducts = lazy(() => import("@/pages/admin/Products"));
+const AdminProductDetail = lazy(() => import("@/pages/admin/ProductDetail"));
 const AdminOrders = lazy(() => import("@/pages/admin/Orders"));
 const AdminCustomers = lazy(() => import("@/pages/admin/Customers"));
 const AdminInventory = lazy(() => import("@/pages/admin/Inventory"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
+const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
 
@@ -107,11 +109,13 @@ function Router() {
         {/* Admin Routes */}
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/products/:productId" component={AdminProductDetail} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
+        <Route path="/admin/notifications" component={AdminNotifications} />
 
         <Route component={NotFound} />
       </Switch>

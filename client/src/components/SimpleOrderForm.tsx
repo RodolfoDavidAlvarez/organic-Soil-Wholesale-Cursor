@@ -14,81 +14,8 @@ interface LeadInfo {
   notes: string;
 }
 
-const generateAdminEmail = (data: any) => `
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #2C3E50; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; }
-        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-        .lead-info { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 6px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>New Lead Submission</h1>
-        </div>
-        <div class="content">
-            <div class="lead-info">
-                <h2>Lead Information</h2>
-                <p><strong>Name:</strong> ${data.leadInfo.name}</p>
-                <p><strong>Email:</strong> ${data.leadInfo.email}</p>
-                <p><strong>Phone:</strong> ${data.leadInfo.phone}</p>
-                ${data.leadInfo.notes ? `<p><strong>Notes:</strong><br>${data.leadInfo.notes.replace(/\n/g, '<br>')}</p>` : ''}
-            </div>
-            
-            <p>This lead was submitted on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}.</p>
-        </div>
-        <div class="footer">
-            <p>© ${new Date().getFullYear()} Organic Soil Wholesale</p>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-const generateCustomerEmail = (data: any) => `
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; }
-        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Thank You for Contacting Us</h1>
-        </div>
-        <div class="content">
-            <p>Dear ${data.leadInfo.name},</p>
-            <p>Thank you for reaching out to Organic Soil Wholesale. We have received your inquiry and will get back to you shortly.</p>
-            
-            <p>Our team will review your request and contact you within one business day to discuss how we can help with your soil and compost needs.</p>
-            
-            <p>If you have any urgent questions, please don't hesitate to call us at (928) 550-1649.</p>
-            
-            <p>Best regards,<br>The Organic Soil Wholesale Team</p>
-        </div>
-        <div class="footer">
-            <p>© ${new Date().getFullYear()} Organic Soil Wholesale</p>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
 export const SimpleOrderForm: React.FC = () => {
   const { toast } = useToast();
-  const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
 
   const [leadInfo, setLeadInfo] = useState<LeadInfo>({
     name: "",
@@ -137,36 +64,18 @@ export const SimpleOrderForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const formData = {
-        formType: "Lead Form",
-        leadInfo,
-        submittedAt: new Date().toISOString(),
-        emails: {
-          admin: {
-            subject: `New Lead from ${leadInfo.name}`,
-            html: generateAdminEmail({
-              leadInfo,
-            }),
-          },
-          customer: {
-            subject: "Thank You for Contacting Organic Soil Wholesale",
-            html: generateCustomerEmail({
-              leadInfo,
-            }),
-          },
-        },
-      };
-
-      const response = await fetch(WEBHOOK_URL, {
+      const response = await fetch("/api/leads/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(leadInfo),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to submit form");
+        throw new Error(result.error || "Failed to submit form");
       }
 
       setShowThankYou(true);

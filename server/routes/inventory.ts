@@ -40,14 +40,18 @@ router.get('/location/:locationId', async (req, res) => {
     if (error) throw error;
 
     // Enhance with pricing information
+    const parsedLocationId = parseInt(locationId);
+
     const inventoryWithPricing = await Promise.all(
       data.map(async (item) => {
+        const basePrice = item?.price != null ? Number(item.price) : undefined;
         const pricing = await pricingService.calculatePrice(
           item.product_id,
           item.size_option,
           1, // Single unit price
           customerType as CustomerType['type'],
-          parseInt(locationId)
+          parsedLocationId,
+          { basePrice }
         );
 
         return {
@@ -201,6 +205,9 @@ router.get('/products/:locationId', async (req, res) => {
     const { locationId } = req.params;
     const { category, customerType = 'regular', payAndPickup = 'false' } = req.query;
     
+    const parsedLocationId = parseInt(locationId);
+    const payAndPickupOnly = payAndPickup === 'true';
+
     let query = supabase
       .from('inventory')
       .select(`
@@ -211,7 +218,26 @@ router.get('/products/:locationId', async (req, res) => {
           description,
           category,
           image_url,
-          texture_photo_url
+          texture_photo_url,
+          display_title,
+          marketing_title,
+          ingredients,
+          recommended_uses,
+          target_audience,
+          story,
+          usage,
+          certifications,
+          features,
+          additional_images,
+          available_size_options,
+          pay_and_pickup_badge,
+          pay_and_pickup_description,
+          pay_and_pickup_hero_image,
+          pay_and_pickup_display_order,
+          is_pay_and_pickup_enabled,
+          size_price_options,
+          product_video_url,
+          product_video_title
         )
       `)
       .eq('location_id', locationId)
@@ -222,50 +248,77 @@ router.get('/products/:locationId', async (req, res) => {
       query = query.eq('products.category', category);
     }
 
-    // Skip payAndPickup filtering for now - column doesn't exist
-    // if (payAndPickup === 'true') {
-    //   query = query.eq('products.is_pay_and_pickup_enabled', true);
-    // }
+    if (payAndPickupOnly) {
+      query = query
+        .eq('products.is_pay_and_pickup_enabled', true);
+      // Remove active check - column might not exist
+      // .eq('products.active', true);
+    }
 
     const { data, error } = await query;
 
     if (error) throw error;
 
+    // Debug logging
+    if (payAndPickupOnly) {
+      console.log('Pay & Pickup filter active - found', data?.length || 0, 'inventory items');
+      if (data && data.length > 0) {
+        console.log('First item is_pay_and_pickup_enabled:', data[0].products?.is_pay_and_pickup_enabled);
+      }
+    }
+
+    // Enrich inventory rows with pricing in parallel
+    const enrichedInventory = await Promise.all(
+      data.map(async (item) => {
+        const basePrice = item?.price != null ? Number(item.price) : undefined;
+        const pricing = await pricingService.calculatePrice(
+          item.product_id,
+          item.size_option,
+          1,
+          customerType as CustomerType['type'],
+          parsedLocationId,
+          { basePrice }
+        );
+
+        return {
+          ...item,
+          pricing
+        };
+      })
+    );
+
     // Group by product and enhance with pricing
     const productMap = new Map();
     
-    for (const item of data) {
+    for (const item of enrichedInventory) {
       const productId = item.product_id;
       
-      if (!productMap.has(productId)) {
-        productMap.set(productId, {
-          ...item.products,
-          inventory: []
-        });
+      // Additional check for pay & pickup filter
+      if (payAndPickupOnly && !item.products?.is_pay_and_pickup_enabled) {
+        console.log(`Skipping product ${productId} - is_pay_and_pickup_enabled: ${item.products?.is_pay_and_pickup_enabled}`);
+        continue;
       }
       
-      // Calculate pricing for this size option
-      const pricing = await pricingService.calculatePrice(
-        productId,
-        item.size_option,
-        1,
-        customerType as CustomerType['type'],
-        parseInt(locationId)
-      );
+      const productRecord = productMap.get(productId) ?? {
+        ...item.products,
+        inventory: []
+      };
 
-      productMap.get(productId).inventory.push({
+      productRecord.inventory.push({
         size_option: item.size_option,
         quantity_available: item.quantity_available,
         quantity_reserved: item.quantity_reserved,
         price: item.price,
         pricing: {
-          base_price: pricing.base_price,
-          final_price: pricing.final_price,
-          discount_amount: pricing.discount_amount,
-          tier_applied: pricing.tier_applied,
-          savings: pricing.savings
+          base_price: item.pricing.base_price,
+          final_price: item.pricing.final_price,
+          discount_amount: item.pricing.discount_amount,
+          tier_applied: item.pricing.tier_applied,
+          savings: item.pricing.savings
         }
       });
+
+      productMap.set(productId, productRecord);
     }
 
     const products = Array.from(productMap.values()).sort((a: any, b: any) => {

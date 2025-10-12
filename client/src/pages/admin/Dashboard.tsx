@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   DollarSign,
@@ -12,7 +13,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -43,7 +43,7 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
-  const { toast } = useToast();
+  const [lastUpdated, setLastUpdated] = useState(() => new Date().toLocaleTimeString());
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['adminDashboardStats'],
@@ -63,6 +63,12 @@ export default function AdminDashboard() {
     },
     refetchInterval: 30000 // Refetch every 30 seconds
   });
+
+  useEffect(() => {
+    if (stats) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [stats]);
 
   if (isLoading) {
     return (
@@ -89,6 +95,8 @@ export default function AdminDashboard() {
   const orderCount = stats?.orderStats?.reduce((sum, stat) => sum + stat.count, 0) || 0;
   const pendingOrders = stats?.orderStats?.find(s => s.status === 'pending')?.count || 0;
   const lowStockCount = stats?.lowStockProducts?.length || 0;
+  const recentOrders = stats?.recentOrders?.slice(0, 5) ?? [];
+  const lowStockProducts = stats?.lowStockProducts?.slice(0, 5) ?? [];
 
   return (
     <ProtectedAdminRoute>
@@ -97,7 +105,7 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <div className="text-sm text-gray-500">
-          Last updated: {new Date().toLocaleTimeString()}
+          Last updated: {lastUpdated}
         </div>
       </div>
 
@@ -163,28 +171,30 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats?.recentOrders?.slice(0, 5).map((order) => (
-                <div key={order.id} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {order.customers?.name || 'Guest'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Order #{order.id} • {new Date(order.created_at).toLocaleTimeString()}
-                    </p>
+              {recentOrders.length > 0 ? (
+                recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {order.customers?.name || 'Guest'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Order #{order.id} • {new Date(order.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">${order.total.toFixed(2)}</p>
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">${order.total.toFixed(2)}</p>
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                      order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              )) || (
+                ))
+              ) : (
                 <p className="text-sm text-muted-foreground">No recent orders</p>
               )}
             </div>
@@ -206,20 +216,22 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats?.lowStockProducts?.slice(0, 5).map((product) => (
-                <div key={product.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{product.name}</p>
-                    <span className="text-sm text-red-600 font-medium">
-                      {product.stock} left
-                    </span>
+              {lowStockProducts.length > 0 ? (
+                lowStockProducts.map((product) => (
+                  <div key={product.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{product.name}</p>
+                      <span className="text-sm text-red-600 font-medium">
+                        {product.stock} left
+                      </span>
+                    </div>
+                    <Progress
+                      value={(product.stock / product.min_stock_level) * 100}
+                      className="h-2"
+                    />
                   </div>
-                  <Progress
-                    value={(product.stock / product.min_stock_level) * 100}
-                    className="h-2"
-                  />
-                </div>
-              )) || (
+                ))
+              ) : (
                 <p className="text-sm text-muted-foreground">All products are well stocked</p>
               )}
             </div>

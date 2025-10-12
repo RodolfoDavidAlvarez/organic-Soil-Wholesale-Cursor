@@ -49,6 +49,18 @@ export const products = pgTable("products", {
   additionalImages: text("additional_images").array(),
   allowBulkPickup: boolean("allow_bulk_pickup").default(false),
   availableSizeOptions: text("available_size_options").array(),
+  sizePriceOptions: jsonb("size_price_options").$type<
+    {
+      key: string;
+      label: string;
+      priceCents: number;
+      price: number;
+      image?: string;
+      description?: string;
+      isActive?: boolean;
+      displayOrder?: number;
+    }[]
+  >(),
   minOrderQuantity: integer("min_order_quantity").notNull().default(1),
   maxOrderQuantity: integer("max_order_quantity"),
   isPriceNegotiable: boolean("is_price_negotiable").default(false).notNull(),

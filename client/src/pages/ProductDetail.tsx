@@ -6,35 +6,18 @@ import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight, ZoomIn, Package, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getProductsData } from "@/data/productData";
+import { SIZE_CATALOG, SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 
-// Size category images and labels from adminInputs.txt
-const SIZE_CATEGORIES = [
-  {
-    name: "Pallet of 9 lb bags",
-    description: "144 units (36 cases of 4 units)",
-    image: "/Size Categories- Pallet of Box.png",
-  },
-  {
-    name: "Pallet of 1CF bags",
-    description: "50 bags (1CF each)",
-    image: "/Size Category - pallet of 50 1 CF bags.png",
-  },
-  {
-    name: "Bulk Delivery",
-    description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-    image: "/Truckload Bulk delivery.png",
-  },
-  {
-    name: "Bulk Pickup",
-    description: "Cubic yards (Dairy compost only)",
-    image: "/CY of Bulk for pick only.png",
-  },
-];
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const ProductDetail = () => {
   const [, params] = useRoute("/products/:slug");
@@ -48,14 +31,119 @@ const ProductDetail = () => {
   const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  const sizeCategories = useMemo(
-    () =>
-      SIZE_CATEGORIES.map((category) => ({
-        ...category,
-        image: getOptimizedImageSrc(category.image),
-      })),
-    []
-  );
+  const sizeCategories = useMemo(() => {
+    const defaultCategories = SIZE_CATALOG.map((entry) => ({
+      key: entry.key,
+      name: entry.label,
+      description: entry.description,
+      image: getOptimizedImageSrc(entry.image),
+      price: undefined as number | undefined,
+      displayOrder: SIZE_CATALOG.findIndex((catalogEntry) => catalogEntry.key === entry.key),
+    }));
+
+    if (!product) {
+      return defaultCategories;
+    }
+
+    const rawSizePriceOptions = Array.isArray(product.sizePriceOptions)
+      ? product.sizePriceOptions
+      : Array.isArray(product.size_price_options)
+        ? product.size_price_options
+        : [];
+
+    const parsedOptions = rawSizePriceOptions
+      .map((option: any) => {
+        if (!option) return null;
+
+        const rawLabel = (option.label ?? option.name ?? option.title ?? "").toString().trim();
+        const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
+        if (!rawLabel || !keyCandidate) {
+          return null;
+        }
+
+        const activeValue =
+          option.isActive ?? option.is_active ?? option.active ?? option.enabled ?? option.visible;
+        const isActive = activeValue === undefined ? true : Boolean(activeValue);
+        if (!isActive) {
+          return null;
+        }
+
+        let priceCents: number | null = null;
+        if (typeof option.priceCents === "number" && Number.isFinite(option.priceCents)) {
+          priceCents = option.priceCents;
+        } else if (typeof option.price_cents === "number" && Number.isFinite(option.price_cents)) {
+          priceCents = option.price_cents;
+        } else if (typeof option.price === "number" && Number.isFinite(option.price)) {
+          priceCents = Math.round(option.price * 100);
+        }
+
+        const displayOrder =
+          typeof option.displayOrder === "number"
+            ? option.displayOrder
+            : typeof option.display_order === "number"
+              ? option.display_order
+              : undefined;
+
+        const catalogEntry = Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, keyCandidate)
+          ? SIZE_CATALOG_BY_KEY[keyCandidate as keyof typeof SIZE_CATALOG_BY_KEY]
+          : undefined;
+
+        const imageSource =
+          typeof option.image === "string" && option.image.trim().length > 0
+            ? option.image
+            : catalogEntry?.image;
+
+        const descriptionText =
+          typeof option.description === "string" && option.description.trim().length > 0
+            ? option.description
+            : catalogEntry?.description ?? "";
+
+        return {
+          key: keyCandidate,
+          name: rawLabel,
+          description: descriptionText,
+          image: getOptimizedImageSrc(imageSource ?? defaultCategories[0]?.image ?? ""),
+          price: priceCents !== null ? priceCents / 100 : undefined,
+          displayOrder: displayOrder ?? Number.MAX_SAFE_INTEGER,
+        };
+      })
+      .filter((option): option is { key: string; name: string; description: string; image: string; price?: number; displayOrder: number } => Boolean(option))
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    if (parsedOptions.length > 0) {
+      return parsedOptions;
+    }
+
+    const fallbackSizesRaw = Array.isArray(product.availableSizeOptions)
+      ? product.availableSizeOptions
+      : Array.isArray(product.available_size_options)
+        ? product.available_size_options
+        : Array.isArray(product.sizeOptions)
+          ? product.sizeOptions
+          : typeof product.sizeOptions === "string"
+            ? product.sizeOptions.split(",").map((value: string) => value.trim()).filter(Boolean)
+            : [];
+
+    if (fallbackSizesRaw.length === 0) {
+      return defaultCategories;
+    }
+
+    return fallbackSizesRaw.map((label: string, index: number) => {
+      const key = slugify(label);
+      const catalogEntry = Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, key)
+        ? SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY]
+        : undefined;
+
+      return {
+        key,
+        name: label,
+        description: catalogEntry?.description ?? "",
+        image: getOptimizedImageSrc(catalogEntry?.image ?? defaultCategories[index % defaultCategories.length]?.image ?? ""),
+        price: undefined,
+        displayOrder: index,
+      };
+    });
+  }, [product]);
 
   // Add history handling
   const handleBack = () => {
@@ -443,7 +531,7 @@ const ProductDetail = () => {
                   >
                     {sizeCategories.map((cat) => (
                       <Card 
-                        key={cat.name} 
+                        key={cat.key || cat.name} 
                         className="flex-shrink-0 w-[calc(85%-0.5rem)] sm:w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
                         onClick={() => {
                           const optimizedUrl = getOptimizedImageSrc(cat.image);
@@ -475,6 +563,11 @@ const ProductDetail = () => {
                         <div className="p-3 sm:p-2 bg-white">
                           <h4 className="font-semibold text-sm sm:text-xs mb-1 sm:mb-0.5">{cat.name}</h4>
                           <p className="text-sm sm:text-[10px] text-neutral-600 leading-relaxed line-clamp-2">{cat.description}</p>
+                          {typeof cat.price === "number" && (
+                            <p className="mt-1 text-sm font-semibold text-neutral-900">
+                              ${cat.price.toFixed(2)}
+                            </p>
+                          )}
                         </div>
                       </Card>
                     ))}

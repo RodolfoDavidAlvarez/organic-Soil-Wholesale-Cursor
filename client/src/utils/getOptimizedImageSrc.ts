@@ -43,11 +43,22 @@ export const getOptimizedImageSrc = (source?: string | null) => {
   const [pathPart, queryPart] = source.split("?", 2);
   const normalizedPath = normalizeKey(pathPart);
   const optimized = normalizedMap.get(normalizedPath);
-  const fallback = getOriginalImageSrc(source);
-
+  
+  // If we have an optimized version, use it
   if (optimized) {
     return queryPart ? `${optimized}?${queryPart}` : optimized;
   }
-
-  return fallback;
+  
+  // For images that should be in the optimized directory but aren't in the map,
+  // try to find them by normalizing the name
+  const cleanedName = pathPart.trim().replace(/^\/+/, "");
+  const baseName = cleanedName.toLowerCase()
+    .replace(/\.(jpg|jpeg|png)$/i, "")
+    .replace(/\s+/g, "-")
+    .replace(/[()]/g, "");
+  const optimizedPath = `/images/optimized/${baseName}.jpg`;
+  
+  // Return the optimized path as a fallback, which will trigger the error handler
+  // in OptimizedImage if it doesn't exist
+  return optimizedPath;
 };

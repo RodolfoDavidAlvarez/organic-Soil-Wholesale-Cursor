@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { tempAdminAuthMiddleware, type AdminRequest } from '../../middleware/tempAdminAuth';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -37,6 +38,14 @@ router.post('/simple-login', async (req, res) => {
     console.error('Simple login error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
+});
+
+router.get('/validate', tempAdminAuthMiddleware, (req: AdminRequest, res) => {
+  if (req.admin) {
+    return res.json({ admin: req.admin });
+  }
+
+  return res.status(401).json({ error: 'Invalid token' });
 });
 
 export default router;

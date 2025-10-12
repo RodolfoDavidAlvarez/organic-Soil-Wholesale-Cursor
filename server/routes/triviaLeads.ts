@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { sendAdminTriviaLeadNotification } from '../services/email.js';
 
 const router = Router();
 
@@ -186,30 +187,20 @@ router.post('/trivia-leads', async (req: Request, res: Response) => {
       emailHtml: createAdminEmailHTML({ name, email, interests, score, answers, submittedAt })
     };
 
-    // Send to webhook if URL is configured
-    const webhookUrl = process.env.TRIVIA_WEBHOOK_URL;
-    if (webhookUrl) {
-      try {
-        const webhookResponse = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-
-        if (!webhookResponse.ok) {
-          console.error('Webhook failed:', webhookResponse.status, webhookResponse.statusText);
-          // Still return success to user even if webhook fails
-        } else {
-          console.log('Webhook sent successfully to:', webhookUrl);
-        }
-      } catch (webhookError) {
-        console.error('Webhook error:', webhookError);
-        // Don't fail the main request if webhook fails
-      }
-    } else {
-      console.warn('TRIVIA_WEBHOOK_URL not configured in environment variables');
+    // Send admin notification email
+    try {
+      await sendAdminTriviaLeadNotification({
+        name,
+        email,
+        interests,
+        score,
+        answers,
+        submittedAt
+      });
+      console.log('Admin notification email sent for trivia lead:', email);
+    } catch (emailError) {
+      console.error('Failed to send admin notification email:', emailError);
+      // Don't fail the main request if email fails
     }
 
     // Return success to the client
