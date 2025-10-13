@@ -1,31 +1,103 @@
 import { Router } from "express";
-import { supabase } from "../db/supabase.js";
+import { supabase } from "../supabaseClient.js";
 import Stripe from "stripe";
 import { sendAdminOrderNotification, sendAdminArrivalNotification } from "../services/email.js";
+import { ProductSyncService } from "../services/productSyncService.js";
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16",
 });
 
+// Test endpoint to check database connection
+router.get("/test", async (req, res) => {
+  try {
+    console.log("🧪 Testing database connection...");
+    const { data, error } = await supabase.from("products").select("id, name").limit(1);
+
+    if (error) {
+      console.error("❌ Database error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log("✅ Database connection successful:", data);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("❌ Test error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test endpoint to check pay-and-pickup products
+router.get("/test-pay-pickup", async (req, res) => {
+  try {
+    console.log("🧪 Testing pay-and-pickup products...");
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, is_pay_and_pickup_enabled, pay_and_pickup_display_order, active")
+      .eq("is_pay_and_pickup_enabled", true)
+      .limit(5);
+
+    if (error) {
+      console.error("❌ Pay-and-pickup query error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log("✅ Pay-and-pickup products found:", data?.length || 0);
+    console.log("📊 Products:", data);
+    res.json({ success: true, count: data?.length || 0, data });
+  } catch (error) {
+    console.error("❌ Test pay-and-pickup error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get Pay & Pickup menu (products enabled for pickup)
 router.get("/menu", async (req, res) => {
   try {
+    console.log("🔍 Fetching pay-and-pickup products...");
+
+    // Query products directly from the main products table
     const { data: products, error } = await supabase
       .from("products")
-      .select("*")
+      .select(
+        `
+        id,
+        name,
+        description,
+        image_url,
+        is_pay_and_pickup_enabled,
+        pay_and_pickup_display_order,
+        active
+      `
+      )
       .eq("is_pay_and_pickup_enabled", true)
       .eq("active", true)
-      .order("pay_and_pickup_display_order", { ascending: true });
+      .order("pay_and_pickup_display_order", { ascending: true, nullsFirst: true });
 
     if (error) {
-      console.error("Error fetching Pay & Pickup menu:", error);
-      return res.status(500).json({ error: "Failed to fetch menu" });
+      console.error("❌ Error fetching pay-and-pickup products:", error);
+      console.error("❌ Error details:", JSON.stringify(error, null, 2));
+      return res.status(500).json({ error: "Failed to fetch menu", details: error.message });
     }
 
-    res.json(products || []);
+    console.log(`📊 Raw products from database:`, products?.length || 0);
+    console.log(`📊 First product:`, products?.[0]);
+
+    // Transform the data to match the expected format
+    const menuProducts = (products || []).map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      image_url: product.image_url,
+      pay_and_pickup_display_order: product.pay_and_pickup_display_order,
+      active: product.active,
+    }));
+
+    console.log(`📦 Found ${menuProducts.length} products for pay-and-pickup`);
+    res.json(menuProducts);
   } catch (error) {
-    console.error("Pay & Pickup menu error:", error);
+    console.error("❌ Pay & Pickup menu error:", error);
     res.status(500).json({ error: "Failed to fetch menu" });
   }
 });
@@ -230,26 +302,26 @@ router.post("/create-order", async (req, res) => {
         customerName: customerInfo.name,
         customerEmail: customerInfo.email || undefined,
         customerPhone: customerInfo.phone,
-        orderType: 'pay_and_pickup',
-        items: inventorySnapshots.map(snapshot => ({
+        orderType: "pay_and_pickup",
+        items: inventorySnapshots.map((snapshot) => ({
           name: snapshot.productName,
           quantity: snapshot.quantity,
           price: snapshot.unitPrice * snapshot.quantity,
-          size: snapshot.size_option
+          size: snapshot.size_option,
         })),
         subtotal,
         tax,
         total,
-        deliveryMethod: 'Pickup',
-        pickupLocation: pickupLocation || 'Phoenix Warehouse',
+        deliveryMethod: "Pickup",
+        pickupLocation: pickupLocation || "Phoenix Warehouse",
         estimatedReadyTime: estimatedReadyTime,
         notes: customerInfo.notes || undefined,
         paymentMethod: resolvedPaymentMethod,
         paymentStatus: resolvedPaymentStatus,
       });
-      console.log('Admin notification email sent for Pay & Pickup order:', order.order_number);
+      console.log("Admin notification email sent for Pay & Pickup order:", order.order_number);
     } catch (emailError) {
-      console.error('Failed to send admin notification email:', emailError);
+      console.error("Failed to send admin notification email:", emailError);
       // Don't fail the order if email fails
     }
 
@@ -372,11 +444,11 @@ router.post("/notify-arrival", async (req, res) => {
         customerPhone: customerInfo.phone,
         vehicleInfo: vehicleInfo,
         arrivalTime: data.arrival_time,
-        notificationId: data.id
+        notificationId: data.id,
       });
-      console.log('Admin arrival notification email sent for:', customerInfo.name);
+      console.log("Admin arrival notification email sent for:", customerInfo.name);
     } catch (emailError) {
-      console.error('Failed to send admin arrival notification email:', emailError);
+      console.error("Failed to send admin arrival notification email:", emailError);
       // Don't fail the request if email fails
     }
 

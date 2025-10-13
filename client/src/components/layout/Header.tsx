@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, Truck } from "lucide-react";
+import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, Truck, ArrowRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
@@ -59,21 +59,45 @@ const Header = () => {
         isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
+      <div
+        className={`transition-all duration-300 ${
+          isScrolled ? "bg-white/90 backdrop-blur-md border-b border-primary/10" : "bg-white/70 backdrop-blur-lg border-b border-white/40"
+        }`}
+      >
+        <div className="container mx-auto px-4 py-2 flex flex-col gap-2 text-[11px] text-foreground/70 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
+          <div className="flex items-center gap-2">
+            <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water logo" className="h-6 w-auto" loading="lazy" />
+            <div className="flex flex-col leading-tight sm:flex-row sm:items-baseline sm:gap-2">
+              <span className="font-semibold text-foreground">Soil Seed &amp; Water</span>
+              <span className="uppercase tracking-[0.2em] text-[10px] text-foreground/50 sm:text-[11px]">Parent Company</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <span className="text-foreground/50">Visit our retail brand</span>
+            <a
+              href="https://soilseedandwater.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              Soil Seed &amp; Water
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/">
-            <div className="flex items-center space-x-2 cursor-pointer">
-              <div>
-                <span className="text-xl font-heading font-bold">
+            <div className="flex items-center gap-3 cursor-pointer">
+              <div className="flex flex-col leading-tight">
+                <span className="text-xl font-heading font-bold sm:text-2xl">
                   Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
                 </span>
-                <div className="text-xs text-foreground/60 mt-0.5">
-                  by{" "}
-                  <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                    Soil Seed and Water
-                  </a>
-                </div>
+                <span className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 sm:text-xs">
+                  Premium bulk amendments for pros
+                </span>
               </div>
             </div>
           </Link>

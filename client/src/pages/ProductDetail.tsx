@@ -177,13 +177,43 @@ const ProductDetail = () => {
       try {
         let fetchedProduct: any | null = null;
         const numericId = Number(slug);
-
-        if (!Number.isNaN(numericId)) {
-          const response = await fetch(`/api/products/${numericId}`);
+        const isNumericSlug = !Number.isNaN(numericId);
+        
+        // Try the new simple products API first (supports both slugs and IDs)
+        try {
+          const response = await fetch(`/api/simple/products/${slug}`);
           if (response.ok) {
             const data = await response.json();
             if (data) {
               fetchedProduct = data;
+            }
+          }
+        } catch (error) {
+          console.warn('Simple products API not available, falling back to public API');
+          
+          // Try public products API as fallback
+          try {
+            const response = await fetch(`/api/public/products/${slug}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data) {
+                fetchedProduct = data;
+              }
+            }
+          } catch (error) {
+            console.warn('Public products API not available, falling back to legacy API');
+          }
+        }
+
+        // Fallback to legacy API if public API fails and slug is numeric
+        if (!fetchedProduct) {
+          if (isNumericSlug) {
+            const response = await fetch(`/api/products/${numericId}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data) {
+                fetchedProduct = data;
+              }
             }
           }
         }
@@ -191,7 +221,7 @@ const ProductDetail = () => {
         if (!fetchedProduct) {
           const allProducts = getProductsData();
 
-          if (!Number.isNaN(numericId)) {
+          if (isNumericSlug) {
             fetchedProduct = allProducts.find((p: any) => Number(p.id) === numericId) || null;
           }
 
@@ -234,6 +264,12 @@ const ProductDetail = () => {
 
     loadProductData();
   }, [slug]);
+
+  useEffect(() => {
+    if (error) {
+      navigate("/products");
+    }
+  }, [error, navigate]);
 
   // Auto-play carousel
   useEffect(() => {
@@ -414,7 +450,6 @@ const ProductDetail = () => {
   };
 
   if (error) {
-    navigate("/products");
     return null;
   }
 

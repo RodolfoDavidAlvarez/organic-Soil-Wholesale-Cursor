@@ -8,6 +8,7 @@ import { Search, Filter, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { generateProductSlug } from "@/utils/generateSlug";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "potting-soil.jpg";
@@ -97,11 +98,14 @@ export default function ProductShowcase({ products, loading = false, onProductSe
     if (onProductSelect) {
       onProductSelect(product);
     } else {
+      // Generate slug from product type or name
+      const slug = generateProductSlug(product.productType, product.name);
+      
       // Route mulch products to the MulchDetail page
       if (product.category === "Mulch") {
-        navigate(`/products/mulch/${product.id}`);
+        navigate(`/products/mulch/${slug || product.id}`);
       } else {
-        navigate(`/products/${product.id}`);
+        navigate(`/products/${slug || product.id}`);
       }
     }
   };
@@ -272,7 +276,10 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                 )}
 
                 <div className="mt-auto pt-2">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200">
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                    onClick={() => !isEditMode && handleProductClick(product)}
+                  >
                     View Details
                   </Button>
                 </div>

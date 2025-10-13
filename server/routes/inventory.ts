@@ -4,6 +4,20 @@ import { pricingService, CustomerType } from '../services/pricingService.js';
 
 const router = Router();
 
+// Helper function to determine display order for size options
+function getSizeDisplayOrder(sizeOption: string): number {
+  const orderMap: Record<string, number> = {
+    '9lb Bag': 1,
+    '25lb Bag': 2,
+    '1 CF Bag': 3,
+    'Bulk (50lb)': 4,
+    'Bulk Pickup': 5,
+    'Bulk Delivery': 6
+  };
+  
+  return orderMap[sizeOption] || 99;
+}
+
 // Get inventory for a specific location with pricing
 router.get('/location/:locationId', async (req, res) => {
   try {
@@ -301,7 +315,8 @@ router.get('/products/:locationId', async (req, res) => {
       
       const productRecord = productMap.get(productId) ?? {
         ...item.products,
-        inventory: []
+        inventory: [],
+        sizePriceOptions: [] // Initialize for synthesized data
       };
 
       productRecord.inventory.push({
@@ -318,7 +333,33 @@ router.get('/products/:locationId', async (req, res) => {
         }
       });
 
+      // Synthesize size_price_options from inventory data for client compatibility
+      const sizeKey = item.size_option.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[()]/g, '');
+
+      const displayOrder = getSizeDisplayOrder(item.size_option);
+      
+      const sizePriceOption = {
+        key: sizeKey,
+        label: item.size_option,
+        price: item.pricing.final_price,
+        priceCents: Math.round(item.pricing.final_price * 100),
+        isActive: true,
+        displayOrder
+      };
+
+      // Add to sizePriceOptions if not already present
+      if (!productRecord.sizePriceOptions.some((opt: any) => opt.key === sizeKey)) {
+        productRecord.sizePriceOptions.push(sizePriceOption);
+      }
+
       productMap.set(productId, productRecord);
+    }
+
+    // Sort size price options by display order for each product
+    for (const product of productMap.values()) {
+      (product as any).sizePriceOptions.sort((a: any, b: any) => a.displayOrder - b.displayOrder);
     }
 
     const products = Array.from(productMap.values()).sort((a: any, b: any) => {

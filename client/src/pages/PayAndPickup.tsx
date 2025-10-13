@@ -1,26 +1,20 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getProductsData } from '../data/productData';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { OptimizedImage } from '@/components/OptimizedImage';
-import { getOptimizedImageSrc } from '@/utils/getOptimizedImageSrc';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Link, useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { getProductsData } from "../data/productData";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { OptimizedImage } from "@/components/OptimizedImage";
+import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Clock, 
+  ShoppingCart,
+  Plus,
+  Minus,
+  Clock,
   MapPin,
   Phone,
   Check,
@@ -35,8 +29,8 @@ import {
   ChevronDown,
   Trash2,
   CreditCard,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle,
+} from "lucide-react";
 
 interface InventoryOption {
   sizeOption: string;
@@ -116,17 +110,17 @@ interface OrderSummary {
   }>;
 }
 
-type Step = 'welcome' | 'pickup-options' | 'menu' | 'cart' | 'customer-info' | 'payment' | 'checkout' | 'notify-arrival';
+type Step = "welcome" | "pickup-options" | "menu" | "cart" | "customer-info" | "payment" | "checkout" | "notify-arrival";
 
 const STEP_SEGMENTS: Record<Step, string | null> = {
   welcome: null,
-  'pickup-options': 'pickup-options',
-  menu: 'menu',
-  cart: 'cart',
-  'customer-info': 'customer-info',
-  payment: 'payment',
-  checkout: 'checkout',
-  'notify-arrival': 'notify-arrival',
+  "pickup-options": "pickup-options",
+  menu: "menu",
+  cart: "cart",
+  "customer-info": "customer-info",
+  payment: "payment",
+  checkout: "checkout",
+  "notify-arrival": "notify-arrival",
 };
 
 const SEGMENT_TO_STEP: Record<string, Step> = Object.entries(STEP_SEGMENTS).reduce(
@@ -136,42 +130,42 @@ const SEGMENT_TO_STEP: Record<string, Step> = Object.entries(STEP_SEGMENTS).redu
     }
     return acc;
   },
-  {} as Record<string, Step>,
+  {} as Record<string, Step>
 );
 
 const stripQueryAndHash = (path: string) => path.split(/[?#]/)[0];
 
 const normalizePath = (path: string) => {
-  if (!path) return '/';
+  if (!path) return "/";
   const stripped = stripQueryAndHash(path);
-  const ensuredLeadingSlash = stripped.startsWith('/') ? stripped : `/${stripped}`;
-  if (ensuredLeadingSlash.length > 1 && ensuredLeadingSlash.endsWith('/')) {
-    return ensuredLeadingSlash.replace(/\/+$/, '');
+  const ensuredLeadingSlash = stripped.startsWith("/") ? stripped : `/${stripped}`;
+  if (ensuredLeadingSlash.length > 1 && ensuredLeadingSlash.endsWith("/")) {
+    return ensuredLeadingSlash.replace(/\/+$/, "");
   }
   return ensuredLeadingSlash;
 };
 
-const getBasePath = (path: string): '/pay-and-pickup' | '/drive-through' => {
+const getBasePath = (path: string): "/pay-and-pickup" | "/drive-through" => {
   const normalized = normalizePath(path);
-  if (normalized.startsWith('/drive-through')) {
-    return '/drive-through';
+  if (normalized.startsWith("/drive-through")) {
+    return "/drive-through";
   }
-  return '/pay-and-pickup';
+  return "/pay-and-pickup";
 };
 
 const getStepFromLocation = (path: string): Step => {
   const normalized = normalizePath(path);
-  if (normalized === '/pay-and-pickup' || normalized === '/drive-through') {
-    return 'welcome';
+  if (normalized === "/pay-and-pickup" || normalized === "/drive-through") {
+    return "welcome";
   }
 
-  const parts = normalized.split('/').filter(Boolean);
-  if (parts.length >= 2 && (parts[0] === 'pay-and-pickup' || parts[0] === 'drive-through')) {
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length >= 2 && (parts[0] === "pay-and-pickup" || parts[0] === "drive-through")) {
     const candidate = parts[1];
-    return SEGMENT_TO_STEP[candidate] ?? 'welcome';
+    return SEGMENT_TO_STEP[candidate] ?? "welcome";
   }
 
-  return 'welcome';
+  return "welcome";
 };
 
 const buildPathForStep = (basePath: string, step: Step) => {
@@ -187,8 +181,8 @@ const TAX_RATE = 0.08;
 const slugify = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const PayAndPickup: React.FC = () => {
   const [location, setLocation] = useLocation();
@@ -202,22 +196,21 @@ const PayAndPickup: React.FC = () => {
         setLocation(nextPath);
       }
     },
-    [basePath, normalizedLocation, setLocation],
+    [basePath, normalizedLocation, setLocation]
   );
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '' });
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: "", phone: "", email: "" });
   const [errors, setErrors] = useState<Partial<CustomerInfo>>({});
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({ cardNumber: '', expiry: '', cvv: '' });
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({ cardNumber: "", expiry: "", cvv: "" });
   const [paymentErrors, setPaymentErrors] = useState<Partial<PaymentInfo>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
   const [products, setProducts] = useState<PayAndPickupProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
 
-  const findProductById = (productId: number) =>
-    products.find((product) => product.id === productId);
+  const findProductById = (productId: number) => products.find((product) => product.id === productId);
 
   const getProductInventory = (productId: number): InventoryOption[] => {
     const product = findProductById(productId);
@@ -225,9 +218,7 @@ const PayAndPickup: React.FC = () => {
   };
 
   const getProductPrice = (productId: number, sizeOption: string): number => {
-    const inventoryOption = getProductInventory(productId).find(
-      (option) => option.sizeOption === sizeOption
-    );
+    const inventoryOption = getProductInventory(productId).find((option) => option.sizeOption === sizeOption);
     if (inventoryOption?.displayPrice != null) {
       return inventoryOption.displayPrice;
     }
@@ -254,18 +245,16 @@ const PayAndPickup: React.FC = () => {
   };
 
   const isInStock = (productId: number, sizeOption: string, quantity = 1): boolean => {
-    const inventoryOption = getProductInventory(productId).find(
-      (option) => option.sizeOption === sizeOption
-    );
+    const inventoryOption = getProductInventory(productId).find((option) => option.sizeOption === sizeOption);
     return (inventoryOption?.quantityAvailable ?? 0) >= quantity;
   };
 
   // Track Pay & Pickup landing page visit
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'pay_pickup_visit', {
-        event_category: 'engagement',
-        event_label: 'pay_pickup_landing'
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", "pay_pickup_visit", {
+        event_category: "engagement",
+        event_label: "pay_pickup_landing",
       });
     }
   }, []);
@@ -277,7 +266,7 @@ const PayAndPickup: React.FC = () => {
       let loaded = false;
 
       try {
-        const response = await fetch('/api/inventory/products/1?payAndPickup=true');
+        const response = await fetch("/api/inventory/products/1?payAndPickup=true");
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data?.products)) {
@@ -300,32 +289,31 @@ const PayAndPickup: React.FC = () => {
                 .map((option: any) => {
                   if (!option) return null;
 
-                  const rawLabel = (option.label ?? option.name ?? '').toString().trim();
+                  const rawLabel = (option.label ?? option.name ?? "").toString().trim();
                   const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
                   if (!rawLabel || !keyCandidate) {
                     return null;
                   }
 
-                  const activeValue =
-                    option.is_active ?? option.isActive ?? option.active ?? option.enabled ?? option.visible;
+                  const activeValue = option.is_active ?? option.isActive ?? option.active ?? option.enabled ?? option.visible;
                   const isActive = activeValue === undefined ? true : Boolean(activeValue);
                   if (!isActive) {
                     return null;
                   }
 
                   let priceCents: number | undefined;
-                  if (typeof option.price_cents === 'number' && Number.isFinite(option.price_cents)) {
+                  if (typeof option.price_cents === "number" && Number.isFinite(option.price_cents)) {
                     priceCents = option.price_cents;
-                  } else if (typeof option.priceCents === 'number' && Number.isFinite(option.priceCents)) {
+                  } else if (typeof option.priceCents === "number" && Number.isFinite(option.priceCents)) {
                     priceCents = option.priceCents;
-                  } else if (typeof option.price === 'number' && Number.isFinite(option.price)) {
+                  } else if (typeof option.price === "number" && Number.isFinite(option.price)) {
                     priceCents = Math.round(option.price * 100);
                   }
 
                   const displayOrder =
-                    typeof option.display_order === 'number'
+                    typeof option.display_order === "number"
                       ? option.display_order
-                      : typeof option.displayOrder === 'number'
+                      : typeof option.displayOrder === "number"
                         ? option.displayOrder
                         : undefined;
 
@@ -334,28 +322,24 @@ const PayAndPickup: React.FC = () => {
                     label: rawLabel,
                     priceCents,
                     price: priceCents !== undefined ? priceCents / 100 : undefined,
-                    image: typeof option.image === 'string' ? option.image : undefined,
+                    image: typeof option.image === "string" ? option.image : undefined,
                     displayOrder,
                   } as ProductSizePriceOption;
                 })
                 .filter((option): option is ProductSizePriceOption => Boolean(option))
-                .sort(
-                  (a, b) =>
-                    (a.displayOrder ?? Number.MAX_SAFE_INTEGER) -
-                    (b.displayOrder ?? Number.MAX_SAFE_INTEGER),
-                );
+                .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
 
-              const configuredSizeOptions = sizePriceOptions.length > 0
-                ? sizePriceOptions.map((option) => option.label)
-                : Array.isArray(product.available_size_options)
-                  ? product.available_size_options
-                  : [];
+              const configuredSizeOptions =
+                sizePriceOptions.length > 0
+                  ? sizePriceOptions.map((option) => option.label)
+                  : Array.isArray(product.available_size_options)
+                    ? product.available_size_options
+                    : [];
 
               const uniqueConfiguredSizes = Array.from(new Set(configuredSizeOptions.filter(Boolean)));
 
-              const fallbackSizes = uniqueConfiguredSizes.length > 0
-                ? uniqueConfiguredSizes
-                : inventory.map((inv: InventoryOption) => inv.sizeOption);
+              const fallbackSizes =
+                uniqueConfiguredSizes.length > 0 ? uniqueConfiguredSizes : inventory.map((inv: InventoryOption) => inv.sizeOption);
 
               return {
                 id: product.id,
@@ -374,8 +358,7 @@ const PayAndPickup: React.FC = () => {
                 certifications: product.certifications,
                 features: product.features,
                 additionalImages: product.additional_images || [],
-                sizeOptions:
-                  fallbackSizes.length > 0 ? fallbackSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
+                sizeOptions: fallbackSizes.length > 0 ? fallbackSizes : ["9lb Bag", "25lb Bag", "Bulk (50lb)"],
                 payAndPickup: {
                   badge: product.pay_and_pickup_badge,
                   description: product.pay_and_pickup_description,
@@ -391,21 +374,22 @@ const PayAndPickup: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching pay & pickup products:', error);
+        console.error("Error fetching pay & pickup products:", error);
       } finally {
         if (!loaded) {
           const fallbackProducts: PayAndPickupProduct[] = getProductsData().map((product, index) => {
             const fallbackSizeOptions = (product as any).sizeOptions
-              ? (product as any).sizeOptions.split(',').map((s: string) => s.trim()).filter(Boolean)
-              : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'];
+              ? (product as any).sizeOptions
+                  .split(",")
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+              : ["9lb Bag", "25lb Bag", "Bulk (50lb)"];
 
-            const fallbackSizePriceOptions: ProductSizePriceOption[] = fallbackSizeOptions.map(
-              (label: string, order: number) => ({
-                key: slugify(label),
-                label,
-                displayOrder: order,
-              }),
-            );
+            const fallbackSizePriceOptions: ProductSizePriceOption[] = fallbackSizeOptions.map((label: string, order: number) => ({
+              key: slugify(label),
+              label,
+              displayOrder: order,
+            }));
 
             return {
               id: (product as any).id ?? index + 1,
@@ -446,22 +430,22 @@ const PayAndPickup: React.FC = () => {
     return products.map((product) => {
       const inventory = getProductInventory(product.id);
       const inventorySizes = inventory.map((inv) => inv.sizeOption).filter(Boolean);
-      const configuredSizes = Array.isArray(product.sizeOptions) && product.sizeOptions.length > 0
-        ? product.sizeOptions
-        : product.sizePriceOptions?.map((option) => option.label).filter(Boolean) ?? [];
+      const configuredSizes =
+        Array.isArray(product.sizeOptions) && product.sizeOptions.length > 0
+          ? product.sizeOptions
+          : (product.sizePriceOptions?.map((option) => option.label).filter(Boolean) ?? []);
 
       const mergedSizes = configuredSizes.length > 0 ? configuredSizes : inventorySizes;
 
       return {
         ...product,
-        sizeOptions: mergedSizes.length > 0 ? mergedSizes : ['9lb Bag', '25lb Bag', 'Bulk (50lb)'],
+        sizeOptions: mergedSizes.length > 0 ? mergedSizes : ["9lb Bag", "25lb Bag", "Bulk (50lb)"],
         inventory,
       };
     });
   }, [products]);
 
-  const getCartSubtotal = () =>
-    cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0);
+  const getCartSubtotal = () => cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0);
 
   const cartSubtotal = useMemo(() => Number(getCartSubtotal().toFixed(2)), [cart]);
   const estimatedTax = useMemo(() => Number((cartSubtotal * TAX_RATE).toFixed(2)), [cartSubtotal]);
@@ -469,14 +453,10 @@ const PayAndPickup: React.FC = () => {
 
   const addToCart = (product: PayAndPickupProduct, size: string) => {
     const uniqueKey = `${product.id}-${size}`;
-    const existingItem = cart.find(item => item.uniqueKey === uniqueKey);
+    const existingItem = cart.find((item) => item.uniqueKey === uniqueKey);
 
     if (existingItem) {
-      setCart(cart.map(item => 
-        item.uniqueKey === uniqueKey
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
+      setCart(cart.map((item) => (item.uniqueKey === uniqueKey ? { ...item, quantity: item.quantity + 1 } : item)));
     } else {
       setCart([...cart, { product, quantity: 1, size, uniqueKey }]);
     }
@@ -484,24 +464,28 @@ const PayAndPickup: React.FC = () => {
 
   const updateQuantity = (productId: number, size: string, delta: number) => {
     const uniqueKey = `${productId}-${size}`;
-    setCart(cart.map(item => {
-      if (item.uniqueKey === uniqueKey) {
-        const newQuantity = item.quantity + delta;
-        return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
-      }
-      return item;
-    }).filter(Boolean) as CartItem[]);
+    setCart(
+      cart
+        .map((item) => {
+          if (item.uniqueKey === uniqueKey) {
+            const newQuantity = item.quantity + delta;
+            return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
+    );
   };
 
   const removeItem = (productId: number, size: string) => {
     const uniqueKey = `${productId}-${size}`;
-    setCart(cart.filter(item => item.uniqueKey !== uniqueKey));
+    setCart(cart.filter((item) => item.uniqueKey !== uniqueKey));
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const toggleProductExpansion = (productId: number) => {
-    setExpandedProducts(prev => {
+    setExpandedProducts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(productId)) {
         newSet.delete(productId);
@@ -513,7 +497,7 @@ const PayAndPickup: React.FC = () => {
   };
 
   const formatPhone = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, "");
     const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
     if (match) {
       return `(${match[1]}) ${match[2]}-${match[3]}`;
@@ -522,19 +506,19 @@ const PayAndPickup: React.FC = () => {
   };
 
   const formatPhoneInput = (value: string) => {
-   const phone = value.replace(/\D/g, '');
-   if (phone.length <= 3) return phone;
-   if (phone.length <= 6) return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
-   return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
+    const phone = value.replace(/\D/g, "");
+    if (phone.length <= 3) return phone;
+    if (phone.length <= 6) return `(${phone.slice(0, 3)}) ${phone.slice(3)}`;
+    return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6, 10)}`;
   };
 
   const formatCardNumberInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    const digits = value.replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
   };
 
   const formatExpiryInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 4);
+    const digits = value.replace(/\D/g, "").slice(0, 4);
     if (digits.length <= 2) return digits;
     return `${digits.slice(0, 2)}/${digits.slice(2)}`;
   };
@@ -548,24 +532,24 @@ const PayAndPickup: React.FC = () => {
         return;
       }
     }
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   const validatePaymentInfo = (): boolean => {
     const newErrors: Partial<PaymentInfo> = {};
 
-    const cardDigits = paymentInfo.cardNumber.replace(/\D/g, '');
+    const cardDigits = paymentInfo.cardNumber.replace(/\D/g, "");
     if (cardDigits.length !== 16) {
-      newErrors.cardNumber = 'Enter a 16-digit card number';
+      newErrors.cardNumber = "Enter a 16-digit card number";
     }
 
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(paymentInfo.expiry)) {
-      newErrors.expiry = 'Use MM/YY format';
+      newErrors.expiry = "Use MM/YY format";
     }
 
-    const cvvDigits = paymentInfo.cvv.replace(/\D/g, '');
+    const cvvDigits = paymentInfo.cvv.replace(/\D/g, "");
     if (cvvDigits.length < 3 || cvvDigits.length > 4) {
-      newErrors.cvv = 'Enter a 3 or 4 digit CVV';
+      newErrors.cvv = "Enter a 3 or 4 digit CVV";
     }
 
     setPaymentErrors(newErrors);
@@ -573,27 +557,27 @@ const PayAndPickup: React.FC = () => {
   };
 
   const formatReadyTime = (timestamp?: string) => {
-    if (!timestamp) return 'Ready in ~15 min';
+    if (!timestamp) return "Ready in ~15 min";
     try {
       const date = new Date(timestamp);
       if (Number.isNaN(date.getTime())) {
-        return 'Ready in ~15 min';
+        return "Ready in ~15 min";
       }
-      return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     } catch {
-      return 'Ready in ~15 min';
+      return "Ready in ~15 min";
     }
   };
 
   const getLatestOrderNumber = () => {
     if (orderSummary?.orderNumber) return orderSummary.orderNumber;
-    if (typeof window !== 'undefined') {
-      const storedNumber = localStorage.getItem('lastOrderNumber');
+    if (typeof window !== "undefined") {
+      const storedNumber = localStorage.getItem("lastOrderNumber");
       if (storedNumber) return storedNumber;
     }
     if (orderSummary?.orderId) return `#${orderSummary.orderId}`;
-    if (typeof window !== 'undefined') {
-      const storedId = localStorage.getItem('lastOrderId');
+    if (typeof window !== "undefined") {
+      const storedId = localStorage.getItem("lastOrderId");
       if (storedId) return `#${storedId}`;
     }
     return `OSW-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -608,131 +592,101 @@ const PayAndPickup: React.FC = () => {
 
   const validateCustomerInfo = (): boolean => {
     const newErrors: Partial<CustomerInfo> = {};
-    
+
     if (!customerInfo.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     }
-    
+
     if (!customerInfo.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(customerInfo.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
+      newErrors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(customerInfo.phone.replace(/\D/g, ""))) {
+      newErrors.phone = "Please enter a valid 10-digit phone number";
     }
-    
+
     if (customerInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleContinueToPayment = () => {
     if (cart.length === 0) {
-      alert('Your cart is empty. Please add items before continuing.');
+      alert("Your cart is empty. Please add items before continuing.");
       return;
     }
     if (!validateCustomerInfo()) return;
     setPaymentErrors({});
-    goToStep('payment');
+    goToStep("payment");
   };
 
   const handleCompletePayment = async () => {
     if (cart.length === 0) {
-      alert('Your cart is empty. Please add items before checking out.');
+      alert("Your cart is empty. Please add items before checking out.");
       return;
     }
 
-    if (!validatePaymentInfo()) return;
+    if (!validateCustomerInfo()) return;
 
     setIsProcessing(true);
     try {
-      const itemsSnapshot = cart.map(item => ({
+      const itemsSnapshot = cart.map((item) => ({
         productId: item.product.id,
         productName: item.product.name,
         size: item.size,
         quantity: item.quantity,
         unitPrice: getProductPrice(item.product.id, item.size),
-        locationId: 1
+        locationId: 1,
       }));
 
-      const orderPayload = {
-        items: itemsSnapshot,
-        customerInfo,
-        orderType: 'drive_through',
-        locationId: 1,
-        pickupLocation: 'Phoenix Warehouse',
-        paymentMethod: 'mock_card',
-        paymentStatus: 'paid'
-      };
-
-      const response = await fetch('/api/pay-and-pickup/create-order', {
-        method: 'POST',
+      // Create Stripe checkout session
+      const response = await fetch("/api/checkout/create-session", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(orderPayload)
+        body: JSON.stringify({
+          items: itemsSnapshot.map((item) => ({
+            productId: item.productId,
+            name: item.productName,
+            price: item.unitPrice,
+            quantity: item.quantity,
+            sizeOption: item.size,
+            imageUrl: findProductById(item.productId)?.imageUrl,
+          })),
+          customerInfo: {
+            businessName: customerInfo.name,
+            email: customerInfo.email,
+            phone: customerInfo.phone,
+          },
+          pickupTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes from now
+          locationId: 1,
+          isQuickOrder: true,
+        }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result?.success) {
-        throw new Error(result?.error || 'Order submission failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create checkout session");
       }
 
-      localStorage.setItem('qrOrderCustomer', JSON.stringify(customerInfo));
-      if (result.orderId) {
-        localStorage.setItem('lastOrderId', result.orderId);
+      const { sessionId, orderId, confirmationCode, url } = await response.json();
+
+      // Store order info for confirmation page
+      localStorage.setItem("qrOrderCustomer", JSON.stringify(customerInfo));
+      if (orderId) {
+        localStorage.setItem("lastOrderId", orderId);
       }
-      if (result.orderNumber) {
-        localStorage.setItem('lastOrderNumber', result.orderNumber);
-      }
-
-      const orderItemsForSummary = itemsSnapshot.map(item => ({
-        name: item.productName,
-        size: item.size,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice
-      }));
-
-      const summary: OrderSummary = {
-        orderId: result.orderId,
-        orderNumber: result.orderNumber,
-        subtotal: result.subtotal,
-        tax: result.tax,
-        total: result.totalAmount,
-        estimatedReadyTime: result.estimatedReadyTime,
-        items: orderItemsForSummary
-      };
-
-      setOrderSummary(summary);
-      try {
-        localStorage.setItem('lastOrderSummary', JSON.stringify(summary));
-      } catch (storageError) {
-        console.warn('Unable to persist order summary:', storageError);
+      if (confirmationCode) {
+        localStorage.setItem("lastOrderNumber", confirmationCode);
       }
 
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'pay_pickup_mock_payment_success', {
-          event_category: 'ecommerce',
-          event_label: 'pay_pickup_order',
-          value: result.totalAmount,
-          items: orderItemsForSummary.map(item => ({
-            item_name: item.name,
-            item_variant: item.size,
-            quantity: item.quantity,
-            price: item.unitPrice
-          }))
-        });
-      }
-
-      setPaymentErrors({});
-      setCart([]);
-      setPaymentInfo({ cardNumber: '', expiry: '', cvv: '' });
-      goToStep('checkout');
+      // Redirect to Stripe Checkout
+      window.location.href = url;
     } catch (error) {
-      console.error('Order error:', error);
-      alert('There was an error placing your order. Please try again.');
+      console.error("Payment error:", error);
+      alert("Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -741,29 +695,29 @@ const PayAndPickup: React.FC = () => {
   // Load saved customer info and cart
   useEffect(() => {
     // Load customer info
-    const savedCustomer = localStorage.getItem('qrOrderCustomer');
+    const savedCustomer = localStorage.getItem("qrOrderCustomer");
     if (savedCustomer) {
       setCustomerInfo(JSON.parse(savedCustomer));
     }
-    
+
     // Load cart from localStorage
-    const savedCart = localStorage.getItem('qrOrderCart');
+    const savedCart = localStorage.getItem("qrOrderCart");
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
         setCart(parsedCart);
       } catch (e) {
-        console.error('Error loading cart:', e);
+        console.error("Error loading cart:", e);
       }
     }
 
-    const savedSummary = localStorage.getItem('lastOrderSummary');
+    const savedSummary = localStorage.getItem("lastOrderSummary");
     if (savedSummary) {
       try {
         const parsedSummary = JSON.parse(savedSummary);
         setOrderSummary(parsedSummary);
       } catch (e) {
-        console.error('Error loading order summary:', e);
+        console.error("Error loading order summary:", e);
       }
     }
   }, []);
@@ -771,9 +725,9 @@ const PayAndPickup: React.FC = () => {
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (cart.length > 0) {
-      localStorage.setItem('qrOrderCart', JSON.stringify(cart));
+      localStorage.setItem("qrOrderCart", JSON.stringify(cart));
     } else {
-      localStorage.removeItem('qrOrderCart');
+      localStorage.removeItem("qrOrderCart");
     }
   }, [cart]);
 
@@ -784,24 +738,24 @@ const PayAndPickup: React.FC = () => {
         <div className="px-4 py-3 max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {step !== 'welcome' && (
+              {step !== "welcome" && (
                 <Button
                   size="sm"
                   variant="ghost"
                   className="text-white hover:bg-white/20 -ml-2"
                   onClick={() => {
-                    if (step === 'pickup-options' || step === 'menu') {
-                      goToStep('welcome');
-                    } else if (step === 'cart') {
-                      goToStep('menu');
-                    } else if (step === 'customer-info') {
-                      goToStep('cart');
-                    } else if (step === 'payment') {
-                      goToStep('customer-info');
-                    } else if (step === 'checkout') {
-                      goToStep('customer-info');
-                    } else if (step === 'notify-arrival') {
-                      goToStep('pickup-options');
+                    if (step === "pickup-options" || step === "menu") {
+                      goToStep("welcome");
+                    } else if (step === "cart") {
+                      goToStep("menu");
+                    } else if (step === "customer-info") {
+                      goToStep("cart");
+                    } else if (step === "payment") {
+                      goToStep("customer-info");
+                    } else if (step === "checkout") {
+                      goToStep("customer-info");
+                    } else if (step === "notify-arrival") {
+                      goToStep("pickup-options");
                     }
                   }}
                 >
@@ -823,18 +777,16 @@ const PayAndPickup: React.FC = () => {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {step !== 'welcome' && (
+              {step !== "welcome" && (
                 <div className="flex items-center gap-3">
                   {cart.length > 0 && (
                     <>
-                      <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">
-                        {getTotalItems()} items
-                      </Badge>
+                      <Badge className="bg-[hsl(43,85%,55%)] text-black px-3 py-1">{getTotalItems()} items</Badge>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-white relative"
-                        onClick={() => (step === 'cart' ? goToStep('menu') : goToStep('cart'))}
+                        onClick={() => (step === "cart" ? goToStep("menu") : goToStep("cart"))}
                       >
                         <ShoppingCart className="w-5 h-5" />
                         {cart.length > 0 && (
@@ -849,21 +801,19 @@ const PayAndPickup: React.FC = () => {
               )}
             </div>
           </div>
-      </div>
+        </div>
       </div>
 
       <div className="bg-amber-100 border-b border-amber-200">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-start gap-3 text-amber-900">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
-          <p className="text-sm lg:text-base font-medium">
-            Under construction, coming soon.
-          </p>
+          <p className="text-sm lg:text-base font-medium">Under construction, coming soon.</p>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
         {/* Welcome Screen */}
-        {step === 'welcome' && (
+        {step === "welcome" && (
           <motion.div
             key="welcome"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -872,170 +822,146 @@ const PayAndPickup: React.FC = () => {
             className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-4"
           >
             <div className="max-w-6xl mx-auto w-full">
-              <motion.div
-                initial={{ y: 20 }}
-                animate={{ y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-center max-w-md mx-auto lg:max-w-4xl"
-              >
-              <h1 className="text-2xl lg:text-3xl text-gray-600 mb-3">
-                Welcome to
-              </h1>
-              <h2 className="text-5xl lg:text-7xl font-black tracking-tight mb-8">
-                <span>Organic </span>
-                <span className="text-primary">Soil </span>
-                <span className="text-accent italic">Wholesale</span>
-              </h2>
-              <p className="text-xl lg:text-2xl text-gray-700 mb-8">
-                How can I help you today?
-              </p>
+              <motion.div initial={{ y: 20 }} animate={{ y: 0 }} transition={{ delay: 0.2 }} className="text-center max-w-md mx-auto lg:max-w-4xl">
+                <h1 className="text-2xl lg:text-3xl text-gray-600 mb-3">Welcome to</h1>
+                <h2 className="text-5xl lg:text-7xl font-black tracking-tight mb-8">
+                  <span>Organic </span>
+                  <span className="text-primary">Soil </span>
+                  <span className="text-accent italic">Wholesale</span>
+                </h2>
+                <p className="text-xl lg:text-2xl text-gray-700 mb-8">How can I help you today?</p>
 
-              {/* Action Buttons */}
-              <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:max-w-4xl mx-auto">
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="relative"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-xl" />
-                  <button
-                    className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => goToStep('pickup-options')}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-8 h-8 lg:w-10 lg:h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                {/* Action Buttons */}
+                <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:max-w-4xl mx-auto">
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-xl" />
+                    <button
+                      className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                      onClick={() => goToStep("pickup-options")}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <svg className="w-8 h-8 lg:w-10 lg:h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Order & Pick Up</h3>
-                      <p className="text-sm lg:text-base text-gray-600">Pre-order or notify arrival</p>
-                    </div>
-                    <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </button>
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="relative"
-                >
-                  <button
-                    className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => goToStep('menu')}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-accent/10 to-accent/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-8 h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
+                      <div className="flex-1 text-left">
+                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Order & Pick Up</h3>
+                        <p className="text-sm lg:text-base text-gray-600">Pre-order or notify arrival</p>
                       </div>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Walking In</h3>
-                      <p className="text-sm lg:text-base text-gray-600">Browse and pick up now</p>
-                    </div>
-                    <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-accent group-hover:translate-x-1 transition-all" />
-                  </button>
-                </motion.div>
-              </div>
+                      <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </button>
+                  </motion.div>
 
-              {/* Product Categories - Now Clickable */}
-              <div className="grid grid-cols-3 lg:grid-cols-3 gap-3 lg:gap-6 mb-6 lg:max-w-2xl mx-auto">
-                {/* Soil Category */}
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setSelectedCategory('potting');
-                    goToStep('menu');
-                  }}
-                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
-                >
-                  <OptimizedImage
-                    src="category-potting-soil.jpeg"
-                    alt="Potting Soils"
-                    className="w-full h-32 lg:h-40 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Potting Soils</p>
-                  </div>
-                </motion.button>
-
-                {/* Amendments Category */}
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setSelectedCategory('amendment');
-                    goToStep('menu');
-                  }}
-                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
-                >
-                  <OptimizedImage
-                    src="category-amendments.jpg"
-                    alt="Amendments"
-                    className="w-full h-32 lg:h-40 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Amendments</p>
-                  </div>
-                </motion.button>
-
-                {/* Mulch Category */}
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setSelectedCategory('mulch');
-                    goToStep('menu');
-                  }}
-                  className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
-                >
-                  <OptimizedImage
-                    src="category-mulch.jpeg"
-                    alt="Mulch"
-                    className="w-full h-32 lg:h-40 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Mulch</p>
-                  </div>
-                </motion.button>
-              </div>
-
-              <div className="mt-8 flex flex-col items-center gap-4 lg:gap-6">
-                <div className="flex items-center gap-6 text-sm lg:text-base text-gray-600">
-                  <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full">
-                    <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
-                    <span className="font-medium">Ready in ~15 min</span>
-                  </div>
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} className="relative">
+                    <button
+                      className="relative w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                      onClick={() => goToStep("menu")}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-accent/10 to-accent/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <svg className="w-8 h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Walking In</h3>
+                        <p className="text-sm lg:text-base text-gray-600">Browse and pick up now</p>
+                      </div>
+                      <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-accent group-hover:translate-x-1 transition-all" />
+                    </button>
+                  </motion.div>
                 </div>
-                
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => window.open('https://maps.google.com/?q=Organic+Soil+Wholesale+Phoenix+AZ', '_blank')}
-                  className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 lg:px-6 lg:py-3 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group"
-                >
-                  <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-red-500 group-hover:animate-bounce" />
-                  <span className="text-sm lg:text-base font-medium text-gray-700">Phoenix, Arizona</span>
-                  <ChevronRight className="w-3 h-3 lg:w-4 lg:h-4 text-gray-400" />
-                </motion.button>
-              </div>
-            </motion.div>
+
+                {/* Product Categories - Now Clickable */}
+                <div className="grid grid-cols-3 lg:grid-cols-3 gap-3 lg:gap-6 mb-6 lg:max-w-2xl mx-auto">
+                  {/* Soil Category */}
+                  <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedCategory("potting");
+                      goToStep("menu");
+                    }}
+                    className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
+                  >
+                    <OptimizedImage src="category-potting-soil.jpeg" alt="Potting Soils" className="w-full h-32 lg:h-40 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                      <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Potting Soils</p>
+                    </div>
+                  </motion.button>
+
+                  {/* Amendments Category */}
+                  <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedCategory("amendment");
+                      goToStep("menu");
+                    }}
+                    className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
+                  >
+                    <OptimizedImage src="category-amendments.jpg" alt="Amendments" className="w-full h-32 lg:h-40 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                      <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Amendments</p>
+                    </div>
+                  </motion.button>
+
+                  {/* Mulch Category */}
+                  <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedCategory("mulch");
+                      goToStep("menu");
+                    }}
+                    className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow"
+                  >
+                    <OptimizedImage src="category-mulch.jpeg" alt="Mulch" className="w-full h-32 lg:h-40 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                      <p className="p-2 lg:p-3 text-white font-semibold text-sm lg:text-base">Mulch</p>
+                    </div>
+                  </motion.button>
+                </div>
+
+                <div className="mt-8 flex flex-col items-center gap-4 lg:gap-6">
+                  <div className="flex items-center gap-6 text-sm lg:text-base text-gray-600">
+                    <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full">
+                      <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+                      <span className="font-medium">Ready in ~15 min</span>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.open("https://maps.google.com/?q=Organic+Soil+Wholesale+Phoenix+AZ", "_blank")}
+                    className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 lg:px-6 lg:py-3 rounded-full shadow-sm hover:shadow-md transition-all duration-200 group"
+                  >
+                    <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-red-500 group-hover:animate-bounce" />
+                    <span className="text-sm lg:text-base font-medium text-gray-700">Phoenix, Arizona</span>
+                    <ChevronRight className="w-3 h-3 lg:w-4 lg:h-4 text-gray-400" />
+                  </motion.button>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
 
         {/* Pickup Options Screen */}
-        {step === 'pickup-options' && (
+        {step === "pickup-options" && (
           <motion.div
             key="pickup-options"
             initial={{ opacity: 0, x: 100 }}
@@ -1050,77 +976,68 @@ const PayAndPickup: React.FC = () => {
                 transition={{ delay: 0.2 }}
                 className="text-center max-w-md mx-auto lg:max-w-3xl w-full"
               >
-              {/* Pickup Image */}
-              <div className="mb-6 lg:mb-8 relative">
-                <OptimizedImage
-                  src="organic-wholesale-pickup.png"
-                  alt="Wholesale Pickup"
-                  className="w-full h-48 lg:h-64 object-cover rounded-2xl shadow-xl"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-2xl" />
-                <div className="absolute bottom-4 lg:bottom-6 left-4 lg:left-6 text-white">
-                  <h2 className="text-2xl lg:text-4xl font-bold">Order & Pick Up</h2>
-                  <p className="text-sm lg:text-base opacity-90">Choose your option</p>
+                {/* Pickup Image */}
+                <div className="mb-6 lg:mb-8 relative">
+                  <OptimizedImage
+                    src="organic-wholesale-pickup.png"
+                    alt="Wholesale Pickup"
+                    className="w-full h-48 lg:h-64 object-cover rounded-2xl shadow-xl"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-2xl" />
+                  <div className="absolute bottom-4 lg:bottom-6 left-4 lg:left-6 text-white">
+                    <h2 className="text-2xl lg:text-4xl font-bold">Order & Pick Up</h2>
+                    <p className="text-sm lg:text-base opacity-90">Choose your option</p>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-xl lg:text-2xl text-gray-700 mb-8 lg:mb-12">
-                How would you like to proceed?
-              </p>
+                <p className="text-xl lg:text-2xl text-gray-700 mb-8 lg:mb-12">How would you like to proceed?</p>
 
-              <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 lg:max-w-4xl mx-auto">
-                {/* Pre-order Option */}
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <button
-                    className="w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => goToStep('menu')}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <ShoppingCart className="w-8 h-8 lg:w-10 lg:h-10 text-primary" />
+                <div className="grid lg:grid-cols-2 gap-4 lg:gap-6 lg:max-w-4xl mx-auto">
+                  {/* Pre-order Option */}
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                    <button
+                      className="w-full bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                      onClick={() => goToStep("menu")}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <ShoppingCart className="w-8 h-8 lg:w-10 lg:h-10 text-primary" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Pre-Order</h3>
-                      <p className="text-sm lg:text-base text-gray-600">Browse products & order for later</p>
-                    </div>
-                    <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </button>
-                </motion.div>
-
-                {/* I'm Here Option */}
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <button
-                    className="w-full bg-gradient-to-r from-accent to-accent/90 text-white rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                    onClick={() => goToStep('notify-arrival')}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <MapPin className="w-8 h-8 lg:w-10 lg:h-10 text-white animate-bounce" />
+                      <div className="flex-1 text-left">
+                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-1">Pre-Order</h3>
+                        <p className="text-sm lg:text-base text-gray-600">Browse products & order for later</p>
                       </div>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-xl lg:text-2xl font-bold mb-1">I'm Here Now</h3>
-                      <p className="text-sm lg:text-base opacity-90">Notify staff of your arrival</p>
-                    </div>
-                    <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                  </button>
-                </motion.div>
-              </div>
+                      <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </button>
+                  </motion.div>
 
-            </motion.div>
+                  {/* I'm Here Option */}
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                    <button
+                      className="w-full bg-gradient-to-r from-accent to-accent/90 text-white rounded-2xl p-6 lg:p-8 flex items-center gap-4 lg:gap-6 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                      onClick={() => goToStep("notify-arrival")}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <MapPin className="w-8 h-8 lg:w-10 lg:h-10 text-white animate-bounce" />
+                        </div>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <h3 className="text-xl lg:text-2xl font-bold mb-1">I'm Here Now</h3>
+                        <p className="text-sm lg:text-base opacity-90">Notify staff of your arrival</p>
+                      </div>
+                      <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                    </button>
+                  </motion.div>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
 
         {/* Menu Screen */}
-        {step === 'menu' && (
+        {step === "menu" && (
           <motion.div
             key="menu"
             initial={{ opacity: 0, x: 100 }}
@@ -1140,11 +1057,7 @@ const PayAndPickup: React.FC = () => {
             </div>
 
             {/* Product List */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="px-4 py-4 max-w-6xl mx-auto"
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-4 py-4 max-w-6xl mx-auto">
               <h2 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4 lg:mb-6">Available Products</h2>
 
               {loadingProducts ? (
@@ -1166,58 +1079,48 @@ const PayAndPickup: React.FC = () => {
                 <div className="grid lg:grid-cols-2 gap-4 lg:gap-6">
                   {productsWithInventory.map((product) => {
                     const isExpanded = expandedProducts.has(product.id);
-                    const cartItems = cart.filter(item => item.product.id === product.id);
+                    const cartItems = cart.filter((item) => item.product.id === product.id);
                     const totalInCart = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-                    
+
                     return (
                       <motion.div
                         key={product.id}
                         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                       >
                         {/* Product Header - Always Visible */}
-                        <div 
-                          className="p-4 lg:p-6 cursor-pointer"
-                          onClick={() => toggleProductExpansion(product.id)}
-                        >
+                        <div className="p-4 lg:p-6 cursor-pointer" onClick={() => toggleProductExpansion(product.id)}>
                           <div className="flex gap-4 lg:gap-6">
                             <OptimizedImage
-                              src={product.texturePhotoUrl || product.imageUrl || 'placeholder.png'}
+                              src={product.texturePhotoUrl || product.imageUrl || "placeholder.png"}
                               alt={product.name}
                               className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg object-cover flex-shrink-0"
                             />
                             <div className="flex-1">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <h4 className="font-bold text-gray-900 text-lg lg:text-xl">
-                                    {product.displayTitle || product.name}
-                                  </h4>
-                                  <p className="text-sm lg:text-base text-gray-600 mt-1 line-clamp-2">
-                                    {product.story || product.description}
-                                  </p>
+                                  <h4 className="font-bold text-gray-900 text-lg lg:text-xl">{product.displayTitle || product.name}</h4>
+                                  <p className="text-sm lg:text-base text-gray-600 mt-1 line-clamp-2">{product.story || product.description}</p>
                                 </div>
-                                <ChevronDown 
-                                  className={`w-5 h-5 lg:w-6 lg:h-6 text-gray-400 ml-2 transition-transform ${
-                                    isExpanded ? 'rotate-180' : ''
-                                  }`}
+                                <ChevronDown
+                                  className={`w-5 h-5 lg:w-6 lg:h-6 text-gray-400 ml-2 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                                 />
                               </div>
-                              
+
                               {/* Quick Add Button - Show when collapsed */}
                               {!isExpanded && (
                                 <div className="mt-3 flex items-center justify-between">
                                   <div className="text-sm">
                                     {product.sizeOptions && product.sizeOptions.length > 0 && (
                                       <span className="text-gray-600">
-                                        From <span className="font-bold text-green-700">
+                                        From{" "}
+                                        <span className="font-bold text-green-700">
                                           ${getProductPrice(product.id, product.sizeOptions[0]).toFixed(2)}
                                         </span>
                                       </span>
                                     )}
                                   </div>
                                   {totalInCart > 0 ? (
-                                    <Badge className="bg-green-100 text-green-700">
-                                      {totalInCart} in cart
-                                    </Badge>
+                                    <Badge className="bg-green-100 text-green-700">{totalInCart} in cart</Badge>
                                   ) : (
                                     <Button
                                       size="sm"
@@ -1236,13 +1139,13 @@ const PayAndPickup: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Size and Quantity Selection - Collapsible */}
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
+                              animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
@@ -1255,95 +1158,91 @@ const PayAndPickup: React.FC = () => {
                                     <p className="text-gray-600 text-base leading-relaxed">{product.description}</p>
                                   </div>
                                 )}
-                                
+
                                 {/* Size Options */}
                                 <div className="space-y-1 mb-4">
                                   <h4 className="font-semibold text-gray-900 text-lg">Select Size & Quantity</h4>
                                   <p className="text-sm text-gray-500">Choose from available options below</p>
                                 </div>
-                                
+
                                 <div className="space-y-4">
-                                  {product.sizeOptions && product.sizeOptions.map((size) => {
-                                    const uniqueKey = `${product.id}-${size}`;
-                                    const cartItem = cart.find(item => item.uniqueKey === uniqueKey);
-                                    const price = getProductPrice(product.id, size);
-                                    const inStock = isInStock(product.id, size);
-                                    const inventoryData = getProductInventory(product.id);
-                                    const inventory = inventoryData.find(inv => inv.sizeOption === size);
-                                    
-                                    return (
-                                      <div key={uniqueKey} className={`bg-white rounded-lg p-4 border ${inStock ? 'border-gray-200' : 'border-red-200 bg-red-50'}`}>
-                                        <div className="flex items-center justify-between gap-4">
-                                          <div className="flex-1">
-                                            <div className="flex flex-wrap items-baseline gap-2">
-                                              <span className="font-medium text-gray-900 text-lg">{size}</span>
-                                              {price > 0 && (
-                                                <span className="text-xl font-bold text-green-700">
-                                                  ${price.toFixed(2)}
-                                                </span>
-                                              )}
-                                              {inventory && (
-                                                <span className="text-sm text-gray-500">
-                                                  ({inventory.quantityAvailable} available)
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          
-                                          {inStock ? (
-                                            cartItem ? (
-                                              <div className="flex items-center gap-2">
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    updateQuantity(product.id, size, -1);
-                                                  }}
-                                                  className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                                                >
-                                                  <Minus className="w-4 h-4" />
-                                                </button>
-                                                <span className="w-16 text-center font-bold text-lg">{cartItem.quantity}</span>
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    updateQuantity(product.id, size, 1);
-                                                  }}
-                                                  className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                                                  disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
-                                                >
-                                                  <Plus className="w-4 h-4" />
-                                                </button>
+                                  {product.sizeOptions &&
+                                    product.sizeOptions.map((size) => {
+                                      const uniqueKey = `${product.id}-${size}`;
+                                      const cartItem = cart.find((item) => item.uniqueKey === uniqueKey);
+                                      const price = getProductPrice(product.id, size);
+                                      const inStock = isInStock(product.id, size);
+                                      const inventoryData = getProductInventory(product.id);
+                                      const inventory = inventoryData.find((inv) => inv.sizeOption === size);
+
+                                      return (
+                                        <div
+                                          key={uniqueKey}
+                                          className={`bg-white rounded-lg p-4 border ${inStock ? "border-gray-200" : "border-red-200 bg-red-50"}`}
+                                        >
+                                          <div className="flex items-center justify-between gap-4">
+                                            <div className="flex-1">
+                                              <div className="flex flex-wrap items-baseline gap-2">
+                                                <span className="font-medium text-gray-900 text-lg">{size}</span>
+                                                {price > 0 && <span className="text-xl font-bold text-green-700">${price.toFixed(2)}</span>}
+                                                {inventory && (
+                                                  <span className="text-sm text-gray-500">({inventory.quantityAvailable} available)</span>
+                                                )}
                                               </div>
+                                            </div>
+
+                                            {inStock ? (
+                                              cartItem ? (
+                                                <div className="flex items-center gap-2">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      updateQuantity(product.id, size, -1);
+                                                    }}
+                                                    className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                  >
+                                                    <Minus className="w-4 h-4" />
+                                                  </button>
+                                                  <span className="w-16 text-center font-bold text-lg">{cartItem.quantity}</span>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      updateQuantity(product.id, size, 1);
+                                                    }}
+                                                    className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-300 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                                                    disabled={inventory && cartItem.quantity >= inventory.quantityAvailable}
+                                                  >
+                                                    <Plus className="w-4 h-4" />
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                <Button
+                                                  size="default"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToCart(product, size);
+                                                  }}
+                                                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                                                >
+                                                  <Plus className="w-4 h-4 mr-1" />
+                                                  Add to Cart
+                                                </Button>
+                                              )
                                             ) : (
-                                              <Button
-                                                size="default"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  addToCart(product, size);
-                                                }}
-                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
-                                              >
-                                                <Plus className="w-4 h-4 mr-1" />
-                                                Add to Cart
-                                              </Button>
-                                            )
-                                          ) : (
-                                            <span className="text-red-600 text-sm font-medium">Out of Stock</span>
-                                          )}
+                                              <span className="text-red-600 text-sm font-medium">Out of Stock</span>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
                                 </div>
-                                
+
                                 {/* Total in Cart for this Product */}
                                 {totalInCart > 0 && (
                                   <div className="mt-6 pt-4 border-t border-gray-200">
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600 text-base">Total in cart:</span>
-                                      <span className="font-bold text-green-700 text-lg">
-                                        {totalInCart} units
-                                      </span>
+                                      <span className="font-bold text-green-700 text-lg">{totalInCart} units</span>
                                     </div>
                                   </div>
                                 )}
@@ -1363,7 +1262,7 @@ const PayAndPickup: React.FC = () => {
         )}
 
         {/* Cart Screen */}
-        {step === 'cart' && (
+        {step === "cart" && (
           <motion.div
             key="cart"
             initial={{ opacity: 0, x: 100 }}
@@ -1372,16 +1271,12 @@ const PayAndPickup: React.FC = () => {
             className="px-4 py-6 max-w-4xl mx-auto"
           >
             <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-6 lg:mb-8">Your Order</h2>
-            
+
             {cart.length === 0 ? (
               <div className="text-center py-12">
                 <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Your cart is empty</p>
-                <Button
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => goToStep('menu')}
-                >
+                <Button className="mt-4" variant="outline" onClick={() => goToStep("menu")}>
                   Back to Menu
                 </Button>
               </div>
@@ -1398,16 +1293,14 @@ const PayAndPickup: React.FC = () => {
                     >
                       <div className="flex items-start gap-3">
                         <OptimizedImage
-                          src={item.product.texturePhotoUrl || item.product.imageUrl || 'placeholder.png'}
+                          src={item.product.texturePhotoUrl || item.product.imageUrl || "placeholder.png"}
                           alt={item.product.name}
                           className="w-20 h-20 rounded-lg object-cover"
                         />
                         <div className="flex-1">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h4 className="font-semibold text-gray-800">
-                                {item.product.displayTitle || item.product.name}
-                              </h4>
+                              <h4 className="font-semibold text-gray-800">{item.product.displayTitle || item.product.name}</h4>
                               <p className="text-sm text-gray-600 mt-1">{item.size}</p>
                             </div>
                             <button
@@ -1453,17 +1346,13 @@ const PayAndPickup: React.FC = () => {
                 <Button
                   size="lg"
                   className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-                  onClick={() => goToStep('customer-info')}
+                  onClick={() => goToStep("customer-info")}
                 >
                   Continue to Checkout
                   <ChevronRight className="ml-2 w-5 h-5" />
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  className="w-full mt-3"
-                  onClick={() => goToStep('menu')}
-                >
+                <Button variant="ghost" className="w-full mt-3" onClick={() => goToStep("menu")}>
                   Add More Items
                 </Button>
               </>
@@ -1472,7 +1361,7 @@ const PayAndPickup: React.FC = () => {
         )}
 
         {/* Customer Info Screen */}
-        {step === 'customer-info' && (
+        {step === "customer-info" && (
           <motion.div
             key="customer-info"
             initial={{ opacity: 0, x: 100 }}
@@ -1481,7 +1370,7 @@ const PayAndPickup: React.FC = () => {
             className="px-4 py-6 max-w-2xl mx-auto"
           >
             <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-6 lg:mb-8">Your Information</h2>
-            
+
             <Card className="p-6 mb-6">
               <div className="space-y-4">
                 <div>
@@ -1492,13 +1381,13 @@ const PayAndPickup: React.FC = () => {
                   <Input
                     id="name"
                     value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setCustomerInfo((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="John Doe"
-                    className={errors.name ? 'border-red-500' : ''}
+                    className={errors.name ? "border-red-500" : ""}
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
-                
+
                 <div>
                   <Label htmlFor="phone" className="flex items-center gap-2">
                     <Phone className="h-4 w-4" />
@@ -1507,13 +1396,13 @@ const PayAndPickup: React.FC = () => {
                   <Input
                     id="phone"
                     value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: formatPhoneInput(e.target.value) }))}
+                    onChange={(e) => setCustomerInfo((prev) => ({ ...prev, phone: formatPhoneInput(e.target.value) }))}
                     placeholder="(555) 123-4567"
-                    className={errors.phone ? 'border-red-500' : ''}
+                    className={errors.phone ? "border-red-500" : ""}
                   />
                   {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
-                
+
                 <div>
                   <Label htmlFor="email" className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
@@ -1523,15 +1412,15 @@ const PayAndPickup: React.FC = () => {
                     id="email"
                     type="email"
                     value={customerInfo.email}
-                    onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => setCustomerInfo((prev) => ({ ...prev, email: e.target.value }))}
                     placeholder="john@example.com"
-                    className={errors.email ? 'border-red-500' : ''}
+                    className={errors.email ? "border-red-500" : ""}
                   />
                   {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
               </div>
             </Card>
-            
+
             <div className="bg-gray-100 rounded-xl p-4 mb-6">
               <h3 className="font-semibold mb-3">Order Summary</h3>
               <div className="space-y-2 text-sm">
@@ -1549,7 +1438,7 @@ const PayAndPickup: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <Button
               size="lg"
               className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
@@ -1563,7 +1452,7 @@ const PayAndPickup: React.FC = () => {
         )}
 
         {/* Payment Screen */}
-        {step === 'payment' && (
+        {step === "payment" && (
           <motion.div
             key="payment"
             initial={{ opacity: 0, x: 100 }}
@@ -1571,7 +1460,7 @@ const PayAndPickup: React.FC = () => {
             exit={{ opacity: 0, x: -100 }}
             className="px-4 py-6 max-w-2xl mx-auto"
           >
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-6 lg:mb-8">Payment Details</h2>
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-6 lg:mb-8">Secure Payment</h2>
 
             <Card className="p-6 mb-6">
               <div className="flex items-center gap-3 mb-6">
@@ -1579,53 +1468,21 @@ const PayAndPickup: React.FC = () => {
                   <CreditCard className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Mock Payment</h3>
-                  <p className="text-sm text-gray-600">Enter any card details to simulate payment.</p>
+                  <h3 className="text-lg font-semibold text-gray-800">Stripe Payment</h3>
+                  <p className="text-sm text-gray-600">Secure payment processing powered by Stripe.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input
-                    id="cardNumber"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                    value={paymentInfo.cardNumber}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: formatCardNumberInput(e.target.value) }))}
-                    placeholder="4242 4242 4242 4242"
-                    className={paymentErrors.cardNumber ? 'border-red-500' : ''}
-                  />
-                  {paymentErrors.cardNumber && <p className="text-red-500 text-sm mt-1">{paymentErrors.cardNumber}</p>}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="expiry">Expiration</Label>
-                    <Input
-                      id="expiry"
-                      inputMode="numeric"
-                      autoComplete="cc-exp"
-                      value={paymentInfo.expiry}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiry: formatExpiryInput(e.target.value) }))}
-                      placeholder="MM/YY"
-                      className={paymentErrors.expiry ? 'border-red-500' : ''}
-                    />
-                    {paymentErrors.expiry && <p className="text-red-500 text-sm mt-1">{paymentErrors.expiry}</p>}
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CreditCard className="w-8 h-8 text-green-600" />
                   </div>
-                  <div>
-                    <Label htmlFor="cvv">CVV</Label>
-                    <Input
-                      id="cvv"
-                      type="password"
-                      inputMode="numeric"
-                      autoComplete="cc-csc"
-                      value={paymentInfo.cvv}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                      placeholder="123"
-                      className={paymentErrors.cvv ? 'border-red-500' : ''}
-                    />
-                    {paymentErrors.cvv && <p className="text-red-500 text-sm mt-1">{paymentErrors.cvv}</p>}
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">Secure Checkout</h4>
+                  <p className="text-sm text-gray-600 mb-6">You'll be redirected to Stripe's secure payment page to complete your order.</p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <span>Powered by</span>
+                    <span className="font-semibold text-blue-600">Stripe</span>
                   </div>
                 </div>
               </div>
@@ -1646,9 +1503,9 @@ const PayAndPickup: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-blue-50 rounded-xl p-4 mb-6">
-              <p className="text-sm text-blue-900">
-                This is a mock payment flow for testing. The order will be recorded and the admin team will be notified immediately.
+            <div className="bg-green-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-green-900">
+                Your payment is processed securely by Stripe. You'll receive a confirmation email once your order is ready for pickup.
               </p>
             </div>
 
@@ -1663,19 +1520,13 @@ const PayAndPickup: React.FC = () => {
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    Complete Payment
-                    <Check className="ml-2 w-5 h-5" />
+                    Proceed to Stripe Checkout
+                    <CreditCard className="ml-2 w-5 h-5" />
                   </>
                 )}
               </Button>
 
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full"
-                onClick={() => goToStep('customer-info')}
-                disabled={isProcessing}
-              >
+              <Button size="lg" variant="outline" className="w-full" onClick={() => goToStep("customer-info")} disabled={isProcessing}>
                 Back to Details
               </Button>
             </div>
@@ -1683,7 +1534,7 @@ const PayAndPickup: React.FC = () => {
         )}
 
         {/* Checkout Screen */}
-        {step === 'checkout' && (
+        {step === "checkout" && (
           <motion.div
             key="checkout"
             initial={{ opacity: 0, y: 20 }}
@@ -1766,7 +1617,7 @@ const PayAndPickup: React.FC = () => {
               <ol className="text-sm text-blue-800 space-y-1">
                 <li>1. Drive to our warehouse at 123 Industrial Way</li>
                 <li>2. Park in the "Online Orders" spot</li>
-                <li>3. Call us when you arrive: {formatPhone('8057030091')}</li>
+                <li>3. Call us when you arrive: {formatPhone("8057030091")}</li>
                 <li>4. We'll load your order directly into your vehicle</li>
               </ol>
             </div>
@@ -1775,18 +1626,14 @@ const PayAndPickup: React.FC = () => {
               <Button
                 size="lg"
                 className="w-full bg-[hsl(142,38%,32%)] hover:bg-[hsl(142,38%,28%)] text-white"
-                onClick={() => window.location.href = 'tel:+18057030091'}
+                onClick={() => (window.location.href = "tel:+18057030091")}
               >
                 <Phone className="w-5 h-5 mr-2" />
                 Call When You Arrive
               </Button>
-              
+
               <Link to="/">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button size="lg" variant="outline" className="w-full">
                   <Home className="w-5 h-5 mr-2" />
                   Back to Website
                 </Button>
@@ -1796,7 +1643,7 @@ const PayAndPickup: React.FC = () => {
         )}
 
         {/* Notify Arrival Screen */}
-        {step === 'notify-arrival' && (
+        {step === "notify-arrival" && (
           <motion.div
             key="notify-arrival"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -1857,18 +1704,13 @@ const PayAndPickup: React.FC = () => {
               <Button
                 size="lg"
                 className="w-full bg-accent hover:bg-accent/90 text-white"
-                onClick={() => window.location.href = 'tel:+18057030091'}
+                onClick={() => (window.location.href = "tel:+18057030091")}
               >
                 <Phone className="w-5 h-5 mr-2" />
                 Call Now: (805) 703-0091
               </Button>
-              
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full"
-                onClick={() => goToStep('menu')}
-              >
+
+              <Button size="lg" variant="outline" className="w-full" onClick={() => goToStep("menu")}>
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Browse Products Instead
               </Button>
@@ -1878,24 +1720,14 @@ const PayAndPickup: React.FC = () => {
       </AnimatePresence>
 
       {/* Floating Cart Button - Fixed position to avoid overlap */}
-      {cart.length > 0 && step === 'menu' && (
-        <motion.div
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg z-50"
-        >
+      {cart.length > 0 && step === "menu" && (
+        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg z-50">
           <div className="container mx-auto max-w-6xl">
-            <Button
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-6 lg:text-lg"
-              onClick={() => goToStep('cart')}
-            >
+            <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white py-6 lg:text-lg" onClick={() => goToStep("cart")}>
               <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 mr-2" />
-              View Cart ({getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'})
+              View Cart ({getTotalItems()} {getTotalItems() === 1 ? "item" : "items"})
               <span className="ml-2 font-bold">
-                ${cart.reduce((sum, item) => 
-                  sum + (getProductPrice(item.product.id, item.size) * item.quantity), 0
-                ).toFixed(2)}
+                ${cart.reduce((sum, item) => sum + getProductPrice(item.product.id, item.size) * item.quantity, 0).toFixed(2)}
               </span>
             </Button>
           </div>

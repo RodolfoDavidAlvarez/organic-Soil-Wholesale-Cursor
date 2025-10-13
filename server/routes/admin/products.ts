@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase } from "../../supabaseClient";
 import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
+import { ProductSyncService } from "../../services/productSyncService.js";
 
 const router = Router();
 
@@ -50,6 +51,15 @@ router.post("/", async (req: AdminRequest, res) => {
 
     if (error) throw error;
 
+    // Sync product to customer portal
+    try {
+      await ProductSyncService.syncProductToCustomerPortal(product.id);
+      console.log("✅ New product synced to customer portal");
+    } catch (syncError) {
+      console.error("⚠️ Product sync failed (non-critical):", syncError);
+      // Don't fail the creation if sync fails
+    }
+
     res.json(product);
   } catch (error) {
     console.error("Create product error:", error);
@@ -85,6 +95,16 @@ router.put("/:id", async (req: AdminRequest, res) => {
     }
 
     console.log("✅ Product updated successfully:", product.id);
+
+    // Sync product to customer portal
+    try {
+      await ProductSyncService.syncProductToCustomerPortal(product.id);
+      console.log("✅ Product synced to customer portal");
+    } catch (syncError) {
+      console.error("⚠️ Product sync failed (non-critical):", syncError);
+      // Don't fail the update if sync fails
+    }
+
     res.json(product);
   } catch (error) {
     console.error("Update product error:", error);
@@ -141,9 +161,7 @@ router.post("/bulk-stock-update", async (req: AdminRequest, res) => {
     }
 
     const results = await Promise.all(
-      normalizedUpdates.map(({ id, quantity }) =>
-        supabase.from("products").update({ stock_quantity: quantity }).eq("id", id)
-      )
+      normalizedUpdates.map(({ id, quantity }) => supabase.from("products").update({ stock_quantity: quantity }).eq("id", id))
     );
 
     const failed = results.find((result) => result?.error);
@@ -172,18 +190,14 @@ router.post("/bulk-update", async (req: AdminRequest, res) => {
     }
 
     // Update all products with the given IDs
-    const { data, error } = await supabase
-      .from("products")
-      .update(updates)
-      .in("id", productIds)
-      .select();
+    const { data, error } = await supabase.from("products").update(updates).in("id", productIds).select();
 
     if (error) throw error;
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       updated: data?.length || 0,
-      products: data 
+      products: data,
     });
   } catch (error) {
     console.error("Bulk update error:", error);

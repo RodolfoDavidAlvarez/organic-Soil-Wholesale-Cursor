@@ -30,10 +30,12 @@ import {
   ShieldCheck,
   CreditCard,
   Compass,
+  Star,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { productsData } from "@/data/productData";
 import { useLocation } from "wouter";
+import { generateProductSlug } from "@/utils/generateSlug";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -92,7 +94,61 @@ const Home = () => {
     { id: "landscaping", name: "Landscaping", icon: <Filter className="h-6 w-6" /> },
   ];
 
-  const showcaseVideoUrl = "https://www.youtube.com/embed/HxbpgFEyc6U?rel=0";
+  const showcaseVideoUrl =
+    "https://www.youtube.com/embed/yZvjAPZ0dVQ?autoplay=1&mute=1&loop=1&playlist=yZvjAPZ0dVQ&controls=0&modestbranding=1&rel=0&playsinline=1";
+  const showcaseWormVideoUrl =
+    "https://www.youtube.com/embed/UBs6anRv2IY?autoplay=1&mute=1&loop=1&playlist=UBs6anRv2IY&controls=0&modestbranding=1&rel=0&playsinline=1";
+  const showcaseFarmersVideoUrl =
+    "https://www.youtube.com/embed/HbR7BH-6uxI?autoplay=1&mute=1&loop=1&playlist=HbR7BH-6uxI&controls=0&modestbranding=1&rel=0&playsinline=1";
+
+  // Amazon reviews for Mikey's Worm Poop
+  const reviews = [
+    {
+      id: 1,
+      name: "Andre",
+      title: "Best worm casting we've ever seen",
+      date: "August 20, 2025",
+      size: "9 lbs",
+      body: "Fresh ready to use.",
+      rating: 5,
+    },
+    {
+      id: 2,
+      name: "Andre",
+      title: "Do they use little toilets to collect the poop?",
+      date: "September 28, 2024",
+      size: "9 lbs", 
+      body: "The bag was a nice gauge plastic. A nice consistency with no long turds. It had a fresh worm poo smell. It looks like ground coco but doesn't taste like it. Very earthy with a hint of beetle larvae.",
+      rating: 5,
+    },
+    {
+      id: 3,
+      name: "Andre",
+      title: "Great plant growth guao",
+      date: "September 6, 2024",
+      size: "9 lbs",
+      body: "Planting my roses",
+      rating: 5,
+    },
+    {
+      id: 4,
+      name: "Andre",
+      title: "So far so good!",
+      date: "August 22, 2024",
+      size: "9 lbs",
+      body: "Anytime I can get my hands on good organic fertilizer I'll take it This Mikey's Worm Poop Worm Castings Organic Fertilizer seems to be doing a smash up job so far. It's made well and a quality product. I feel it's important to use organic materials as much as possible when it comes to my own personal garden. Growing as organic as possible is key. The fertilizer is easy to work with. You mix a little in your soil and your good to go. The fertilizer has the appearance of pebbles and dirt/soil so it's really easy to manage. I have sprinkled some on top of the soil for my potted citrus tress so the fertilizer is versatile with where you want to utilize it. So far it's definitely worth the purchase. Here's hoping I grow a really great crop.",
+      rating: 5,
+    },
+    {
+      id: 5,
+      name: "Bopper", 
+      title: "Great value, well packaged for shipping, and good quality castings",
+      date: "July 15, 2024",
+      size: "9 lbs",
+      body: "Recommend! Mikey's Worm Poop from Soil Seed & Water is a great value - nine pounds of worm castings will go a good ways with my fall container gardening. The texture is good, no issues with gnats or flies, and no odor. I am always reluctant to try soil and soil amendments online because shipping and packaging can be an issue - I've received open bags, contaminated materials, etc. Mikey's Worm Poop is well packaged for shipping - the bag is strong and there's a double seal at the top where the bag can be resealed. Risk of contamination during shipping seems low as a result. Castings are well processed and the OMRI certification is also a huge plus. Also, the manufacturer has a website where I can read more about their backstory / process - which I like to see with gardening amendments I order online to make sure I'm not getting something I can't trust. Soil Seed & Water is a legitimate company with a great backstory!",
+      rating: 5,
+    },
+  ];
 
   // State for products showcase
   const [products, setProducts] = useState<Product[]>([]);
@@ -281,11 +337,14 @@ const Home = () => {
 
   // Handle selection of a product
   const handleProductSelect = (product: Product) => {
+    // Generate slug from product type or name for better URLs
+    const slug = generateProductSlug(product.productType, product.name);
+
     // Navigate to product detail page
     if (product.category === "Mulch") {
-      navigate(`/products/mulch/${product.id}`);
+      navigate(`/products/mulch/${slug || product.id}`);
     } else {
-      navigate(`/products/${product.id}`);
+      navigate(`/products/${slug || product.id}`);
     }
   };
 
@@ -326,7 +385,6 @@ const Home = () => {
       </div>
     );
   };
-
 
   // Featured products data
   const featuredProducts: FeaturedProduct[] = [
@@ -370,7 +428,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO 
+      <SEO
         title="Premium Bulk Organic Soil Products"
         description="Arizona's leading wholesale supplier of organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads."
         keywords="bulk organic soil, wholesale compost, dairy compost bulk, worm castings wholesale, commercial soil supplier, soil amendments wholesale, potting soil bulk, landscaper soil supplier, golf course soil, supersack soil, pallet soil, wholesale plant nutrients"
@@ -378,17 +436,17 @@ const Home = () => {
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
-          "speakable": {
+          speakable: {
             "@type": "SpeakableSpecification",
-            "cssSelector": ["h1", ".speakable"]
+            cssSelector: ["h1", ".speakable"],
           },
-          "name": "Organic Soil Wholesale - Premium Bulk Soil Products",
-          "url": "https://organicsoilwholesale.com",
-          "potentialAction": {
+          name: "Organic Soil Wholesale - Premium Bulk Soil Products",
+          url: "https://organicsoilwholesale.com",
+          potentialAction: {
             "@type": "SearchAction",
-            "target": "https://organicsoilwholesale.com/products?category={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
+            target: "https://organicsoilwholesale.com/products?category={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
         }}
       >
         <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
@@ -536,11 +594,7 @@ const Home = () => {
                         <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors duration-200">
                           {product.name}
                         </h3>
-                        {product.productName && (
-                          <p className="text-sm font-semibold text-muted-foreground mt-1">
-                            {product.productName}
-                          </p>
-                        )}
+                        {product.productName && <p className="text-sm font-semibold text-muted-foreground mt-1">{product.productName}</p>}
                       </div>
                     </motion.div>
                   ))}
@@ -562,6 +616,113 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Amazon Reviews - Mikey's Worm Poop */}
+      <section className="py-12 md:py-16 px-4 md:px-8 bg-muted/20">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center text-center mb-8 md:mb-12"
+          >
+            <h2 className="text-2xl md:text-4xl lg:text-5xl font-extrabold text-primary tracking-tight">Mikey&apos;s Worm Poop Reviews</h2>
+            <p className="text-muted-foreground mt-2 md:mt-3 text-sm md:text-base">Real Amazon customers on our worm castings</p>
+          </motion.div>
+
+          <div className="space-y-6 md:space-y-8">
+            {/* Product Images Section */}
+            <div className="flex justify-center">
+              <div className="flex gap-3 md:gap-6 max-w-md">
+                <Card className="overflow-hidden border border-muted-foreground/10 bg-white shadow-sm flex-1">
+                  <OptimizedImage
+                    src="images/optimized/mikeys-worm-poop9lbs.jpg"
+                    alt="Mikey's Worm Poop 9lb bag"
+                    className="w-full aspect-square object-cover"
+                    sizes="(max-width: 768px) 40vw, 20vw"
+                  />
+                  <CardFooter className="bg-white p-2 text-xs text-muted-foreground text-center">
+                    9lb bag
+                  </CardFooter>
+                </Card>
+
+                <Card className="overflow-hidden border border-muted-foreground/10 bg-white shadow-sm flex-1">
+                  <OptimizedImage
+                    src="images/optimized/worm-castting-product-texture.jpg"
+                    alt="Worm castings texture close-up"
+                    className="w-full aspect-square object-cover"
+                    sizes="(max-width: 768px) 40vw, 20vw"
+                  />
+                  <CardFooter className="bg-white p-2 text-xs text-muted-foreground text-center">
+                    Texture
+                  </CardFooter>
+                </Card>
+              </div>
+            </div>
+
+            {/* Reviews Carousel */}
+            <div className="w-full">
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: false,
+                  skipSnaps: false,
+                  containScroll: "trimSnaps",
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {reviews.map((review) => (
+                    <CarouselItem key={review.id} className="pl-2 md:pl-4 basis-[280px] md:basis-[320px]">
+                      <Card className="border border-muted-foreground/10 bg-white shadow-sm hover:shadow-md transition-shadow h-full">
+                        <CardHeader className="pb-2 p-3 md:p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-xs md:text-sm font-semibold leading-tight line-clamp-2">{review.title}</CardTitle>
+                              <CardDescription className="text-xs mt-1 text-muted-foreground/80">
+                                {review.name} · {review.date.split(',')[0]} · {review.size}
+                              </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
+                              {Array.from({ length: review.rating }).map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-current" />
+                              ))}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="text-xs text-muted-foreground pt-0 p-3 md:p-4 flex flex-col justify-between h-full">
+                          <div>
+                            {review.body.length > 100 ? (
+                              <details className="group">
+                                <summary className="cursor-pointer">
+                                  <p className="leading-relaxed inline">{review.body.substring(0, 100)}...</p>
+                                  <span className="text-primary ml-2 font-medium group-open:hidden text-xs">Read more</span>
+                                </summary>
+                                <p className="leading-relaxed mt-1">{review.body}</p>
+                              </details>
+                            ) : (
+                              <p className="leading-relaxed">{review.body}</p>
+                            )}
+                          </div>
+                          <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span>
+                            Verified Purchase
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <div className="flex justify-center gap-2 mt-4">
+                  <CarouselPrevious className="relative translate-x-0 translate-y-0" />
+                  <CarouselNext className="relative translate-x-0 translate-y-0" />
+                </div>
+              </Carousel>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pay & Pickup Promotion */}
       <section className="py-16 px-4 md:px-8 bg-muted/40">
         <div className="max-w-6xl mx-auto rounded-3xl border border-border shadow-lg bg-white">
@@ -578,9 +739,7 @@ const Home = () => {
                   <Truck className="h-4 w-4" />
                   Pay & Pickup
                 </div>
-                <h2 className="text-[clamp(2rem,3.6vw,2.75rem)] font-bold text-foreground">
-                  Pay & Pickup in Phoenix
-                </h2>
+                <h2 className="text-[clamp(2rem,3.6vw,2.75rem)] font-bold text-foreground">Pay & Pickup in Phoenix</h2>
                 <p className="text-base md:text-lg text-muted-foreground">
                   Order online, choose a pickup window, and collect from our Phoenix yard. The crew stages pallets, totes, or bulk before you pull in.
                 </p>
@@ -627,12 +786,8 @@ const Home = () => {
                       <span className="text-sm font-semibold uppercase tracking-wide">Next window</span>
                       <Clock className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-[clamp(1.35rem,2.4vw,1.8rem)] text-foreground">
-                      Today · 2:30 – 4:30 PM
-                    </CardTitle>
-                    <CardDescription className="text-sm md:text-base">
-                      1634 N 19th Ave, Phoenix AZ
-                    </CardDescription>
+                    <CardTitle className="text-[clamp(1.35rem,2.4vw,1.8rem)] text-foreground">Today · 2:30 – 4:30 PM</CardTitle>
+                    <CardDescription className="text-sm md:text-base">1634 N 19th Ave, Phoenix AZ</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 text-sm text-muted-foreground">
                     <div className="flex items-start gap-3 rounded-xl border border-muted-foreground/15 px-4 py-3">
@@ -682,30 +837,86 @@ const Home = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex justify-center"
+            className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
           >
-            <Card className="w-full max-w-sm sm:max-w-md border border-muted-foreground/10 bg-white shadow-xl overflow-hidden">
-              <CardContent className="p-0 bg-black">
-                <div className="relative aspect-[9/16] w-full">
+            <Card className="group relative overflow-hidden border border-muted-foreground/10 bg-white shadow-2xl flex flex-col">
+              <CardContent className="relative flex-1 p-0 bg-black">
+                <div className="relative aspect-video w-full lg:h-full">
                   <iframe
                     src={showcaseVideoUrl}
-                    title="Urban Farm Video"
+                    title="Dan's Gold Dairy Compost Video"
                     className="absolute inset-0 h-full w-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
                 </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/0 transition-opacity duration-300 group-hover:from-black/95"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white">
+                  <span className="text-xs uppercase tracking-[0.3em] text-white/60">Flagship Compost</span>
+                  <h3 className="mt-2 text-2xl font-heading font-semibold sm:text-3xl">Dan&apos;s Gold Dairy Compost</h3>
+                  <p className="mt-3 text-sm text-white/80 sm:text-base">
+                    See how we transform raw dairy into living soil that feeds commercial landscapes and farms across the Southwest.
+                  </p>
+                </div>
               </CardContent>
-              <CardFooter className="flex items-center justify-center gap-2 bg-white p-6">
-                <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                <p className="text-sm font-semibold text-primary tracking-wide">Watch our process in action</p>
+              <CardFooter className="bg-white/80 px-6 py-4 text-sm text-primary/80 backdrop-blur-sm sm:text-base">
+                Watch the full process from dairy partnerships to screened finished compost.
               </CardFooter>
             </Card>
+
+            <div className="flex flex-col gap-8">
+              <Card className="border border-muted-foreground/10 bg-white shadow-lg overflow-hidden flex flex-col h-full">
+                <CardContent className="p-0 bg-black">
+                  <div className="relative aspect-video w-full">
+                    <iframe
+                      src={showcaseWormVideoUrl}
+                      title="Worm Farming Video"
+                      className="absolute inset-0 h-full w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3 bg-white p-6 text-left">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-lg font-semibold text-primary">Worm Farming Hub</h3>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary uppercase tracking-wide">
+                      Vermicompost
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Follow our castings operation—from feedstock blends to gentle harvesting that preserves microbe diversity.
+                  </p>
+                </CardFooter>
+              </Card>
+
+              <Card className="border border-muted-foreground/10 bg-white shadow-lg overflow-hidden flex flex-col h-full">
+                <CardContent className="p-0 bg-black">
+                  <div className="relative aspect-video w-full">
+                    <iframe
+                      src={showcaseFarmersVideoUrl}
+                      title="Compost Blend for Farmers Video"
+                      className="absolute inset-0 h-full w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3 bg-white p-6 text-left">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-lg font-semibold text-primary">Field Application</h3>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary uppercase tracking-wide">Bulk Loads</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    See the on-farm blends we craft for commercial growers and how we stage truckloads for fast delivery.
+                  </p>
+                </CardFooter>
+              </Card>
+            </div>
           </motion.div>
         </div>
       </section>
+
 
       {/* CTA Section */}
       <section className="py-20 relative overflow-hidden">

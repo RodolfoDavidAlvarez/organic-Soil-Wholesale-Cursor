@@ -1,5 +1,5 @@
 import express from "express";
-import { grokService, GrokMessage } from "../services/grokService.js";
+import { grokService, GrokMessage } from "../services/grokService";
 
 const router = express.Router();
 

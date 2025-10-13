@@ -10,17 +10,20 @@ const Footer = () => {
             {/* Company Info */}
             <div className="md:col-span-4">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center">
-                  <div className="text-white text-xl font-bold">OSW</div>
-                </div>
+                <img
+                  src="/images/soil-seed-and-water-logo.png"
+                  alt="Soil Seed and Water logo"
+                  className="h-12 w-auto"
+                  loading="lazy"
+                />
                 <div>
                   <span className="text-xl font-heading font-bold">
                     Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
                   </span>
-                  <div className="text-sm text-foreground/60 mt-1">
-                    by{" "}
-                    <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                      Soil Seed and Water
+                  <div className="text-sm text-foreground/60 mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="uppercase tracking-wide text-xs text-foreground/50">Supported by</span>
+                    <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors font-medium">
+                      Soil Seed &amp; Water
                     </a>
                   </div>
                 </div>

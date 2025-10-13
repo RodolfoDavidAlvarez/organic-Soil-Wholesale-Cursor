@@ -8,26 +8,46 @@ import checkoutRoutes from "./routes/checkout";
 import authRoutes from "./routes/auth";
 import pricingRoutes from "./routes/pricing";
 import triviaLeadsRoutes from "./routes/triviaLeads";
+import publicProductsRoutes from "./routes/publicProducts";
+import simpleProductsRoutes from "./routes/simpleProducts";
+import productSyncRoutes from "./routes/productSync";
+import orderManagementRoutes from "./routes/orderManagement";
+import payAndPickupRoutes from "./routes/payAndPickup";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
 
   // Inventory routes
   app.use("/api/inventory", inventoryRoutes);
-  
+
   // Checkout routes
   app.use("/api/checkout", checkoutRoutes);
-  
+
   // Pricing routes
   app.use("/api/pricing", pricingRoutes);
-  
+
   // Customer authentication routes
   app.use("/api/auth", authRoutes);
 
   // Trivia leads routes
   app.use("/api", triviaLeadsRoutes);
 
-  // Products routes
+  // Public Products routes (with slug support)
+  app.use("/api/public/products", publicProductsRoutes);
+
+  // Simple Products routes (working with current data)
+  app.use("/api/simple/products", simpleProductsRoutes);
+
+  // Product sync routes
+  app.use("/api/product-sync", productSyncRoutes);
+
+  // Order management routes
+  app.use("/api/orders", orderManagementRoutes);
+
+  // Pay & Pickup routes
+  app.use("/api/pay-and-pickup", payAndPickupRoutes);
+
+  // Legacy Products routes for backward compatibility
   app.get("/api/products", async (req, res) => {
     try {
       const products = await storage.getAllProducts();
