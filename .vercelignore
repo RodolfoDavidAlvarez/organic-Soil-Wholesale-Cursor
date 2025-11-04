@@ -1,10 +1,6 @@
 # Dependencies
 node_modules/
 
-# Source files (already built)
-client/src/
-server/
-
 # Development files
 *.log
 .env.local

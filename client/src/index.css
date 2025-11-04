@@ -33,6 +33,7 @@
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 142 35% 40%;
   --radius: 0.75rem;
+  --app-header-height: 6.5rem;
 }
 
 .dark {
@@ -75,6 +76,7 @@
 
   body {
     @apply font-sans antialiased bg-white text-black;
+    scroll-padding-top: var(--app-header-height);
   }
 
   h1,

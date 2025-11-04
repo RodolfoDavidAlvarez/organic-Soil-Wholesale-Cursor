@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   server: {
     host: true, // This allows external connections
-    port: 5173, // Default Vite port
+    port: 3000, // Match server port
   },
   resolve: {
     alias: {

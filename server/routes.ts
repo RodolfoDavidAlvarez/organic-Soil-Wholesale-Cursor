@@ -13,6 +13,7 @@ import simpleProductsRoutes from "./routes/simpleProducts";
 import productSyncRoutes from "./routes/productSync";
 import orderManagementRoutes from "./routes/orderManagement";
 import payAndPickupRoutes from "./routes/payAndPickup";
+import leadsRoutes from "./routes/leads";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -46,6 +47,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Pay & Pickup routes
   app.use("/api/pay-and-pickup", payAndPickupRoutes);
+
+  // Leads routes
+  app.use("/api/leads", leadsRoutes);
 
   // Legacy Products routes for backward compatibility
   app.get("/api/products", async (req, res) => {

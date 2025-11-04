@@ -630,93 +630,55 @@ const Home = () => {
             <p className="text-muted-foreground mt-2 md:mt-3 text-sm md:text-base">Real Amazon customers on our worm castings</p>
           </motion.div>
 
-          <div className="space-y-6 md:space-y-8">
-            {/* Product Images Section */}
-            <div className="flex justify-center">
-              <div className="flex gap-3 md:gap-6 max-w-md">
-                <Card className="overflow-hidden border border-muted-foreground/10 bg-white shadow-sm flex-1">
-                  <OptimizedImage
-                    src="images/optimized/mikeys-worm-poop9lbs.jpg"
-                    alt="Mikey's Worm Poop 9lb bag"
-                    className="w-full aspect-square object-cover"
-                    sizes="(max-width: 768px) 40vw, 20vw"
-                  />
-                  <CardFooter className="bg-white p-2 text-xs text-muted-foreground text-center">
-                    9lb bag
-                  </CardFooter>
-                </Card>
-
-                <Card className="overflow-hidden border border-muted-foreground/10 bg-white shadow-sm flex-1">
-                  <OptimizedImage
-                    src="images/optimized/worm-castting-product-texture.jpg"
-                    alt="Worm castings texture close-up"
-                    className="w-full aspect-square object-cover"
-                    sizes="(max-width: 768px) 40vw, 20vw"
-                  />
-                  <CardFooter className="bg-white p-2 text-xs text-muted-foreground text-center">
-                    Texture
-                  </CardFooter>
-                </Card>
+          <div className="max-w-5xl mx-auto flex flex-col gap-8 lg:flex-row lg:items-start">
+            {/* Product Images */}
+            <div className="flex justify-center gap-4 lg:flex-col lg:items-start lg:justify-start">
+              <div className="relative">
+                <OptimizedImage
+                  src="/images/optimized/mikeys-worm-poop9lbs.jpg"
+                  alt="Mikey's Worm Poop 9lb bag"
+                  className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-xl shadow-sm"
+                  sizes="(max-width: 768px) 96px, 112px"
+                />
+                <p className="text-xs text-center mt-2 text-muted-foreground">Product</p>
+              </div>
+              <div className="relative">
+                <OptimizedImage
+                  src="/images/optimized/worm-castting-product-texture.jpg"
+                  alt="Worm castings texture"
+                  className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-xl shadow-sm"
+                  sizes="(max-width: 768px) 96px, 112px"
+                />
+                <p className="text-xs text-center mt-2 text-muted-foreground">Texture</p>
               </div>
             </div>
 
             {/* Reviews Carousel */}
-            <div className="w-full">
-              <Carousel
-                opts={{
-                  align: "start",
-                  loop: false,
-                  skipSnaps: false,
-                  containScroll: "trimSnaps",
-                }}
-                className="w-full"
-              >
-                <CarouselContent className="-ml-2 md:-ml-4">
+            <div className="relative w-full">
+              <Carousel opts={{ align: "start", loop: true }} className="w-full">
+                <CarouselContent className="-ml-3 md:-ml-4">
                   {reviews.map((review) => (
-                    <CarouselItem key={review.id} className="pl-2 md:pl-4 basis-[280px] md:basis-[320px]">
-                      <Card className="border border-muted-foreground/10 bg-white shadow-sm hover:shadow-md transition-shadow h-full">
-                        <CardHeader className="pb-2 p-3 md:p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <CardTitle className="text-xs md:text-sm font-semibold leading-tight line-clamp-2">{review.title}</CardTitle>
-                              <CardDescription className="text-xs mt-1 text-muted-foreground/80">
-                                {review.name} · {review.date.split(',')[0]} · {review.size}
-                              </CardDescription>
-                            </div>
-                            <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
-                              {Array.from({ length: review.rating }).map((_, i) => (
-                                <Star key={i} className="h-3 w-3 fill-current" />
-                              ))}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-xs text-muted-foreground pt-0 p-3 md:p-4 flex flex-col justify-between h-full">
-                          <div>
-                            {review.body.length > 100 ? (
-                              <details className="group">
-                                <summary className="cursor-pointer">
-                                  <p className="leading-relaxed inline">{review.body.substring(0, 100)}...</p>
-                                  <span className="text-primary ml-2 font-medium group-open:hidden text-xs">Read more</span>
-                                </summary>
-                                <p className="leading-relaxed mt-1">{review.body}</p>
-                              </details>
-                            ) : (
-                              <p className="leading-relaxed">{review.body}</p>
-                            )}
-                          </div>
-                          <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                            <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span>
-                            Verified Purchase
-                          </div>
-                        </CardContent>
-                      </Card>
+                    <CarouselItem key={review.id} className="pl-3 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
+                      <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                        <div className="flex items-center gap-1 mb-3">
+                          {Array.from({ length: review.rating }).map((_, i) => (
+                            <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          ))}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mb-2 leading-snug">{review.title}</h3>
+                        <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                          {review.body.length > 150 ? `${review.body.substring(0, 150)}...` : review.body}
+                        </p>
+                        <div className="mt-auto flex items-center justify-between text-xs text-gray-500">
+                          <span>{review.name}</span>
+                          <span>Verified Purchase</span>
+                        </div>
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <div className="flex justify-center gap-2 mt-4">
-                  <CarouselPrevious className="relative translate-x-0 translate-y-0" />
-                  <CarouselNext className="relative translate-x-0 translate-y-0" />
-                </div>
+                <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2 bg-white/90 shadow-md" />
+                <CarouselNext className="right-2 top-1/2 -translate-y-1/2 bg-white/90 shadow-md" />
               </Carousel>
             </div>
           </div>

@@ -127,9 +127,9 @@ export async function sendAdminContactFormNotification(contactDetails: {
             <div class="contact-info">
               <p><strong>Name:</strong> ${contactDetails.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${contactDetails.email}">${contactDetails.email}</a></p>
-              ${contactDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${contactDetails.phone}">${contactDetails.phone}</a></p>` : ''}
-              ${contactDetails.company ? `<p><strong>Company:</strong> ${contactDetails.company}</p>` : ''}
-              ${contactDetails.subject ? `<p><strong>Subject:</strong> ${contactDetails.subject}</p>` : ''}
+              ${contactDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${contactDetails.phone}">${contactDetails.phone}</a></p>` : ""}
+              ${contactDetails.company ? `<p><strong>Company:</strong> ${contactDetails.company}</p>` : ""}
+              ${contactDetails.subject ? `<p><strong>Subject:</strong> ${contactDetails.subject}</p>` : ""}
               <p><strong>Submitted:</strong> ${new Date(contactDetails.submittedAt).toLocaleString()}</p>
             </div>
             
@@ -153,23 +153,19 @@ export async function sendAdminContactFormNotification(contactDetails: {
   `;
 
   // Import dependencies at the top of the function
-  const { sendEmail } = require('./email');
-  const { supabase } = require('../db/supabase');
+  const { sendEmail } = require("./email");
+  const { supabase } = require("../db/supabase");
 
   // Get active admin emails for contact forms
-  const { data, error } = await supabase
-    .from('admin_notifications')
-    .select('email')
-    .eq('active', true)
-    .eq('notify_contact_forms', true);
+  const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_contact_forms", true);
 
-  const adminEmails = data?.map(admin => admin.email) || ['ralvarez@soilseedandwater.com'];
-  
+  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
-      subject: `[CONTACT] ${contactDetails.subject || 'New Contact Form'} - ${contactDetails.name}`,
+      subject: `[CONTACT] ${contactDetails.subject || "New Contact Form"} - ${contactDetails.name}`,
       html,
     })
   );
@@ -315,9 +311,9 @@ export async function sendAdminQuoteRequestNotification(quoteDetails: {
             <div class="quote-info">
               <p><strong>Name:</strong> ${quoteDetails.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${quoteDetails.email}">${quoteDetails.email}</a></p>
-              ${quoteDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${quoteDetails.phone}">${quoteDetails.phone}</a></p>` : ''}
-              ${quoteDetails.company ? `<p><strong>Company:</strong> ${quoteDetails.company}</p>` : ''}
-              ${quoteDetails.deliveryLocation ? `<p><strong>Delivery Location:</strong> ${quoteDetails.deliveryLocation}</p>` : ''}
+              ${quoteDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${quoteDetails.phone}">${quoteDetails.phone}</a></p>` : ""}
+              ${quoteDetails.company ? `<p><strong>Company:</strong> ${quoteDetails.company}</p>` : ""}
+              ${quoteDetails.deliveryLocation ? `<p><strong>Delivery Location:</strong> ${quoteDetails.deliveryLocation}</p>` : ""}
               <p><strong>Submitted:</strong> ${new Date(quoteDetails.submittedAt).toLocaleString()}</p>
             </div>
             
@@ -329,12 +325,16 @@ export async function sendAdminQuoteRequestNotification(quoteDetails: {
               <p style="margin: 0; white-space: pre-wrap;">${quoteDetails.quantities}</p>
             </div>
             
-            ${quoteDetails.notes ? `
+            ${
+              quoteDetails.notes
+                ? `
             <h3 style="color: #1a1a1a; font-size: 18px; margin: 32px 0 16px 0;">Additional Notes:</h3>
             <div class="notes-box">
               <p style="margin: 0; white-space: pre-wrap;">${quoteDetails.notes}</p>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <p style="text-align: center;">
               <a href="mailto:${quoteDetails.email}" class="action-button">Prepare Quote</a>
@@ -351,23 +351,19 @@ export async function sendAdminQuoteRequestNotification(quoteDetails: {
   `;
 
   // Import dependencies at the top of the function
-  const { sendEmail } = require('./email');
-  const { supabase } = require('../db/supabase');
+  const { sendEmail } = require("./email");
+  const { supabase } = require("../db/supabase");
 
   // Get active admin emails for quote requests
-  const { data, error } = await supabase
-    .from('admin_notifications')
-    .select('email')
-    .eq('active', true)
-    .eq('notify_quote_requests', true);
+  const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_quote_requests", true);
 
-  const adminEmails = data?.map(admin => admin.email) || ['ralvarez@soilseedandwater.com'];
-  
+  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
-      subject: `[QUOTE REQUEST] ${quoteDetails.company || quoteDetails.name} - ${quoteDetails.products.split('\n')[0].substring(0, 50)}...`,
+      subject: `[QUOTE REQUEST] ${quoteDetails.company || quoteDetails.name} - ${quoteDetails.products.split("\n")[0].substring(0, 50)}...`,
       html,
     })
   );
@@ -503,8 +499,8 @@ export async function sendAdminSpecialRequestNotification(requestDetails: {
             <div class="request-info">
               <p><strong>Name:</strong> ${requestDetails.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${requestDetails.email}">${requestDetails.email}</a></p>
-              ${requestDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${requestDetails.phone}">${requestDetails.phone}</a></p>` : ''}
-              ${requestDetails.zipCode ? `<p><strong>ZIP Code:</strong> ${requestDetails.zipCode}</p>` : ''}
+              ${requestDetails.phone ? `<p><strong>Phone:</strong> <a href="tel:${requestDetails.phone}">${requestDetails.phone}</a></p>` : ""}
+              ${requestDetails.zipCode ? `<p><strong>ZIP Code:</strong> ${requestDetails.zipCode}</p>` : ""}
               <p><strong>Submitted:</strong> ${new Date(requestDetails.submittedAt).toLocaleString()}</p>
             </div>
             
@@ -528,20 +524,16 @@ export async function sendAdminSpecialRequestNotification(requestDetails: {
   `;
 
   // Import dependencies at the top of the function
-  const { sendEmail } = require('./email');
-  const { supabase } = require('../db/supabase');
+  const { sendEmail } = require("./email");
+  const { supabase } = require("../db/supabase");
 
   // Get active admin emails for special requests
-  const { data, error } = await supabase
-    .from('admin_notifications')
-    .select('email')
-    .eq('active', true)
-    .eq('notify_special_requests', true);
+  const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_special_requests", true);
 
-  const adminEmails = data?.map(admin => admin.email) || ['ralvarez@soilseedandwater.com'];
-  
+  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
       subject: `[SPECIAL REQUEST] ${requestDetails.name} - ${requestDetails.message.substring(0, 50)}...`,
@@ -553,13 +545,7 @@ export async function sendAdminSpecialRequestNotification(requestDetails: {
 }
 
 // Admin notification for lead submissions
-export async function sendAdminLeadNotification(leadDetails: {
-  name: string;
-  email: string;
-  phone: string;
-  notes?: string;
-  submittedAt: string;
-}) {
+export async function sendAdminLeadNotification(leadDetails: { name: string; email: string; phone: string; notes?: string; submittedAt: string }) {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -683,12 +669,16 @@ export async function sendAdminLeadNotification(leadDetails: {
               <p><strong>Submitted:</strong> ${new Date(leadDetails.submittedAt).toLocaleString()}</p>
             </div>
             
-            ${leadDetails.notes ? `
+            ${
+              leadDetails.notes
+                ? `
             <h3 style="color: #1a1a1a; font-size: 18px; margin: 32px 0 16px 0;">Additional Notes:</h3>
             <div class="notes-box">
               <p style="margin: 0; white-space: pre-wrap;">${leadDetails.notes}</p>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <p style="text-align: center;">
               <a href="mailto:${leadDetails.email}" class="action-button">Contact Lead</a>
@@ -704,21 +694,17 @@ export async function sendAdminLeadNotification(leadDetails: {
     </html>
   `;
 
-  // Import dependencies at the top of the function
-  const { sendEmail } = require('./email');
-  const { supabase } = require('../db/supabase');
+  // Import dependencies
+  const { sendEmail } = await import("./email.js");
+  const { supabase } = await import("../db/supabase.js");
 
   // Get active admin emails for leads
-  const { data, error } = await supabase
-    .from('admin_notifications')
-    .select('email')
-    .eq('active', true)
-    .eq('notify_orders', true); // Using notify_orders for leads as well
+  const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_orders", true); // Using notify_orders for leads as well
 
-  const adminEmails = data?.map(admin => admin.email) || ['ralvarez@soilseedandwater.com'];
-  
+  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
       subject: `[LEAD] ${leadDetails.name} - New Lead Submission`,

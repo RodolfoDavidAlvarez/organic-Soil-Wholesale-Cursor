@@ -125,11 +125,12 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const isPayAndPickup = location === "/pay-and-pickup" || location === "/drive-through";
-  const isTriviaGame = location === "/trivia";
-  const isCheckoutFlow = location === "/checkout" || location === "/order-confirmation" || location === "/quick-order";
+  const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through");
+  const isTriviaGame = location.startsWith("/trivia");
+  const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -139,17 +140,15 @@ function App() {
             <AdminAuthProvider>
               <TooltipProvider>
                 <div className="min-h-screen flex flex-col">
-                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Header />}
-                  <main
-                    className={`flex-grow ${!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel ? "pt-20" : ""}`}
-                  >
+                  {showStandardLayout && <Header />}
+                  <main className="flex-grow" style={showStandardLayout ? { paddingTop: "var(--app-header-height, 6.5rem)" } : undefined}>
                     <Router />
                   </main>
-                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <Footer />}
+                  {showStandardLayout && <Footer />}
                   <Toaster />
                   <ScrollToTop />
                   <Analytics />
-                  {!isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && <FloatingCTA />}
+                  {showStandardLayout && <FloatingCTA />}
                   {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                 </div>
               </TooltipProvider>

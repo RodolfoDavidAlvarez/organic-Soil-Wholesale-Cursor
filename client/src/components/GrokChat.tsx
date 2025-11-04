@@ -168,3 +168,6 @@ export function GrokChat({ className = "", placeholder = "Ask me about soil, gar
     </Card>
   );
 }
+
+
+

@@ -25,3 +25,6 @@ ON customer_portal_products (active);
 
 CREATE INDEX IF NOT EXISTS idx_customer_portal_products_product_id 
 ON customer_portal_products (product_id);
+
+
+

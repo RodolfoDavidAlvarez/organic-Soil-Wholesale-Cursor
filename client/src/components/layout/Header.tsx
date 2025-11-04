@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,22 @@ const Header = () => {
   const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  const updateHeaderHeight = useCallback(() => {
+    if (!headerRef.current) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (!headerRef.current) {
+        return;
+      }
+
+      const height = Math.ceil(headerRef.current.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--app-header-height", `${height}px`);
+    });
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,8 +69,24 @@ const Header = () => {
     ...(GROK_ASSISTANT_ENABLED ? [{ name: "AI Assistant", path: "/grok" }] : []),
   ];
 
+  useLayoutEffect(() => {
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    window.addEventListener("orientationchange", updateHeaderHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateHeaderHeight);
+      window.removeEventListener("orientationchange", updateHeaderHeight);
+    };
+  }, [updateHeaderHeight]);
+
+  useEffect(() => {
+    updateHeaderHeight();
+  }, [isScrolled, isMobileMenuOpen, updateHeaderHeight]);
+
   return (
     <header
+      ref={headerRef}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}

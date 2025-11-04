@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 
 // Load environment variables from server/.env
-dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') });
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,7 +15,7 @@ const app = express();
 
 // Apply JSON middleware to all routes except uploads
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/admin/uploads')) {
+  if (req.path.startsWith("/api/admin/uploads")) {
     // Skip JSON parsing for upload routes
     next();
   } else {
@@ -26,30 +26,26 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: false }));
 
 // Trust proxy for Vercel deployment
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 // Simple admin login endpoint - TEMPORARY
 app.post("/api/admin-login-temp", (req, res) => {
   const { email, password } = req.body;
-  
-  if (email === 'ralvarez@soilseedandwater.com' && password === 'admin123') {
-    const token = jwt.sign(
-      { id: '1', email: email, role: 'super_admin' },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '8h' }
-    );
-    
+
+  if (email === "ralvarez@soilseedandwater.com" && password === "admin123") {
+    const token = jwt.sign({ id: "1", email: email, role: "super_admin" }, process.env.JWT_SECRET || "your-secret-key", { expiresIn: "8h" });
+
     res.json({
       token,
       admin: {
-        id: '1',
+        id: "1",
         email: email,
-        full_name: 'Admin User',
-        role: 'super_admin'
-      }
+        full_name: "Admin User",
+        role: "super_admin",
+      },
     });
   } else {
-    res.status(401).json({ error: 'Invalid credentials' });
+    res.status(401).json({ error: "Invalid credentials" });
   }
 });
 
@@ -100,7 +96,7 @@ async function startServer() {
 
   if (process.env.NODE_ENV === "production") {
     const publicPath = process.env.VERCEL ? path.join(__dirname, "../../dist/public") : path.join(__dirname, "../dist/public");
-    
+
     // Serve static files from the public directory
     app.use(express.static(publicPath));
 
@@ -124,7 +120,7 @@ async function startServer() {
   }
 
   // Start the server
-  const PORT = process.env.PORT || 5001;
+  const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });

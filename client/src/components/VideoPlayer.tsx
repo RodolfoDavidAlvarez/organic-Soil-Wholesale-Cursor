@@ -187,3 +187,6 @@ export function VideoPlayer({ src, poster, autoPlay = false, muted = true, loop 
     </div>
   );
 }
+
+
+

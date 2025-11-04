@@ -1,11 +1,18 @@
 {
-  "buildCommand": "echo 'Using pre-built dist folder'",
-  "outputDirectory": "dist",
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "client/dist",
   "framework": null,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
