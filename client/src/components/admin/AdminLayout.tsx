@@ -12,7 +12,9 @@ import {
   X,
   AlertCircle,
   BarChart3,
-  Bell
+  Bell,
+  UserCircle,
+  BookUser
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
@@ -59,6 +61,16 @@ const navItems: NavItem[] = [
     label: 'Notifications',
     icon: <Bell className="w-5 h-5" />,
     href: '/admin/notifications'
+  },
+  {
+    label: 'Representatives',
+    icon: <UserCircle className="w-5 h-5" />,
+    href: '/admin/representatives'
+  },
+  {
+    label: 'CRM Contacts',
+    icon: <BookUser className="w-5 h-5" />,
+    href: '/admin/representative-contacts'
   },
   {
     label: 'Settings',

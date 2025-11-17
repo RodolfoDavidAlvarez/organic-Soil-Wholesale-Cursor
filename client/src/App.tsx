@@ -54,6 +54,9 @@ const AdminCustomers = lazy(() => import("@/pages/admin/Customers"));
 const AdminInventory = lazy(() => import("@/pages/admin/Inventory"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
+const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"));
+const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
+const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
 
@@ -97,6 +100,7 @@ function Router() {
         <Route path="/order-confirmation" component={OrderConfirmation} />
         {GROK_ASSISTANT_ENABLED && <Route path="/grok" component={GrokAssistant} />}
         <Route path="/video-demo" component={VideoDemo} />
+        <Route path="/rep/:slug" component={RepresentativeLanding} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />
@@ -116,6 +120,8 @@ function Router() {
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/notifications" component={AdminNotifications} />
+        <Route path="/admin/representatives" component={AdminRepresentatives} />
+        <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
 
         <Route component={NotFound} />
       </Switch>

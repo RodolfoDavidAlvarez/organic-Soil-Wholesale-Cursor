@@ -16,6 +16,7 @@ export type Product = {
   pay_and_pickup_display_order?: number | null;
   pay_and_pickup_description?: string | null;
   pay_and_pickup_hero_image?: string | null;
+  pay_and_pickup_badge?: string | null;
   texture_photo_url?: string | null;
   image_url?: string | null;
   marketing_title?: string | null;
@@ -32,6 +33,21 @@ export type Product = {
   size_price_options?: ProductSizePriceOption[] | string | null;
   product_video_url?: string | null;
   product_video_title?: string | null;
+  product_status?: string | null;
+  inventory?:
+    | Array<{
+        id?: number;
+        size_option?: string | null;
+        sizeOption?: string | null;
+        quantity_available?: number | null;
+        quantityAvailable?: number | null;
+        quantity_reserved?: number | null;
+        quantityReserved?: number | null;
+        price?: number | null;
+        unit_price?: number | null;
+      }>
+    | string
+    | null;
   [key: string]: unknown;
 };
 
@@ -50,6 +66,7 @@ export type EditFormData = {
   features: string;
   story: string;
   usage: string;
+  product_status: string;
   catalog_display_order: string;
   pay_and_pickup_display_order: string;
   price: string;
@@ -58,6 +75,7 @@ export type EditFormData = {
   is_pay_and_pickup_enabled: boolean;
   pay_and_pickup_description: string;
   pay_and_pickup_hero_image: string;
+  pay_and_pickup_badge: string;
   texture_photo_url: string;
   image_url: string;
   additional_images: string[];
@@ -102,6 +120,7 @@ export type SizePriceOptionFormValue = {
   image?: string;
   price: string;
   isActive: boolean;
+  inventoryQuantity: string;
 };
 
 const PRICE_FIELDS = ['price_cents', 'priceCents', 'price', 'amount', 'value', 'unit_price'];
@@ -555,6 +574,12 @@ const PAY_PICKUP_DESCRIPTION_KEYS = combineCandidates(
   ['overview', 'summary']
 );
 
+const PAY_PICKUP_BADGE_KEYS = combineCandidates(
+  createFieldCandidates('pay_and_pickup_badge'),
+  createFieldCandidates('payAndPickupBadge'),
+  ['badge', 'pickupBadge', 'heroBadge']
+);
+
 const DESCRIPTION_KEYS = combineCandidates(
   createFieldCandidates('description'),
   ['briefOverview', 'overview', 'summary', 'long_description', 'productDescription']
@@ -736,6 +761,54 @@ export const buildEditForm = (product: Product): EditFormData => {
   const payPickupDescription =
     getStringField(product, PAY_PICKUP_DESCRIPTION_KEYS) || generalDescription;
 
+  const inventoryEntries = (() => {
+    if (Array.isArray(product.inventory)) {
+      return product.inventory;
+    }
+
+    if (typeof product.inventory === 'string') {
+      try {
+        const parsed = JSON.parse(product.inventory);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    return [];
+  })();
+
+  const inventoryMap = new Map<string, number>();
+  let inventoryTotal = 0;
+
+  for (const entry of inventoryEntries) {
+    if (!entry) continue;
+    const rawLabel =
+      (typeof entry.size_option === 'string' && entry.size_option) ||
+      (typeof entry.sizeOption === 'string' && entry.sizeOption) ||
+      '';
+
+    if (!rawLabel) continue;
+    const normalizedLabel = rawLabel.trim().toLowerCase();
+    if (!normalizedLabel) continue;
+
+    const quantityValue =
+      (typeof entry.quantity_available === 'number' && Number.isFinite(entry.quantity_available)
+        ? entry.quantity_available
+        : null) ??
+      (typeof entry.quantityAvailable === 'number' && Number.isFinite(entry.quantityAvailable)
+        ? entry.quantityAvailable
+        : null);
+
+    const quantity = quantityValue ?? 0;
+    inventoryMap.set(normalizedLabel, quantity);
+    inventoryTotal += quantity;
+  }
+
+  const hasInventoryData = inventoryEntries.length > 0;
+
   const heroImageRaw = getStringField(product, HERO_IMAGE_KEYS);
   const textureImageRaw = getStringField(product, TEXTURE_IMAGE_KEYS);
   const baseImageRaw = getStringField(product, IMAGE_URL_KEYS);
@@ -775,7 +848,8 @@ export const buildEditForm = (product: Product): EditFormData => {
     const existing = findSizeOptionByCatalog(entry);
     const priceCents = getProductSizePriceCents(existing);
     const image = existing?.image ?? entry.image;
-    
+    const inventoryQuantity = inventoryMap.get(entry.label.toLowerCase());
+
     const isActive =
       existing?.is_active != null
         ? Boolean(existing.is_active)
@@ -788,6 +862,8 @@ export const buildEditForm = (product: Product): EditFormData => {
       image: image ?? entry.image,
       price: priceCents !== null ? formatPrice(priceCents) : '',
       isActive,
+      inventoryQuantity:
+        inventoryQuantity != null && Number.isFinite(inventoryQuantity) ? String(inventoryQuantity) : '',
     };
   });
 
@@ -803,6 +879,7 @@ export const buildEditForm = (product: Product): EditFormData => {
         option.is_active != null
           ? Boolean(option.is_active)
           : availableSizeSet.has(normalizedLabel) || availableSizeSet.has(option.key.toLowerCase());
+      const inventoryQuantity = inventoryMap.get(normalizedLabel);
 
       return {
         key: option.key,
@@ -811,6 +888,8 @@ export const buildEditForm = (product: Product): EditFormData => {
         image: option.image ?? undefined,
         price: priceCents !== null ? formatPrice(priceCents) : '',
         isActive,
+        inventoryQuantity:
+          inventoryQuantity != null && Number.isFinite(inventoryQuantity) ? String(inventoryQuantity) : '',
       };
     });
 
@@ -826,6 +905,12 @@ export const buildEditForm = (product: Product): EditFormData => {
     CATALOG_ENABLED_KEYS,
     product.is_catalog_enabled != null ? Boolean(product.is_catalog_enabled) : true
   );
+  const statusValue =
+    typeof product.product_status === 'string' && product.product_status.trim().length > 0
+      ? product.product_status.trim().toLowerCase()
+      : catalogEnabled
+        ? 'active'
+        : 'draft';
 
   return {
     name: getStringField(product, NAME_KEYS) || '',
@@ -842,10 +927,12 @@ export const buildEditForm = (product: Product): EditFormData => {
     features: getStringField(product, FEATURES_KEYS) || '',
     story: getStringField(product, STORY_KEYS) || '',
     usage: getStringField(product, USAGE_KEYS) || '',
+    product_status: statusValue,
     catalog_display_order: catalogOrderValue !== null ? String(catalogOrderValue) : '0',
     pay_and_pickup_display_order: displayOrderValue !== null ? String(displayOrderValue) : '0',
     price: priceValue !== null ? formatPrice(priceValue) : '',
-    stock_quantity: stockValue !== null ? String(stockValue) : '',
+    stock_quantity:
+      hasInventoryData ? String(inventoryTotal) : stockValue !== null ? String(stockValue) : '',
     is_catalog_enabled: catalogEnabled,
     is_pay_and_pickup_enabled: getBooleanField(
       product,
@@ -854,6 +941,7 @@ export const buildEditForm = (product: Product): EditFormData => {
     ),
     pay_and_pickup_description: payPickupDescription,
     pay_and_pickup_hero_image: heroImage || baseImage || galleryImages[0] || '',
+    pay_and_pickup_badge: getStringField(product, PAY_PICKUP_BADGE_KEYS) || '',
     texture_photo_url: textureImage || heroImage || baseImage || '',
     image_url: baseImage || heroImage || textureImage || '',
     additional_images: galleryImages,
@@ -866,3 +954,45 @@ export const buildEditForm = (product: Product): EditFormData => {
 
 export const getPrimaryImage = (product: Product) =>
   buildProductImageCandidates(product)[0] ?? '';
+
+export const createEmptyEditForm = (): EditFormData => ({
+  name: '',
+  display_title: '',
+  sku: '',
+  category: '',
+  marketing_title: '',
+  marketing_note: '',
+  seo_keywords: '',
+  description: '',
+  ingredients: '',
+  target_audience: '',
+  recommended_uses: '',
+  features: '',
+  story: '',
+  usage: '',
+  product_status: 'draft',
+  catalog_display_order: '0',
+  pay_and_pickup_display_order: '0',
+  price: '',
+  stock_quantity: '',
+  is_catalog_enabled: false,
+  is_pay_and_pickup_enabled: false,
+  pay_and_pickup_description: '',
+  pay_and_pickup_hero_image: '',
+  pay_and_pickup_badge: '',
+  texture_photo_url: '',
+  image_url: '',
+  additional_images: [],
+  available_size_options: [],
+  size_price_options: SIZE_CATALOG.map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    description: entry.description,
+    image: entry.image,
+    price: '',
+    isActive: false,
+    inventoryQuantity: '',
+  })),
+  product_video_url: '',
+  product_video_title: '',
+});

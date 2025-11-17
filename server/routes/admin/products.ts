@@ -2,8 +2,194 @@ import { Router } from "express";
 import { supabase } from "../../supabaseClient";
 import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
 import { ProductSyncService } from "../../services/productSyncService.js";
+import { InventoryService, type InventoryUpdateInput } from "../../services/inventoryService.js";
 
 const router = Router();
+
+const parseQuantity = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value));
+  }
+
+  if (typeof value === "string") {
+    const cleaned = value.trim();
+    if (!cleaned) {
+      return null;
+    }
+    const parsed = Number.parseInt(cleaned, 10);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed);
+    }
+  }
+
+  return null;
+};
+
+const parseInventoryUpdates = (input: unknown): InventoryUpdateInput[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const updates: InventoryUpdateInput[] = [];
+
+  for (const entry of input) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
+
+    const record = entry as Record<string, unknown>;
+    const rawLabel =
+      typeof record.size_option === "string"
+        ? record.size_option
+        : typeof record.sizeOption === "string"
+          ? record.sizeOption
+          : typeof record.label === "string"
+            ? record.label
+            : typeof record.name === "string"
+              ? record.name
+              : "";
+
+    const label = rawLabel.trim();
+    if (!label) {
+      continue;
+    }
+
+    const quantity =
+      parseQuantity(record.quantity_available) ??
+      parseQuantity(record.quantityAvailable) ??
+      parseQuantity(record.quantity) ??
+      parseQuantity(record.stock);
+
+    if (quantity === null) {
+      continue;
+    }
+
+    const locationId =
+      typeof record.location_id === "number"
+        ? record.location_id
+        : typeof record.locationId === "number"
+          ? record.locationId
+          : undefined;
+
+    updates.push({
+      size_option: label,
+      quantity_available: quantity,
+      location_id: locationId,
+    });
+  }
+
+  return updates;
+};
+
+const extractSizeOptionMeta = (raw: unknown) => {
+  let source: unknown = raw;
+
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      source = [];
+    }
+  }
+
+  if (!Array.isArray(source)) {
+    return {
+      priceMap: new Map<string, number | null>(),
+      activeSizes: new Set<string>(),
+    };
+  }
+
+  const priceMap = new Map<string, number | null>();
+  const activeSizes = new Set<string>();
+
+  for (const option of source) {
+    if (!option || typeof option !== "object") {
+      continue;
+    }
+
+    const record = option as Record<string, unknown>;
+    const labelCandidate =
+      typeof record.label === "string"
+        ? record.label
+        : typeof record.name === "string"
+          ? record.name
+          : typeof record.title === "string"
+            ? record.title
+            : typeof record.display_name === "string"
+              ? record.display_name
+              : "";
+
+    const label = labelCandidate.trim();
+    if (!label) {
+      continue;
+    }
+
+    const lowerLabel = label.toLowerCase();
+
+    if (!priceMap.has(lowerLabel)) {
+      const directNumberFields = ["price", "unit_price", "unitPrice"];
+      let resolvedPrice: number | null = null;
+
+      for (const field of directNumberFields) {
+        const value = record[field];
+        if (typeof value === "number" && Number.isFinite(value)) {
+          resolvedPrice = value;
+          break;
+        }
+      }
+
+      if (resolvedPrice === null) {
+        const centFields = ["price_cents", "priceCents"];
+        for (const field of centFields) {
+          const value = record[field];
+          if (typeof value === "number" && Number.isFinite(value)) {
+            resolvedPrice = Number((value / 100).toFixed(2));
+            break;
+          }
+        }
+      }
+
+      if (resolvedPrice === null) {
+        const stringFields = ["price", "price_cents", "priceCents", "unit_price", "unitPrice"];
+        for (const field of stringFields) {
+          const rawValue = record[field];
+          if (typeof rawValue === "string") {
+            const parsed = Number.parseFloat(rawValue.replace(/[^0-9.]/g, ""));
+            if (Number.isFinite(parsed)) {
+              resolvedPrice = parsed;
+              break;
+            }
+          }
+        }
+      }
+
+      priceMap.set(lowerLabel, resolvedPrice);
+    }
+
+    const activeField =
+      record.is_active ??
+      record.isActive ??
+      record.active ??
+      record.enabled ??
+      record.visible;
+
+    const isActive =
+      typeof activeField === "boolean"
+        ? activeField
+        : typeof activeField === "number"
+          ? activeField !== 0
+          : typeof activeField === "string"
+            ? !["false", "0", "no", "off", "hidden"].includes(activeField.toLowerCase())
+            : true;
+
+    if (isActive) {
+      activeSizes.add(lowerLabel);
+    }
+  }
+
+  return { priceMap, activeSizes };
+};
+
 
 // Apply admin auth to all routes
 router.use(tempAdminAuthMiddleware);
@@ -30,12 +216,22 @@ router.get("/", async (req: AdminRequest, res) => {
 router.get("/:id", async (req: AdminRequest, res) => {
   try {
     const { id } = req.params;
+    const productId = Number(id);
 
-    const { data: product, error } = await supabase.from("products").select("*").eq("id", id).single();
+    if (!Number.isFinite(productId)) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    const { data: product, error } = await supabase.from("products").select("*").eq("id", productId).single();
 
     if (error) throw error;
 
-    res.json(product);
+    const inventory = await InventoryService.getProductInventory(productId);
+
+    res.json({
+      ...product,
+      inventory,
+    });
   } catch (error) {
     console.error("Get product error:", error);
     res.status(500).json({ error: "Failed to fetch product" });
@@ -45,11 +241,31 @@ router.get("/:id", async (req: AdminRequest, res) => {
 // Create product
 router.post("/", async (req: AdminRequest, res) => {
   try {
-    const productData = req.body;
+    const { inventory_updates, ...remaining } = (req.body ?? {}) as Record<string, unknown>;
+    const inventoryUpdates = parseInventoryUpdates(inventory_updates);
+    const productPayload = { ...remaining } as Record<string, unknown>;
 
-    const { data: product, error } = await supabase.from("products").insert(productData).select().single();
+    if (productPayload.additionalImages !== undefined && !Array.isArray(productPayload.additionalImages)) {
+      productPayload.additionalImages = [];
+    }
+
+    if (productPayload.additional_images !== undefined && !Array.isArray(productPayload.additional_images)) {
+      productPayload.additional_images = [];
+    }
+
+    const { data: product, error } = await supabase.from("products").insert(productPayload).select().single();
 
     if (error) throw error;
+
+    if (product && inventoryUpdates.length > 0) {
+      const { priceMap, activeSizes } = extractSizeOptionMeta(product.size_price_options);
+      await InventoryService.upsertInventoryEntries({
+        productId: product.id,
+        entries: inventoryUpdates,
+        priceMap,
+        activeSizes,
+      });
+    }
 
     // Sync product to customer portal
     try {
@@ -60,7 +276,9 @@ router.post("/", async (req: AdminRequest, res) => {
       // Don't fail the creation if sync fails
     }
 
-    res.json(product);
+    const inventory = product ? await InventoryService.getProductInventory(product.id) : [];
+
+    res.json(product ? { ...product, inventory } : product);
   } catch (error) {
     console.error("Create product error:", error);
     res.status(500).json({ error: "Failed to create product" });
@@ -71,18 +289,22 @@ router.post("/", async (req: AdminRequest, res) => {
 router.put("/:id", async (req: AdminRequest, res) => {
   try {
     const { id } = req.params;
-    const productData = req.body;
+    const { inventory_updates, ...remaining } = (req.body ?? {}) as Record<string, unknown>;
+    const inventoryUpdates = parseInventoryUpdates(inventory_updates);
+    const productPayload = { ...remaining } as Record<string, any>;
 
-    console.log("Updating product", id, "with data:", JSON.stringify(productData, null, 2));
+    console.log("Updating product", id, "with data:", JSON.stringify(remaining, null, 2));
 
     // Ensure additionalImages is properly formatted as an array
-    if (productData.additionalImages !== undefined) {
-      if (!Array.isArray(productData.additionalImages)) {
-        productData.additionalImages = [];
-      }
+    if (productPayload.additionalImages !== undefined && !Array.isArray(productPayload.additionalImages)) {
+      productPayload.additionalImages = [];
     }
 
-    const { data: product, error } = await supabase.from("products").update(productData).eq("id", id).select().single();
+    if (productPayload.additional_images !== undefined && !Array.isArray(productPayload.additional_images)) {
+      productPayload.additional_images = [];
+    }
+
+    const { data: product, error } = await supabase.from("products").update(productPayload).eq("id", id).select().single();
 
     if (error) {
       console.error("Update product error:", error);
@@ -96,6 +318,16 @@ router.put("/:id", async (req: AdminRequest, res) => {
 
     console.log("✅ Product updated successfully:", product.id);
 
+    if (product && inventoryUpdates.length > 0) {
+      const { priceMap, activeSizes } = extractSizeOptionMeta(product.size_price_options);
+      await InventoryService.upsertInventoryEntries({
+        productId: product.id,
+        entries: inventoryUpdates,
+        priceMap,
+        activeSizes,
+      });
+    }
+
     // Sync product to customer portal
     try {
       await ProductSyncService.syncProductToCustomerPortal(product.id);
@@ -105,7 +337,12 @@ router.put("/:id", async (req: AdminRequest, res) => {
       // Don't fail the update if sync fails
     }
 
-    res.json(product);
+    const inventory = await InventoryService.getProductInventory(product.id);
+
+    res.json({
+      ...product,
+      inventory,
+    });
   } catch (error) {
     console.error("Update product error:", error);
     res.status(500).json({ error: "Failed to update product" });

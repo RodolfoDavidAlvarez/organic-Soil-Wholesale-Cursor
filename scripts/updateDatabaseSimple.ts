@@ -37,6 +37,7 @@ ADD COLUMN IF NOT EXISTS pay_and_pickup_display_order INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS pay_and_pickup_badge TEXT,
 ADD COLUMN IF NOT EXISTS pay_and_pickup_description TEXT,
 ADD COLUMN IF NOT EXISTS pay_and_pickup_hero_image TEXT,
+ADD COLUMN IF NOT EXISTS product_status TEXT DEFAULT 'active',
 ADD COLUMN IF NOT EXISTS min_stock_level INTEGER DEFAULT 10;`);
       console.log("");
       console.log("3. Then run this script again to seed the data.");

@@ -36,7 +36,8 @@ interface AdminNotification {
 }
 
 export default function AdminNotifications() {
-  const { isAuthenticated, loading: authLoading } = useAdminAuth();
+  const { admin, loading: authLoading } = useAdminAuth();
+  const isAuthenticated = !!admin;
   const [admins, setAdmins] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);

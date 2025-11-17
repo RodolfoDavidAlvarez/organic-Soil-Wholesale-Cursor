@@ -27,6 +27,17 @@ export default defineConfig({
   },
   root: path.resolve(__dirname, "client"),
   base: "./",
+  optimizeDeps: {
+    include: [
+      "@radix-ui/react-select",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-dialog",
+      "react",
+      "react-dom",
+      "wouter",
+    ],
+  },
   build: {
     outDir: path.resolve(__dirname, "dist"),
     emptyOutDir: true,

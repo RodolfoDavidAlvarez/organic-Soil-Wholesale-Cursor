@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,6 +22,13 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,6 +43,7 @@ export default function AdminProducts() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'payPickup'>('catalog');
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -136,9 +144,36 @@ export default function AdminProducts() {
   const displayedProducts =
     activeTab === 'catalog' ? catalogFilteredProducts : payPickupFilteredProducts;
 
+  const resolveProductStatus = (product: Product) => {
+    const snakeStatus =
+      typeof product.product_status === 'string' ? product.product_status : undefined;
+    const camelStatus =
+      typeof (product as Record<string, unknown>).productStatus === 'string'
+        ? ((product as Record<string, string>).productStatus as string)
+        : undefined;
+    const normalized = (snakeStatus || camelStatus || '').trim().toLowerCase();
+    if (normalized === 'draft' || normalized === 'inactive') {
+      return 'draft';
+    }
+    if (normalized === 'active') {
+      return 'active';
+    }
+    return product.is_catalog_enabled === false ? 'draft' : 'active';
+  };
+
+  const visibleProducts = useMemo(() => {
+    if (statusFilter === 'all') {
+      return displayedProducts;
+    }
+    const desiredStatus = statusFilter === 'active' ? 'active' : 'draft';
+    return displayedProducts.filter(
+      (product) => resolveProductStatus(product) === desiredStatus,
+    );
+  }, [displayedProducts, statusFilter]);
+
   const catalogCount = catalogFilteredProducts.length;
   const payPickupCount = payPickupFilteredProducts.length;
-  const totalCount = displayedProducts.length;
+  const totalCount = visibleProducts.length;
   const contextLabel = activeTab === 'catalog' ? 'Catalog' : 'Pay & Pickup';
   const secondaryContextLabel = activeTab === 'catalog' ? 'Pay & Pickup' : 'Catalog';
   const headerDescription =
@@ -264,10 +299,10 @@ export default function AdminProducts() {
 
   useEffect(() => {
     setSelectedProductIds(new Set());
-  }, [activeTab]);
+  }, [activeTab, statusFilter]);
 
   const selectAllProducts = () => {
-    setSelectedProductIds(new Set(displayedProducts.map((product) => product.id)));
+    setSelectedProductIds(new Set(visibleProducts.map((product) => product.id)));
   };
 
   const clearSelection = () => {
@@ -308,7 +343,12 @@ export default function AdminProducts() {
     }
   };
 
-  const isAllSelected = selectedProductIds.size === displayedProducts.length && displayedProducts.length > 0;
+  const isAllSelected =
+    selectedProductIds.size === visibleProducts.length && visibleProducts.length > 0;
+
+  const handleAddProduct = useCallback(() => {
+    navigate('/admin/products/new');
+  }, [navigate]);
 
   return (
     <ProtectedAdminRoute>
@@ -330,7 +370,7 @@ export default function AdminProducts() {
                   <TabsTrigger value="payPickup">Pay &amp; Pickup ({payPickupCount})</TabsTrigger>
                 </TabsList>
               </Tabs>
-              <Button className="self-start md:self-auto">
+              <Button className="self-start md:self-auto" onClick={handleAddProduct}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
@@ -339,13 +379,25 @@ export default function AdminProducts() {
 
           <div className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex w-full items-center gap-2 md:max-w-md">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products by name, SKU, or category..."
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
+              <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                <div className="flex flex-1 items-center gap-2 md:max-w-md">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products by name, SKU, or category..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
+                  <SelectTrigger className="md:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">
@@ -421,7 +473,7 @@ export default function AdminProducts() {
                 <div key={index} className="h-[360px] animate-pulse rounded-2xl border border-border bg-muted/30" />
               ))}
             </div>
-          ) : displayedProducts.length === 0 ? (
+          ) : visibleProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 py-16 text-center">
               <Package className="mb-4 h-12 w-12 text-muted-foreground" />
               <h2 className="text-lg font-semibold text-foreground">No products found</h2>
@@ -431,7 +483,7 @@ export default function AdminProducts() {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {displayedProducts.map((product) => {
+              {visibleProducts.map((product) => {
                 const primaryImage = getPrimaryImage(product);
                 const isSelected = selectedProductIds.has(product.id);
                 const catalogOrder = getDisplayOrder(product.catalog_display_order);
@@ -576,7 +628,7 @@ export default function AdminProducts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedProducts.map((product, index) => {
+                  {visibleProducts.map((product, index) => {
                     const primaryImage = getPrimaryImage(product);
                     const isSelected = selectedProductIds.has(product.id);
                     const catalogOrder = getDisplayOrder(product.catalog_display_order);

@@ -1,12 +1,17 @@
 {
   "watch": ["server/**/*", "scripts/**/*", "shared/**/*"],
   "ext": "ts,js,json",
-  "ignore": ["node_modules/**/*", "dist/**/*", "client/dist/**/*", "*.log"],
+  "ignore": ["node_modules/**/*", "dist/**/*", "client/dist/**/*", "*.log", "client/**/*"],
   "delay": "1000",
+  "restartable": "rs",
   "env": {
     "NODE_ENV": "development"
-  }
+  },
+  "verbose": true,
+  "legacyWatch": false,
+  "signal": "SIGTERM"
 }
+
 
 
 

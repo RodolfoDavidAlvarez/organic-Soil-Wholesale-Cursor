@@ -43,6 +43,7 @@ async function addColumns() {
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS pay_and_pickup_description text;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS pay_and_pickup_hero_image text;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS is_catalog_enabled boolean DEFAULT true;',
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS product_status text DEFAULT 'active';",
     ];
 
     for (const query of alterQueries) {

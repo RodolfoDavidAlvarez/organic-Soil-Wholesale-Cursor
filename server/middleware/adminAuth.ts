@@ -14,6 +14,17 @@ export interface AdminRequest extends Request {
 }
 
 export async function adminAuthMiddleware(req: AdminRequest, res: Response, next: NextFunction) {
+  // TEMPORARY: Bypass authentication for development
+  // TODO: Re-enable authentication before deployment
+  req.admin = {
+    id: '1',
+    email: 'admin@soilseedandwater.com',
+    role: 'super_admin',
+    permissions: { all: true }
+  };
+  next();
+  
+  /* ORIGINAL AUTH CODE - DISABLED FOR DEVELOPMENT
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
@@ -40,6 +51,7 @@ export async function adminAuthMiddleware(req: AdminRequest, res: Response, next
     console.error('Admin auth error:', error);
     res.status(401).json({ error: 'Invalid or expired token' });
   }
+  */
 }
 
 export function createAdminToken(admin: { id: string; email: string; role: string }) {

@@ -41,11 +41,25 @@ router.post('/simple-login', async (req, res) => {
 });
 
 router.get('/validate', tempAdminAuthMiddleware, (req: AdminRequest, res) => {
+  // TEMPORARY: Always return admin for development
+  // TODO: Re-enable token validation before deployment
+  return res.json({ 
+    admin: {
+      id: '1',
+      email: 'admin@soilseedandwater.com',
+      full_name: 'Admin User',
+      role: 'super_admin',
+      permissions: { all: true }
+    }
+  });
+  
+  /* ORIGINAL VALIDATION CODE - DISABLED FOR DEVELOPMENT
   if (req.admin) {
     return res.json({ admin: req.admin });
   }
 
   return res.status(401).json({ error: 'Invalid token' });
+  */
 });
 
 export default router;

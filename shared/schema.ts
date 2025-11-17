@@ -47,6 +47,7 @@ export const products = pgTable("products", {
   productVideoTitle: text("product_video_title"),
   isWholesaleOnly: boolean("is_wholesale_only").default(false).notNull(),
   additionalImages: text("additional_images").array(),
+  productStatus: text("product_status").default("active"),
   payAndPickupDisplayOrder: integer("pay_and_pickup_display_order").default(0),
   allowBulkPickup: boolean("allow_bulk_pickup").default(false),
   availableSizeOptions: text("available_size_options").array(),
@@ -284,3 +285,78 @@ export interface BusinessInfo {
   address?: string;
   pickupLocation?: string;
 }
+
+// CRM Tables
+export const representatives = pgTable("representatives", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  website: text("website"),
+  bio: text("bio"),
+  photoUrl: text("photo_url"),
+  bannerImageUrl: text("banner_image_url"),
+  galleryImages: text("gallery_images").array(),
+  companyName: text("company_name"),
+  title: text("title"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  socialLinks: jsonb("social_links").$type<{
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+    [key: string]: string | undefined;
+  }>(),
+  customFields: jsonb("custom_fields").$type<Record<string, any>>(),
+  contactButtonText: text("contact_button_text").default("Contact Me").notNull(),
+  contactCardButtonText: text("contact_card_button_text").default("Download Contact Card").notNull(),
+  contactFormTitle: text("contact_form_title").default("Get In Touch").notNull(),
+  contactFormDescription: text("contact_form_description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const representativeContacts = pgTable("representative_contacts", {
+  id: serial("id").primaryKey(),
+  representativeId: integer("representative_id")
+    .references(() => representatives.id, { onDelete: "cascade" })
+    .notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  companyName: text("company_name"),
+  message: text("message"),
+  source: text("source").default("landing_page"),
+  status: text("status").default("new").notNull(),
+  notes: text("notes"),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Schemas for inserting data
+export const insertRepresentativeSchema = createInsertSchema(representatives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRepresentativeContactSchema = createInsertSchema(representativeContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type definitions
+export type InsertRepresentative = z.infer<typeof insertRepresentativeSchema>;
+export type Representative = typeof representatives.$inferSelect;
+
+export type InsertRepresentativeContact = z.infer<typeof insertRepresentativeContactSchema>;
+export type RepresentativeContact = typeof representativeContacts.$inferSelect;

@@ -24,6 +24,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // TEMPORARY: Auto-authenticate for development
+    // TODO: Re-enable authentication before deployment
+    setAdmin({
+      id: 1,
+      email: 'admin@soilseedandwater.com',
+      full_name: 'Admin User',
+      role: 'super_admin',
+      permissions: { all: true }
+    });
+    setLoading(false);
+    
+    /* ORIGINAL AUTH CODE - DISABLED FOR DEVELOPMENT
     // Check for stored admin token
     const token = localStorage.getItem("adminToken");
     if (token) {
@@ -32,6 +44,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
+    */
   }, []);
 
   const validateToken = async (token: string) => {

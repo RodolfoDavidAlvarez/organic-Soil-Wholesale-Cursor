@@ -18,10 +18,13 @@ import adminOrderRoutes from "./admin/orders.js";
 import simpleAuthRoutes from "./admin/simpleAuth.js";
 import adminUploadRoutes from "./admin/uploads.js";
 import adminNotificationRoutes from "./admin/notifications.js";
+import adminRepresentativeRoutes from "./admin/representatives.js";
+import adminRepresentativeContactsRoutes from "./admin/representativeContacts.js";
 import contactRoutes from "./contact.js";
 import quoteRequestRoutes from "./quoteRequests.js";
 import specialRequestRoutes from "./specialRequests.js";
 import leadRoutes from "./leads.js";
+import representativeRoutes from "./representatives.js";
 // import authRoutes from "./auth.js";
 import checkoutRoutes from "./checkout.js";
 import inventoryRoutes from "./inventory.js";
@@ -40,7 +43,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register route modules
-  app.use("/api/products", publicProductRoutes);
+  app.use("/api/public/products", publicProductRoutes);
   app.use("/api/pay-and-pickup", payAndPickupRoutes);
   app.use("/api/drive-through", payAndPickupRoutes);
   app.use("/api/drive-thru/admin", driveThruAdminRoutes);
@@ -51,6 +54,9 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/orders", adminOrderRoutes);
   app.use("/api/admin/uploads", adminUploadRoutes);
   app.use("/api/admin/notifications", adminNotificationRoutes);
+  app.use("/api/admin/representatives", adminRepresentativeRoutes);
+  app.use("/api/admin/representative-contacts", adminRepresentativeContactsRoutes);
+  app.use("/api/representatives", representativeRoutes);
   app.use("/api/contact", contactRoutes);
   app.use("/api/quote", quoteRequestRoutes);
   app.use("/api/special-request", specialRequestRoutes);

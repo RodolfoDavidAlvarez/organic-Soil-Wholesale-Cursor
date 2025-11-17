@@ -49,6 +49,7 @@ export const products = pgTable("products", {
   additionalImages: text("additional_images").array(),
   isCatalogEnabled: boolean("is_catalog_enabled").default(true),
   catalogDisplayOrder: integer("catalog_display_order").default(0),
+  productStatus: text("product_status").default("active"),
 });
 
 export const onboardingRequests = pgTable("onboarding_requests", {

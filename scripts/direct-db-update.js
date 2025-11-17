@@ -21,6 +21,7 @@ async function updateDatabase() {
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS pay_and_pickup_display_order INTEGER DEFAULT 0;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS catalog_display_order INTEGER DEFAULT 0;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS is_catalog_enabled BOOLEAN DEFAULT true;',
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS product_status TEXT DEFAULT 'active';",
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS is_pay_and_pickup_enabled BOOLEAN DEFAULT false;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS pay_and_pickup_description TEXT;',
       'ALTER TABLE products ADD COLUMN IF NOT EXISTS pay_and_pickup_hero_image TEXT;'
@@ -48,6 +49,7 @@ async function updateDatabase() {
         'catalog_display_order',
         'is_catalog_enabled',
         'is_pay_and_pickup_enabled',
+        'product_status',
         'pay_and_pickup_description',
         'pay_and_pickup_hero_image'
       )

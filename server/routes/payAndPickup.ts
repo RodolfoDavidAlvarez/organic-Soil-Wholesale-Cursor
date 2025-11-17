@@ -9,6 +9,126 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16",
 });
 
+const toArrayOfStrings = (input: unknown): string[] => {
+  if (Array.isArray(input)) {
+    return input
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((value): value is string => Boolean(value));
+  }
+
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value): value is string => Boolean(value));
+      }
+    } catch {
+      return input
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const parseMoneyCents = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+
+  if (typeof value === "string") {
+    const numeric = Number.parseFloat(value.replace(/[^0-9.]/g, ""));
+    if (Number.isFinite(numeric)) {
+      return Math.round(numeric * 100);
+    }
+  }
+
+  return null;
+};
+
+const normalizeSizePriceOptions = (input: unknown) => {
+  let source: unknown = input;
+
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  return source
+    .map((option) => {
+      if (!option || typeof option !== "object") {
+        return null;
+      }
+
+      const record = option as Record<string, unknown>;
+      const rawLabel = typeof record.label === "string" ? record.label : typeof record.name === "string" ? record.name : null;
+      if (!rawLabel) {
+        return null;
+      }
+      const label = rawLabel.trim();
+      if (!label) {
+        return null;
+      }
+
+      const keyCandidate =
+        typeof record.key === "string"
+          ? record.key
+          : label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+      const priceCents =
+        parseMoneyCents(record.price_cents) ??
+        parseMoneyCents(record.priceCents) ??
+        parseMoneyCents(record.price) ??
+        parseMoneyCents(record.amount) ??
+        parseMoneyCents(record.value);
+
+      const activeField =
+        record.is_active ??
+        record.isActive ??
+        record.active ??
+        record.enabled ??
+        record.visible;
+
+      const isActive =
+        typeof activeField === "boolean"
+          ? activeField
+          : typeof activeField === "number"
+            ? activeField !== 0
+            : typeof activeField === "string"
+              ? !["false", "0", "no", "off", "hidden"].includes(activeField.toLowerCase())
+              : true;
+
+      const displayOrder =
+        typeof record.display_order === "number"
+          ? record.display_order
+          : typeof record.displayOrder === "number"
+            ? record.displayOrder
+            : undefined;
+
+      return {
+        key: keyCandidate,
+        label,
+        price: priceCents !== null ? Number((priceCents / 100).toFixed(2)) : null,
+        priceCents,
+        isActive,
+        displayOrder,
+      };
+    })
+    .filter((option): option is { key: string; label: string; price: number | null; priceCents: number | null; isActive: boolean; displayOrder?: number } => Boolean(option))
+    .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
+};
+
 // Test endpoint to check database connection
 router.get("/test", async (req, res) => {
   try {
@@ -57,22 +177,30 @@ router.get("/menu", async (req, res) => {
   try {
     console.log("🔍 Fetching pay-and-pickup products...");
 
-    // Query products directly from the main products table
     const { data: products, error } = await supabase
       .from("products")
       .select(
         `
         id,
         name,
+        display_title,
+        category,
         description,
+        price,
         image_url,
+        texture_photo_url,
+        additional_images,
+        available_size_options,
+        size_price_options,
         is_pay_and_pickup_enabled,
         pay_and_pickup_display_order,
-        active
+        pay_and_pickup_description,
+        pay_and_pickup_hero_image,
+        pay_and_pickup_badge,
+        product_status
       `
       )
       .eq("is_pay_and_pickup_enabled", true)
-      .eq("active", true)
       .order("pay_and_pickup_display_order", { ascending: true, nullsFirst: true });
 
     if (error) {
@@ -81,21 +209,60 @@ router.get("/menu", async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch menu", details: error.message });
     }
 
-    console.log(`📊 Raw products from database:`, products?.length || 0);
-    console.log(`📊 First product:`, products?.[0]);
+    const normalizedProducts = (products || [])
+      .filter((product) => {
+        if (!product?.is_pay_and_pickup_enabled) {
+          return false;
+        }
+        const rawStatus =
+          typeof product.product_status === "string" ? product.product_status.toLowerCase().trim() : "";
+        return rawStatus === "" || rawStatus === "active";
+      })
+      .map((product) => {
+        const availableSizes = toArrayOfStrings(product.available_size_options);
+        const gallery = toArrayOfStrings(product.additional_images);
+        const sizePriceOptions = normalizeSizePriceOptions(product.size_price_options);
+        const heroImage =
+          typeof product.pay_and_pickup_hero_image === "string" && product.pay_and_pickup_hero_image.trim().length > 0
+            ? product.pay_and_pickup_hero_image
+            : product.texture_photo_url ||
+              product.image_url ||
+              gallery[0] ||
+              null;
 
-    // Transform the data to match the expected format
-    const menuProducts = (products || []).map((product) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      image_url: product.image_url,
-      pay_and_pickup_display_order: product.pay_and_pickup_display_order,
-      active: product.active,
-    }));
+        const normalizedDescription = product.pay_and_pickup_description ?? product.description ?? null;
+        return {
+          id: product.id,
+          name: product.name,
+          display_title: product.display_title,
+          displayTitle: product.display_title,
+          category: product.category,
+          description: product.description,
+          price: product.price,
+          pay_and_pickup_description: normalizedDescription,
+          payAndPickupDescription: normalizedDescription,
+          pay_and_pickup_display_order: product.pay_and_pickup_display_order ?? 0,
+          payAndPickupDisplayOrder: product.pay_and_pickup_display_order ?? 0,
+          pay_and_pickup_hero_image: heroImage,
+          payAndPickupHeroImage: heroImage,
+          pay_and_pickup_badge: product.pay_and_pickup_badge,
+          payAndPickupBadge: product.pay_and_pickup_badge,
+          available_size_options: availableSizes,
+          availableSizeOptions: availableSizes,
+          additional_images: gallery,
+          additionalImages: gallery,
+          size_price_options: sizePriceOptions,
+          sizePriceOptions: sizePriceOptions,
+        };
+      })
+      .sort(
+        (productA, productB) =>
+          (productA.pay_and_pickup_display_order ?? Number.MAX_SAFE_INTEGER) -
+          (productB.pay_and_pickup_display_order ?? Number.MAX_SAFE_INTEGER)
+      );
 
-    console.log(`📦 Found ${menuProducts.length} products for pay-and-pickup`);
-    res.json(menuProducts);
+    console.log(`📦 Found ${normalizedProducts.length} products for pay-and-pickup`);
+    res.json(normalizedProducts);
   } catch (error) {
     console.error("❌ Pay & Pickup menu error:", error);
     res.status(500).json({ error: "Failed to fetch menu" });
