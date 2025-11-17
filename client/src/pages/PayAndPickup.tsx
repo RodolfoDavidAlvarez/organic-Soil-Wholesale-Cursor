@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { getProductsData } from "../data/productData";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -184,6 +184,178 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const normalizeInventoryEntry = (entry: any): InventoryOption | null => {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const sizeOption = entry.size_option ?? entry.sizeOption;
+  if (typeof sizeOption !== "string" || !sizeOption.trim()) {
+    return null;
+  }
+
+  const priceValue =
+    typeof entry.price === "number"
+      ? entry.price
+      : typeof entry.price === "string"
+        ? Number(entry.price)
+        : 0;
+
+  const displayPrice =
+    typeof entry.pricing?.final_price === "number"
+      ? entry.pricing.final_price
+      : priceValue;
+
+  return {
+    sizeOption,
+    quantityAvailable:
+      Number(entry.quantity_available ?? entry.quantityAvailable ?? 0) || 0,
+    quantityReserved:
+      Number(entry.quantity_reserved ?? entry.quantityReserved ?? 0) || 0,
+    price: priceValue || 0,
+    displayPrice: displayPrice || priceValue || 0,
+  };
+};
+
+const normalizeSizePriceOption = (option: any): ProductSizePriceOption | null => {
+  if (!option || typeof option !== "object") {
+    return null;
+  }
+
+  const rawLabel = (option.label ?? option.name ?? "").toString().trim();
+  if (!rawLabel) {
+    return null;
+  }
+
+  const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
+  if (!keyCandidate) {
+    return null;
+  }
+
+  const activeValue =
+    option.is_active ?? option.isActive ?? option.active ?? option.enabled ?? option.visible;
+  const isActive = activeValue === undefined ? true : Boolean(activeValue);
+  if (!isActive) {
+    return null;
+  }
+
+  let priceCents: number | undefined;
+  if (typeof option.price_cents === "number" && Number.isFinite(option.price_cents)) {
+    priceCents = option.price_cents;
+  } else if (typeof option.priceCents === "number" && Number.isFinite(option.priceCents)) {
+    priceCents = option.priceCents;
+  } else if (typeof option.price === "number" && Number.isFinite(option.price)) {
+    priceCents = Math.round(option.price * 100);
+  }
+
+  const displayOrder =
+    typeof option.display_order === "number"
+      ? option.display_order
+      : typeof option.displayOrder === "number"
+        ? option.displayOrder
+        : undefined;
+
+  return {
+    key: keyCandidate,
+    label: rawLabel,
+    priceCents,
+    price: priceCents !== undefined ? priceCents / 100 : undefined,
+    image: typeof option.image === "string" ? option.image : undefined,
+    displayOrder,
+  };
+};
+
+const buildPayAndPickupProduct = (product: any): PayAndPickupProduct => {
+  const inventory = Array.isArray(product?.inventory)
+    ? (product.inventory as any[])
+        .map(normalizeInventoryEntry)
+        .filter((entry): entry is InventoryOption => Boolean(entry))
+    : [];
+
+  const sizePriceOptionsRaw = Array.isArray(product?.size_price_options)
+    ? product.size_price_options
+    : Array.isArray(product?.sizePriceOptions)
+      ? product.sizePriceOptions
+      : [];
+
+  const sizePriceOptions = (sizePriceOptionsRaw as any[])
+    .map(normalizeSizePriceOption)
+    .filter((option): option is ProductSizePriceOption => Boolean(option))
+    .sort(
+      (a, b) =>
+        (a.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+        (b.displayOrder ?? Number.MAX_SAFE_INTEGER),
+    );
+
+  const configuredSizeOptions =
+    sizePriceOptions.length > 0
+      ? sizePriceOptions.map((option) => option.label)
+      : Array.isArray(product?.available_size_options)
+        ? product.available_size_options
+        : Array.isArray(product?.availableSizeOptions)
+          ? product.availableSizeOptions
+          : [];
+
+  const uniqueConfiguredSizes = Array.from(
+    new Set((configuredSizeOptions ?? []).filter(Boolean)),
+  );
+
+  const fallbackSizes =
+    uniqueConfiguredSizes.length > 0
+      ? uniqueConfiguredSizes
+      : inventory.map((inv) => inv.sizeOption);
+
+  const imageUrl = product?.image_url ?? product?.imageUrl ?? undefined;
+  const texturePhotoUrl =
+    product?.texture_photo_url ?? product?.texturePhotoUrl ?? undefined;
+
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    imageUrl,
+    texturePhotoUrl,
+    displayTitle: product.display_title ?? product.displayTitle,
+    marketingTitle: product.marketing_title ?? product.marketingTitle,
+    ingredients: product.ingredients,
+    recommendedUses: product.recommended_uses ?? product.recommendedUses,
+    targetAudience: product.target_audience ?? product.targetAudience,
+    story: product.story,
+    usage: product.usage,
+    certifications: product.certifications,
+    features: product.features,
+    additionalImages: Array.isArray(product.additional_images)
+      ? product.additional_images
+      : Array.isArray(product.additionalImages)
+        ? product.additionalImages
+        : [],
+    sizeOptions:
+      (fallbackSizes.length > 0 ? fallbackSizes : ["9lb Bag", "25lb Bag", "Bulk (50lb)"]) as string[],
+    payAndPickup: {
+      badge: product.pay_and_pickup_badge ?? product.payAndPickupBadge,
+      description: product.pay_and_pickup_description ?? product.payAndPickupDescription,
+      heroImage:
+        product.pay_and_pickup_hero_image ??
+        product.payAndPickupHeroImage ??
+        texturePhotoUrl ??
+        imageUrl,
+    },
+    sizePriceOptions,
+    inventory,
+  };
+};
+
+const fetchPayAndPickupProducts = async (): Promise<PayAndPickupProduct[]> => {
+  const response = await fetch("/api/inventory/products/1?payAndPickup=true");
+  if (!response.ok) {
+    throw new Error("Failed to load Pay & Pickup products");
+  }
+  const data = await response.json();
+  const items = Array.isArray(data?.products) ? data.products : [];
+  return items.map(buildPayAndPickupProduct);
+};
+
 const PayAndPickup: React.FC = () => {
   const [location, setLocation] = useLocation();
   const normalizedLocation = normalizePath(location);
@@ -205,10 +377,20 @@ const PayAndPickup: React.FC = () => {
   const [paymentErrors, setPaymentErrors] = useState<Partial<PaymentInfo>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
-  const [products, setProducts] = useState<PayAndPickupProduct[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
+
+  const {
+    data: fetchedProducts = [],
+    isLoading: loadingProducts,
+    isError: productsError,
+    refetch: refetchProducts,
+  } = useQuery<PayAndPickupProduct[]>({
+    queryKey: ["payAndPickupProducts"],
+    queryFn: fetchPayAndPickupProducts,
+    staleTime: 60 * 1000,
+  });
+
+  const products = fetchedProducts;
 
   const findProductById = (productId: number) => products.find((product) => product.id === productId);
 
@@ -259,171 +441,7 @@ const PayAndPickup: React.FC = () => {
     }
   }, []);
 
-  // Fetch products from database
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoadingProducts(true);
-      let loaded = false;
-
-      try {
-        const response = await fetch("/api/inventory/products/1?payAndPickup=true");
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data?.products)) {
-            const mappedProducts: PayAndPickupProduct[] = data.products.map((product: any) => {
-              const inventory = (product.inventory || []).map((inv: any) => ({
-                sizeOption: inv.size_option,
-                quantityAvailable: inv.quantity_available,
-                quantityReserved: inv.quantity_reserved,
-                price: inv.price,
-                displayPrice: inv.pricing?.final_price ?? inv.price,
-              }));
-
-              const sizePriceOptionsRaw = Array.isArray(product.size_price_options)
-                ? product.size_price_options
-                : Array.isArray(product.sizePriceOptions)
-                  ? product.sizePriceOptions
-                  : [];
-
-              const sizePriceOptions: ProductSizePriceOption[] = sizePriceOptionsRaw
-                .map((option: any) => {
-                  if (!option) return null;
-
-                  const rawLabel = (option.label ?? option.name ?? "").toString().trim();
-                  const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
-                  if (!rawLabel || !keyCandidate) {
-                    return null;
-                  }
-
-                  const activeValue = option.is_active ?? option.isActive ?? option.active ?? option.enabled ?? option.visible;
-                  const isActive = activeValue === undefined ? true : Boolean(activeValue);
-                  if (!isActive) {
-                    return null;
-                  }
-
-                  let priceCents: number | undefined;
-                  if (typeof option.price_cents === "number" && Number.isFinite(option.price_cents)) {
-                    priceCents = option.price_cents;
-                  } else if (typeof option.priceCents === "number" && Number.isFinite(option.priceCents)) {
-                    priceCents = option.priceCents;
-                  } else if (typeof option.price === "number" && Number.isFinite(option.price)) {
-                    priceCents = Math.round(option.price * 100);
-                  }
-
-                  const displayOrder =
-                    typeof option.display_order === "number"
-                      ? option.display_order
-                      : typeof option.displayOrder === "number"
-                        ? option.displayOrder
-                        : undefined;
-
-                  return {
-                    key: keyCandidate,
-                    label: rawLabel,
-                    priceCents,
-                    price: priceCents !== undefined ? priceCents / 100 : undefined,
-                    image: typeof option.image === "string" ? option.image : undefined,
-                    displayOrder,
-                  } as ProductSizePriceOption;
-                })
-                .filter((option): option is ProductSizePriceOption => Boolean(option))
-                .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
-
-              const configuredSizeOptions =
-                sizePriceOptions.length > 0
-                  ? sizePriceOptions.map((option) => option.label)
-                  : Array.isArray(product.available_size_options)
-                    ? product.available_size_options
-                    : [];
-
-              const uniqueConfiguredSizes = Array.from(new Set(configuredSizeOptions.filter(Boolean)));
-
-              const fallbackSizes =
-                uniqueConfiguredSizes.length > 0 ? uniqueConfiguredSizes : inventory.map((inv: InventoryOption) => inv.sizeOption);
-
-              return {
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                category: product.category,
-                imageUrl: product.image_url,
-                texturePhotoUrl: product.texture_photo_url,
-                displayTitle: product.display_title,
-                marketingTitle: product.marketing_title,
-                ingredients: product.ingredients,
-                recommendedUses: product.recommended_uses,
-                targetAudience: product.target_audience,
-                story: product.story,
-                usage: product.usage,
-                certifications: product.certifications,
-                features: product.features,
-                additionalImages: product.additional_images || [],
-                sizeOptions: fallbackSizes.length > 0 ? fallbackSizes : ["9lb Bag", "25lb Bag", "Bulk (50lb)"],
-                payAndPickup: {
-                  badge: product.pay_and_pickup_badge,
-                  description: product.pay_and_pickup_description,
-                  heroImage: product.pay_and_pickup_hero_image,
-                },
-                sizePriceOptions,
-                inventory,
-              };
-            });
-
-            setProducts(mappedProducts);
-            loaded = true;
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching pay & pickup products:", error);
-      } finally {
-        if (!loaded) {
-          const fallbackProducts: PayAndPickupProduct[] = getProductsData().map((product, index) => {
-            const fallbackSizeOptions = (product as any).sizeOptions
-              ? (product as any).sizeOptions
-                  .split(",")
-                  .map((s: string) => s.trim())
-                  .filter(Boolean)
-              : ["9lb Bag", "25lb Bag", "Bulk (50lb)"];
-
-            const fallbackSizePriceOptions: ProductSizePriceOption[] = fallbackSizeOptions.map((label: string, order: number) => ({
-              key: slugify(label),
-              label,
-              displayOrder: order,
-            }));
-
-            return {
-              id: (product as any).id ?? index + 1,
-              name: product.name,
-              description: product.description,
-              category: product.category,
-              imageUrl: (product as any).imageUrl,
-              texturePhotoUrl: (product as any).texturePhotoUrl,
-              displayTitle: (product as any).displayTitle,
-              marketingTitle: (product as any).marketingTitle,
-              ingredients: (product as any).ingredients,
-              recommendedUses: (product as any).recommendedUses,
-              targetAudience: (product as any).targetAudience,
-              story: (product as any).story,
-              usage: (product as any).usage,
-              certifications: (product as any).certifications,
-              features: (product as any).features,
-              additionalImages: (product as any).additionalImages || [],
-              sizeOptions: fallbackSizeOptions,
-              payAndPickup: undefined,
-              sizePriceOptions: fallbackSizePriceOptions,
-              inventory: [],
-            };
-          });
-
-          setProducts(fallbackProducts);
-        }
-
-        setLoadingProducts(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  // Fetch products from database handled by useQuery
 
   // Ensure each product carries inventory and size info so the list can render without category filtering
   const productsWithInventory = useMemo(() => {
@@ -1060,7 +1078,17 @@ const PayAndPickup: React.FC = () => {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-4 py-4 max-w-6xl mx-auto">
               <h2 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4 lg:mb-6">Available Products</h2>
 
-              {loadingProducts ? (
+              {productsError ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                  <h3 className="text-lg font-semibold text-destructive">Unable to load Pay &amp; Pickup products</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Check your connection or verify products are enabled in the admin console, then try again.
+                  </p>
+                  <Button className="mt-4" variant="destructive" onClick={() => refetchProducts()}>
+                    Retry
+                  </Button>
+                </div>
+              ) : loadingProducts ? (
                 <div className="grid lg:grid-cols-2 gap-4 lg:gap-6">
                   {[...Array(4)].map((_, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 animate-pulse">
@@ -1074,6 +1102,10 @@ const PayAndPickup: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : productsWithInventory.length === 0 ? (
+                <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No products are currently enabled for Pay &amp; Pickup. Toggle the feature on within the admin product editor to populate this list.
                 </div>
               ) : (
                 <div className="grid lg:grid-cols-2 gap-4 lg:gap-6">
