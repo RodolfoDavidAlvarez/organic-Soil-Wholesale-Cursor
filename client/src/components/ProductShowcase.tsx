@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Edit } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { generateProductSlug } from "@/utils/generateSlug";
 
 // Default placeholder image for products that don't have images
@@ -50,6 +49,8 @@ interface Product {
     name: string;
     price: number;
   }>;
+  slug?: string;
+  catalogDisplayOrder?: number;
 }
 
 interface ProductShowcaseProps {
@@ -57,6 +58,7 @@ interface ProductShowcaseProps {
   loading?: boolean;
   onProductSelect?: (product: Product) => void;
   initialCategory?: string;
+  categories?: Array<{ value: string; label: string }>;
 }
 
 // Helper function to get the display name for products (copied from Home/ProductDetail)
@@ -64,34 +66,50 @@ const getProductDisplayName = (product: Product): string => {
   return product.displayTitle || product.productType || product.name;
 };
 
-export default function ProductShowcase({ products, loading = false, onProductSelect, initialCategory = "all" }: ProductShowcaseProps) {
-  const { admin } = useAdminAuth();
+export default function ProductShowcase({
+  products,
+  loading = false,
+  onProductSelect,
+  initialCategory = "all",
+  categories,
+}: ProductShowcaseProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [, navigate] = useLocation();
-  const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
-  const [localProducts, setLocalProducts] = useState(products);
-  const [isEditMode, setIsEditMode] = useState(false);
 
   // Update selected category when initialCategory changes
   useEffect(() => {
     setSelectedCategory(initialCategory);
   }, [initialCategory]);
 
-  // Update local products when prop changes
-  useEffect(() => {
-    setLocalProducts(products);
-  }, [products]);
+  const categoryOptions =
+    categories && categories.length > 0 ? categories : PRODUCT_CATEGORIES;
 
   // Filter products based on search term and category
-  const filteredProducts = localProducts.filter(
-    (product) =>
-      (selectedCategory === "all" || product.category === selectedCategory) &&
-      (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const normalizedCategory = selectedCategory.toLowerCase();
 
+    return products.filter((product) => {
+      const productCategory = product.category?.toLowerCase() ?? "";
+      const matchesCategory =
+        normalizedCategory === "all" || productCategory === normalizedCategory;
+      if (!matchesCategory) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const description = product.description?.toLowerCase() ?? "";
+      return (
+        product.name.toLowerCase().includes(normalizedSearch) ||
+        description.includes(normalizedSearch) ||
+        productCategory.includes(normalizedSearch)
+      );
+    });
+  }, [products, searchTerm, selectedCategory]);
 
   // Handle product click
   const handleProductClick = (product: Product) => {
@@ -99,10 +117,11 @@ export default function ProductShowcase({ products, loading = false, onProductSe
       onProductSelect(product);
     } else {
       // Generate slug from product type or name
-      const slug = generateProductSlug(product.productType, product.name);
-      
+      const slug =
+        product.slug || generateProductSlug(product.productType ?? undefined, product.name);
+
       // Route mulch products to the MulchDetail page
-      if (product.category === "Mulch") {
+      if ((product.category || "").toLowerCase() === "mulch") {
         navigate(`/products/mulch/${slug || product.id}`);
       } else {
         navigate(`/products/${slug || product.id}`);
@@ -140,20 +159,6 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Edit Mode Toggle - Admin Only */}
-      {admin && (
-        <div className="flex justify-end mb-4">
-          <Button
-            variant={isEditMode ? "default" : "outline"}
-            onClick={() => setIsEditMode(!isEditMode)}
-            className="gap-2"
-          >
-            <Edit className="h-4 w-4" />
-            {isEditMode ? "Exit Edit Mode" : "Edit Products"}
-          </Button>
-        </div>
-      )}
-
       {/* Search and Filter Section */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="flex-1">
@@ -174,7 +179,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              {PRODUCT_CATEGORIES.map((category) => (
+              {categoryOptions.map((category) => (
                 <SelectItem key={category.value} value={category.value}>
                   {category.label}
                 </SelectItem>
@@ -211,33 +216,15 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               key={product.id}
               className="overflow-hidden transition-all duration-300 border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group relative"
             >
-              {/* Edit button overlay - Admin Only */}
-              {isEditMode && admin && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/products/${product.id}/edit`);
-                  }}
-                  className="absolute top-2 right-2 z-30 gap-1"
-                >
-                  <Edit className="h-3 w-3" />
-                  Edit
-                </Button>
-              )}
-              
               <div 
                 className="relative aspect-[4/3] overflow-hidden rounded-t-2xl cursor-pointer"
-                onClick={() => !isEditMode && handleProductClick(product)}
+                onClick={() => handleProductClick(product)}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                  {!isEditMode && (
-                    <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                      View Details
-                    </div>
-                  )}
+                  <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
+                    View Details
+                  </div>
                 </div>
                 <OptimizedImage
                   src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
@@ -278,7 +265,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                 <div className="mt-auto pt-2">
                   <Button
                     className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                    onClick={() => !isEditMode && handleProductClick(product)}
+                    onClick={() => handleProductClick(product)}
                   >
                     View Details
                   </Button>

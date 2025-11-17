@@ -1,1089 +1,518 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link, useRoute, useLocation } from "wouter";
+import { useMemo } from "react";
+import { useRoute, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, CheckCircle, X, ChevronLeft, ChevronRight, ZoomIn, Package, Truck, Shield, PlayCircle, Edit2, Save, XCircle } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { getProductsData } from "@/data/productData";
-import { SIZE_CATALOG, SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { generateProductSlug } from "@/utils/generateSlug";
+import { ArrowLeft, Package, Leaf, ShoppingBag, Truck, Sparkles } from "lucide-react";
+
+type ApiProduct = {
+  id: number;
+  name: string;
+  displayTitle?: string | null;
+  display_title?: string | null;
+  productType?: string | null;
+  product_type?: string | null;
+  category?: string | null;
+  description?: string | null;
+  marketingTitle?: string | null;
+  marketing_title?: string | null;
+  marketingNote?: string | null;
+  marketing_note?: string | null;
+  story?: string | null;
+  usage?: string | null;
+  features?: string | null;
+  targetAudience?: string | null;
+  target_audience?: string | null;
+  recommendedUses?: string | null;
+  recommended_uses?: string | null;
+  ingredients?: string | null;
+  price?: number | string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  texturePhotoUrl?: string | null;
+  texture_photo_url?: string | null;
+  additionalImages?: string[] | null;
+  additional_images?: string[] | null;
+  sizePriceOptions?: unknown;
+  size_price_options?: unknown;
+  availableSizeOptions?: string[] | null;
+  available_size_options?: string[] | null;
+  payAndPickup?: {
+    isEnabled?: boolean;
+    badge?: string | null;
+    description?: string | null;
+    heroImage?: string | null;
+  };
+  slug?: string | null;
+};
+
+type SizeOption = {
+  key: string;
+  label: string;
+  price?: number;
+};
+
+type NormalizedProduct = {
+  id: number;
+  slug: string;
+  name: string;
+  displayTitle: string;
+  category: string;
+  productType?: string;
+  description: string;
+  marketingTitle?: string;
+  marketingNote?: string;
+  story?: string;
+  usage?: string;
+  features?: string;
+  targetAudience?: string;
+  recommendedUses?: string;
+  ingredients?: string;
+  price?: number;
+  imageUrl?: string;
+  texturePhotoUrl?: string;
+  additionalImages: string[];
+  sizeOptions: SizeOption[];
+  availableSizes: string[];
+  payAndPickup?: {
+    isEnabled: boolean;
+    badge?: string;
+    description?: string;
+    heroImage?: string;
+  };
+};
 
 const slugify = (value: string) =>
   value
     .toLowerCase()
+    .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const ProductDetail = () => {
-  const { admin, loading: adminLoading } = useAdminAuth();
-  const [, params] = useRoute("/products/:slug");
-  const [, navigate] = useLocation();
-  const slug = params && (params as any).slug ? (params as any).slug : undefined;
-  const [product, setProduct] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [currentSizeIndex, setCurrentSizeIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  
-  // Inline editing state
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!admin) {
-      setEditingField(null);
-      setEditValues({});
-    }
-  }, [admin]);
-
-  const sizeCategories = useMemo(() => {
-    const defaultCategories = SIZE_CATALOG.map((entry) => ({
-      key: entry.key,
-      name: entry.label,
-      description: entry.description,
-      image: getOptimizedImageSrc(entry.image),
-      price: undefined as number | undefined,
-      displayOrder: SIZE_CATALOG.findIndex((catalogEntry) => catalogEntry.key === entry.key),
-    }));
-
-    if (!product) {
-      return defaultCategories;
-    }
-
-    const rawSizePriceOptions = Array.isArray(product.sizePriceOptions)
-      ? product.sizePriceOptions
-      : Array.isArray(product.size_price_options)
-        ? product.size_price_options
-        : [];
-
-    const parsedOptions = rawSizePriceOptions
-      .map((option: any) => {
-        if (!option) return null;
-
-        const rawLabel = (option.label ?? option.name ?? option.title ?? "").toString().trim();
-        const keyCandidate = (option.key ?? slugify(rawLabel)).toString();
-        if (!rawLabel || !keyCandidate) {
-          return null;
-        }
-
-        const activeValue =
-          option.isActive ?? option.is_active ?? option.active ?? option.enabled ?? option.visible;
-        const isActive = activeValue === undefined ? true : Boolean(activeValue);
-        if (!isActive) {
-          return null;
-        }
-
-        let priceCents: number | null = null;
-        if (typeof option.priceCents === "number" && Number.isFinite(option.priceCents)) {
-          priceCents = option.priceCents;
-        } else if (typeof option.price_cents === "number" && Number.isFinite(option.price_cents)) {
-          priceCents = option.price_cents;
-        } else if (typeof option.price === "number" && Number.isFinite(option.price)) {
-          priceCents = Math.round(option.price * 100);
-        }
-
-        const displayOrder =
-          typeof option.displayOrder === "number"
-            ? option.displayOrder
-            : typeof option.display_order === "number"
-              ? option.display_order
-              : undefined;
-
-        const catalogEntry = Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, keyCandidate)
-          ? SIZE_CATALOG_BY_KEY[keyCandidate as keyof typeof SIZE_CATALOG_BY_KEY]
-          : undefined;
-
-        const imageSource =
-          typeof option.image === "string" && option.image.trim().length > 0
-            ? option.image
-            : catalogEntry?.image;
-
-        const descriptionText =
-          typeof option.description === "string" && option.description.trim().length > 0
-            ? option.description
-            : catalogEntry?.description ?? "";
-
-        return {
-          key: keyCandidate,
-          name: rawLabel,
-          description: descriptionText,
-          image: getOptimizedImageSrc(imageSource ?? defaultCategories[0]?.image ?? ""),
-          price: priceCents !== null ? priceCents / 100 : undefined,
-          displayOrder: displayOrder ?? Number.MAX_SAFE_INTEGER,
-        };
-      })
-      .filter((option): option is { key: string; name: string; description: string; image: string; price?: number; displayOrder: number } => Boolean(option))
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-
-    if (parsedOptions.length > 0) {
-      return parsedOptions;
-    }
-
-    const fallbackSizesRaw = Array.isArray(product.availableSizeOptions)
-      ? product.availableSizeOptions
-      : Array.isArray(product.available_size_options)
-        ? product.available_size_options
-        : Array.isArray(product.sizeOptions)
-          ? product.sizeOptions
-          : typeof product.sizeOptions === "string"
-            ? product.sizeOptions.split(",").map((value: string) => value.trim()).filter(Boolean)
-            : [];
-
-    if (fallbackSizesRaw.length === 0) {
-      return defaultCategories;
-    }
-
-    return fallbackSizesRaw.map((label: string, index: number) => {
-      const key = slugify(label);
-      const catalogEntry = Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, key)
-        ? SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY]
-        : undefined;
-
-      return {
-        key,
-        name: label,
-        description: catalogEntry?.description ?? "",
-        image: getOptimizedImageSrc(catalogEntry?.image ?? defaultCategories[index % defaultCategories.length]?.image ?? ""),
-        price: undefined,
-        displayOrder: index,
-      };
-    });
-  }, [product]);
-
-  // Add history handling
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  useEffect(() => {
-    const loadProductData = async () => {
-      if (!slug) {
-        setError(true);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        let fetchedProduct: any | null = null;
-        const numericId = Number(slug);
-        const isNumericSlug = !Number.isNaN(numericId);
-        
-        // Try the new simple products API first (supports both slugs and IDs)
-        try {
-          const response = await fetch(`/api/simple/products/${slug}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data) {
-              fetchedProduct = data;
-            }
-          }
-        } catch (error) {
-          console.warn('Simple products API not available, falling back to public API');
-          
-          // Try public products API as fallback
-          try {
-            const response = await fetch(`/api/public/products/${slug}`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data) {
-                fetchedProduct = data;
-              }
-            }
-          } catch (error) {
-            console.warn('Public products API not available, falling back to legacy API');
-          }
-        }
-
-        // Fallback to legacy API if public API fails and slug is numeric
-        if (!fetchedProduct) {
-          if (isNumericSlug) {
-            const response = await fetch(`/api/products/${numericId}`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data) {
-                fetchedProduct = data;
-              }
-            }
-          }
-        }
-
-        if (!fetchedProduct) {
-          const allProducts = getProductsData();
-
-          if (isNumericSlug) {
-            fetchedProduct = allProducts.find((p: any) => Number(p.id) === numericId) || null;
-          }
-
-          if (!fetchedProduct) {
-            const normalizedSlug = slugify(String(slug));
-            fetchedProduct =
-              allProducts.find((p: any) => {
-                const slugCandidates = [
-                  p.slug,
-                  p.slug?.current,
-                  p.productSlug,
-                  p.product_slug,
-                  p.productType,
-                  p.product_type,
-                  p.displayTitle,
-                  p.display_title,
-                  p.name,
-                ]
-                  .filter(Boolean)
-                  .map((value) => slugify(String(value)));
-
-                return slugCandidates.includes(normalizedSlug);
-              }) || null;
-          }
-        }
-
-        if (fetchedProduct) {
-          setProduct(fetchedProduct);
-          setError(false);
-        } else {
-          setError(true);
-        }
-      } catch (err) {
-        console.error("Failed to load product", err);
-        setError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProductData();
-  }, [slug]);
-
-  useEffect(() => {
-    if (error) {
-      navigate("/products");
-    }
-  }, [error, navigate]);
-
-  // Auto-play carousel
-  useEffect(() => {
-    if (!isAutoPlaying) return;
-    
-    const interval = setInterval(() => {
-      setCurrentSizeIndex((prev) => {
-        const maxIndex = window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2;
-        if (prev >= maxIndex) {
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 3000); // Change every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, sizeCategories.length]);
-
-  // Inline editing functions
-  const handleEditStart = (field: string, currentValue: string) => {
-    setEditingField(field);
-    setEditValues({ ...editValues, [field]: currentValue || '' });
-  };
-
-  const handleEditCancel = () => {
-    setEditingField(null);
-    setEditValues({});
-  };
-
-  const handleEditSave = async (field: string) => {
-    if (!product || !admin) return;
-    const nextValue = editValues[field];
-    if (nextValue === undefined) return;
-
-    const token = localStorage.getItem("adminToken");
-    if (!token) {
-      console.error("Admin token missing; unable to save product updates.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/admin/products/${product.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          [field]: nextValue
-        }),
-      });
-
-      if (response.ok) {
-        setProduct({ ...product, [field]: nextValue });
-        setEditingField(null);
-        setEditValues({});
-      } else {
-        console.error('Failed to save product update');
-      }
-    } catch (error) {
-      console.error('Error saving product update:', error);
-    }
-  };
-
-  // Inline editing component
-  const InlineEditField = ({ 
-    field, 
-    value, 
-    multiline = false, 
-    className = "", 
-    placeholder = "",
-    children 
-  }: { 
-    field: string;
-    value: string;
-    multiline?: boolean;
-    className?: string;
-    placeholder?: string;
-    children: React.ReactNode;
-  }) => {
-    if (editingField === field) {
-      return (
-        <div className="group relative">
-          {multiline ? (
-            <Textarea
-              value={editValues[field] || ''}
-              onChange={(e) => setEditValues({ ...editValues, [field]: e.target.value })}
-              className={`${className} border-primary`}
-              placeholder={placeholder}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') handleEditCancel();
-              }}
-              autoFocus
-            />
-          ) : (
-            <Input
-              value={editValues[field] || ''}
-              onChange={(e) => setEditValues({ ...editValues, [field]: e.target.value })}
-              className={`${className} border-primary`}
-              placeholder={placeholder}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleEditSave(field);
-                if (e.key === 'Escape') handleEditCancel();
-              }}
-              autoFocus
-            />
-          )}
-          <div className="flex gap-1 mt-1">
-            <Button size="sm" onClick={() => handleEditSave(field)} className="h-7 px-2">
-              <Save className="h-3 w-3 mr-1" />
-              Save
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleEditCancel} className="h-7 px-2">
-              <XCircle className="h-3 w-3 mr-1" />
-              Cancel
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    if (admin) {
-      return (
-        <div className="group relative">
-          {children}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-            onClick={() => handleEditStart(field, value)}
-            disabled={adminLoading}
-          >
-            <Edit2 className="h-3 w-3" />
-          </Button>
-        </div>
-      );
-    }
-
-    return <>{children}</>;
-  };
-
-  const allImages: string[] = Array.from(
-    new Set(
-      [
-        ...(product?.texturePhotoUrl ? [product.texturePhotoUrl] : []),
-        ...((product?.additionalImages || []).filter((img) => img && img !== product?.texturePhotoUrl)),
-        ...(product?.imageUrl ? [product.imageUrl] : []),
-      ]
-        .map((img) => getOptimizedImageSrc(img))
-        .filter((img): img is string => Boolean(img))
-    )
-  );
-
-  // Add video as the last item if it exists
-  const hasVideo = product?.productVideoUrl;
-  const allMedia = hasVideo ? [...allImages, 'video'] : allImages;
-
-  // Navigation handlers
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % allMedia.length);
-  };
-  const handlePreviousImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
-  };
-  const handleThumbnailClick = (index: number) => {
-    setCurrentImageIndex(index);
-  };
-
-  // Get YouTube video ID from URL
-  const getYouTubeVideoId = (url: string) => {
-    const match = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
-    return match ? match[1] : null;
-  };
-
-  // Get YouTube thumbnail URL
-  const getYouTubeThumbnail = (videoId: string) => {
-    return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-  };
-
-  if (error) {
-    return null;
+const parseSizeOptions = (input: unknown): SizeOption[] => {
+  if (!Array.isArray(input)) {
+    return [];
   }
 
-  // Prepare SEO data when product is loaded
-  const getProductSchema = (product) => {
-    if (!product) return null;
-    
-    return {
-      "@context": "https://schema.org",
-      "@type": "Product",
-      "name": product.productType || product.name,
-      "description": product.description,
-      "category": product.category,
-      "brand": {
-        "@type": "Brand",
-        "name": "Organic Soil Wholesale"
-      },
-      "image": allImages[0] || "",
-      "offers": {
-        "@type": "Offer",
-        "availability": "https://schema.org/InStock",
-        "price": "0",
-        "priceCurrency": "USD",
-        "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-        "url": `https://organicsoilwholesale.com/products/${slug}`,
-        "seller": {
-          "@type": "Organization",
-          "name": "Organic Soil Wholesale"
-        },
-        "businessFunction": "http://purl.org/goodrelations/v1#Sell"
+  return input
+    .map((option: any) => {
+      if (!option) return null;
+      const label = (option.label ?? option.name ?? option.title ?? "").toString().trim();
+      if (!label) return null;
+      const price =
+        typeof option.price === "number"
+          ? option.price
+          : typeof option.priceCents === "number"
+            ? option.priceCents / 100
+            : typeof option.price_cents === "number"
+              ? option.price_cents / 100
+              : undefined;
+      return {
+        key: option.key ?? slugify(label),
+        label,
+        price,
+      };
+    })
+    .filter((option): option is SizeOption => Boolean(option));
+};
+
+const normalizeProduct = (record: ApiProduct): NormalizedProduct => {
+  const additionalImages = Array.isArray(record.additionalImages)
+    ? record.additionalImages
+    : Array.isArray(record.additional_images)
+      ? record.additional_images
+      : [];
+
+  const sizeOptions =
+    parseSizeOptions(record.sizePriceOptions ?? record.size_price_options) ?? [];
+  const availableSizes =
+    record.availableSizeOptions ??
+    record.available_size_options ??
+    [];
+
+  const payAndPickup = record.payAndPickup
+    ? {
+        isEnabled: Boolean(record.payAndPickup?.isEnabled),
+        badge: record.payAndPickup?.badge ?? undefined,
+        description: record.payAndPickup?.description ?? undefined,
+        heroImage: record.payAndPickup?.heroImage ?? undefined,
       }
-    };
+    : undefined;
+
+  return {
+    id: record.id,
+    slug:
+      record.slug ??
+      generateProductSlug(record.product_type || record.productType, record.name) ??
+      record.id.toString(),
+    name: record.name ?? "Product",
+    displayTitle:
+      record.displayTitle ?? record.display_title ?? record.productType ?? record.product_type ?? record.name ?? "Product",
+    category: record.category ?? "Uncategorized",
+    productType: record.productType ?? record.product_type ?? undefined,
+    description: record.description ?? "No description provided.",
+    marketingTitle: record.marketingTitle ?? record.marketing_title ?? undefined,
+    marketingNote: record.marketingNote ?? record.marketing_note ?? undefined,
+    story: record.story ?? undefined,
+    usage: record.usage ?? undefined,
+    features: record.features ?? undefined,
+    targetAudience: record.targetAudience ?? record.target_audience ?? undefined,
+    recommendedUses: record.recommendedUses ?? record.recommended_uses ?? undefined,
+    ingredients: record.ingredients ?? undefined,
+    price:
+      typeof record.price === "number"
+        ? record.price
+        : typeof record.price === "string"
+          ? Number(record.price)
+          : undefined,
+    imageUrl: record.imageUrl ?? record.image_url ?? undefined,
+    texturePhotoUrl: record.texturePhotoUrl ?? record.texture_photo_url ?? undefined,
+    additionalImages,
+    sizeOptions,
+    availableSizes,
+    payAndPickup,
   };
+};
+
+const fetchProduct = async (identifier: string): Promise<NormalizedProduct> => {
+  const response = await fetch(`/api/public/products/${identifier}`);
+  if (!response.ok) {
+    throw new Error("Product not found");
+  }
+  const body = await response.json();
+  return normalizeProduct(body);
+};
+
+const parseList = (value?: string, delimiterPattern = /[|,]/) =>
+  value
+    ? value
+        .split(delimiterPattern)
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : [];
+
+const formatCurrency = (value?: number) =>
+  typeof value === "number"
+    ? value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
+    : undefined;
+
+const DEFAULT_IMAGE = "/potting-soil.jpg";
+
+const ProductDetail = () => {
+  const [, params] = useRoute<{ slug: string }>("/products/:slug");
+  const slug = params?.slug ?? "";
+
+  const {
+    data: product,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["publicProduct", slug],
+    queryFn: () => fetchProduct(slug),
+    enabled: Boolean(slug),
+  });
+
+  const galleryImages = useMemo(() => {
+    if (!product) {
+      return [];
+    }
+    const collection = [
+      product.texturePhotoUrl,
+      product.imageUrl,
+      product.payAndPickup?.heroImage,
+      ...product.additionalImages,
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(collection));
+  }, [product]);
+
+  const heroImage = galleryImages[0] ?? DEFAULT_IMAGE;
+
+  const featureList = useMemo(() => parseList(product?.features, /\|/), [product]);
+  const recommendedUses = useMemo(() => parseList(product?.recommendedUses), [product]);
+  const targetAudiences = useMemo(() => parseList(product?.targetAudience), [product]);
+  const ingredients = useMemo(() => parseList(product?.ingredients), [product]);
+
+  const sizesToDisplay = useMemo(() => {
+    if (product?.sizeOptions?.length) {
+      return product.sizeOptions;
+    }
+    return (product?.availableSizes ?? []).map((label) => ({
+      key: slugify(label),
+      label,
+    }));
+  }, [product]);
+
+  const priceLabel = formatCurrency(product?.price);
 
   return (
-    <section className="py-4 sm:py-16 pb-20 sm:pb-16 bg-white">
-      {product && (
-        <SEO 
-          title={product.marketingTitle || product.displayTitle || product.productType || product.name}
-          description={`Wholesale ${product.displayTitle || product.productType || product.name} for commercial applications. ${product.description || ''}`}
-          keywords={product.seoKeywords || `wholesale ${product.name.toLowerCase()}, bulk ${product.name.toLowerCase()}, commercial ${product.name.toLowerCase()}, ${product.category.toLowerCase()} wholesale, organic soil wholesale, ${product.ingredients ? product.ingredients.toLowerCase() + ',' : ''} bulk soil delivery, commercial soil supplier`}
-          canonical={`https://organicsoilwholesale.com/products/${slug}`}
-          ogImage={allImages[0] || ''}
-          structuredData={getProductSchema(product)}
-        />
-      )}
-      <div className="container mx-auto px-4">
-        {/* Mobile-optimized back button and admin edit */}
-        <div className="mb-4 sm:mb-8 flex items-center justify-between">
-          <div onClick={handleBack} className="text-primary hover:text-primary-light flex items-center cursor-pointer p-2 -ml-2">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </div>
-          {admin && product && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/products/${product.id}/edit`)}
-              className="gap-2"
-            >
-              <Edit2 className="h-4 w-4" />
-              Advanced Edit
+    <>
+      <SEO
+        title={product ? `${product.displayTitle} — Soil Seed & Water` : "Product Detail"}
+        description={product?.description ?? "Detailed information about this Soil Seed & Water product."}
+        canonical={`https://organicsoilwholesale.com/products/${product?.slug ?? slug}`}
+        keywords={`${product?.category ?? ""}, ${product?.productType ?? ""}, Soil Seed and Water`}
+      />
+
+      <section className="bg-gradient-to-br from-muted/20 via-white to-white py-6 sm:py-10">
+        <div className="container mx-auto px-4">
+          <div className="mb-6">
+            <Button variant="ghost" className="text-muted-foreground" asChild>
+              <Link href="/products">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Products
+              </Link>
             </Button>
-          )}
-        </div>
-        {isLoading ? (
-          <div className="flex flex-col lg:flex-row">
-            {/* Product Images Skeleton */}
-            <div className="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
-              <div className="bg-neutral-50 p-4 rounded-xl">
-                <Skeleton className="w-full h-[400px] rounded-lg mb-4" />
-                <div className="grid grid-cols-4 gap-2">
-                  {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 rounded-md" />
-                  ))}
-                </div>
-              </div>
-            </div>
-            {/* Product Information Skeleton */}
-            <div className="lg:w-1/2">
-              <Skeleton className="h-6 w-32 mb-4" />
-              <Skeleton className="h-10 w-3/4 mb-2" />
-              <Skeleton className="h-6 w-1/2 mb-6" />
-              <Skeleton className="h-6 w-40 mb-3" />
-              <div className="flex flex-wrap gap-3 mb-8">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-24" />
-                ))}
-              </div>
-            </div>
           </div>
-        ) : product ? (
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-12">
-            {/* Product Images - Mobile Optimized */}
-            <div className="w-full lg:w-1/2">
-              <div className="sticky top-24">
-                {/* Main Image Display - Mobile optimized */}
-                <div className="relative group bg-white rounded-lg sm:rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
-                  <div 
-                    className="relative aspect-[4/3] sm:aspect-square cursor-zoom-in overflow-hidden"
-                    onClick={() => setIsGalleryOpen(true)}
-                  >
-                    {allMedia[currentImageIndex] === 'video' && product.productVideoUrl ? (
-                      <div className="w-full h-full relative bg-black">
-                        <iframe
-                          src={`https://www.youtube.com/embed/${getYouTubeVideoId(product.productVideoUrl)}?rel=0`}
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                        {product.productVideoTitle && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pointer-events-none">
-                            <p className="text-white text-sm font-medium">{product.productVideoTitle}</p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <OptimizedImage
-                          src={allImages[currentImageIndex]}
-                          alt={product.name}
-                          className="w-full h-full object-contain p-4 sm:p-8 transition-transform duration-500 group-hover:scale-105"
-                          priority
-                          sizes="(max-width: 1024px) 100vw, 50vw"
-                        />
-                        {/* Zoom Indicator */}
-                        <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
-                          <ZoomIn className="h-4 w-4" />
-                          <span className="text-sm">Click to zoom</span>
+
+          {isLoading && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Skeleton className="h-[420px] rounded-3xl" />
+              <Skeleton className="h-[420px] rounded-3xl" />
+            </div>
+          )}
+
+          {!isLoading && error && (
+            <Card className="rounded-3xl border-destructive/30 bg-destructive/5 p-8 text-center">
+              <h2 className="text-2xl font-semibold text-destructive">Product not available</h2>
+              <p className="mt-2 text-muted-foreground">
+                We couldn&apos;t find that product in the catalog. It may have been archived or renamed in
+                the admin dashboard.
+              </p>
+              <div className="mt-6">
+                <Button asChild>
+                  <Link href="/products">Return to catalog</Link>
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {!isLoading && product && (
+            <div className="space-y-12">
+              <div className="grid gap-10 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="relative overflow-hidden rounded-3xl border bg-white shadow-xl">
+                    <OptimizedImage
+                      src={heroImage}
+                      alt={product.displayTitle}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute left-6 top-6 flex flex-wrap gap-2">
+                      <Badge variant="secondary">{product.category}</Badge>
+                      {product.payAndPickup?.isEnabled && (
+                        <Badge className="bg-primary text-white">
+                          {product.payAndPickup?.badge ?? "Pay & Pickup Ready"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {galleryImages.length > 1 && (
+                    <div className="grid grid-cols-4 gap-3">
+                      {galleryImages.slice(0, 4).map((image, index) => (
+                        <div key={image} className="overflow-hidden rounded-2xl border bg-white">
+                          <OptimizedImage src={image} alt={`${product.displayTitle} ${index + 1}`} className="h-24 w-full object-cover" />
                         </div>
-                      </>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Product Overview</p>
+                    <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl">
+                      {product.displayTitle}
+                    </h1>
+                    {product.marketingTitle && (
+                      <p className="text-lg text-muted-foreground">{product.marketingTitle}</p>
                     )}
                   </div>
-                  
-                  {/* Navigation Arrows for Main Image */}
-                  {allMedia.length > 1 && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={handlePreviousImage}
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={handleNextImage}
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </Button>
-                    </>
+                  <p className="text-base leading-relaxed text-muted-foreground">{product.description}</p>
+                  {product.marketingNote && (
+                    <div className="rounded-2xl bg-muted/40 p-4 text-sm text-muted-foreground">
+                      {product.marketingNote}
+                    </div>
                   )}
-                </div>
-                
-                {/* Thumbnail Gallery - Mobile optimized */}
-                {allMedia.length > 1 && (
-                  <div className="mt-3 sm:mt-4 grid grid-cols-4 gap-1.5 sm:gap-3">
-                    {allMedia.map((media, index) => (
-                      <button
-                        key={index}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 min-h-[60px] sm:min-h-0 ${
-                          currentImageIndex === index 
-                            ? "border-primary shadow-md" 
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
-                        onClick={() => handleThumbnailClick(index)}
-                      >
-                        {media === 'video' && product.productVideoUrl ? (
-                          <div className="relative w-full h-full group bg-black rounded overflow-hidden">
-                            <OptimizedImage
-                              src={getYouTubeThumbnail(getYouTubeVideoId(product.productVideoUrl) || '')}
-                              alt="Product Video"
-                              className="w-full h-full object-contain"
-                            />
-                            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center group-hover:bg-black/50 transition-colors">
-                              <PlayCircle className="h-6 w-6 sm:h-8 sm:w-8 text-white mb-1 drop-shadow-lg" />
-                              <span className="text-[10px] sm:text-xs text-white font-medium drop-shadow-md">Watch Video</span>
-                            </div>
-                          </div>
-                        ) : media === 'video' ? (
-                          <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
-                            <PlayCircle className="h-8 w-8 text-white" />
-                          </div>
-                        ) : (
-                          <>
-                            <OptimizedImage
-                              src={allImages[index]}
-                              alt={`${product.name} - View ${index + 1}`}
-                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-200"
-                            />
-                            {currentImageIndex === index && (
-                              <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
-                            )}
-                          </>
-                        )}
-                      </button>
-                    ))}
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Card className="rounded-2xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Price</p>
+                      <p className="mt-2 text-xl font-semibold">{priceLabel ?? "Contact for pricing"}</p>
+                      <p className="text-xs text-muted-foreground">Pricing synced from admin</p>
+                    </Card>
+                    <Card className="rounded-2xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Category</p>
+                      <p className="mt-2 text-xl font-semibold">{product.category}</p>
+                      <p className="text-xs text-muted-foreground">Used for catalog filtering</p>
+                    </Card>
+                    <Card className="rounded-2xl border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Audiences</p>
+                      <p className="mt-2 text-xl font-semibold">
+                        {targetAudiences.length ? targetAudiences.length : "Flexible"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Directly from product metadata</p>
+                    </Card>
                   </div>
-                )}
-              </div>
-            </div>
-            {/* Product Information - Mobile Optimized */}
-            <div className="w-full lg:w-1/2">
-              {/* Header Section - Mobile optimized */}
-              <div className="mb-4 sm:mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Badge variant="outline" className="text-primary border-primary px-3 py-1">
-                    {product.category}
-                  </Badge>
-                  {product.certifications && product.certifications.includes("OMRI") && (
-                    <Badge className="bg-green-100 text-green-800 border-green-200">
-                      OMRI Listed
-                    </Badge>
-                  )}
-                </div>
-                <InlineEditField 
-                  field="displayTitle" 
-                  value={product.displayTitle || product.productType || product.name}
-                  className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3"
-                  placeholder="Enter display title"
-                >
-                  <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">{product.displayTitle || product.productType || product.name}</h1>
-                </InlineEditField>
-                {product.name && product.name !== (product.displayTitle || product.productType) && (
-                  <InlineEditField 
-                    field="name" 
-                    value={product.name}
-                    className="text-lg text-neutral-500 mb-2"
-                    placeholder="Enter product name"
-                  >
-                    <p className="text-lg text-neutral-500 mb-2">{product.name}</p>
-                  </InlineEditField>
-                )}
-                <InlineEditField 
-                  field="description" 
-                  value={product.description}
-                  multiline={true}
-                  className="text-base sm:text-xl text-neutral-600 leading-relaxed"
-                  placeholder="Enter product description"
-                >
-                  <p className="text-base sm:text-xl text-neutral-600 leading-relaxed">{product.description}</p>
-                </InlineEditField>
-              </div>
-
-              {/* Key Benefits - Mobile optimized */}
-              <div className="bg-primary/5 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-                  <div>
-                    <Package className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xs sm:text-sm font-medium">Bulk Available</p>
-                  </div>
-                  <div>
-                    <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xs sm:text-sm font-medium">Fast Delivery</p>
-                  </div>
-                  <div>
-                    <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xs sm:text-sm font-medium">Quality Assured</p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
+                      <Link href="/order">
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        Start Order
+                      </Link>
+                    </Button>
+                    {product.payAndPickup?.isEnabled && (
+                      <Button variant="secondary" size="lg" asChild>
+                        <Link href="/pay-and-pickup">
+                          <Truck className="mr-2 h-4 w-4" />
+                          Pay &amp; Pickup Menu
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Available Sizes - Mobile optimized carousel */}
-              <div className="mb-6 sm:mb-8">
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Available Sizes</h3>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 sm:h-8 sm:w-8"
-                      onClick={() => {
-                        setIsAutoPlaying(false);
-                        setCurrentSizeIndex(Math.max(0, currentSizeIndex - 1));
-                      }}
-                      disabled={currentSizeIndex === 0}
-                    >
-                      <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 sm:h-8 sm:w-8"
-                      onClick={() => {
-                        setIsAutoPlaying(false);
-                        setCurrentSizeIndex(Math.min(window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2, currentSizeIndex + 1));
-                      }}
-                      disabled={currentSizeIndex >= (window.innerWidth < 640 ? sizeCategories.length - 1 : sizeCategories.length - 2)}
-                    >
-                      <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
-                    </Button>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="rounded-3xl border bg-white p-6">
+                  <div className="flex items-center gap-3">
+                    <Leaf className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Benefits</p>
+                      <h2 className="text-xl font-semibold">Features &amp; Soil Impact</h2>
+                    </div>
                   </div>
-                </div>
-                <div 
-                  className="relative overflow-hidden"
-                  onMouseEnter={() => setIsAutoPlaying(false)}
-                  onMouseLeave={() => setIsAutoPlaying(true)}
-                >
-                  <div 
-                    className="flex transition-transform duration-500 ease-in-out gap-3"
-                    style={{ transform: `translateX(-${currentSizeIndex * (window.innerWidth < 640 ? 85 : 50)}%)` }}
-                  >
-                    {sizeCategories.map((cat) => (
-                      <Card 
-                        key={cat.key || cat.name} 
-                        className="flex-shrink-0 w-[calc(85%-0.5rem)] sm:w-[calc(50%-0.5rem)] overflow-hidden hover:shadow-lg transition-shadow duration-300 border-neutral-200 cursor-pointer"
-                        onClick={() => {
-                          const optimizedUrl = getOptimizedImageSrc(cat.image);
-                          const img = new Image();
-                          img.src = optimizedUrl;
-                          const newWindow = window.open('', '_blank');
-                          if (newWindow) {
-                            newWindow.document.write(`
-                              <html>
-                                <head><title>${cat.name}</title></head>
-                                <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;">
-                                  <img src="${optimizedUrl}" style="max-width:100%;height:auto;" alt="${cat.name}"/>
-                                </body>
-                              </html>
-                            `);
-                          }
-                        }}
-                      >
-                        <div className="aspect-[4/3] relative bg-neutral-50">
-                          <OptimizedImage
-                            src={cat.image}
-                            alt={cat.name}
-                            className="w-full h-full object-contain p-3"
-                          />
-                          <div className="absolute top-2 right-2 bg-white/90 p-2 rounded-full opacity-0 hover:opacity-100 transition-opacity">
-                            <ZoomIn className="h-4 w-4 text-neutral-600" />
-                          </div>
-                        </div>
-                        <div className="p-3 sm:p-2 bg-white">
-                          <h4 className="font-semibold text-sm sm:text-xs mb-1 sm:mb-0.5">{cat.name}</h4>
-                          <p className="text-sm sm:text-[10px] text-neutral-600 leading-relaxed line-clamp-2">{cat.description}</p>
-                          {typeof cat.price === "number" && (
-                            <p className="mt-1 text-sm font-semibold text-neutral-900">
-                              ${cat.price.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </Card>
+                  <ul className="mt-4 space-y-3">
+                    {featureList.length > 0 ? (
+                      featureList.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3 text-sm text-muted-foreground">
+                          <span className="mt-1 h-2 w-2 rounded-full bg-primary/70" />
+                          {feature}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-sm text-muted-foreground">
+                        Update the &quot;features&quot; field in the admin detail page to populate this list.
+                      </li>
+                    )}
+                  </ul>
+                </Card>
+
+                <Card className="rounded-3xl border bg-white p-6">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Sizing</p>
+                      <h2 className="text-xl font-semibold">Sizes &amp; Pricing Options</h2>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {sizesToDisplay.length === 0 && (
+                      <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+                        Activate a size or add pricing in the admin editor to show options here.
+                      </div>
+                    )}
+                    {sizesToDisplay.map((option) => (
+                      <div key={option.key} className="rounded-2xl border bg-muted/30 p-4">
+                        <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {option.price ? formatCurrency(option.price) : "Custom pricing"}
+                        </p>
+                      </div>
                     ))}
                   </div>
-                </div>
-                {/* Carousel Indicators */}
-                <div className="flex justify-center mt-3 gap-1">
-                  {Array.from({ length: window.innerWidth < 640 ? sizeCategories.length : Math.ceil(sizeCategories.length / 2) }).map((_, index) => (
-                    <button
-                      key={index}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        (window.innerWidth < 640 ? currentSizeIndex : Math.floor(currentSizeIndex / 2)) === index 
-                          ? 'w-4 bg-primary' 
-                          : 'w-1.5 bg-neutral-300'
-                      }`}
-                      onClick={() => setCurrentSizeIndex(window.innerWidth < 640 ? index : index * 2)}
-                    />
-                  ))}
-                </div>
+                </Card>
               </div>
-              {/* Product Details Tabs - Mobile optimized */}
-              <div className="mt-6 sm:mt-8">
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full p-1 h-auto gap-1">
-                    <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
-                      Details
-                    </TabsTrigger>
-                    <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
-                      Usage
-                    </TabsTrigger>
-                    <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
-                      Ingredients
-                    </TabsTrigger>
-                    <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
-                      Certifications
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="mt-4 sm:mt-6 bg-neutral-50 rounded-lg sm:rounded-xl p-4 sm:p-6">
-                    <TabsContent value="details" className="mt-0 space-y-6">
-                      {(product.story || admin) && (
-                        <div>
-                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Our Story</h4>
-                          <InlineEditField 
-                            field="story" 
-                            value={product.story || ''}
-                            multiline={true}
-                            className="text-sm sm:text-base text-neutral-700 leading-relaxed"
-                            placeholder="Enter product story"
-                          >
-                            <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.story || (admin ? 'Click to add story...' : '')}</p>
-                          </InlineEditField>
-                        </div>
-                      )}
-                      {product.targetAudience && (
-                        <div>
-                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Target Audience</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {product.targetAudience.split(',').map((audience, index) => (
-                              <Badge key={index} variant="secondary" className="bg-white">
-                                {audience.trim()}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {(product.recommendedUses || admin) && (
-                        <div>
-                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Recommended Uses</h4>
-                          <InlineEditField 
-                            field="recommendedUses" 
-                            value={product.recommendedUses || ''}
-                            multiline={true}
-                            className="text-sm sm:text-base text-neutral-700 leading-relaxed"
-                            placeholder="Enter recommended uses"
-                          >
-                            <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{product.recommendedUses || (admin ? 'Click to add recommended uses...' : '')}</p>
-                          </InlineEditField>
-                        </div>
-                      )}
-                      {product.features && product.features.includes('|') && (
-                        <div>
-                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Key Features</h4>
-                          <ul className="space-y-2">
-                            {product.features.split('|').map((feature, index) => (
-                              <li key={index} className="flex items-start gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm sm:text-base text-neutral-700">{feature.trim()}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {(product.marketingNote || admin) && (
-                        <div className="mt-4 p-4 bg-primary/10 rounded-lg">
-                          <InlineEditField 
-                            field="marketingNote" 
-                            value={product.marketingNote || ''}
-                            multiline={true}
-                            className="text-sm text-neutral-700 italic"
-                            placeholder="Enter marketing note"
-                          >
-                            <p className="text-sm text-neutral-700 italic">{product.marketingNote || (admin ? 'Click to add marketing note...' : '')}</p>
-                          </InlineEditField>
-                        </div>
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="usage" className="mt-0">
-                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Usage Instructions</h4>
-                      <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
-                        <InlineEditField 
-                          field="usage" 
-                          value={product.usage || ''}
-                          multiline={true}
-                          className="text-sm sm:text-base text-neutral-700 leading-relaxed"
-                          placeholder="Enter usage instructions"
-                        >
-                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{product.usage || (admin ? 'Click to add usage instructions...' : "Usage instructions will be provided with your order.")}</p>
-                        </InlineEditField>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="ingredients" className="mt-0">
-                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Ingredients</h4>
-                      <div className="bg-white rounded-lg p-4 sm:p-5 border border-neutral-200">
-                        <InlineEditField 
-                          field="ingredients" 
-                          value={product.ingredients || ''}
-                          multiline={true}
-                          className="text-sm sm:text-base text-neutral-700 font-medium"
-                          placeholder="Enter ingredients"
-                        >
-                          <p className="text-sm sm:text-base text-neutral-700 font-medium">{product.ingredients || (admin ? 'Click to add ingredients...' : "Ingredient information available upon request.")}</p>
-                        </InlineEditField>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="certifications" className="mt-0">
-                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Certifications</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        {product.certifications?.split(',').map((cert, index) => (
-                          <div key={index} className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200 text-center">
-                            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-1 sm:mb-2" />
-                            <p className="text-sm sm:text-base font-medium text-neutral-900">{cert.trim()}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  </div>
-                </Tabs>
-              </div>
-              
-              {/* CTA Section - Sticky on mobile */}
-              <div className="mt-8 sm:mt-10">
-                <div className="hidden sm:block space-y-4">
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
-                    size="lg" 
-                    onClick={() => navigate("/order")}
-                  >
-                    <Truck className="mr-2 h-5 w-5" />
-                    Order Now - Arizona Delivery Available
-                  </Button>
-                  <p className="text-center text-sm text-neutral-600">
-                    Need a custom quote? <Link href="/contact" className="text-primary hover:underline font-medium">Contact us</Link>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="rounded-3xl border bg-white p-6">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Application</p>
+                  <h2 className="mt-1 text-xl font-semibold">Usage Guidance</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.usage ??
+                      "Add usage instructions in the admin editor to provide application guidance here."}
                   </p>
-                </div>
+                  {recommendedUses.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {recommendedUses.map((item) => (
+                        <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+
+                <Card className="rounded-3xl border bg-white p-6">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Story</p>
+                  <h2 className="mt-1 text-xl font-semibold">Product Narrative</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.story ??
+                      "Share the origin story or agronomic insight within the admin editor to highlight it here."}
+                  </p>
+                </Card>
               </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
-      {/* Enhanced Image Gallery Modal */}
-      {isGalleryOpen && (
-        <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-          <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none">
-            <div className="relative h-full flex flex-col">
-              {/* Close Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-4 right-4 z-20 bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm"
-                onClick={() => setIsGalleryOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-              
-              {/* Main Image Display */}
-              <div className="flex-1 relative flex items-center justify-center p-4">
-                {allMedia[currentImageIndex] === 'video' && product?.productVideoUrl ? (
-                  <div className="w-full max-w-4xl aspect-video">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${getYouTubeVideoId(product.productVideoUrl)}?rel=0&autoplay=1`}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+
+              <Card className="rounded-3xl border bg-white p-6">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Ingredients &amp; Audiences</p>
+                <h2 className="mt-1 text-xl font-semibold">What’s inside &amp; who it’s for</h2>
+                <div className="mt-6 grid gap-6 md:grid-cols-3">
+                  <div>
+                    <p className="text-sm font-semibold">Ingredients</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {ingredients.length > 0 ? (
+                        ingredients.map((item) => (
+                          <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                            {item}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Add ingredient text in the admin panel to show it here.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <OptimizedImage
-                    src={allImages[currentImageIndex]}
-                    alt={product?.name || "Product image"}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                )}
-                
-                {/* Navigation Arrows */}
-                {allMedia.length > 1 && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm h-12 w-12"
-                      onClick={handlePreviousImage}
-                    >
-                      <ChevronLeft className="h-8 w-8" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm h-12 w-12"
-                      onClick={handleNextImage}
-                    >
-                      <ChevronRight className="h-8 w-8" />
-                    </Button>
-                  </>
-                )}
-              </div>
-              
-              {/* Thumbnail Strip */}
-              {allMedia.length > 1 && (
-                <div className="bg-black/50 backdrop-blur-sm p-4">
-                  <div className="flex gap-2 justify-center overflow-x-auto">
-                    {allMedia.map((media, index) => (
-                      <button
-                        key={index}
-                        className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                          currentImageIndex === index 
-                            ? "border-white" 
-                            : "border-transparent opacity-60 hover:opacity-100"
-                        }`}
-                        onClick={() => handleThumbnailClick(index)}
-                      >
-                        {media === 'video' && product?.productVideoUrl ? (
-                          <div className="relative w-full h-full group">
-                            <OptimizedImage
-                              src={getYouTubeThumbnail(getYouTubeVideoId(product.productVideoUrl) || '')}
-                              alt="Product Video"
-                              className="w-full h-full object-contain bg-black"
-                            />
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <PlayCircle className="h-5 w-5 text-white" />
-                            </div>
-                          </div>
-                        ) : media === 'video' ? (
-                          <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
-                            <PlayCircle className="h-6 w-6 text-white" />
-                          </div>
-                        ) : (
-                          <OptimizedImage src={allImages[index]} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
-                        )}
-                      </button>
-                    ))}
+                  <div>
+                    <p className="text-sm font-semibold">Best for</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {targetAudiences.length > 0 ? (
+                        targetAudiences.map((item) => (
+                          <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                            {item}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Fill in the “target audience” field in admin to populate this list.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Pay &amp; Pickup</p>
+                    {product.payAndPickup?.isEnabled ? (
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p>{product.payAndPickup.description ?? "Available for quick pickup scheduling."}</p>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/pay-and-pickup">View menu</Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Enable Pay &amp; Pickup in the admin editor to showcase pickup-specific messaging.
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-              
-              {/* Image Counter */}
-              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
-                {currentImageIndex + 1} / {allMedia.length}
-              </div>
+              </Card>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Mobile Sticky CTA */}
-      {product && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4 shadow-lg sm:hidden z-10">
-          <Button 
-            className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" 
-            size="lg" 
-            onClick={() => navigate("/order")}
-          >
-            <Truck className="mr-2 h-5 w-5" />
-            Order Now
-          </Button>
+          )}
         </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 };
 

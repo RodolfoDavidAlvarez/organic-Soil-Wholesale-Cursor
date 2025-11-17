@@ -346,6 +346,36 @@ type RawProduct = {
   is_catalog_enabled?: boolean | null;
   catalog_display_order?: number | null;
   size_price_options?: unknown;
+  product_status?: string | null;
+};
+
+const slugifyValue = (value?: string | null) =>
+  typeof value === 'string'
+    ? value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    : '';
+
+const buildProductSlug = (record?: Partial<RawProduct & FallbackProduct>): string => {
+  if (!record) return '';
+  const source =
+    (record as RawProduct).product_type ??
+    (record as FallbackProduct).productType ??
+    (record as RawProduct).display_title ??
+    (record as FallbackProduct).displayTitle ??
+    record.name ??
+    '';
+
+  const normalized = slugifyValue(source);
+  if (normalized) return normalized;
+
+  if ('id' in record && record.id !== undefined && record.id !== null) {
+    return String(record.id);
+  }
+
+  return '';
 };
 
 const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
@@ -384,6 +414,12 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
       : Array.isArray(fallbackProduct?.additionalImages)
         ? fallbackProduct.additionalImages
         : [];
+
+  const normalizedStatus =
+    typeof record.product_status === 'string' && record.product_status.toLowerCase() === 'draft'
+      ? 'draft'
+      : 'active';
+  const isDraft = normalizedStatus === 'draft';
 
   const primarySizePriceOptions = normalizeSizePriceOptions(record.size_price_options);
   const sizePriceOptions =
@@ -434,22 +470,24 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
     catalog: {
       isEnabled:
         record.is_catalog_enabled !== undefined
-          ? Boolean(record.is_catalog_enabled)
-          : fallbackProduct?.isCatalogEnabled ?? true,
+          ? Boolean(record.is_catalog_enabled) && !isDraft
+          : (fallbackProduct?.isCatalogEnabled ?? true) && !isDraft,
       displayOrder: record.catalog_display_order ?? fallbackProduct?.catalogDisplayOrder ?? 0,
     },
     isCatalogEnabled:
       record.is_catalog_enabled !== undefined
-        ? Boolean(record.is_catalog_enabled)
-        : fallbackProduct?.isCatalogEnabled ?? true,
+        ? Boolean(record.is_catalog_enabled) && !isDraft
+        : (fallbackProduct?.isCatalogEnabled ?? true) && !isDraft,
     catalogDisplayOrder: record.catalog_display_order ?? fallbackProduct?.catalogDisplayOrder ?? 0,
+    productStatus: normalizedStatus,
     payAndPickup: {
       isEnabled: Boolean(record.is_pay_and_pickup_enabled),
       displayOrder: record.pay_and_pickup_display_order ?? 0,
       badge: record.pay_and_pickup_badge ?? undefined,
       description: record.pay_and_pickup_description ?? undefined,
       heroImage: record.pay_and_pickup_hero_image ?? undefined
-    }
+    },
+    slug: buildProductSlug(record)
   };
 };
 
@@ -473,6 +511,7 @@ async function getProductsFromDatabase(params: {
   } else {
     query = query
       .eq('is_catalog_enabled', true)
+      .eq('product_status', 'active')
       .order('catalog_display_order', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true });
   }
@@ -484,6 +523,20 @@ async function getProductsFromDatabase(params: {
   }
 
   return data?.map((product) => toPublicProduct(product)) ?? [];
+}
+
+async function findProductBySlug(slug: string): Promise<RawProduct | null> {
+  const normalizedSlug = slugifyValue(slug);
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const { data, error } = await supabase.from<RawProduct>('products').select('*');
+  if (error) {
+    throw error;
+  }
+
+  return data?.find((record) => buildProductSlug(record) === normalizedSlug) ?? null;
 }
 
 function getProductsFromFallback(category?: string | string[]) {
@@ -540,17 +593,19 @@ function getProductsFromFallback(category?: string | string[]) {
 // Get all active products for public display
 router.get('/', async (req, res) => {
   try {
+    let productsFromDatabase: Awaited<ReturnType<typeof getProductsFromDatabase>> | undefined;
+
     try {
-      const products = await getProductsFromDatabase({
+      productsFromDatabase = await getProductsFromDatabase({
         category: req.query.category,
         payAndPickup: req.query.payAndPickup
       });
-
-      if (products.length > 0) {
-        return res.json({ products });
-      }
     } catch (databaseError) {
       console.warn('Falling back to static product data:', databaseError);
+    }
+
+    if (productsFromDatabase !== undefined) {
+      return res.json({ products: productsFromDatabase });
     }
 
     const fallbackProducts = getProductsFromFallback(req.query.category);
@@ -612,6 +667,7 @@ const createRawProductFromFallback = (fallback: FallbackProduct, fallbackId?: nu
     pay_and_pickup_hero_image: fallback.payAndPickupHeroImage ?? undefined,
     is_catalog_enabled: fallback.isCatalogEnabled ?? true,
     catalog_display_order: fallback.catalogDisplayOrder ?? undefined,
+    product_status: 'active',
     size_price_options: fallback.sizePriceOptions ?? undefined
   };
 };
@@ -621,6 +677,7 @@ router.get('/:id', async (req, res) => {
   try {
     const rawId = req.params.id;
     const numericId = Number(rawId);
+    const normalizedSlugParam = slugifyValue(rawId);
     let productResponse;
 
     if (!Number.isNaN(numericId)) {
@@ -643,6 +700,17 @@ router.get('/:id', async (req, res) => {
       }
     }
 
+    if (!productResponse && normalizedSlugParam) {
+      try {
+        const matched = await findProductBySlug(normalizedSlugParam);
+        if (matched) {
+          productResponse = toPublicProduct(matched);
+        }
+      } catch (slugError) {
+        console.warn('Unable to resolve product by slug:', slugError);
+      }
+    }
+
     if (!productResponse) {
       const cache = ensureFallbackCache();
       let fallback: FallbackProduct | undefined;
@@ -651,14 +719,11 @@ router.get('/:id', async (req, res) => {
         fallback = cache.byId.get(numericId);
       }
 
-      if (!fallback) {
-        const normalizedSlug = slugify(rawId);
-        if (normalizedSlug) {
-          const slugMatch = cache.entries.find((entry) =>
-            entry.slugValues.includes(normalizedSlug)
-          );
-          fallback = slugMatch?.product;
-        }
+      if (!fallback && normalizedSlugParam) {
+        const slugMatch = cache.entries.find((entry) =>
+          entry.slugValues.includes(normalizedSlugParam)
+        );
+        fallback = slugMatch?.product;
       }
 
       if (!fallback) {
