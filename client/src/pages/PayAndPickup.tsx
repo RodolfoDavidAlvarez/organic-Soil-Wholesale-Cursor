@@ -346,6 +346,7 @@ const buildPayAndPickupProduct = (product: any): PayAndPickupProduct => {
   };
 };
 
+// Fetch Pay & Pickup products (restored for new system)
 const fetchPayAndPickupProducts = async (): Promise<PayAndPickupProduct[]> => {
   const response = await fetch("/api/inventory/products/1?payAndPickup=true");
   if (!response.ok) {

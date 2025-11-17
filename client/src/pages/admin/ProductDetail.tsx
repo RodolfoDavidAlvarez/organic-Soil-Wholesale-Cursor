@@ -100,6 +100,7 @@ export default function AdminProductDetail() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Fetch product data (restored for new system)
   const {
     data: product,
     isLoading,
@@ -946,173 +947,13 @@ export default function AdminProductDetail() {
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Main Content - Left 2 columns */}
                 <div className="lg:col-span-2 space-y-6">
-                  {/* Hero Image Card */}
+                  {/* SECTION 1: BASIC INFORMATION */}
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Hero Image</CardTitle>
-                      <CardDescription>Main product image displayed on product pages</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className="relative group aspect-[16/10] rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={handleHeroDrop}
-                        onClick={() => heroInputRef.current?.click()}
-                      >
-                        {heroImageForPreview ? (
-                          <>
-                            <img 
-                              src={heroImageForPreview} 
-                              alt={resolvedProductName} 
-                              className="h-full w-full object-cover" 
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-white/95 shadow-lg"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    heroInputRef.current?.click();
-                                  }}
-                                >
-                                  <UploadCloud className="mr-2 h-4 w-4" />
-                                  Replace Image
-                                </Button>
-                              </div>
-                            </div>
-                            {(heroUpload || editForm.pay_and_pickup_hero_image) && (
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="destructive"
-                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 shadow-lg"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setHeroUpload(null);
-                                  resetHeroPreview();
-                                  setEditForm({
-                                    ...editForm,
-                                    pay_and_pickup_hero_image: '',
-                                  });
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white border-2 border-gray-300">
-                              <ImagePlus className="h-6 w-6" />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900">Click or drag to upload</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                1600×1200 recommended · JPG, PNG, or WEBP
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <input
-                        ref={heroInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleHeroInputChange}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  {/* Gallery Images Card */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-base">Gallery Images</CardTitle>
-                          <CardDescription>Additional product photos for texture and packaging</CardDescription>
-                        </div>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => galleryInputRef.current?.click()}
-                        >
-                          <ImagePlus className="mr-2 h-4 w-4" />
-                          Add Images
-                        </Button>
-                      </div>
-                      <input
-                        ref={galleryInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleGalleryInputChange}
-                      />
-                    </CardHeader>
-                    <CardContent>
-                      <div
-                        className="grid grid-cols-2 md:grid-cols-3 gap-3"
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={handleGalleryDrop}
-                      >
-                        {editForm.additional_images.length === 0 && galleryPreviews.length === 0 ? (
-                          <div className="col-span-full flex h-32 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 text-center text-sm text-muted-foreground">
-                            <ImagePlus className="h-6 w-6" />
-                            <span>Drag images here or click "Add Images"</span>
-                          </div>
-                        ) : (
-                          <>
-                            {editForm.additional_images.map((image) => (
-                              <div
-                                key={image}
-                                className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white"
-                              >
-                                <img src={image} alt="" className="h-full w-full object-cover" />
-                                <button
-                                  type="button"
-                                  className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleRemoveExistingGalleryImage(image);
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                            {galleryPreviews.map((preview, index) => (
-                              <div
-                                key={`${preview}-${index}`}
-                                className="group relative aspect-square overflow-hidden rounded-lg border-2 border-primary/40 bg-white"
-                              >
-                                <img src={preview} alt="" className="h-full w-full object-cover" />
-                                <button
-                                  type="button"
-                                  className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleRemoveNewGalleryImage(index);
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Basic Information Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Basic Information</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">1</span>
+                        Basic Information
+                      </CardTitle>
                       <CardDescription>Essential product details and identification</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -1182,7 +1023,7 @@ export default function AdminProductDetail() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="price" className="text-sm font-medium">Price (USD)</Label>
+                          <Label htmlFor="price" className="text-sm font-medium">Base Price (USD)</Label>
                           <Input
                             id="price"
                             type="number"
@@ -1198,77 +1039,264 @@ export default function AdminProductDetail() {
                     </CardContent>
                   </Card>
 
-                  {/* Visibility & Ordering Card */}
+                  {/* SECTION 2: IMAGES */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Visibility & Ordering</CardTitle>
-                      <CardDescription>Control where and how this product appears</CardDescription>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">2</span>
+                        Images
+                      </CardTitle>
+                      <CardDescription>Product photos and gallery images</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm font-medium">Catalog Visibility</Label>
-                              <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
-                                {editForm.is_catalog_enabled ? 'Visible' : 'Hidden'}
-                              </Badge>
+                    <CardContent className="space-y-4">
+                      {/* Hero Image */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Hero Image</Label>
+                        <div
+                          className="relative group aspect-[16/10] rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={handleHeroDrop}
+                          onClick={() => heroInputRef.current?.click()}
+                        >
+                          {heroImageForPreview ? (
+                            <>
+                              <img 
+                                src={heroImageForPreview} 
+                                alt={resolvedProductName} 
+                                className="h-full w-full object-cover" 
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="bg-white/95 shadow-lg"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      heroInputRef.current?.click();
+                                    }}
+                                  >
+                                    <UploadCloud className="mr-2 h-4 w-4" />
+                                    Replace Image
+                                  </Button>
+                                </div>
+                              </div>
+                              {(heroUpload || editForm.pay_and_pickup_hero_image) && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="destructive"
+                                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 shadow-lg"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setHeroUpload(null);
+                                    resetHeroPreview();
+                                    setEditForm({
+                                      ...editForm,
+                                      pay_and_pickup_hero_image: '',
+                                    });
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white border-2 border-gray-300">
+                                <ImagePlus className="h-6 w-6" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-medium text-gray-900">Click or drag to upload</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  1600×1200 recommended · JPG, PNG, or WEBP
+                                </p>
+                              </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Show this product on the public Products page
-                            </p>
-                          </div>
-                          <Switch
-                            checked={editForm.is_catalog_enabled}
-                            onCheckedChange={(value) =>
-                              setEditForm({ ...editForm, is_catalog_enabled: value })
-                            }
-                          />
+                          )}
                         </div>
-                        {editForm.is_catalog_enabled && (
-                          <div className="ml-4 space-y-2">
-                            <Label htmlFor="catalog-order" className="text-xs text-muted-foreground">Display Order</Label>
-                            <Input
-                              id="catalog-order"
-                              type="number"
-                              min={0}
-                              value={editForm.catalog_display_order}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, catalog_display_order: event.target.value })
-                              }
-                              placeholder="0"
-                              className="h-9 max-w-32"
-                            />
-                            <p className="text-xs text-muted-foreground">Lower numbers appear first</p>
-                          </div>
-                        )}
+                        <input
+                          ref={heroInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleHeroInputChange}
+                        />
                       </div>
 
-                      <Separator />
-
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm font-medium">Pay & Pickup</Label>
-                              <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                                {editForm.is_pay_and_pickup_enabled ? 'Enabled' : 'Hidden'}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Available for pickup ordering
-                            </p>
-                          </div>
-                          <Switch
-                            checked={editForm.is_pay_and_pickup_enabled}
-                            onCheckedChange={(value) =>
-                              setEditForm({ ...editForm, is_pay_and_pickup_enabled: value })
-                            }
-                          />
+                      {/* Gallery Images */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Gallery Images</Label>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => galleryInputRef.current?.click()}
+                          >
+                            <ImagePlus className="mr-2 h-4 w-4" />
+                            Add Images
+                          </Button>
                         </div>
-                        {editForm.is_pay_and_pickup_enabled && (
-                          <div className="ml-4 space-y-2">
-                            <Label htmlFor="pay-pickup-order" className="text-xs text-muted-foreground">Display Order</Label>
+                        <input
+                          ref={galleryInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleGalleryInputChange}
+                        />
+                        <div
+                          className="grid grid-cols-2 md:grid-cols-3 gap-3"
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={handleGalleryDrop}
+                        >
+                          {editForm.additional_images.length === 0 && galleryPreviews.length === 0 ? (
+                            <div className="col-span-full flex h-32 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 text-center text-sm text-muted-foreground">
+                              <ImagePlus className="h-6 w-6" />
+                              <span>Drag images here or click "Add Images"</span>
+                            </div>
+                          ) : (
+                            <>
+                              {editForm.additional_images.map((image) => (
+                                <div
+                                  key={image}
+                                  className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white"
+                                >
+                                  <img src={image} alt="" className="h-full w-full object-cover" />
+                                  <button
+                                    type="button"
+                                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleRemoveExistingGalleryImage(image);
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              {galleryPreviews.map((preview, index) => (
+                                <div
+                                  key={`${preview}-${index}`}
+                                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-primary/40 bg-white"
+                                >
+                                  <img src={preview} alt="" className="h-full w-full object-cover" />
+                                  <button
+                                    type="button"
+                                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleRemoveNewGalleryImage(index);
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Texture Photo URL */}
+                      <div className="space-y-2">
+                        <Label htmlFor="texture-photo" className="text-sm font-medium">Texture Photo URL</Label>
+                        <Input
+                          id="texture-photo"
+                          value={editForm.texture_photo_url}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, texture_photo_url: event.target.value })
+                          }
+                          placeholder="/images/textures/..."
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* SECTION 3: CATALOG SETTINGS */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">3</span>
+                        Catalog Settings
+                      </CardTitle>
+                      <CardDescription>Control visibility and ordering in the public Products catalog</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Show in Catalog</Label>
+                            <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
+                              {editForm.is_catalog_enabled ? 'Visible' : 'Hidden'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Show this product on the public Products page
+                          </p>
+                        </div>
+                        <Switch
+                          checked={editForm.is_catalog_enabled}
+                          onCheckedChange={(value) =>
+                            setEditForm({ ...editForm, is_catalog_enabled: value })
+                          }
+                        />
+                      </div>
+                      {editForm.is_catalog_enabled && (
+                        <div className="space-y-2">
+                          <Label htmlFor="catalog-order" className="text-sm font-medium">Display Order</Label>
+                          <Input
+                            id="catalog-order"
+                            type="number"
+                            min={0}
+                            value={editForm.catalog_display_order}
+                            onChange={(event) =>
+                              setEditForm({ ...editForm, catalog_display_order: event.target.value })
+                            }
+                            placeholder="0"
+                            className="max-w-32"
+                          />
+                          <p className="text-xs text-muted-foreground">Lower numbers appear first in the catalog</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* SECTION 4: PAY & PICKUP */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">4</span>
+                        Pay & Pickup
+                      </CardTitle>
+                      <CardDescription>Settings for local pickup ordering</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Enable Pay & Pickup</Label>
+                            <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
+                              {editForm.is_pay_and_pickup_enabled ? 'Enabled' : 'Disabled'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Make this product available for local pickup ordering
+                          </p>
+                        </div>
+                        <Switch
+                          checked={editForm.is_pay_and_pickup_enabled}
+                          onCheckedChange={(value) =>
+                            setEditForm({ ...editForm, is_pay_and_pickup_enabled: value })
+                          }
+                        />
+                      </div>
+                      {editForm.is_pay_and_pickup_enabled && (
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-pickup-order" className="text-sm font-medium">Display Order</Label>
                             <Input
                               id="pay-pickup-order"
                               type="number"
@@ -1278,66 +1306,69 @@ export default function AdminProductDetail() {
                                 setEditForm({ ...editForm, pay_and_pickup_display_order: event.target.value })
                               }
                               placeholder="0"
-                              className="h-9 max-w-32"
+                              className="max-w-32"
                             />
-                            <p className="text-xs text-muted-foreground">Lower numbers appear first</p>
+                            <p className="text-xs text-muted-foreground">Lower numbers appear first in Pay & Pickup</p>
                           </div>
-                        )}
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-pickup-badge" className="text-sm font-medium">Badge Text</Label>
+                            <Input
+                              id="pay-pickup-badge"
+                              value={editForm.pay_and_pickup_badge}
+                              maxLength={60}
+                              onChange={(event) =>
+                                setEditForm({ ...editForm, pay_and_pickup_badge: event.target.value })
+                              }
+                              placeholder="e.g., Phoenix Pickup • 24hr Turnaround"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Short label displayed above the hero image on Pay & Pickup page
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-pickup-description" className="text-sm font-medium">Description</Label>
+                            <Textarea
+                              id="pay-pickup-description"
+                              rows={4}
+                              value={editForm.pay_and_pickup_description}
+                              onChange={(event) =>
+                                setEditForm({ ...editForm, pay_and_pickup_description: event.target.value })
+                              }
+                              placeholder="Highlight pickup-ready details..."
+                              className="resize-none"
+                            />
+                            <p className="text-xs text-muted-foreground text-right">
+                              {editForm.pay_and_pickup_description.length} characters
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-pickup-hero-image" className="text-sm font-medium">Hero Image URL</Label>
+                            <Input
+                              id="pay-pickup-hero-image"
+                              value={editForm.pay_and_pickup_hero_image}
+                              onChange={(event) =>
+                                setEditForm({ ...editForm, pay_and_pickup_hero_image: event.target.value })
+                              }
+                              placeholder="/images/products/..."
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Optional: Specific image for Pay & Pickup page (uses hero image if not set)
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
-                  {/* Pay & Pickup Messaging */}
+                  {/* SECTION 5: SIZES & PRICING */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Pay & Pickup Messaging</CardTitle>
-                      <CardDescription>Badge + description used in the pickup journey</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="pay-pickup-badge" className="text-sm">
-                          Badge Text
-                        </Label>
-                        <Input
-                          id="pay-pickup-badge"
-                          value={editForm.pay_and_pickup_badge}
-                          maxLength={60}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, pay_and_pickup_badge: event.target.value })
-                          }
-                          placeholder="e.g., Phoenix Pickup • 24hr Turnaround"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Short label displayed above the hero image on Pay & Pickup.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pay-pickup-description" className="text-sm">
-                          Description
-                        </Label>
-                        <Textarea
-                          id="pay-pickup-description"
-                          rows={4}
-                          value={editForm.pay_and_pickup_description}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, pay_and_pickup_description: event.target.value })
-                          }
-                          placeholder="Highlight pickup-ready details..."
-                          className="resize-none"
-                        />
-                        <p className="text-xs text-muted-foreground text-right">
-                          {editForm.pay_and_pickup_description.length} characters
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Size & Pricing Options */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Size & Pricing Options</CardTitle>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">5</span>
+                        Sizes & Pricing
+                      </CardTitle>
                       <CardDescription>
-                        {editForm.available_size_options.length} size{editForm.available_size_options.length === 1 ? '' : 's'} active
+                        Configure size options, prices, and inventory
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -1525,15 +1556,112 @@ export default function AdminProductDetail() {
                     </CardContent>
                   </Card>
 
-                  {/* Media URLs */}
+                  {/* SECTION 6: ADDITIONAL INFO */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Media URLs</CardTitle>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">6</span>
+                        Additional Information
+                      </CardTitle>
+                      <CardDescription>Optional content for product detail pages</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="features" className="text-sm font-medium">Features</Label>
+                        <Textarea
+                          id="features"
+                          value={editForm.features || ''}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, features: event.target.value })
+                          }
+                          rows={3}
+                          placeholder="List key features (separate with | or commas)..."
+                          className="resize-none"
+                        />
+                        <p className="text-xs text-muted-foreground">Separate multiple features with | or commas</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="usage" className="text-sm font-medium">Usage Instructions</Label>
+                        <Textarea
+                          id="usage"
+                          value={editForm.usage || ''}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, usage: event.target.value })
+                          }
+                          rows={3}
+                          placeholder="How to use this product..."
+                          className="resize-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="story" className="text-sm font-medium">Product Story</Label>
+                        <Textarea
+                          id="story"
+                          value={editForm.story || ''}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, story: event.target.value })
+                          }
+                          rows={3}
+                          placeholder="Origin story or agronomic insight..."
+                          className="resize-none"
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="ingredients" className="text-sm font-medium">Ingredients</Label>
+                          <Textarea
+                            id="ingredients"
+                            value={editForm.ingredients || ''}
+                            onChange={(event) =>
+                              setEditForm({ ...editForm, ingredients: event.target.value })
+                            }
+                            rows={2}
+                            placeholder="List ingredients (separate with | or commas)..."
+                            className="resize-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="target-audience" className="text-sm font-medium">Target Audience</Label>
+                          <Textarea
+                            id="target-audience"
+                            value={editForm.target_audience || ''}
+                            onChange={(event) =>
+                              setEditForm({ ...editForm, target_audience: event.target.value })
+                            }
+                            rows={2}
+                            placeholder="Who this is for (separate with | or commas)..."
+                            className="resize-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="recommended-uses" className="text-sm font-medium">Recommended Uses</Label>
+                        <Textarea
+                          id="recommended-uses"
+                          value={editForm.recommended_uses || ''}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, recommended_uses: event.target.value })
+                          }
+                          rows={2}
+                          placeholder="Use cases (separate with | or commas)..."
+                          className="resize-none"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* SECTION 7: MEDIA */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">7</span>
+                        Media
+                      </CardTitle>
                       <CardDescription>Video and image URLs</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="product-video-url" className="text-sm">Video URL</Label>
+                        <Label htmlFor="product-video-url" className="text-sm font-medium">Video URL</Label>
                         <Input
                           id="product-video-url"
                           value={editForm.product_video_url}
@@ -1544,7 +1672,7 @@ export default function AdminProductDetail() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="product-video-title" className="text-sm">Video Title</Label>
+                        <Label htmlFor="product-video-title" className="text-sm font-medium">Video Title</Label>
                         <Input
                           id="product-video-title"
                           value={editForm.product_video_title}
@@ -1554,29 +1682,17 @@ export default function AdminProductDetail() {
                           placeholder="Optional video title"
                         />
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="image-url" className="text-sm">Image URL</Label>
-                          <Input
-                            id="image-url"
-                            value={editForm.image_url}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, image_url: event.target.value })
-                            }
-                            placeholder="/images/products/..."
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="texture-photo" className="text-sm">Texture URL</Label>
-                          <Input
-                            id="texture-photo"
-                            value={editForm.texture_photo_url}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, texture_photo_url: event.target.value })
-                            }
-                            placeholder="/images/textures/..."
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="image-url" className="text-sm font-medium">Primary Image URL</Label>
+                        <Input
+                          id="image-url"
+                          value={editForm.image_url}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, image_url: event.target.value })
+                          }
+                          placeholder="/images/products/..."
+                        />
+                        <p className="text-xs text-muted-foreground">Fallback image URL if hero image not uploaded</p>
                       </div>
                     </CardContent>
                   </Card>

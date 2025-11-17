@@ -11,6 +11,8 @@ import {
   Plus,
   Search,
   Trash2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
@@ -43,7 +45,8 @@ export default function AdminProducts() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'payPickup'>('catalog');
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('active'); // Default to active only
+  const [showInactive, setShowInactive] = useState(false); // Collapse/expand for inactive products
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -62,6 +65,7 @@ export default function AdminProducts() {
     return null;
   };
 
+  // Fetch products (restored for new system)
   const {
     data: products = [],
     isLoading,
@@ -144,7 +148,7 @@ export default function AdminProducts() {
   const displayedProducts =
     activeTab === 'catalog' ? catalogFilteredProducts : payPickupFilteredProducts;
 
-  const resolveProductStatus = (product: Product) => {
+  const resolveProductStatus = useCallback((product: Product) => {
     const snakeStatus =
       typeof product.product_status === 'string' ? product.product_status : undefined;
     const camelStatus =
@@ -159,17 +163,64 @@ export default function AdminProducts() {
       return 'active';
     }
     return product.is_catalog_enabled === false ? 'draft' : 'active';
-  };
+  }, []);
 
+  // Filter products based on tab and status
   const visibleProducts = useMemo(() => {
-    if (statusFilter === 'all') {
-      return displayedProducts;
+    if (!displayedProducts || displayedProducts.length === 0) {
+      return [];
     }
-    const desiredStatus = statusFilter === 'active' ? 'active' : 'draft';
-    return displayedProducts.filter(
-      (product) => resolveProductStatus(product) === desiredStatus,
-    );
-  }, [displayedProducts, statusFilter]);
+
+    let filtered = displayedProducts;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      const desiredStatus = statusFilter === 'active' ? 'active' : 'draft';
+      filtered = filtered.filter(
+        (product) => product && resolveProductStatus(product) === desiredStatus,
+      );
+    }
+
+    // For active filter, also filter by tab-specific visibility
+    if (statusFilter === 'active') {
+      if (activeTab === 'catalog') {
+        // Show only products that are catalog-enabled
+        filtered = filtered.filter((product) => product && Boolean(product.is_catalog_enabled));
+      } else {
+        // Show only products that are pay-pickup-enabled
+        filtered = filtered.filter((product) => product && Boolean(product.is_pay_and_pickup_enabled));
+      }
+    }
+
+    return filtered;
+  }, [displayedProducts, statusFilter, activeTab, resolveProductStatus]);
+
+  // Separate active and inactive products
+  const { activeProducts, inactiveProducts } = useMemo(() => {
+    const active: Product[] = [];
+    const inactive: Product[] = [];
+
+    if (!displayedProducts || displayedProducts.length === 0) {
+      return { activeProducts: active, inactiveProducts: inactive };
+    }
+
+    displayedProducts.forEach((product) => {
+      if (!product) return;
+      
+      const isActive = resolveProductStatus(product) === 'active';
+      const isVisible = activeTab === 'catalog' 
+        ? Boolean(product.is_catalog_enabled)
+        : Boolean(product.is_pay_and_pickup_enabled);
+
+      if (isActive && isVisible) {
+        active.push(product);
+      } else {
+        inactive.push(product);
+      }
+    });
+
+    return { activeProducts: active, inactiveProducts: inactive };
+  }, [displayedProducts, activeTab, resolveProductStatus]);
 
   const catalogCount = catalogFilteredProducts.length;
   const payPickupCount = payPickupFilteredProducts.length;
@@ -224,6 +275,8 @@ export default function AdminProducts() {
       queryClient.setQueryData<Product[]>(['adminProducts'], (existing) =>
         existing?.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)) ?? []
       );
+      // Invalidate to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
     },
     onError: (_error, variables) => {
       const contextLabel =
@@ -473,267 +526,399 @@ export default function AdminProducts() {
                 <div key={index} className="h-[360px] animate-pulse rounded-2xl border border-border bg-muted/30" />
               ))}
             </div>
-          ) : visibleProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 py-16 text-center">
-              <Package className="mb-4 h-12 w-12 text-muted-foreground" />
-              <h2 className="text-lg font-semibold text-foreground">No products found</h2>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Try adjusting your search terms or add a new product to manage {contextLabel.toLowerCase()} settings.
-              </p>
-            </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {visibleProducts.map((product) => {
-                const primaryImage = getPrimaryImage(product);
-                const isSelected = selectedProductIds.has(product.id);
-                const catalogOrder = getDisplayOrder(product.catalog_display_order);
-                const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
-                const catalogVisible = Boolean(product.is_catalog_enabled);
-                const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
-                const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
-                const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
-                const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
-                const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
-
-                return (
-                  <article
-                    key={product.id}
-                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
-                      isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
-                    }`}
-                    onClick={() => handleCardClick(product.id)}
-                  >
-                    <div className="absolute right-4 top-4 z-10">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleProductSelection(product.id)}
-                        onClick={(event) => event.stopPropagation()}
-                        className="bg-white shadow-sm"
-                      />
-                    </div>
-
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted" aria-hidden="true">
-                      {primaryImage ? (
-                        <img
-                          src={primaryImage}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                          <Package className="h-10 w-10" />
-                        </div>
-                      )}
-                      <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                        <Badge variant={primaryVisibility ? 'default' : 'secondary'}>
-                          {primaryVisibility ? `${contextLabel} Visible` : `${contextLabel} Hidden`}
-                        </Badge>
-                        <Badge variant="outline">
-                          {contextLabel} {primaryOrder !== null ? `#${primaryOrder}` : '—'}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-1 flex-col gap-4 p-5">
-                      <div className="space-y-1.5">
-                        <h3 className="text-lg font-semibold leading-tight">
-                          {product.display_title || product.name}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                          {product.category && <span>{product.category}</span>}
-                          {product.sku && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide">
-                              {product.sku}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Price</p>
-                          <p className="text-base font-semibold">${formatPrice(product.price)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Stock</p>
-                          <p
-                            className={`text-base font-semibold ${
-                              (product.stock_quantity ?? 0) < 10 ? 'text-destructive' : ''
-                            }`}
-                          >
-                            {product.stock_quantity ?? 0}
-                          </p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div
-                        className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <div>
-                          <p className="text-xs text-muted-foreground">{contextLabel}</p>
-                          <p className="text-sm font-medium">
-                            {primaryVisibility ? 'Visible' : 'Hidden'}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {secondaryContextLabel}: {secondaryVisibility ? 'Visible' : 'Hidden'}
-                            {secondaryVisibility && secondaryOrder !== null ? ` (#${secondaryOrder})` : ''}
-                          </p>
-                        </div>
-                        <Switch
-                          checked={primaryVisibility}
-                          disabled={toggleVisibilityMutation.isPending}
-                          onCheckedChange={(value) =>
-                            toggleVisibilityMutation.mutate({
-                              productId: product.id,
-                              field:
-                                activeTab === 'catalog'
-                                  ? 'is_catalog_enabled'
-                                  : 'is_pay_and_pickup_enabled',
-                              isEnabled: value,
-                            })
-                          }
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="mt-auto"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleCardClick(product.id);
-                        }}
-                      >
-                        Manage product
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-white">
-              <table className="w-full">
-                <thead className="border-b bg-muted/50">
-                  <tr>
-                    <th className="w-12 p-4">
-                      <Checkbox checked={isAllSelected} onCheckedChange={(checked) => (checked ? selectAllProducts() : clearSelection())} />
-                    </th>
-                    <th className="p-4 text-left text-sm font-medium">Product</th>
-                    <th className="p-4 text-left text-sm font-medium">{contextLabel}</th>
-                    <th className="p-4 text-left text-sm font-medium">{secondaryContextLabel}</th>
-                    <th className="p-4 text-left text-sm font-medium">Category</th>
-                    <th className="p-4 text-left text-sm font-medium">SKU</th>
-                    <th className="p-4 text-center text-sm font-medium">Price</th>
-                    <th className="p-4 text-center text-sm font-medium">Stock</th>
-                    <th className="p-4 text-center text-sm font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleProducts.map((product, index) => {
-                    const primaryImage = getPrimaryImage(product);
-                    const isSelected = selectedProductIds.has(product.id);
-                    const catalogOrder = getDisplayOrder(product.catalog_display_order);
-                    const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
-                    const catalogVisible = Boolean(product.is_catalog_enabled);
-                    const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
-                    const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
-                    const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
-                    const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
-                    const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
+            <>
+              {/* Active Products - Always Visible */}
+              {visibleProducts.length > 0 && (
+                <div className="space-y-4">
+                  {viewMode === 'grid' ? (
+                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                      {visibleProducts.map((product) => {
+                        const primaryImage = getPrimaryImage(product);
+                        const isSelected = selectedProductIds.has(product.id);
+                        const catalogOrder = getDisplayOrder(product.catalog_display_order);
+                        const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
+                        const catalogVisible = Boolean(product.is_catalog_enabled);
+                        const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
+                        const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
+                        const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
+                        const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
+                        const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
 
-                    return (
-                      <tr
-                        key={product.id}
-                        className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
-                          isSelected ? 'bg-primary/5' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                        }`}
-                        onClick={() => handleCardClick(product.id)}
-                      >
-                        <td className="p-4" onClick={(event) => event.stopPropagation()}>
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleProductSelection(product.id)}
-                          />
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 overflow-hidden rounded-lg bg-muted">
+                        return (
+                          <article
+                            key={product.id}
+                            className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
+                              isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                            }`}
+                            onClick={() => handleCardClick(product.id)}
+                          >
+                            <div className="absolute right-4 top-4 z-10">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleProductSelection(product.id)}
+                                onClick={(event) => event.stopPropagation()}
+                                className="bg-white shadow-sm"
+                              />
+                            </div>
+
+                            <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted" aria-hidden="true">
                               {primaryImage ? (
-                                <img src={primaryImage} alt={product.name} className="h-full w-full object-cover" />
+                                <img
+                                  src={primaryImage}
+                                  alt={product.name}
+                                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                />
                               ) : (
                                 <div className="flex h-full items-center justify-center text-muted-foreground">
-                                  <Package className="h-6 w-6" />
+                                  <Package className="h-10 w-10" />
                                 </div>
                               )}
+                              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                                <Badge variant={primaryVisibility ? 'default' : 'secondary'}>
+                                  {primaryVisibility ? `${contextLabel} Visible` : `${contextLabel} Hidden`}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {contextLabel} {primaryOrder !== null ? `#${primaryOrder}` : '—'}
+                                </Badge>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">{product.display_title || product.name}</p>
-                              {product.category && (
-                                <p className="text-xs text-muted-foreground">{product.category}</p>
-                              )}
+
+                            <div className="flex flex-1 flex-col gap-4 p-5">
+                              <div className="space-y-1.5">
+                                <h3 className="text-lg font-semibold leading-tight">
+                                  {product.display_title || product.name}
+                                </h3>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                                  {product.category && <span>{product.category}</span>}
+                                  {product.sku && (
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide">
+                                      {product.sku}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">Price</p>
+                                  <p className="text-base font-semibold">${formatPrice(product.price)}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground">Stock</p>
+                                  <p
+                                    className={`text-base font-semibold ${
+                                      (product.stock_quantity ?? 0) < 10 ? 'text-destructive' : ''
+                                    }`}
+                                  >
+                                    {product.stock_quantity ?? 0}
+                                  </p>
+                                </div>
+                              </div>
+                              <Separator />
+                              <div
+                                className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <div>
+                                  <p className="text-xs text-muted-foreground">{contextLabel}</p>
+                                  <p className="text-sm font-medium">
+                                    {primaryVisibility ? 'Visible' : 'Hidden'}
+                                  </p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {secondaryContextLabel}: {secondaryVisibility ? 'Visible' : 'Hidden'}
+                                    {secondaryVisibility && secondaryOrder !== null ? ` (#${secondaryOrder})` : ''}
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={primaryVisibility}
+                                  disabled={toggleVisibilityMutation.isPending}
+                                  onCheckedChange={(value) =>
+                                    toggleVisibilityMutation.mutate({
+                                      productId: product.id,
+                                      field:
+                                        activeTab === 'catalog'
+                                          ? 'is_catalog_enabled'
+                                          : 'is_pay_and_pickup_enabled',
+                                      isEnabled: value,
+                                    })
+                                  }
+                                />
+                              </div>
+                              <Button
+                                variant="outline"
+                                className="mt-auto"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleCardClick(product.id);
+                                }}
+                              >
+                                Manage product
+                              </Button>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4" onClick={(event) => event.stopPropagation()}>
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">{contextLabel}</p>
-                              <p className="text-sm font-medium">
-                                {primaryVisibility ? 'Visible' : 'Hidden'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Order {primaryOrder !== null ? `#${primaryOrder}` : '—'}
-                              </p>
-                            </div>
-                            <Switch
-                              checked={primaryVisibility}
-                              disabled={toggleVisibilityMutation.isPending}
-                              onCheckedChange={(value) =>
-                                toggleVisibilityMutation.mutate({
-                                  productId: product.id,
-                                  field:
-                                    activeTab === 'catalog'
-                                      ? 'is_catalog_enabled'
-                                      : 'is_pay_and_pickup_enabled',
-                                  isEnabled: value,
-                                })
-                              }
-                            />
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm" onClick={(event) => event.stopPropagation()}>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">{secondaryContextLabel}</p>
-                            <p className="text-sm font-medium">
-                              {secondaryVisibility ? 'Visible' : 'Hidden'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Order {secondaryOrder !== null ? `#${secondaryOrder}` : '—'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm">{product.category || '-'}</td>
-                        <td className="p-4 text-sm font-mono">{product.sku || '-'}</td>
-                        <td className="p-4 text-center text-sm font-medium">${formatPrice(product.price)}</td>
-                        <td className="p-4 text-center">
-                          <span
-                            className={`text-sm font-medium ${
-                              (product.stock_quantity ?? 0) < 10 ? 'text-red-600' : ''
-                            }`}
-                          >
-                            {product.stock_quantity ?? 0}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
-                          <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>
-                            Edit
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-lg border border-border bg-white">
+                      <table className="w-full">
+                        <thead className="border-b bg-muted/50">
+                          <tr>
+                            <th className="w-12 p-4">
+                              <Checkbox checked={isAllSelected} onCheckedChange={(checked) => (checked ? selectAllProducts() : clearSelection())} />
+                            </th>
+                            <th className="p-4 text-left text-sm font-medium">Product</th>
+                            <th className="p-4 text-left text-sm font-medium">{contextLabel}</th>
+                            <th className="p-4 text-left text-sm font-medium">{secondaryContextLabel}</th>
+                            <th className="p-4 text-left text-sm font-medium">Category</th>
+                            <th className="p-4 text-left text-sm font-medium">SKU</th>
+                            <th className="p-4 text-center text-sm font-medium">Price</th>
+                            <th className="p-4 text-center text-sm font-medium">Stock</th>
+                            <th className="p-4 text-center text-sm font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleProducts.map((product, index) => {
+                            const primaryImage = getPrimaryImage(product);
+                            const isSelected = selectedProductIds.has(product.id);
+                            const catalogOrder = getDisplayOrder(product.catalog_display_order);
+                            const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
+                            const catalogVisible = Boolean(product.is_catalog_enabled);
+                            const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
+                            const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
+                            const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
+                            const secondaryVisibility = activeTab === 'catalog' ? payPickupVisible : catalogVisible;
+                            const secondaryOrder = activeTab === 'catalog' ? payPickupOrder : catalogOrder;
+
+                            return (
+                              <tr
+                                key={product.id}
+                                className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
+                                  isSelected ? 'bg-primary/5' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                                }`}
+                                onClick={() => handleCardClick(product.id)}
+                              >
+                                <td className="p-4" onClick={(event) => event.stopPropagation()}>
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleProductSelection(product.id)}
+                                  />
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-12 w-12 overflow-hidden rounded-lg bg-muted">
+                                      {primaryImage ? (
+                                        <img src={primaryImage} alt={product.name} className="h-full w-full object-cover" />
+                                      ) : (
+                                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                                          <Package className="h-6 w-6" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium">{product.display_title || product.name}</p>
+                                      {product.category && (
+                                        <p className="text-xs text-muted-foreground">{product.category}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-4" onClick={(event) => event.stopPropagation()}>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">{contextLabel}</p>
+                                      <p className="text-sm font-medium">
+                                        {primaryVisibility ? 'Visible' : 'Hidden'}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Order {primaryOrder !== null ? `#${primaryOrder}` : '—'}
+                                      </p>
+                                    </div>
+                                    <Switch
+                                      checked={primaryVisibility}
+                                      disabled={toggleVisibilityMutation.isPending}
+                                      onCheckedChange={(value) =>
+                                        toggleVisibilityMutation.mutate({
+                                          productId: product.id,
+                                          field:
+                                            activeTab === 'catalog'
+                                              ? 'is_catalog_enabled'
+                                              : 'is_pay_and_pickup_enabled',
+                                          isEnabled: value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </td>
+                                <td className="p-4 text-sm" onClick={(event) => event.stopPropagation()}>
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-muted-foreground">{secondaryContextLabel}</p>
+                                    <p className="text-sm font-medium">
+                                      {secondaryVisibility ? 'Visible' : 'Hidden'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Order {secondaryOrder !== null ? `#${secondaryOrder}` : '—'}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-sm">{product.category || '-'}</td>
+                                <td className="p-4 text-sm font-mono">{product.sku || '-'}</td>
+                                <td className="p-4 text-center text-sm font-medium">${formatPrice(product.price)}</td>
+                                <td className="p-4 text-center">
+                                  <span
+                                    className={`text-sm font-medium ${
+                                      (product.stock_quantity ?? 0) < 10 ? 'text-red-600' : ''
+                                    }`}
+                                  >
+                                    {product.stock_quantity ?? 0}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
+                                  <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>
+                                    Edit
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Inactive Products - Collapsible Section */}
+              {inactiveProducts.length > 0 && statusFilter === 'active' && (
+                <div className="mt-6 space-y-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowInactive(!showInactive)}
+                    className="w-full justify-between"
+                  >
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Inactive Products ({inactiveProducts.length})
+                    </span>
+                    {showInactive ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                  {showInactive && (
+                    <div className="rounded-lg border border-dashed border-muted bg-muted/20 p-4">
+                      {viewMode === 'grid' ? (
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          {inactiveProducts.map((product) => {
+                            const primaryImage = getPrimaryImage(product);
+                            const isSelected = selectedProductIds.has(product.id);
+                            const catalogOrder = getDisplayOrder(product.catalog_display_order);
+                            const payPickupOrder = getDisplayOrder(product.pay_and_pickup_display_order);
+                            const catalogVisible = Boolean(product.is_catalog_enabled);
+                            const payPickupVisible = Boolean(product.is_pay_and_pickup_enabled);
+                            const primaryVisibility = activeTab === 'catalog' ? catalogVisible : payPickupVisible;
+                            const primaryOrder = activeTab === 'catalog' ? catalogOrder : payPickupOrder;
+
+                            return (
+                              <article
+                                key={product.id}
+                                className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-white/50 shadow-sm opacity-75 transition hover:opacity-100 hover:shadow ${
+                                  isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                                }`}
+                                onClick={() => handleCardClick(product.id)}
+                              >
+                                <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted" aria-hidden="true">
+                                  {primaryImage ? (
+                                    <img
+                                      src={primaryImage}
+                                      alt={product.name}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                                      <Package className="h-8 w-8" />
+                                    </div>
+                                  )}
+                                  <div className="absolute left-2 top-2">
+                                    <Badge variant="secondary" className="text-xs">
+                                      Inactive
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex flex-1 flex-col gap-2 p-3">
+                                  <h3 className="text-sm font-semibold leading-tight">
+                                    {product.display_title || product.name}
+                                  </h3>
+                                  <p className="text-xs text-muted-foreground">{product.category || 'Uncategorized'}</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-auto text-xs"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleCardClick(product.id);
+                                    }}
+                                  >
+                                    Activate
+                                  </Button>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="overflow-hidden rounded-lg border border-border bg-white/50">
+                          <table className="w-full">
+                            <thead className="border-b bg-muted/30">
+                              <tr>
+                                <th className="p-3 text-left text-xs font-medium">Product</th>
+                                <th className="p-3 text-left text-xs font-medium">Status</th>
+                                <th className="p-3 text-center text-xs font-medium">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {inactiveProducts.map((product) => (
+                                <tr
+                                  key={product.id}
+                                  className="cursor-pointer border-b transition-colors hover:bg-muted/30"
+                                  onClick={() => handleCardClick(product.id)}
+                                >
+                                  <td className="p-3">
+                                    <p className="text-sm font-medium">{product.display_title || product.name}</p>
+                                    <p className="text-xs text-muted-foreground">{product.category || 'Uncategorized'}</p>
+                                  </td>
+                                  <td className="p-3">
+                                    <Badge variant="secondary" className="text-xs">
+                                      {resolveProductStatus(product) === 'draft' ? 'Draft' : 'Hidden'}
+                                    </Badge>
+                                  </td>
+                                  <td className="p-3 text-center">
+                                    <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>
+                                      Edit
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {visibleProducts.length === 0 && inactiveProducts.length === 0 && (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 py-16 text-center">
+                  <Package className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold text-foreground">No products found</h2>
+                  <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                    Try adjusting your search terms or add a new product to manage {contextLabel.toLowerCase()} settings.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </AdminLayout>

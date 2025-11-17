@@ -179,6 +179,7 @@ const normalizeProduct = (record: ApiProduct): NormalizedProduct => {
   };
 };
 
+// Fetch product by slug (restored for new system)
 const fetchProduct = async (identifier: string): Promise<NormalizedProduct> => {
   const response = await fetch(`/api/public/products/${identifier}`);
   if (!response.ok) {

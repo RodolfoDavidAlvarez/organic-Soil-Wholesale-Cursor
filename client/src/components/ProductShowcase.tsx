@@ -116,15 +116,15 @@ export default function ProductShowcase({
     if (onProductSelect) {
       onProductSelect(product);
     } else {
-      // Generate slug from product type or name
-      const slug =
-        product.slug || generateProductSlug(product.productType ?? undefined, product.name);
+      // Always use product ID for reliable routing, with slug as fallback
+      // This ensures each product has a unique URL even if slugs collide
+      const identifier = product.id ? String(product.id) : (product.slug || generateProductSlug(product.productType ?? undefined, product.name));
 
       // Route mulch products to the MulchDetail page
       if ((product.category || "").toLowerCase() === "mulch") {
-        navigate(`/products/mulch/${slug || product.id}`);
+        navigate(`/products/mulch/${identifier}`);
       } else {
-        navigate(`/products/${slug || product.id}`);
+        navigate(`/products/${identifier}`);
       }
     }
   };

@@ -38,6 +38,7 @@ type ApiProduct = {
   slug?: string | null;
 };
 
+// Fetch public products (restored for new system)
 const fetchPublicProducts = async (): Promise<ApiProduct[]> => {
   const response = await fetch("/api/public/products");
   if (!response.ok) {

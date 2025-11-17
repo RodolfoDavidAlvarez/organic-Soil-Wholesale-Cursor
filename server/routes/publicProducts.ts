@@ -360,6 +360,10 @@ const slugifyValue = (value?: string | null) =>
 
 const buildProductSlug = (record?: Partial<RawProduct & FallbackProduct>): string => {
   if (!record) return '';
+  
+  // Always include ID in slug to ensure uniqueness
+  const id = 'id' in record && record.id !== undefined && record.id !== null ? String(record.id) : '';
+  
   const source =
     (record as RawProduct).product_type ??
     (record as FallbackProduct).productType ??
@@ -369,11 +373,16 @@ const buildProductSlug = (record?: Partial<RawProduct & FallbackProduct>): strin
     '';
 
   const normalized = slugifyValue(source);
-  if (normalized) return normalized;
-
-  if ('id' in record && record.id !== undefined && record.id !== null) {
-    return String(record.id);
+  
+  // If we have both a normalized name and an ID, combine them for uniqueness
+  // Format: "product-name-123" instead of just "product-name"
+  if (normalized && id) {
+    return `${normalized}-${id}`;
   }
+  
+  // Fallback to just normalized name or ID
+  if (normalized) return normalized;
+  if (id) return id;
 
   return '';
 };
@@ -531,12 +540,53 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
     return null;
   }
 
+  // First, try to extract ID from slug (format: "product-name-123" or just "123")
+  const idMatch = normalizedSlug.match(/-(\d+)$/);
+  if (idMatch) {
+    const productId = Number(idMatch[1]);
+    if (!Number.isNaN(productId)) {
+      const { data, error } = await supabase
+        .from<RawProduct>('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+      
+      if (!error && data) {
+        return data;
+      }
+    }
+  }
+
+  // If no ID in slug, try matching by ID directly (in case slug is just a number)
+  const numericId = Number(normalizedSlug);
+  if (!Number.isNaN(numericId)) {
+    const { data, error } = await supabase
+      .from<RawProduct>('products')
+      .select('*')
+      .eq('id', numericId)
+      .single();
+    
+    if (!error && data) {
+      return data;
+    }
+  }
+
+  // Fallback: try to match by slug pattern
   const { data, error } = await supabase.from<RawProduct>('products').select('*');
   if (error) {
     throw error;
   }
 
-  return data?.find((record) => buildProductSlug(record) === normalizedSlug) ?? null;
+  // Try exact match first
+  const exactMatch = data?.find((record) => buildProductSlug(record) === normalizedSlug);
+  if (exactMatch) return exactMatch;
+
+  // Try partial match (in case slug is just the name part)
+  const namePart = normalizedSlug.replace(/-\d+$/, ''); // Remove trailing ID
+  return data?.find((record) => {
+    const recordSlug = buildProductSlug(record);
+    return recordSlug === normalizedSlug || recordSlug.startsWith(namePart + '-');
+  }) ?? null;
 }
 
 function getProductsFromFallback(category?: string | string[]) {
