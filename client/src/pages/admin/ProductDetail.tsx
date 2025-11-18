@@ -472,7 +472,7 @@ export default function AdminProductDetail() {
     });
   };
 
-  const handleSizePriceChange = (key: string, field: "price" | "description", value: string) => {
+  const handleSizePriceChange = (key: string, field: "price" | "description" | "image", value: string) => {
     updateSizePriceOptions((options) =>
       options.map((option) =>
         option.key === key
@@ -483,6 +483,27 @@ export default function AdminProductDetail() {
           : option
       )
     );
+  };
+
+  const handleSizeImageUpload = async (key: string, file: File) => {
+    if (!validateFileSize(file)) return;
+
+    try {
+      const uploadFolder = isValidProductId ? `${PRODUCT_IMAGE_FOLDER}/${productId}` : PRODUCT_IMAGE_FOLDER;
+      const imageUrl = await uploadImage(file, `${uploadFolder}/size-${key}`);
+      handleSizePriceChange(key, "image", imageUrl);
+      toast({
+        title: "Image uploaded",
+        description: "Size category image has been uploaded and optimized.",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
+      toast({
+        title: "Upload failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCustomSizeChange = (key: string, partial: Pick<SizePriceOptionFormValue, "label" | "price" | "description">) => {
@@ -1604,6 +1625,48 @@ export default function AdminProductDetail() {
                               {isActive && (
                                 <div className="ml-6 mt-2 space-y-3">
                                   <div className="space-y-1">
+                                    <Label className="text-xs">Image</Label>
+                                    <div className="flex items-center gap-2">
+                                      {option.image ? (
+                                        <div className="relative group">
+                                          <img src={option.image} alt={entry.label} className="h-16 w-16 rounded-lg object-cover border" />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSizePriceChange(entry.key, "image", "")}
+                                            className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                            aria-label="Remove image"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      ) : null}
+                                      <div className="flex-1">
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          id={`size-image-${entry.key}`}
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) handleSizeImageUpload(entry.key, file);
+                                            e.target.value = "";
+                                          }}
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => document.getElementById(`size-image-${entry.key}`)?.click()}
+                                          className="h-8 text-xs"
+                                        >
+                                          <ImagePlus className="mr-1 h-3 w-3" />
+                                          {option.image ? "Change" : "Upload"} Image
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Upload an image for this size category (automatically optimized)</p>
+                                  </div>
+                                  <div className="space-y-1">
                                     <Label className="text-xs">Description</Label>
                                     <Input
                                       value={option.description ?? entry.description}
@@ -1678,45 +1741,91 @@ export default function AdminProductDetail() {
                                         </button>
                                       </div>
                                     )}
-                                    <div className="flex-1 grid gap-3 sm:grid-cols-3">
-                                      <Input
-                                        value={option.label}
-                                        onChange={(event) =>
-                                          handleCustomSizeChange(option.key, {
-                                            label: event.target.value,
-                                            price: option.price,
-                                            description: option.description,
-                                          })
-                                        }
-                                        placeholder="Size label"
-                                      />
-                                      <Input
-                                        value={option.description ?? ""}
-                                        onChange={(event) =>
-                                          handleCustomSizeChange(option.key, {
-                                            label: option.label,
-                                            price: option.price,
-                                            description: event.target.value,
-                                          })
-                                        }
-                                        placeholder="Description (e.g., 144 units)"
-                                      />
-                                      <div className="flex items-center gap-2">
+                                    <div className="flex-1 space-y-3">
+                                      <div className="grid gap-3 sm:grid-cols-3">
                                         <Input
-                                          value={option.price}
+                                          value={option.label}
                                           onChange={(event) =>
                                             handleCustomSizeChange(option.key, {
-                                              label: option.label,
-                                              price: event.target.value,
+                                              label: event.target.value,
+                                              price: option.price,
                                               description: option.description,
                                             })
                                           }
-                                          placeholder="Price"
-                                          className="flex-1"
+                                          placeholder="Size label"
                                         />
-                                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveCustomSizeOption(option.key)}>
-                                          Remove
-                                        </Button>
+                                        <Input
+                                          value={option.description ?? ""}
+                                          onChange={(event) =>
+                                            handleCustomSizeChange(option.key, {
+                                              label: option.label,
+                                              price: option.price,
+                                              description: event.target.value,
+                                            })
+                                          }
+                                          placeholder="Description (e.g., 144 units)"
+                                        />
+                                        <div className="flex items-center gap-2">
+                                          <Input
+                                            value={option.price}
+                                            onChange={(event) =>
+                                              handleCustomSizeChange(option.key, {
+                                                label: option.label,
+                                                price: event.target.value,
+                                                description: option.description,
+                                              })
+                                            }
+                                            placeholder="Price"
+                                            className="flex-1"
+                                          />
+                                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveCustomSizeOption(option.key)}>
+                                            Remove
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Image</Label>
+                                        <div className="flex items-center gap-2">
+                                          {option.image ? (
+                                            <div className="relative group">
+                                              <img src={option.image} alt={option.label} className="h-16 w-16 rounded-lg object-cover border" />
+                                              <button
+                                                type="button"
+                                                onClick={() => handleSizePriceChange(option.key, "image", "")}
+                                                className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                aria-label="Remove image"
+                                              >
+                                                <X className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          ) : null}
+                                          <div className="flex-1">
+                                            <input
+                                              type="file"
+                                              accept="image/*"
+                                              className="hidden"
+                                              id={`custom-size-image-${option.key}`}
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleSizeImageUpload(option.key, file);
+                                                e.target.value = "";
+                                              }}
+                                            />
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => document.getElementById(`custom-size-image-${option.key}`)?.click()}
+                                              className="h-8 text-xs"
+                                            >
+                                              <ImagePlus className="mr-1 h-3 w-3" />
+                                              {option.image ? "Change" : "Upload"} Image
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                          Upload an image for this size category (automatically optimized)
+                                        </p>
                                       </div>
                                     </div>
                                   </div>

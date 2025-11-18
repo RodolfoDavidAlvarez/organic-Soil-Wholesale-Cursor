@@ -10,7 +10,7 @@ import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
-import { ArrowLeft, Package, Leaf, ShoppingBag, Truck, Sparkles, Maximize2, ChevronLeft, ChevronRight, Youtube, ImagePlus, Play } from "lucide-react";
+import { ArrowLeft, Leaf, ShoppingBag, Truck, Sparkles, Maximize2, ChevronLeft, ChevronRight, Youtube, ImagePlus, Play } from "lucide-react";
 
 type ApiProduct = {
   id: number;
@@ -65,6 +65,7 @@ type SizeOption = {
   price?: number;
   displayOrder?: number;
   description?: string;
+  image?: string;
 };
 
 type NormalizedProduct = {
@@ -128,12 +129,14 @@ const parseSizeOptions = (input: unknown): SizeOption[] => {
       const displayOrder =
         typeof option.display_order === "number" ? option.display_order : typeof option.displayOrder === "number" ? option.displayOrder : undefined;
       const description = typeof option.description === "string" && option.description.trim().length > 0 ? option.description.trim() : undefined;
+      const image = typeof option.image === "string" && option.image.trim().length > 0 ? option.image.trim() : undefined;
       return {
         key: option.key ?? slugify(label),
         label,
         ...(price !== undefined && { price }),
         ...(displayOrder !== undefined && { displayOrder }),
         ...(description !== undefined && { description }),
+        ...(image !== undefined && { image }),
       };
     })
     .filter((option): option is SizeOption => option !== null)
@@ -281,6 +284,9 @@ const ProductDetail = () => {
   const activeGalleryItem = galleryItems[activeGalleryIndex];
   const showGalleryControls = totalGalleryItems > 1;
 
+  // Size image expansion
+  const [expandedSizeImage, setExpandedSizeImage] = useState<{ url: string; label: string } | null>(null);
+
   const openGalleryAt = useCallback(
     (index: number) => {
       if (!totalGalleryItems) return;
@@ -329,17 +335,6 @@ const ProductDetail = () => {
       price: undefined,
     }));
   }, [product]);
-
-  // Get price from first active size option, or fall back to product.price
-  const priceLabel = useMemo(() => {
-    if (product?.sizeOptions && product.sizeOptions.length > 0) {
-      const firstPricedOption = product.sizeOptions.find((opt) => opt.price && opt.price > 0);
-      if (firstPricedOption?.price) {
-        return formatCurrency(firstPricedOption.price);
-      }
-    }
-    return formatCurrency(product?.price);
-  }, [product?.price, product?.sizeOptions]);
 
   return (
     <>
@@ -490,22 +485,12 @@ const ProductDetail = () => {
                 </div>
 
                 <Card className="rounded-3xl border bg-white p-6 shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Product Overview</p>
-                      <h1 className="mt-2 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl">{product.displayTitle}</h1>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Package className="h-4 w-4" />
-                      <span>{product.slug}</span>
-                    </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Product Overview</p>
+                    <h1 className="mt-2 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl">{product.displayTitle}</h1>
                   </div>
                   <p className="mt-4 text-base leading-relaxed text-muted-foreground">{primaryDescription}</p>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl border bg-muted/30 p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Price</p>
-                      <p className="mt-2 text-xl font-semibold">{priceLabel ?? "Contact for pricing"}</p>
-                    </div>
+                  <div className="mt-6">
                     <div className="rounded-2xl border bg-muted/30 p-4">
                       <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Category</p>
                       <p className="mt-2 text-xl font-semibold">{product.category}</p>
@@ -635,11 +620,34 @@ const ProductDetail = () => {
                     )}
                     {sizesToDisplay.map((option) => (
                       <div key={option.key} className="rounded-lg border bg-muted/10 px-3 py-2 text-sm hover:bg-muted/20 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-foreground">{option.label}</span>
-                          {option.price ? <span className="text-sm font-semibold text-foreground">{formatCurrency(option.price)}</span> : null}
+                        <div className="flex items-start gap-3">
+                          {option.image && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSizeImage({ url: option.image!, label: option.label })}
+                              className="relative group flex-shrink-0"
+                              aria-label={`View larger image of ${option.label}`}
+                            >
+                              <img
+                                src={option.image}
+                                alt={option.label}
+                                className="h-16 w-16 rounded-lg object-cover border cursor-pointer transition-transform group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <Maximize2 className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            </button>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-foreground">{option.label}</span>
+                              {option.price ? (
+                                <span className="text-sm font-semibold text-foreground ml-2">{formatCurrency(option.price)}</span>
+                              ) : null}
+                            </div>
+                            {option.description && <p className="text-xs text-muted-foreground mt-1">{option.description}</p>}
+                          </div>
                         </div>
-                        {option.description && <p className="text-xs text-muted-foreground mt-1">{option.description}</p>}
                       </div>
                     ))}
                   </div>
@@ -755,6 +763,26 @@ const ProductDetail = () => {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ImagePlus className="h-12 w-12 text-white/50 mb-4" />
               <p className="text-sm text-white/70">No media available for this product yet.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Expanded Size Image Dialog */}
+      <Dialog open={expandedSizeImage !== null} onOpenChange={(open) => !open && setExpandedSizeImage(null)}>
+        <DialogContent className="sm:max-w-4xl border-none bg-black/95 text-white duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-100">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{expandedSizeImage?.label ?? "Size image"}</DialogTitle>
+            <DialogDescription>Expanded view of the size category image.</DialogDescription>
+          </DialogHeader>
+          {expandedSizeImage && (
+            <div className="space-y-4 animate-in fade-in-0 duration-300">
+              <div className="relative overflow-hidden rounded-2xl bg-black">
+                <OptimizedImage src={expandedSizeImage.url} alt={expandedSizeImage.label} className="w-full h-auto max-h-[80vh] object-contain" />
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-semibold">{expandedSizeImage.label}</p>
+              </div>
             </div>
           )}
         </DialogContent>
