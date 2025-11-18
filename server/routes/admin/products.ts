@@ -275,6 +275,60 @@ router.post("/", async (req: AdminRequest, res) => {
 
     if (error) throw error;
 
+    // Sync size category images across all products (same logic as update)
+    if (sizePriceOptionsInput && Array.isArray(sizePriceOptionsInput)) {
+      try {
+        const sizeKeysToSync = new Set<string>();
+        const sizeImageMap = new Map<string, string | null>();
+
+        for (const sizeOption of sizePriceOptionsInput) {
+          if (sizeOption.key) {
+            sizeKeysToSync.add(sizeOption.key);
+            sizeImageMap.set(sizeOption.key, sizeOption.image || null);
+          }
+        }
+
+        if (sizeKeysToSync.size > 0) {
+          const { data: allProducts, error: fetchError } = await supabase
+            .from("products")
+            .select("id, size_price_options")
+            .not("size_price_options", "is", null);
+
+          if (!fetchError && allProducts) {
+            const updatePromises: Promise<any>[] = [];
+
+            for (const prod of allProducts) {
+              if (prod.size_price_options && Array.isArray(prod.size_price_options)) {
+                let hasChanges = false;
+                const updatedOptions = prod.size_price_options.map((opt: any) => {
+                  if (sizeKeysToSync.has(opt.key)) {
+                    const newImage = sizeImageMap.get(opt.key);
+                    if (opt.image !== newImage) {
+                      hasChanges = true;
+                      return { ...opt, image: newImage };
+                    }
+                  }
+                  return opt;
+                });
+
+                if (hasChanges) {
+                  updatePromises.push(Promise.resolve(supabase.from("products").update({ size_price_options: updatedOptions }).eq("id", prod.id)));
+                }
+              }
+            }
+
+            if (updatePromises.length > 0) {
+              const results = await Promise.all(updatePromises);
+              const successCount = results.filter((r) => !r.error).length;
+              console.log(`✅ Synced size category images for ${sizeKeysToSync.size} size(s) across ${successCount} product(s)`);
+            }
+          }
+        }
+      } catch (syncError) {
+        console.error("⚠️ Size image sync failed (non-critical):", syncError);
+      }
+    }
+
     if (product && inventoryUpdates.length > 0) {
       const { priceMap, activeSizes } = extractSizeOptionMeta(sizePriceOptionsInput);
       await InventoryService.upsertInventoryEntries({
@@ -353,6 +407,64 @@ router.put("/:id", async (req: AdminRequest, res) => {
     }
 
     console.log("✅ Product updated successfully:", product.id);
+
+    // Sync size category images across all products
+    // When a size category image is updated, update it for all products using that size
+    if (sizePriceOptionsInput && Array.isArray(sizePriceOptionsInput)) {
+      try {
+        // Collect all size keys that have images (including empty strings for removal)
+        const sizeKeysToSync = new Set<string>();
+        const sizeImageMap = new Map<string, string | null>();
+
+        for (const sizeOption of sizePriceOptionsInput) {
+          if (sizeOption.key) {
+            sizeKeysToSync.add(sizeOption.key);
+            sizeImageMap.set(sizeOption.key, sizeOption.image || null);
+          }
+        }
+
+        if (sizeKeysToSync.size > 0) {
+          // Get all products that might have these size keys
+          const { data: allProducts, error: fetchError } = await supabase
+            .from("products")
+            .select("id, size_price_options")
+            .not("size_price_options", "is", null);
+
+          if (!fetchError && allProducts) {
+            const updatePromises: Promise<any>[] = [];
+
+            for (const prod of allProducts) {
+              if (prod.size_price_options && Array.isArray(prod.size_price_options)) {
+                let hasChanges = false;
+                const updatedOptions = prod.size_price_options.map((opt: any) => {
+                  if (sizeKeysToSync.has(opt.key)) {
+                    const newImage = sizeImageMap.get(opt.key);
+                    if (opt.image !== newImage) {
+                      hasChanges = true;
+                      return { ...opt, image: newImage };
+                    }
+                  }
+                  return opt;
+                });
+
+                if (hasChanges) {
+                  updatePromises.push(Promise.resolve(supabase.from("products").update({ size_price_options: updatedOptions }).eq("id", prod.id)));
+                }
+              }
+            }
+
+            if (updatePromises.length > 0) {
+              const results = await Promise.all(updatePromises);
+              const successCount = results.filter((r) => !r.error).length;
+              console.log(`✅ Synced size category images for ${sizeKeysToSync.size} size(s) across ${successCount} product(s)`);
+            }
+          }
+        }
+      } catch (syncError) {
+        console.error("⚠️ Size image sync failed (non-critical):", syncError);
+        // Don't fail the update if sync fails
+      }
+    }
 
     if (product && inventoryUpdates.length > 0) {
       const { priceMap, activeSizes } = extractSizeOptionMeta(sizePriceOptionsInput);

@@ -489,12 +489,13 @@ export default function AdminProductDetail() {
     if (!validateFileSize(file)) return;
 
     try {
-      const uploadFolder = isValidProductId ? `${PRODUCT_IMAGE_FOLDER}/${productId}` : PRODUCT_IMAGE_FOLDER;
-      const imageUrl = await uploadImage(file, `${uploadFolder}/size-${key}`);
+      // Upload to shared location - this image will be used by ALL products with this size category
+      const uploadFolder = "size-categories";
+      const imageUrl = await uploadImage(file, `${uploadFolder}/${key}`);
       handleSizePriceChange(key, "image", imageUrl);
       toast({
         title: "Image uploaded",
-        description: "Size category image has been uploaded and optimized.",
+        description: "Size category image has been uploaded and optimized. This will update for all products using this size category.",
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
@@ -1664,7 +1665,13 @@ export default function AdminProductDetail() {
                                         </Button>
                                       </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Upload an image for this size category (automatically optimized)</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Upload an image for this size category (automatically optimized).
+                                      <span className="font-medium text-amber-600 dark:text-amber-400">
+                                        {" "}
+                                        This image will be shared across all products using this size category.
+                                      </span>
+                                    </p>
                                   </div>
                                   <div className="space-y-1">
                                     <Label className="text-xs">Description</Label>
@@ -1824,7 +1831,11 @@ export default function AdminProductDetail() {
                                           </div>
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                          Upload an image for this size category (automatically optimized)
+                                          Upload an image for this size category (automatically optimized).
+                                          <span className="font-medium text-amber-600 dark:text-amber-400">
+                                            {" "}
+                                            This image will be shared across all products using this size category.
+                                          </span>
                                         </p>
                                       </div>
                                     </div>
