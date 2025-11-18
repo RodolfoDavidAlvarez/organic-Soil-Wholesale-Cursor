@@ -131,3 +131,4 @@ export async function optimizeThumbnail(inputBuffer: Buffer): Promise<OptimizedI
     convertToWebP: true,
   });
 }
+

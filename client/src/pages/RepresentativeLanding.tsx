@@ -12,13 +12,15 @@ import {
   Instagram,
   Send,
   CheckCircle2,
-  Download,
+  IdCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { usePhoneNumberLock } from '@/hooks/usePhoneNumberLock';
+import { formatPhoneNumber, getPhoneNumberForTel } from '@/utils/phone';
 import {
   Dialog,
   DialogContent,
@@ -54,12 +56,80 @@ interface Representative {
   contact_card_button_text?: string;
   contact_form_title?: string;
   contact_form_description?: string;
+  video_urls?: string[];
 }
+
+const getYouTubeVideoId = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.replace('/', '').trim() || null;
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      if (parsed.pathname.startsWith('/shorts/')) {
+        return parsed.pathname.replace('/shorts/', '').trim() || null;
+      }
+      return parsed.searchParams.get('v');
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+const getYouTubeEmbedUrl = (url: string): string | null => {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1&rel=0&controls=1&loop=1&playlist=${videoId}`;
+};
 
 export default function RepresentativeLanding() {
   const [, params] = useRoute('/rep/:slug');
   const slug = (params as { slug?: string })?.slug || '';
   const { toast } = useToast();
+
+  // Exclude this page from phone number tracking systems (CallRail, etc.)
+  // Use useLayoutEffect to set attributes before paint, preventing script from running
+  useEffect(() => {
+    // Set on html element
+    document.documentElement.setAttribute('data-callrail-ignore', 'true');
+    document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
+    document.documentElement.setAttribute('data-call-tracking-ignore', 'true');
+    
+    // Also set on body element
+    document.body.setAttribute('data-callrail-ignore', 'true');
+    document.body.setAttribute('data-dynamic-number-ignore', 'true');
+    document.body.setAttribute('data-call-tracking-ignore', 'true');
+    
+    // Set class for additional exclusion methods
+    document.documentElement.classList.add('no-call-tracking');
+    document.body.classList.add('no-call-tracking');
+    
+    // Prevent phone number replacement by wrapping in protected container
+    const style = document.createElement('style');
+    style.textContent = `
+      [data-callrail-ignore="true"],
+      [data-dynamic-number-ignore="true"],
+      .no-call-tracking a[href^="tel:"] {
+        pointer-events: auto !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.documentElement.removeAttribute('data-callrail-ignore');
+      document.documentElement.removeAttribute('data-dynamic-number-ignore');
+      document.documentElement.removeAttribute('data-call-tracking-ignore');
+      document.body.removeAttribute('data-callrail-ignore');
+      document.body.removeAttribute('data-dynamic-number-ignore');
+      document.body.removeAttribute('data-call-tracking-ignore');
+      document.documentElement.classList.remove('no-call-tracking');
+      document.body.classList.remove('no-call-tracking');
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    };
+  }, []);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -152,6 +222,8 @@ export default function RepresentativeLanding() {
     submitMutation.mutate(formData);
   };
 
+  usePhoneNumberLock({ enabled: Boolean(representative?.phone) });
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -179,39 +251,28 @@ export default function RepresentativeLanding() {
   const galleryImages = Array.isArray(representative.gallery_images)
     ? representative.gallery_images.filter((url) => !!url)
     : [];
-  const contactButtonLabel = representative.contact_button_text || 'Contact Me';
+  const videoUrls = Array.isArray(representative.video_urls)
+    ? representative.video_urls.filter((url) => !!url)
+    : [];
+  const contactButtonLabel = representative.contact_button_text || 'Enter Your Contact Details';
   const contactCardLabel = representative.contact_card_button_text || 'Download Contact Card';
-  const contactFormTitle = representative.contact_form_title || 'Get In Touch';
+  const contactFormTitle = representative.contact_form_title || 'Stay Connected';
   const contactFormDescription =
     representative.contact_form_description ||
-    'Share your details and we will follow up with recommendations tailored to your needs.';
+    'Share a few quick details and I will follow up with tailored wholesale recommendations.';
   const locationLine = [representative.address, representative.city, representative.state, representative.zip_code]
     .filter(Boolean)
     .join(', ');
   const socialLinks = representative.social_links || {};
   const hasBanner = Boolean(representative.banner_image_url);
-
-  const formatPhoneNumber = (phone: string): string => {
-    if (!phone) return phone;
-    // Remove all non-digit characters
-    const cleaned = phone.replace(/\D/g, '');
-    // Format as (XXX) XXX-XXXX if it's 10 digits
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    // Format as (XXX) XXX-XXXX XXXX if it's 11 digits (with country code)
-    if (cleaned.length === 11 && cleaned[0] === '1') {
-      return `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
-    }
-    // Return original if it doesn't match expected format
-    return phone;
-  };
-
-  const getPhoneNumberForTel = (phone: string): string => {
-    if (!phone) return phone;
-    // Remove all non-digit characters for tel: link
-    return phone.replace(/\D/g, '');
-  };
+  const primaryCtaClasses =
+    'w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300 shadow-lg font-semibold border border-emerald-50/70';
+  const secondaryCtaClasses =
+    'w-full border border-white/80 bg-white/15 text-white hover:bg-white/25 hover:text-white shadow-lg backdrop-blur-sm disabled:border-white/40 disabled:bg-white/5 disabled:text-white/50';
+  const inputClasses =
+    'h-12 rounded-2xl border border-emerald-100 bg-white/90 text-emerald-900 placeholder:text-emerald-400 shadow-inner transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/70';
+  const textareaClasses =
+    'rounded-3xl border border-emerald-100 bg-white/90 text-emerald-900 placeholder:text-emerald-400 shadow-inner transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/70';
 
   const handleDownloadContactCard = async () => {
     if (!representative) return;
@@ -288,22 +349,22 @@ export default function RepresentativeLanding() {
                 {representative.company_name}
               </p>
             )}
-            <p className="mt-4 max-w-2xl text-base text-emerald-50/90">
-              I help Soil Seed &amp; Water partners dial in bulk soil, seed, and irrigation blends
-              for their projects. Drop a quick note and I'll get right back to you.
-            </p>
             <div className="mt-8 grid w-full gap-3 sm:max-w-xl sm:grid-cols-2">
-              <Button size="lg" className="w-full" onClick={() => setIsContactDialogOpen(true)}>
+              <Button
+                size="lg"
+                className={primaryCtaClasses}
+                onClick={() => setIsContactDialogOpen(true)}
+              >
                 {contactButtonLabel}
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:text-white disabled:border-white/30 disabled:bg-white/5 disabled:text-white/60"
+                className={secondaryCtaClasses}
                 onClick={handleDownloadContactCard}
                 disabled={isDownloadingCard}
               >
-                <Download className="mr-2 h-4 w-4" />
+                <IdCard className="mr-2 h-4 w-4" />
                 {isDownloadingCard ? 'Preparing...' : contactCardLabel}
               </Button>
             </div>
@@ -333,13 +394,22 @@ export default function RepresentativeLanding() {
                   </div>
                 )}
                 {representative.phone && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
+                  <div 
+                    className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4"
+                    data-callrail-ignore="true"
+                    data-dynamic-number-ignore="true"
+                    data-call-tracking-ignore="true"
+                  >
                     <Phone className="mt-1 h-5 w-5 text-emerald-700" />
                     <div>
                       <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">Phone</p>
                       <a
                         href={`tel:${getPhoneNumberForTel(representative.phone)}`}
-                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline no-call-tracking"
+                        data-callrail-ignore="true"
+                        data-dynamic-number-ignore="true"
+                        data-call-tracking-ignore="true"
+                        data-phone-number={representative.phone}
                       >
                         {formatPhoneNumber(representative.phone)}
                       </a>
@@ -455,30 +525,67 @@ export default function RepresentativeLanding() {
                 </div>
               </div>
             )}
+
+            {videoUrls.length > 0 && (
+              <div className="rounded-3xl border border-emerald-100 bg-white/95 p-6 shadow-lg shadow-emerald-900/5">
+                <h2 className="mb-2 text-2xl font-semibold text-emerald-900">Video spotlight</h2>
+                <p className="text-sm text-emerald-800/80">
+                  Tap play to meet {representative.name} and learn how we support partners at Soil Seed &amp; Water.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {videoUrls.map((url, index) => {
+                    const embedUrl = getYouTubeEmbedUrl(url);
+                    return (
+                      <div key={`${url}-${index}`} className="space-y-2">
+                        <div className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-900/20 shadow-inner aspect-video">
+                          {embedUrl ? (
+                            <iframe
+                              src={embedUrl}
+                              title={`Video ${index + 1}`}
+                              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                              allowFullScreen
+                              loading="lazy"
+                              className="h-full w-full"
+                            />
+                          ) : (
+                            <video
+                              src={url}
+                              className="h-full w-full object-cover"
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                              controls
+                            />
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-emerald-900">Video highlight {index + 1}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-emerald-300/40 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-700 p-6 text-white shadow-xl shadow-emerald-900/30">
               <h2 className="text-2xl font-semibold">{contactFormTitle}</h2>
               <p className="mt-2 text-emerald-50/90">{contactFormDescription}</p>
-              <ul className="mt-6 space-y-3 text-sm text-emerald-50/90">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
-                  <span>Direct access to {representative.name}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
-                  <span>Customized wholesale recommendations</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
-                  <span>Fast follow-up within 1 business day</span>
-                </li>
-              </ul>
+              <div className="mt-6 space-y-3 text-sm text-emerald-50/90">
+                <div className="rounded-2xl bg-white/10 px-4 py-3">
+                  <p className="font-semibold text-white">1:1 connection</p>
+                  <p>Skip phone trees—chat directly with {representative.name} about your project.</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 px-4 py-3">
+                  <p className="font-semibold text-white">Fast follow-up</p>
+                  <p>Average response time is under one business day with curated recommendations.</p>
+                </div>
+              </div>
               <div className="mt-8 space-y-3">
                 <Button
                   size="lg"
-                  className="w-full bg-white text-emerald-900 hover:bg-emerald-50"
+                  className={primaryCtaClasses}
                   onClick={() => setIsContactDialogOpen(true)}
                 >
                   {contactButtonLabel}
@@ -486,35 +593,25 @@ export default function RepresentativeLanding() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white disabled:border-white/30 disabled:bg-white/5 disabled:text-white/60"
+                  className={secondaryCtaClasses}
                   onClick={handleDownloadContactCard}
                   disabled={isDownloadingCard}
                 >
-                  <Download className="mr-2 h-4 w-4" />
+                  <IdCard className="mr-2 h-4 w-4" />
                   {isDownloadingCard ? 'Preparing...' : contactCardLabel}
                 </Button>
               </div>
-            </div>
-
-            <div className="rounded-3xl border border-dashed border-emerald-200 bg-emerald-50/80 p-6 text-emerald-900 shadow-inner">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                Quick note
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-emerald-900/80">
-                Once you hit send, {representative.name.split(' ')[0]} sees your details instantly
-                inside the Soil Seed &amp; Water CRM. Expect a friendly follow-up shortly after.
-              </p>
             </div>
           </div>
         </section>
       </main>
 
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent className="w-[92vw] max-w-lg rounded-3xl border-none p-6 sm:w-full sm:p-8">
+        <DialogContent className="w-[94vw] max-w-xl rounded-[32px] border border-emerald-100 bg-gradient-to-b from-white via-emerald-50/70 to-white p-5 shadow-2xl shadow-emerald-900/15 sm:p-8">
           <DialogHeader>
-            <DialogTitle>{contactFormTitle}</DialogTitle>
-            <DialogDescription>
-              Provide a few details so {representative.name} can follow up quickly.
+            <DialogTitle className="text-2xl font-semibold text-emerald-900">{contactFormTitle}</DialogTitle>
+            <DialogDescription className="text-emerald-700">
+              Provide a few quick details so {representative.name} can follow up within one business day.
             </DialogDescription>
           </DialogHeader>
 
@@ -531,7 +628,7 @@ export default function RepresentativeLanding() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">
@@ -539,6 +636,7 @@ export default function RepresentativeLanding() {
                   </Label>
                   <Input
                     id="firstName"
+                    className={inputClasses}
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     required
@@ -550,6 +648,7 @@ export default function RepresentativeLanding() {
                   </Label>
                   <Input
                     id="lastName"
+                    className={inputClasses}
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     required
@@ -564,6 +663,7 @@ export default function RepresentativeLanding() {
                 <Input
                   id="email"
                   type="email"
+                  className={inputClasses}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -575,6 +675,7 @@ export default function RepresentativeLanding() {
                 <Input
                   id="phone"
                   type="tel"
+                  className={inputClasses}
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
@@ -584,6 +685,7 @@ export default function RepresentativeLanding() {
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
+                  className={textareaClasses}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={4}
@@ -591,7 +693,11 @@ export default function RepresentativeLanding() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitMutation.isPending}>
+              <Button
+                type="submit"
+                className="w-full h-12 rounded-full bg-emerald-500 text-white font-semibold tracking-wide shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-400 focus:ring-4 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={submitMutation.isPending}
+              >
                 {submitMutation.isPending ? (
                   <>
                     <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

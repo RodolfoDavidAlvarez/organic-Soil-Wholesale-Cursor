@@ -12,6 +12,26 @@ router.get("/", async (req: AdminRequest, res) => {
 
     let query = supabase.from("representative_contacts").select("*").order("created_at", { ascending: false });
 
+    // Role-based filtering: Regular admins only see their own contacts
+    if (req.admin?.role !== "super_admin") {
+      // Get all representatives (contact cards) linked to this admin
+      const { data: linkedReps, error: repsError } = await supabase.from("representatives").select("id").eq("admin_id", req.admin.id);
+
+      if (repsError) throw repsError;
+
+      const repIds = (linkedReps || []).map((r) => r.id);
+
+      if (repIds.length > 0) {
+        // Show contacts from this admin's contact cards OR direct admin_id matches
+        // PostgREST syntax: or(condition1,condition2)
+        const repIdFilter = repIds.map((id) => `representative_id.eq.${id}`).join(",");
+        query = query.or(`${repIdFilter},admin_id.eq.${req.admin.id}`);
+      } else {
+        // No contact cards linked, only show direct admin_id matches
+        query = query.eq("admin_id", req.admin.id);
+      }
+    }
+
     if (status) {
       query = query.eq("status", status);
     }
@@ -29,10 +49,14 @@ router.get("/", async (req: AdminRequest, res) => {
 
     if (error) throw error;
 
+    // Get representative IDs and admin IDs for enrichment
     const representativeIds = Array.from(new Set((contacts || []).map((contact) => contact.representative_id).filter(Boolean)));
+    const adminIds = Array.from(new Set((contacts || []).map((contact) => contact.admin_id).filter(Boolean)));
 
     let representativesMap: Record<number, any> = {};
+    let adminsMap: Record<number, any> = {};
 
+    // Fetch representatives
     if (representativeIds.length > 0) {
       const { data: reps, error: repsError } = await supabase
         .from("representatives")
@@ -50,9 +74,30 @@ router.get("/", async (req: AdminRequest, res) => {
       );
     }
 
+    // Fetch admins
+    if (adminIds.length > 0) {
+      const { data: admins, error: adminsError } = await supabase
+        .from("admin_users")
+        .select("id, email, full_name, phone, photo_url, slug")
+        .in("id", adminIds);
+
+      if (adminsError) throw adminsError;
+
+      adminsMap = (admins || []).reduce(
+        (acc, admin) => {
+          acc[admin.id] = admin;
+          return acc;
+        },
+        {} as Record<number, any>
+      );
+    }
+
+    // Enrich contacts with both representative and admin info
     const enriched = (contacts || []).map((contact) => ({
       ...contact,
-      representative: representativesMap[contact.representative_id] || null,
+      representative: contact.representative_id ? representativesMap[contact.representative_id] || null : null,
+      admin: contact.admin_id ? adminsMap[contact.admin_id] || null : null,
+      source: contact.admin_id ? "admin" : "representative",
     }));
 
     res.json(enriched);

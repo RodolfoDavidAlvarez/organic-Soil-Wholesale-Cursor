@@ -155,6 +155,27 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
+    <!-- Exclude ONLY contact card landing pages from phone tracking -->
+    <script>
+      // Set exclusion attributes immediately before React loads
+      (function() {
+        const path = window.location.pathname;
+        // Exclude ONLY contact card landing pages (not admin pages)
+        if (path.startsWith('/rep/')) {
+          document.documentElement.setAttribute('data-callrail-ignore', 'true');
+          document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
+          document.documentElement.setAttribute('data-call-tracking-ignore', 'true');
+          document.documentElement.classList.add('no-call-tracking');
+          if (document.body) {
+            document.body.setAttribute('data-callrail-ignore', 'true');
+            document.body.setAttribute('data-dynamic-number-ignore', 'true');
+            document.body.setAttribute('data-call-tracking-ignore', 'true');
+            document.body.classList.add('no-call-tracking');
+          }
+        }
+      })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

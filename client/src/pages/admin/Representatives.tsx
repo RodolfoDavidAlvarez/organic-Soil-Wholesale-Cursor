@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,10 +13,16 @@ import {
   User,
   Building2,
   Image as ImageIcon,
+  Video,
   MapPin,
   Link2,
   MessageSquare,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  UserCircle,
+  AlertCircle,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
@@ -43,6 +49,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ImageUpload } from '@/components/admin/ImageUpload';
+import { usePhoneNumberLock } from '@/hooks/usePhoneNumberLock';
+import { formatPhoneNumber } from '@/utils/phone';
 
 interface Representative {
   id: number;
@@ -55,18 +67,21 @@ interface Representative {
   photo_url?: string;
   banner_image_url?: string;
   gallery_images?: string[];
+  video_urls?: string[];
   company_name?: string;
   title?: string;
   address?: string;
   city?: string;
   state?: string;
   zip_code?: string;
+  admin_id?: string | null; // Link to admin (UUID)
   social_links?: {
     facebook?: string;
     twitter?: string;
     linkedin?: string;
     instagram?: string;
-    [key: string]: string | undefined;
+    customLinks?: Array<{ label: string; url: string }>;
+    [key: string]: string | Array<{ label: string; url: string }> | undefined;
   };
   custom_fields?: Record<string, any>;
   contact_button_text?: string;
@@ -80,6 +95,7 @@ interface Representative {
 }
 
 interface RepresentativeFormData {
+  adminId?: string | null; // Link to admin (UUID)
   slug: string;
   name: string;
   email: string;
@@ -89,6 +105,7 @@ interface RepresentativeFormData {
   photoUrl?: string;
   bannerImageUrl?: string;
   galleryImages: string[];
+  videoUrls: string[];
   companyName?: string;
   title?: string;
   address?: string;
@@ -100,7 +117,8 @@ interface RepresentativeFormData {
     twitter?: string;
     linkedin?: string;
     instagram?: string;
-    [key: string]: string | undefined;
+    customLinks?: Array<{ label: string; url: string }>;
+    [key: string]: string | Array<{ label: string; url: string }> | undefined;
   };
   customFields: Record<string, any>;
   contactButtonText?: string;
@@ -112,6 +130,7 @@ interface RepresentativeFormData {
 }
 
 const createEmptyFormData = (): RepresentativeFormData => ({
+  adminId: null,
   slug: '',
   name: '',
   email: '',
@@ -127,11 +146,12 @@ const createEmptyFormData = (): RepresentativeFormData => ({
   zipCode: '',
   bannerImageUrl: '',
   galleryImages: [],
-  socialLinks: {},
+  videoUrls: [],
+  socialLinks: { customLinks: [] },
   customFields: {},
-  contactButtonText: 'Contact Me',
+  contactButtonText: 'Enter Your Contact Details',
   contactCardButtonText: 'Download Contact Card',
-  contactFormTitle: 'Get In Touch',
+  contactFormTitle: 'Stay In Touch',
   contactFormDescription: '',
   isActive: true,
   displayOrder: 0,
@@ -142,6 +162,15 @@ export default function AdminRepresentatives() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRep, setEditingRep] = useState<Representative | null>(null);
   const [formData, setFormData] = useState<RepresentativeFormData>(createEmptyFormData());
+  const [imagesExpanded, setImagesExpanded] = useState(false);
+  const [locationExpanded, setLocationExpanded] = useState(false);
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  usePhoneNumberLock({ enabled: true });
+
+  // Note: Admin pages keep phone tracking for analytics
+  // Only contact card landing pages (/rep/*) are excluded
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -161,7 +190,26 @@ export default function AdminRepresentatives() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch representatives');
+        throw new Error('Failed to fetch contact cards');
+      }
+
+      return response.json();
+    },
+  });
+
+  // Fetch admins for dropdown
+  const { data: admins = [] } = useQuery({
+    queryKey: ['adminUsers'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/representatives/admins', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch admins');
       }
 
       return response.json();
@@ -187,14 +235,32 @@ export default function AdminRepresentatives() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-        const errorMessage = errorData.error || errorData.message || 'Failed to create representative';
+        let errorMessage = 'Failed to create contact card';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, try to get text
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            // If all else fails, use status text
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
         
         // Check for database schema errors
         if (errorMessage.includes('column') && errorMessage.includes('not found')) {
           throw new Error(
             'Database schema is missing required columns. Please run the migration script: scripts/add-representative-contact-fields.sql'
           );
+        }
+        
+        // Check for duplicate slug errors
+        if (errorMessage.includes('slug') && errorMessage.includes('already exists')) {
+          throw new Error('A contact card with this slug already exists. Please choose a different slug.');
         }
         
         throw new Error(errorMessage);
@@ -206,18 +272,22 @@ export default function AdminRepresentatives() {
       queryClient.invalidateQueries({ queryKey: ['adminRepresentatives'] });
       setIsDialogOpen(false);
       setFormData(createEmptyFormData());
+      setFormError(null);
       toast({
         title: '✅ Success',
-        description: 'Representative created successfully',
+        description: 'Contact card created successfully',
         duration: 3000,
       });
     },
     onError: (error: Error) => {
+      console.error('Create contact card error:', error);
+      const errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+      setFormError(errorMessage);
       toast({
-        title: '❌ Error Creating',
-        description: error.message,
+        title: '❌ Error Creating Contact Card',
+        description: errorMessage,
         variant: 'destructive',
-        duration: 5000,
+        duration: 7000,
       });
     },
   });
@@ -241,14 +311,32 @@ export default function AdminRepresentatives() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-        const errorMessage = errorData.error || errorData.message || 'Failed to update representative';
+        let errorMessage = 'Failed to update contact card';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, try to get text
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            // If all else fails, use status text
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
         
         // Check for database schema errors
         if (errorMessage.includes('column') && errorMessage.includes('not found')) {
           throw new Error(
             'Database schema is missing required columns. Please run the migration script: scripts/add-representative-contact-fields.sql'
           );
+        }
+        
+        // Check for duplicate slug errors
+        if (errorMessage.includes('slug') && errorMessage.includes('already exists')) {
+          throw new Error('A contact card with this slug already exists. Please choose a different slug.');
         }
         
         throw new Error(errorMessage);
@@ -261,18 +349,22 @@ export default function AdminRepresentatives() {
       setIsDialogOpen(false);
       setEditingRep(null);
       setFormData(createEmptyFormData());
+      setFormError(null);
       toast({
         title: '✅ Success',
-        description: 'Representative updated successfully',
+        description: 'Contact card updated successfully',
         duration: 3000,
       });
     },
     onError: (error: Error) => {
+      console.error('Update contact card error:', error);
+      const errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+      setFormError(errorMessage);
       toast({
-        title: '❌ Error Saving',
-        description: error.message,
+        title: '❌ Error Saving Contact Card',
+        description: errorMessage,
         variant: 'destructive',
-        duration: 5000,
+        duration: 7000,
       });
     },
   });
@@ -300,10 +392,12 @@ export default function AdminRepresentatives() {
       });
     },
     onError: (error: Error) => {
+      console.error('Delete contact card error:', error);
       toast({
-        title: 'Error',
-        description: error.message,
+        title: '❌ Error Deleting Contact Card',
+        description: error.message || 'Failed to delete contact card. Please try again.',
         variant: 'destructive',
+        duration: 5000,
       });
     },
   });
@@ -318,20 +412,103 @@ export default function AdminRepresentatives() {
     );
   });
 
-  const handleAddGalleryImage = () => {
-    setFormData({
-      ...formData,
-      galleryImages: [...(formData.galleryImages || []), ''],
+  const uploadImage = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('adminToken');
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('folder', 'contact-cards/gallery');
+
+    const response = await fetch('/api/admin/uploads/product-image', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(errorData.error || 'Failed to upload image');
+    }
+
+    const result = await response.json();
+    return result.url;
   };
 
-  const handleGalleryImageChange = (index: number, value: string) => {
-    const next = [...(formData.galleryImages || [])];
-    next[index] = value;
-    setFormData({
-      ...formData,
-      galleryImages: next,
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const files = Array.from(e.target.files);
+    const currentImages = formData.galleryImages || [];
+
+    toast({
+      title: 'Uploading...',
+      description: `Uploading ${files.length} image${files.length > 1 ? 's' : ''}`,
     });
+
+    try {
+      const uploadPromises = files.map((file) => uploadImage(file));
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      setFormData({
+        ...formData,
+        galleryImages: [...currentImages, ...uploadedUrls],
+      });
+
+      toast({
+        title: 'Images uploaded',
+        description: `${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} uploaded and optimized.`,
+      });
+    } catch (error) {
+      console.error('Gallery upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload images',
+        variant: 'destructive',
+      });
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const currentImages = formData.galleryImages || [];
+
+    toast({
+      title: 'Uploading...',
+      description: `Uploading ${files.length} image${files.length > 1 ? 's' : ''}`,
+    });
+
+    try {
+      const uploadPromises = files.map((file) => uploadImage(file));
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      setFormData({
+        ...formData,
+        galleryImages: [...currentImages, ...uploadedUrls],
+      });
+
+      toast({
+        title: 'Images uploaded',
+        description: `${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} uploaded and optimized.`,
+      });
+    } catch (error) {
+      console.error('Gallery upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload images',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleRemoveGalleryImage = (index: number) => {
@@ -346,12 +523,14 @@ export default function AdminRepresentatives() {
   const handleCreate = () => {
     setEditingRep(null);
     setFormData(createEmptyFormData());
+    setFormError(null);
     setIsDialogOpen(true);
   };
 
   const handleEdit = (rep: Representative) => {
     setEditingRep(rep);
     setFormData({
+      adminId: (rep as any).admin_id || null,
       slug: rep.slug,
       name: rep.name,
       email: rep.email,
@@ -361,17 +540,21 @@ export default function AdminRepresentatives() {
       photoUrl: rep.photo_url,
       bannerImageUrl: rep.banner_image_url,
       galleryImages: rep.gallery_images || [],
+      videoUrls: rep.video_urls || [],
       companyName: rep.company_name,
       title: rep.title,
       address: rep.address,
       city: rep.city,
       state: rep.state,
       zipCode: rep.zip_code,
-      socialLinks: rep.social_links || {},
+      socialLinks: {
+        ...(rep.social_links || {}),
+        customLinks: (rep.social_links as any)?.customLinks || [],
+      },
       customFields: rep.custom_fields || {},
-      contactButtonText: rep.contact_button_text || 'Contact Me',
+      contactButtonText: rep.contact_button_text || 'Enter Your Contact Details',
       contactCardButtonText: rep.contact_card_button_text || 'Download Contact Card',
-      contactFormTitle: rep.contact_form_title || 'Get In Touch',
+      contactFormTitle: rep.contact_form_title || 'Stay In Touch',
       contactFormDescription: rep.contact_form_description || '',
       isActive: rep.is_active,
       displayOrder: rep.display_order,
@@ -380,7 +563,7 @@ export default function AdminRepresentatives() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this representative?')) {
+    if (confirm('Are you sure you want to delete this contact card?')) {
       deleteMutation.mutate(id);
     }
   };
@@ -388,14 +571,19 @@ export default function AdminRepresentatives() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     
-    if (!formData.slug || !formData.name || !formData.email) {
+    if (!formData.name || !formData.email || !formData.phone) {
       toast({
         title: '⚠️ Validation Error',
-        description: 'Slug, name, and email are required fields',
+        description: 'Name, email, and phone are required fields',
         variant: 'destructive',
         duration: 4000,
       });
       return;
+    }
+
+    // Auto-generate slug if not provided
+    if (!formData.slug) {
+      formData.slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     }
 
     // Validate email format
@@ -417,9 +605,11 @@ export default function AdminRepresentatives() {
       isActive: formData.isActive ?? true,
       displayOrder: formData.displayOrder ?? 0,
       galleryImages: (formData.galleryImages || []).filter((url) => url.trim().length > 0),
-      contactButtonText: formData.contactButtonText || 'Contact Me',
+      videoUrls: (formData.videoUrls || []).filter((url) => url.trim().length > 0),
+      contactButtonText: formData.contactButtonText || 'Enter Your Contact Details',
       contactCardButtonText: formData.contactCardButtonText || 'Download Contact Card',
-      contactFormTitle: formData.contactFormTitle || 'Get In Touch',
+      contactFormTitle: formData.contactFormTitle || 'Stay In Touch',
+      adminId: formData.adminId || null,
     };
 
     try {
@@ -429,8 +619,16 @@ export default function AdminRepresentatives() {
         await createMutation.mutateAsync(payload);
       }
     } catch (error) {
-      // Error handling is done in mutation onError
+      // Error handling is done in mutation onError, but ensure it's displayed
       console.error('Error submitting form:', error);
+      if (error instanceof Error) {
+        toast({
+          title: '❌ Error',
+          description: error.message || 'An unexpected error occurred. Please check the form and try again.',
+          variant: 'destructive',
+          duration: 7000,
+        });
+      }
     }
   };
 
@@ -444,14 +642,14 @@ export default function AdminRepresentatives() {
         <div className="space-y-6 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Representatives</h1>
+              <h1 className="text-3xl font-bold">Contact Cards</h1>
               <p className="text-muted-foreground">
-                Manage representative landing pages and contact information
+                Manage contact card landing pages and track prospects
               </p>
             </div>
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Representative
+              Add Contact Card
             </Button>
           </div>
 
@@ -459,15 +657,15 @@ export default function AdminRepresentatives() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>All Representatives</CardTitle>
+                  <CardTitle>All Contact Cards</CardTitle>
                   <CardDescription>
-                    {filteredReps.length} representative{filteredReps.length !== 1 ? 's' : ''}
+                    {filteredReps.length} contact card{filteredReps.length !== 1 ? 's' : ''}
                   </CardDescription>
                 </div>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search representatives..."
+                    placeholder="Search contact cards..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -480,7 +678,7 @@ export default function AdminRepresentatives() {
                 <div className="py-8 text-center text-muted-foreground">Loading...</div>
               ) : filteredReps.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
-                  {searchTerm ? 'No representatives found' : 'No representatives yet. Create one to get started.'}
+                  {searchTerm ? 'No contact cards found' : 'No contact cards yet. Create one to get started.'}
                 </div>
               ) : (
                 <Table>
@@ -523,7 +721,14 @@ export default function AdminRepresentatives() {
                             {rep.phone && (
                               <div className="flex items-center gap-2 text-sm">
                                 <Phone className="h-3 w-3" />
-                                {rep.phone}
+                                <span
+                                  data-callrail-ignore="true"
+                                  data-dynamic-number-ignore="true"
+                                  data-call-tracking-ignore="true"
+                                  data-phone-number={rep.phone}
+                                >
+                                  {formatPhoneNumber(rep.phone)}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -584,63 +789,88 @@ export default function AdminRepresentatives() {
                 return;
               }
               setIsDialogOpen(open);
+              // Clear error when dialog closes
+              if (!open) {
+                setFormError(null);
+              }
             }}
           >
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-2xl">
-                  {editingRep ? 'Edit Representative' : 'Create Representative'}
+                  {editingRep ? 'Edit Contact Card' : 'Create Contact Card'}
                 </DialogTitle>
                 <DialogDescription>
                   {editingRep
-                    ? 'Update representative information and landing page settings'
-                    : 'Add a new representative landing page'}
+                    ? 'Update contact card information and landing page settings'
+                    : 'Add a new contact card landing page'}
                 </DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-6 py-4">
-                {/* Basic Information Section */}
+                {/* Error Alert */}
+                {formError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{formError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Admin Selection - First and Prominent */}
+                <Card className="border-2 border-primary/20">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">Link to Admin</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Select which admin will receive contacts from this contact card
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminId">Admin</Label>
+                      <Select
+                        value={formData.adminId?.toString() || ''}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            adminId: value === 'none' ? null : value,
+                          })
+                        }
+                      >
+                        <SelectTrigger id="adminId">
+                          <SelectValue placeholder="Select an admin (recommended)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {admins.map((admin: any) => (
+                            <SelectItem key={admin.id} value={admin.id.toString()}>
+                              {admin.full_name || admin.email}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="none" className="text-muted-foreground italic">
+                            No Admin (not recommended)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Contacts from this card will be associated with the selected admin
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Required Information Section */}
                 <Card className="border-2">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <User className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">Basic Information</CardTitle>
+                      <CardTitle className="text-lg">Required Information</CardTitle>
                     </div>
-                    <CardDescription>Core details about the representative</CardDescription>
+                    <CardDescription>Core details required for the contact card</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="slug">
-                          Slug <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="slug"
-                          value={formData.slug || ''}
-                          onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                          placeholder="john-smith"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          URL-friendly identifier (e.g., /rep/john-smith)
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="displayOrder">Display Order</Label>
-                        <Input
-                          id="displayOrder"
-                          type="number"
-                          value={formData.displayOrder ?? 0}
-                          onChange={(e) =>
-                            setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Lower numbers appear first
-                        </p>
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="name">
@@ -649,7 +879,19 @@ export default function AdminRepresentatives() {
                         <Input
                           id="name"
                           value={formData.name || ''}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          onChange={(e) => {
+                            const name = e.target.value;
+                            // Auto-generate slug from name only if creating new (not editing) and slug is empty
+                            const shouldAutoGenerate = !editingRep && !formData.slug;
+                            setFormData({
+                              ...formData,
+                              name,
+                              // Auto-generate slug from name if creating new contact card
+                              slug: shouldAutoGenerate 
+                                ? name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                                : formData.slug,
+                            });
+                          }}
                           required
                         />
                       </div>
@@ -667,38 +909,49 @@ export default function AdminRepresentatives() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={formData.phone || ''}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="(555) 123-4567"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="website">Website</Label>
-                        <Input
-                          id="website"
-                          value={formData.website || ''}
-                          onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                          placeholder="https://example.com"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">
+                        Phone <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                        required
+                      />
                     </div>
+                  </CardContent>
+                </Card>
 
+                {/* Highly Recommended Section */}
+                <Card className="border-2 border-blue-200">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-lg">Highly Recommended</CardTitle>
+                    </div>
+                    <CardDescription>
+                      These fields make your contact card look professional and complete
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="companyName">Company Name</Label>
-                        <Input
-                          id="companyName"
-                          value={formData.companyName || ''}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        <ImageUpload
+                          value={formData.photoUrl}
+                          onChange={(url) => setFormData({ ...formData, photoUrl: url })}
+                          onRemove={() => setFormData({ ...formData, photoUrl: '' })}
+                          folder="contact-cards/profiles"
+                          label="Profile Photo"
+                          description="Square image recommended (will be cropped to circle)"
+                          aspectRatio="square"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="title">Title</Label>
+                        <Label htmlFor="title">
+                          Title <span className="text-blue-600 text-xs">(Recommended)</span>
+                        </Label>
                         <Input
                           id="title"
                           value={formData.title || ''}
@@ -707,230 +960,443 @@ export default function AdminRepresentatives() {
                         />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Images & Content Section */}
-                <Card className="border-2">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">Images & Content</CardTitle>
-                    </div>
-                    <CardDescription>Visual assets and biographical information</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="photoUrl">Photo URL</Label>
-                      <Input
-                        id="photoUrl"
-                        value={formData.photoUrl || ''}
-                        onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-                        placeholder="https://example.com/photo.jpg"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Profile photo (square image recommended)
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="bannerImageUrl">Banner Image URL</Label>
-                      <Input
-                        id="bannerImageUrl"
-                        value={formData.bannerImageUrl || ''}
-                        onChange={(e) => setFormData({ ...formData, bannerImageUrl: e.target.value })}
-                        placeholder="https://example.com/banner.jpg"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Wide hero image that appears behind the header (recommended: 1920x600px)
-                      </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="companyName">
+                          Company Name <span className="text-blue-600 text-xs">(Recommended)</span>
+                        </Label>
+                        <Input
+                          id="companyName"
+                          value={formData.companyName || ''}
+                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <ImageUpload
+                          value={formData.bannerImageUrl}
+                          onChange={(url) => setFormData({ ...formData, bannerImageUrl: url })}
+                          onRemove={() => setFormData({ ...formData, bannerImageUrl: '' })}
+                          folder="contact-cards/banners"
+                          label="Banner Image"
+                          description="Wide hero image (recommended: 1920x600px)"
+                          aspectRatio="banner"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
+                      <Label htmlFor="bio">
+                        Bio <span className="text-blue-600 text-xs">(Recommended)</span>
+                      </Label>
                       <Textarea
                         id="bio"
                         value={formData.bio || ''}
                         onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                         rows={4}
-                        placeholder="Tell us about this representative..."
+                        placeholder="Tell us about this contact card..."
                         className="resize-none"
                       />
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Gallery Images</Label>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleAddGalleryImage}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Image
-                        </Button>
-                      </div>
-                      {(!formData.galleryImages || formData.galleryImages.length === 0) && (
-                        <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
-                          No gallery images yet. Add image URLs to showcase the representative&apos;s work.
-                        </p>
-                      )}
-                      <div className="space-y-2">
-                        {(formData.galleryImages || []).map((url, index) => (
-                          <div className="flex gap-2" key={`gallery-${index}`}>
-                            <Input
-                              value={url}
-                              onChange={(e) => handleGalleryImageChange(index, e.target.value)}
-                              placeholder="https://example.com/gallery.jpg"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveGalleryImage(index)}
-                              aria-label="Remove image"
-                              className="shrink-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Description that appears on the landing page
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Location & Social Section */}
-                <Card className="border-2">
+                {/* Social Media Links Section - In Recommended but also here for organization */}
+                <Card className="border-2 border-blue-200">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">Location & Social Media</CardTitle>
+                      <Link2 className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-lg">Social Media Links</CardTitle>
                     </div>
-                    <CardDescription>Address and social media profiles</CardDescription>
+                    <CardDescription>Connect your social media profiles</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
+                        <Label htmlFor="facebook" className="text-xs">Facebook</Label>
                         <Input
-                          id="address"
-                          value={formData.address || ''}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                          placeholder="123 Main St"
+                          id="facebook"
+                          placeholder="https://facebook.com/username"
+                          value={formData.socialLinks?.facebook || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              socialLinks: {
+                                ...(formData.socialLinks || {}),
+                                facebook: e.target.value,
+                              },
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
+                        <Label htmlFor="linkedin" className="text-xs">LinkedIn</Label>
                         <Input
-                          id="city"
-                          value={formData.city || ''}
-                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          placeholder="City"
+                          id="linkedin"
+                          placeholder="https://linkedin.com/in/username"
+                          value={formData.socialLinks?.linkedin || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              socialLinks: {
+                                ...(formData.socialLinks || {}),
+                                linkedin: e.target.value,
+                              },
+                            })
+                          }
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State</Label>
-                          <Input
-                            id="state"
-                            value={formData.state || ''}
-                            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                            placeholder="CA"
-                            maxLength={2}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="zipCode">Zip Code</Label>
-                          <Input
-                            id="zipCode"
-                            value={formData.zipCode || ''}
-                            onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                            placeholder="12345"
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="instagram" className="text-xs">Instagram</Label>
+                        <Input
+                          id="instagram"
+                          placeholder="https://instagram.com/username"
+                          value={formData.socialLinks?.instagram || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              socialLinks: {
+                                ...(formData.socialLinks || {}),
+                                instagram: e.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="twitter" className="text-xs">Twitter</Label>
+                        <Input
+                          id="twitter"
+                          placeholder="https://twitter.com/username"
+                          value={formData.socialLinks?.twitter || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              socialLinks: {
+                                ...(formData.socialLinks || {}),
+                                twitter: e.target.value,
+                              },
+                            })
+                          }
+                        />
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Link2 className="h-4 w-4 text-muted-foreground" />
-                        <Label>Social Media Links</Label>
+                    {/* Custom Links */}
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <Label>Custom Links</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentLinks = formData.socialLinks?.customLinks || [];
+                            setFormData({
+                              ...formData,
+                              socialLinks: {
+                                ...(formData.socialLinks || {}),
+                                customLinks: [...currentLinks, { label: '', url: '' }],
+                              },
+                            });
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Custom Link
+                        </Button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="facebook" className="text-xs text-muted-foreground">Facebook</Label>
+                      {(formData.socialLinks?.customLinks || []).map((link, index) => (
+                        <div key={`custom-${index}`} className="flex gap-2">
                           <Input
-                            id="facebook"
-                            placeholder="https://facebook.com/username"
-                            value={formData.socialLinks?.facebook || ''}
-                            onChange={(e) =>
+                            placeholder="Link Label"
+                            value={link.label}
+                            onChange={(e) => {
+                              const customLinks = [...(formData.socialLinks?.customLinks || [])];
+                              customLinks[index] = { ...customLinks[index], label: e.target.value };
                               setFormData({
                                 ...formData,
                                 socialLinks: {
                                   ...(formData.socialLinks || {}),
-                                  facebook: e.target.value,
+                                  customLinks,
                                 },
-                              })
-                            }
+                              });
+                            }}
+                            className="flex-1"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="twitter" className="text-xs text-muted-foreground">Twitter</Label>
                           <Input
-                            id="twitter"
-                            placeholder="https://twitter.com/username"
-                            value={formData.socialLinks?.twitter || ''}
-                            onChange={(e) =>
+                            placeholder="https://example.com"
+                            value={link.url}
+                            onChange={(e) => {
+                              const customLinks = [...(formData.socialLinks?.customLinks || [])];
+                              customLinks[index] = { ...customLinks[index], url: e.target.value };
                               setFormData({
                                 ...formData,
                                 socialLinks: {
                                   ...(formData.socialLinks || {}),
-                                  twitter: e.target.value,
+                                  customLinks,
                                 },
-                              })
-                            }
+                              });
+                            }}
+                            className="flex-2"
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="linkedin" className="text-xs text-muted-foreground">LinkedIn</Label>
-                          <Input
-                            id="linkedin"
-                            placeholder="https://linkedin.com/in/username"
-                            value={formData.socialLinks?.linkedin || ''}
-                            onChange={(e) =>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const customLinks = (formData.socialLinks?.customLinks || []).filter((_, i) => i !== index);
                               setFormData({
                                 ...formData,
                                 socialLinks: {
                                   ...(formData.socialLinks || {}),
-                                  linkedin: e.target.value,
+                                  customLinks,
                                 },
-                              })
-                            }
-                          />
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="instagram" className="text-xs text-muted-foreground">Instagram</Label>
-                          <Input
-                            id="instagram"
-                            placeholder="https://instagram.com/username"
-                            value={formData.socialLinks?.instagram || ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                socialLinks: {
-                                  ...(formData.socialLinks || {}),
-                                  instagram: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Images & Media - Collapsible */}
+                <Collapsible open={imagesExpanded} onOpenChange={setImagesExpanded}>
+                  <Card className="border-2">
+                    <CollapsibleTrigger className="w-full">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="h-5 w-5 text-primary" />
+                            <CardTitle className="text-lg">Images & Media</CardTitle>
+                          </div>
+                          {imagesExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <CardDescription>Additional images and gallery</CardDescription>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label>Gallery Images</Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Upload Images
+                            </Button>
+                          </div>
+                          
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleGalleryUpload}
+                            className="hidden"
+                          />
+
+                          {(!formData.galleryImages || formData.galleryImages.length === 0) ? (
+                            <div
+                              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDrop={handleGalleryDrop}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm font-medium mb-1">Drag images here or click to upload</p>
+                              <p className="text-xs text-muted-foreground">
+                                PNG, JPG, WebP up to 20MB each
+                              </p>
+                            </div>
+                          ) : (
+                            <div
+                              className="grid grid-cols-2 sm:grid-cols-3 gap-4"
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDrop={handleGalleryDrop}
+                            >
+                              {(formData.galleryImages || []).map((url, index) => (
+                                <div key={`gallery-${index}`} className="relative group">
+                                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-border">
+                                    <img
+                                      src={url}
+                                      alt={`Gallery ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleRemoveGalleryImage(index)}
+                                    aria-label="Remove image"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <div
+                                className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                <Plus className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Video className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">YouTube Spotlight</CardTitle>
+                </div>
+                <CardDescription>Add short-form videos that automatically play on the contact card.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <Label>Video URLs</Label>
+                    <p className="text-xs text-muted-foreground">Use full YouTube links (watch or share URLs).</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        videoUrls: [...(formData.videoUrls || []), ''],
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Video
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {(formData.videoUrls || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No videos yet. Click “Add Video” to get started.</p>
+                  )}
+                  {(formData.videoUrls || []).map((url, index) => (
+                    <div key={`video-${index}`} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        value={url}
+                        onChange={(e) => {
+                          const next = [...(formData.videoUrls || [])];
+                          next[index] = e.target.value;
+                          setFormData({ ...formData, videoUrls: next });
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const next = (formData.videoUrls || []).filter((_, i) => i !== index);
+                          setFormData({ ...formData, videoUrls: next });
+                        }}
+                        aria-label="Remove video"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+                {/* Location - Collapsible */}
+                <Collapsible open={locationExpanded} onOpenChange={setLocationExpanded}>
+                  <Card className="border-2">
+                    <CollapsibleTrigger className="w-full">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-primary" />
+                            <CardTitle className="text-lg">Location</CardTitle>
+                          </div>
+                          {locationExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <CardDescription>Physical address information</CardDescription>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Input
+                              id="address"
+                              value={formData.address || ''}
+                              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                              placeholder="123 Main St"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="city">City</Label>
+                            <Input
+                              id="city"
+                              value={formData.city || ''}
+                              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                              placeholder="City"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="state">State</Label>
+                              <Input
+                                id="state"
+                                value={formData.state || ''}
+                                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                placeholder="CA"
+                                maxLength={2}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="zipCode">Zip Code</Label>
+                              <Input
+                                id="zipCode"
+                                value={formData.zipCode || ''}
+                                onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                                placeholder="12345"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
 
                 {/* Contact Form Settings Section */}
                 <Card className="border-2">
@@ -949,7 +1415,7 @@ export default function AdminRepresentatives() {
                           id="contactButtonText"
                           value={formData.contactButtonText || ''}
                           onChange={(e) => setFormData({ ...formData, contactButtonText: e.target.value })}
-                          placeholder="Contact Me"
+                          placeholder="Enter Your Contact Details"
                         />
                         <p className="text-xs text-muted-foreground">
                           Text for the main contact button
@@ -977,31 +1443,113 @@ export default function AdminRepresentatives() {
                         id="contactFormTitle"
                         value={formData.contactFormTitle || ''}
                         onChange={(e) => setFormData({ ...formData, contactFormTitle: e.target.value })}
-                        placeholder="Get In Touch"
+                        placeholder="Stay In Touch"
                       />
                       <p className="text-xs text-muted-foreground">
                         Main heading above the contact form
                       </p>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="contactFormDescription">Contact Form Description</Label>
-                      <Textarea
-                        id="contactFormDescription"
-                        value={formData.contactFormDescription || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, contactFormDescription: e.target.value })
-                        }
-                        rows={3}
-                        placeholder="Short description that appears above the intake form button"
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Brief description that appears below the title
-                      </p>
-                    </div>
                   </CardContent>
                 </Card>
+
+                {/* Advanced - Collapsible */}
+                <Collapsible open={advancedExpanded} onOpenChange={setAdvancedExpanded}>
+                  <Card className="border-2">
+                    <CollapsibleTrigger className="w-full">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-primary" />
+                            <CardTitle className="text-lg">Advanced Settings</CardTitle>
+                          </div>
+                          {advancedExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <CardDescription>Additional customization options</CardDescription>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Website</Label>
+                          <Input
+                            id="website"
+                            value={formData.website || ''}
+                            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                            placeholder="https://example.com"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="contactFormDescription">Contact Form Description</Label>
+                          <Textarea
+                            id="contactFormDescription"
+                            value={formData.contactFormDescription || ''}
+                            onChange={(e) =>
+                              setFormData({ ...formData, contactFormDescription: e.target.value })
+                            }
+                            rows={3}
+                            placeholder="Short description that appears above the intake form button"
+                            className="resize-none"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Brief description that appears below the title
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="slug">
+                            Slug <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="slug"
+                            value={formData.slug || ''}
+                            onChange={(e) => {
+                              const newSlug = e.target.value;
+                              // If editing and slug is being changed, show warning
+                              if (editingRep && newSlug !== editingRep.slug) {
+                                if (!confirm(
+                                  '⚠️ WARNING: Changing the slug will break all existing links to this contact card!\n\n' +
+                                  'Previous URL: /rep/' + editingRep.slug + '\n' +
+                                  'New URL: /rep/' + newSlug + '\n\n' +
+                                  'Anyone who has bookmarked or shared the old link will get a 404 error.\n\n' +
+                                  'Are you sure you want to change the slug?'
+                                )) {
+                                  return; // User cancelled
+                                }
+                              }
+                              setFormData({ ...formData, slug: newSlug });
+                            }}
+                            placeholder="Auto-generated from name"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            URL-friendly identifier (e.g., /rep/john-smith). Auto-generated from name on first save.
+                            {editingRep && <span className="text-amber-600 font-semibold"> Changing this will break existing links!</span>}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="displayOrder">Display Order</Label>
+                          <Input
+                            id="displayOrder"
+                            type="number"
+                            value={formData.displayOrder ?? 0}
+                            onChange={(e) =>
+                              setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Lower numbers appear first
+                          </p>
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
 
                 {/* Status Section */}
                 <Card className="border-2">

@@ -298,6 +298,7 @@ export const representatives = pgTable("representatives", {
   photoUrl: text("photo_url"),
   bannerImageUrl: text("banner_image_url"),
   galleryImages: text("gallery_images").array(),
+  videoUrls: text("video_urls").array(),
   companyName: text("company_name"),
   title: text("title"),
   address: text("address"),
@@ -312,7 +313,7 @@ export const representatives = pgTable("representatives", {
     [key: string]: string | undefined;
   }>(),
   customFields: jsonb("custom_fields").$type<Record<string, any>>(),
-  contactButtonText: text("contact_button_text").default("Contact Me").notNull(),
+  contactButtonText: text("contact_button_text").default("Enter Your Contact Details").notNull(),
   contactCardButtonText: text("contact_card_button_text").default("Download Contact Card").notNull(),
   contactFormTitle: text("contact_form_title").default("Get In Touch").notNull(),
   contactFormDescription: text("contact_form_description"),

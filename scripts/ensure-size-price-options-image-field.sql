@@ -51,3 +51,4 @@ ON products USING gin (size_price_options);
 -- Images are automatically optimized (resized, converted to WebP) when uploaded
 -- Image URLs are stored as strings in the image field of each size option
 
+

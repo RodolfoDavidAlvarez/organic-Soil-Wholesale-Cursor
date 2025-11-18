@@ -3,27 +3,61 @@ import { supabase } from "../supabaseClient";
 
 const router = Router();
 
-// Download contact card (vCard)
+// Download contact card (vCard) - supports both representatives and admins
 router.get("/:slug/contact-card", async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const { data, error } = await supabase
+    // Try representatives first
+    let { data, error } = await supabase
       .from("representatives")
       .select("*")
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return res.status(404).json({ error: "Representative not found" });
+    // If not found, try admin_users
+    if (error && error.code === "PGRST116") {
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("slug", slug)
+        .eq("has_landing_page", true)
+        .eq("is_active", true)
+        .single();
+
+      if (adminError) {
+        if (adminError.code === "PGRST116") {
+          return res.status(404).json({ error: "Contact not found" });
+        }
+        throw adminError;
       }
+
+      if (!adminData) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+
+      // Transform admin data
+      data = {
+        name: adminData.full_name || adminData.email,
+        email: adminData.email,
+        phone: adminData.phone,
+        website: adminData.website,
+        company_name: adminData.company_name,
+        title: adminData.title,
+        address: adminData.address,
+        city: adminData.city,
+        state: adminData.state,
+        zip_code: adminData.zip_code,
+        photo_url: adminData.photo_url,
+        slug: adminData.slug,
+      };
+    } else if (error) {
       throw error;
     }
 
     if (!data) {
-      return res.status(404).json({ error: "Representative not found" });
+      return res.status(404).json({ error: "Contact not found" });
     }
 
     const [firstName, ...rest] = (data.name || "").split(" ");
@@ -53,7 +87,7 @@ router.get("/:slug/contact-card", async (req, res) => {
     res.setHeader("Content-Type", "text/vcard; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${data.slug || "representative"}.vcf"`
+      `attachment; filename="${data.slug || "contact"}.vcf"`
     );
     return res.send(vcard);
   } catch (error: any) {
@@ -62,33 +96,79 @@ router.get("/:slug/contact-card", async (req, res) => {
   }
 });
 
-// Get a representative by slug (public route)
+// Get a representative or admin by slug (public route)
 router.get("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const { data, error } = await supabase
+    // First, try to find in representatives table
+    let { data, error } = await supabase
       .from("representatives")
       .select("*")
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return res.status(404).json({ error: "Representative not found" });
+    // If not found in representatives, check admin_users
+    if (error && error.code === "PGRST116") {
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("slug", slug)
+        .eq("has_landing_page", true)
+        .eq("is_active", true)
+        .single();
+
+      if (adminError) {
+        if (adminError.code === "PGRST116") {
+          return res.status(404).json({ error: "Landing page not found" });
+        }
+        throw adminError;
       }
+
+      if (!adminData) {
+        return res.status(404).json({ error: "Landing page not found" });
+      }
+
+      // Transform admin data to match representative format
+      data = {
+        id: adminData.id,
+        slug: adminData.slug,
+        name: adminData.full_name || adminData.email,
+        email: adminData.email,
+        phone: adminData.phone,
+        website: adminData.website,
+        bio: adminData.bio,
+        photo_url: adminData.photo_url,
+        banner_image_url: adminData.banner_image_url,
+        gallery_images: adminData.gallery_images || [],
+        video_urls: adminData.video_urls || [],
+        company_name: adminData.company_name,
+        title: adminData.title,
+        address: adminData.address,
+        city: adminData.city,
+        state: adminData.state,
+        zip_code: adminData.zip_code,
+        social_links: adminData.social_links || {},
+        contact_button_text: adminData.contact_button_text || "Enter Your Contact Details",
+        contact_card_button_text: adminData.contact_card_button_text || "Download Contact Card",
+        contact_form_title: adminData.contact_form_title || "Get In Touch",
+        contact_form_description: adminData.contact_form_description,
+        is_active: adminData.is_active,
+        source: "admin", // Flag to indicate this is from admin_users
+      };
+    } else if (error) {
       throw error;
     }
 
     if (!data) {
-      return res.status(404).json({ error: "Representative not found" });
+      return res.status(404).json({ error: "Landing page not found" });
     }
 
     res.json(data);
   } catch (error: any) {
-    console.error("Error fetching representative:", error);
-    res.status(500).json({ error: error.message || "Failed to fetch representative" });
+    console.error("Error fetching landing page:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch landing page" });
   }
 });
 
@@ -103,7 +183,7 @@ router.post("/:slug/contact", async (req, res) => {
       return res.status(400).json({ error: "First name, last name, and email are required" });
     }
 
-    // Get representative ID
+    // Try to find in representatives first
     const { data: representative, error: repError } = await supabase
       .from("representatives")
       .select("id")
@@ -111,24 +191,55 @@ router.post("/:slug/contact", async (req, res) => {
       .eq("is_active", true)
       .single();
 
-    if (repError || !representative) {
-      return res.status(404).json({ error: "Representative not found" });
+    let contactData: any = {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone: phone || null,
+      company_name: companyName || null,
+      message: message || null,
+      source: "landing_page",
+      status: "new",
+    };
+
+    if (representative && !repError) {
+      // Found in representatives table - get the full representative to access admin_id
+      const { data: fullRep, error: fullRepError } = await supabase
+        .from("representatives")
+        .select("id, admin_id")
+        .eq("id", representative.id)
+        .single();
+
+      if (!fullRepError && fullRep) {
+        contactData.representative_id = fullRep.id;
+        contactData.admin_id = fullRep.admin_id || null; // Link to admin if representative has one
+      } else {
+        contactData.representative_id = representative.id;
+        contactData.admin_id = null;
+      }
+    } else {
+      // Try to find in admin_users
+      const { data: admin, error: adminError } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("slug", slug)
+        .eq("has_landing_page", true)
+        .eq("is_active", true)
+        .single();
+
+      if (adminError || !admin) {
+        return res.status(404).json({ error: "Landing page not found" });
+      }
+
+      // Found in admin_users table
+      contactData.admin_id = admin.id;
+      contactData.representative_id = null;
     }
 
     // Insert contact submission
     const { data, error } = await supabase
       .from("representative_contacts")
-      .insert({
-        representative_id: representative.id,
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone: phone || null,
-        company_name: companyName || null,
-        message: message || null,
-        source: "landing_page",
-        status: "new",
-      })
+      .insert(contactData)
       .select()
       .single();
 
@@ -142,4 +253,3 @@ router.post("/:slug/contact", async (req, res) => {
 });
 
 export default router;
-

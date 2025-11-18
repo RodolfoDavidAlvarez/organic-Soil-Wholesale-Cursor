@@ -33,3 +33,4 @@ CREATE TRIGGER admin_invitations_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_admin_invitations_updated_at();
 
+

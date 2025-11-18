@@ -26,6 +26,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Phone, Search, User, NotebookPen } from 'lucide-react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface RepresentativeSummary {
   id: number;
@@ -54,6 +55,8 @@ interface RepresentativeContactRecord {
 const statusOptions = ['new', 'contacted', 'qualified', 'converted', 'archived'] as const;
 
 export default function AdminRepresentativeContacts() {
+  const { admin } = useAdminAuth();
+  const isSuperAdmin = admin?.role === 'super_admin';
   const [statusFilter, setStatusFilter] = useState<'all' | typeof statusOptions[number]>('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -196,9 +199,9 @@ export default function AdminRepresentativeContacts() {
         <div className="space-y-6 p-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Representative CRM</h1>
+              <h1 className="text-3xl font-bold">My CRM Contacts</h1>
               <p className="text-muted-foreground">
-                View and manage contact submissions from every representative landing page.
+                View and manage contact submissions from your contact landing page.
               </p>
             </div>
           </div>
@@ -261,7 +264,7 @@ export default function AdminRepresentativeContacts() {
                       <TableRow>
                         <TableHead>Prospect</TableHead>
                         <TableHead>Contact</TableHead>
-                        <TableHead>Representative</TableHead>
+                        {isSuperAdmin && <TableHead>Representative</TableHead>}
                         <TableHead>Status</TableHead>
                         <TableHead>Submitted</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -301,28 +304,30 @@ export default function AdminRepresentativeContacts() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {contact.representative ? (
-                              <div className="space-y-1 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-3.5 w-3.5" />
-                                  <span>{contact.representative.name}</span>
+                          {isSuperAdmin && (
+                            <TableCell>
+                              {contact.representative ? (
+                                <div className="space-y-1 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-3.5 w-3.5" />
+                                    <span>{contact.representative.name}</span>
+                                  </div>
+                                  {contact.representative.slug && (
+                                    <a
+                                      href={`/rep/${contact.representative.slug}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-green-600 hover:underline"
+                                    >
+                                      /rep/{contact.representative.slug}
+                                    </a>
+                                  )}
                                 </div>
-                                {contact.representative.slug && (
-                                  <a
-                                    href={`/rep/${contact.representative.slug}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-green-600 hover:underline"
-                                  >
-                                    /rep/{contact.representative.slug}
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">Unknown</span>
-                            )}
-                          </TableCell>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Unknown</span>
+                              )}
+                            </TableCell>
+                          )}
                           <TableCell>
                             <div className="flex flex-col gap-2">
                               {renderStatusBadge(contact.status)}

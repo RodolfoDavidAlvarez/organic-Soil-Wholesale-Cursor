@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     href: "/admin/notifications",
   },
   {
-    label: "Representatives",
+    label: "Rep. Contact Cards",
     icon: <UserCircle className="w-5 h-5" />,
     href: "/admin/representatives",
   },
@@ -137,26 +137,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(item.href);
-                  setSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors",
-                  (item.href === "/admin" ? normalizedLocation === item.href : normalizedLocation.startsWith(item.href))
-                    ? "bg-green-50 text-green-800 font-medium"
-                    : "hover:bg-gray-100"
-                )}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </a>
-            ))}
+            {navItems.map((item) => {
+              // Hide "Rep. Contact Cards" for regular admins (only show for super admins)
+              if (item.href === "/admin/representatives" && admin?.role !== "super_admin") {
+                return null;
+              }
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(item.href);
+                    setSidebarOpen(false);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors",
+                    (item.href === "/admin" ? normalizedLocation === item.href : normalizedLocation.startsWith(item.href))
+                      ? "bg-green-50 text-green-800 font-medium"
+                      : "hover:bg-gray-100"
+                  )}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </a>
+              );
+            })}
           </nav>
 
           {/* Sign out */}

@@ -46,3 +46,4 @@ ON products USING gin (size_price_options);
 -- WHERE size_price_options IS NOT NULL 
 -- LIMIT 5;
 
+

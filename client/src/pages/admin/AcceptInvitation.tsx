@@ -35,6 +35,8 @@ export default function AcceptInvitation() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
 
   // Extract token from URL path using window.location for reliability
   const token = useMemo(() => {
@@ -115,12 +117,31 @@ export default function AcceptInvitation() {
     verifyInvitation();
   }, [token, setValue]);
 
+  // Handle countdown and redirect when account is created
+  useEffect(() => {
+    if (!accountCreated) return;
+
+    const interval = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setTimeout(() => navigate("/admin/login"), 100);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [accountCreated, navigate]);
+
   const onSubmit = async (data: SignupFormData) => {
     if (!token) {
       return;
     }
 
     try {
+      setError(null);
       const response = await fetch(`/api/admin/invitations/accept/${token}`, {
         method: "POST",
         headers: {
@@ -135,20 +156,31 @@ export default function AcceptInvitation() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to create account");
+        const errorMessage = result.error || "Failed to create account";
+        console.error("Account creation failed:", errorMessage);
+        setError(errorMessage);
+        toast({
+          title: "Account Creation Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
       }
 
+      // Show success state
+      setAccountCreated(true);
+      
       toast({
         title: "Account created successfully!",
         description: "You can now log in with your email and password.",
       });
 
-      // Redirect to login after a short delay
-      setTimeout(() => {
-        navigate("/admin/login");
-      }, 2000);
+      // Start countdown - the useEffect will handle the redirect
+      setRedirectCountdown(5);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create account";
+      const message = error instanceof Error ? error.message : "Failed to create account. Please try again.";
+      console.error("Account creation error:", error);
+      setError(message);
       toast({
         title: "Error",
         description: message,
@@ -166,6 +198,57 @@ export default function AcceptInvitation() {
             <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
             <p className="text-gray-600">Verifying invitation...</p>
           </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Success state - show after account creation
+  if (accountCreated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-12 px-4" style={{ paddingTop: "var(--app-header-height, 6.5rem)" }}>
+          <Card className="w-full max-w-md shadow-xl border-2 border-green-200">
+            <CardHeader className="space-y-1 pb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="relative">
+                  {/* Animated success circle */}
+                  <div className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full shadow-lg animate-scale-in">
+                    <CheckCircle className="w-12 h-12 text-white" />
+                  </div>
+                  {/* Pulsing ring animation */}
+                  <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-20"></div>
+                </div>
+              </div>
+              <CardTitle className="text-3xl text-center font-heading text-gray-900 animate-fade-in">
+                Account Created Successfully!
+              </CardTitle>
+              <CardDescription className="text-center text-base mt-2 animate-fade-in-delay">
+                Thank you for creating your account. You're all set!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center space-y-2">
+                <p className="text-gray-600">
+                  Redirecting you to the login page in <span className="font-bold text-green-600 text-lg">{redirectCountdown}</span> seconds...
+                </p>
+                <p className="text-sm text-gray-500">
+                  You can now log in with your email and password.
+                </p>
+              </div>
+              
+              <div className="pt-4">
+                <Button 
+                  className="w-full h-11 text-base font-medium bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all"
+                  onClick={() => navigate("/admin/login")}
+                >
+                  Go to Login Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <Footer />
       </div>
@@ -303,6 +386,14 @@ export default function AcceptInvitation() {
                   )}
                 </Button>
               </form>
+
+              {/* Error Display */}
+              {error && (
+                <Alert variant="destructive" className="mt-4">
+                  <XCircle className="w-4 h-4" />
+                  <AlertDescription className="font-medium">{error}</AlertDescription>
+                </Alert>
+              )}
 
               {/* Security Notice */}
               <div className="pt-4 border-t border-gray-200">
