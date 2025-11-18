@@ -101,7 +101,7 @@ router.get("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
 
-    // First, try to find in representatives table
+    // Try to find in representatives table first
     let { data, error } = await supabase
       .from("representatives")
       .select("*")
@@ -110,7 +110,8 @@ router.get("/:slug", async (req, res) => {
       .single();
 
     // If not found in representatives, check admin_users
-    if (error && error.code === "PGRST116") {
+    if (error && (error.code === "PGRST116" || error.code === "42P01")) {
+      // PGRST116 = not found, 42P01 = table doesn't exist (fallback)
       const { data: adminData, error: adminError } = await supabase
         .from("admin_users")
         .select("*")
@@ -123,6 +124,7 @@ router.get("/:slug", async (req, res) => {
         if (adminError.code === "PGRST116") {
           return res.status(404).json({ error: "Landing page not found" });
         }
+        console.error("Error fetching admin landing page:", adminError);
         throw adminError;
       }
 
@@ -158,7 +160,56 @@ router.get("/:slug", async (req, res) => {
         source: "admin", // Flag to indicate this is from admin_users
       };
     } else if (error) {
-      throw error;
+      // If there's an error other than "not found", log it and try admin_users as fallback
+      console.error("Error fetching representative:", error);
+      
+      // Try admin_users as fallback
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("slug", slug)
+        .eq("has_landing_page", true)
+        .eq("is_active", true)
+        .single();
+
+      if (adminError) {
+        if (adminError.code === "PGRST116") {
+          return res.status(404).json({ error: "Landing page not found" });
+        }
+        throw adminError;
+      }
+
+      if (adminData) {
+        // Transform admin data to match representative format
+        data = {
+          id: adminData.id,
+          slug: adminData.slug,
+          name: adminData.full_name || adminData.email,
+          email: adminData.email,
+          phone: adminData.phone,
+          website: adminData.website,
+          bio: adminData.bio,
+          photo_url: adminData.photo_url,
+          banner_image_url: adminData.banner_image_url,
+          gallery_images: adminData.gallery_images || [],
+          video_urls: adminData.video_urls || [],
+          company_name: adminData.company_name,
+          title: adminData.title,
+          address: adminData.address,
+          city: adminData.city,
+          state: adminData.state,
+          zip_code: adminData.zip_code,
+          social_links: adminData.social_links || {},
+          contact_button_text: adminData.contact_button_text || "Enter Your Contact Details",
+          contact_card_button_text: adminData.contact_card_button_text || "Download Contact Card",
+          contact_form_title: adminData.contact_form_title || "Get In Touch",
+          contact_form_description: adminData.contact_form_description,
+          is_active: adminData.is_active,
+          source: "admin",
+        };
+      } else {
+        throw error;
+      }
     }
 
     if (!data) {

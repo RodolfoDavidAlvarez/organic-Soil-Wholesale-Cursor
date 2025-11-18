@@ -156,11 +156,14 @@ export default function RepresentativeLanding() {
     queryFn: async () => {
       const response = await fetch(`/api/representatives/${slug}`);
       if (!response.ok) {
-        throw new Error('Representative not found');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to fetch landing page (${response.status})`;
+        throw new Error(errorMessage);
       }
       return response.json();
     },
     enabled: !!slug,
+    retry: false, // Don't retry on 404 errors
   });
 
   const submitMutation = useMutation({
@@ -236,13 +239,21 @@ export default function RepresentativeLanding() {
   }
 
   if (error || !representative) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold">Representative Not Found</h1>
-          <p className="text-muted-foreground">
-            The representative you're looking for doesn't exist or is inactive.
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md px-4">
+          <h1 className="mb-4 text-2xl font-bold text-gray-900">Landing Page Not Found</h1>
+          <p className="text-muted-foreground mb-2">
+            {errorMessage.includes('404') || errorMessage.includes('not found') 
+              ? "The contact card you're looking for doesn't exist or is inactive."
+              : `Error: ${errorMessage}`}
           </p>
+          {errorMessage.includes('Failed to fetch') && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Please make sure your contact card is saved and the landing page is enabled in Settings.
+            </p>
+          )}
         </div>
       </div>
     );
