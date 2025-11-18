@@ -1,43 +1,48 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type DragEvent,
-  type ReactNode,
-} from 'react';
-import { useLocation, useRoute } from 'wouter';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from "react";
+import { useLocation, useRoute } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
   ImagePlus,
   Loader2,
   Package,
+  ShoppingBag,
   Trash2,
+  Truck,
   UploadCloud,
   X,
-} from 'lucide-react';
-import AdminLayout from '@/components/admin/AdminLayout';
-import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+  Youtube,
+  Plus,
+  Play,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
+} from "lucide-react";
+import AdminLayout from "@/components/admin/AdminLayout";
+import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { SIZE_CATALOG, SIZE_CATALOG_BY_KEY } from '@/data/sizeCatalog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { SIZE_CATALOG, SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
+import { generateSlug } from "@/utils/generateSlug";
+import { extractYouTubeVideoId } from "@/components/YouTubePlayer";
 import {
   PRODUCT_IMAGE_FOLDER,
   Product,
@@ -47,26 +52,46 @@ import {
   buildEditForm,
   formatPrice,
   getPrimaryImage,
-} from './product-utils';
+  buildAdminProductRouteParam,
+} from "./product-utils";
+
+// Increased to 20MB - images will be automatically optimized on the server
+const MAX_UPLOAD_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
 const parseProductId = (param?: string | number | null) => {
   if (param === undefined || param === null) return NaN;
-  const numeric = Number(param);
+  if (typeof param === "number") {
+    return Number.isFinite(param) ? param : NaN;
+  }
+  const trimmed = param.trim();
+  if (trimmed.toLowerCase() === "new") {
+    return NaN;
+  }
+  const idMatch = trimmed.match(/^\d+/);
+  if (idMatch) {
+    const numeric = Number.parseInt(idMatch[0], 10);
+    return Number.isFinite(numeric) ? numeric : NaN;
+  }
+  const numeric = Number(trimmed);
   return Number.isFinite(numeric) ? numeric : NaN;
 };
 
 type SectionCardProps = {
-  title: string;
+  title: string | ReactNode;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
 };
 
 const SectionCard = ({ title, description, actions, children }: SectionCardProps) => (
-  <div className="space-y-4 rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
+  <div className="space-y-4 rounded-2xl border border-border/50 bg-white p-6 shadow-sm">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
+        {typeof title === "string" ? (
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
+        ) : (
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</div>
+        )}
         {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -75,42 +100,71 @@ const SectionCard = ({ title, description, actions, children }: SectionCardProps
   </div>
 );
 
+const sanitizeSlug = (value: string) => generateSlug(value) ?? "";
+
+const priceStringToCents = (value: string): number | null => {
+  if (!value) return null;
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  if (!cleaned) return null;
+  const parsed = Number.parseFloat(cleaned);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.round(parsed * 100);
+};
+
+const parseInventoryQuantity = (value: string): number | null => {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim();
+  if (!cleaned.length) {
+    return null;
+  }
+  const parsed = Number.parseInt(cleaned, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
+};
+
+const getCatalogEntry = (key: string) => SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY];
+
 export default function AdminProductDetail() {
-  const [, params] = useRoute('/admin/products/:productId');
+  const [, params] = useRoute("/admin/products/:productId");
   const [, navigate] = useLocation();
+  const isCreatingNew = params?.productId === "new";
   const productId = parseProductId(params?.productId ?? null);
   const isValidProductId = Number.isInteger(productId) && productId > 0;
-  const isCreatingNew = params?.productId === 'new';
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const heroInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   const [editForm, setEditForm] = useState<EditFormData | null>(isCreatingNew ? createEmptyEditForm() : null);
-  const [heroUpload, setHeroUpload] = useState<File | null>(null);
-  const [heroPreview, setHeroPreview] = useState<string | null>(null);
   const [galleryUploads, setGalleryUploads] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [newCustomSize, setNewCustomSize] = useState<{ label: string; price: string; quantity: string }>({
-    label: '',
-    price: '',
-    quantity: '',
+  const [newCustomSize, setNewCustomSize] = useState<{ label: string; price: string; description?: string }>({
+    label: "",
+    price: "",
+    description: "",
   });
+  const [newVideoUrl, setNewVideoUrl] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(!isCreatingNew);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [originalSlug, setOriginalSlug] = useState<string>("");
+  const [pendingSlugChange, setPendingSlugChange] = useState<{ oldSlug: string; newSlug: string } | null>(null);
+  const [originalFormData, setOriginalFormData] = useState<EditFormData | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<Array<{ fileName: string; error: string }>>([]);
 
-  // Fetch product data (restored for new system)
   const {
     data: product,
     isLoading,
     isError,
     error,
   } = useQuery<Product>({
-    queryKey: ['adminProduct', productId],
-    enabled: isValidProductId,
+    queryKey: ["adminProduct", productId],
+    enabled: !isCreatingNew && isValidProductId,
     queryFn: async () => {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`/api/admin/products/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -118,57 +172,68 @@ export default function AdminProductDetail() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load product');
+        throw new Error("Failed to load product");
       }
 
       return response.json();
     },
   });
 
-  const resetHeroPreview = () => {
-    setHeroPreview((previous) => {
-      if (previous) {
-        URL.revokeObjectURL(previous);
-      }
-      return null;
-    });
-  };
-
-  const resetGalleryPreviews = () => {
+  const resetGalleryPreviews = useCallback(() => {
     setGalleryPreviews((previous) => {
       previous.forEach((preview) => URL.revokeObjectURL(preview));
       return [];
     });
-  };
+  }, []);
 
   useEffect(() => {
     if (product) {
-      setEditForm(buildEditForm(product));
-      setHeroUpload(null);
-      resetHeroPreview();
+      const form = buildEditForm(product);
+      setEditForm(form);
+      setOriginalFormData(JSON.parse(JSON.stringify(form))); // Deep clone for comparison
+      setOriginalSlug(form.slug);
       setGalleryUploads([]);
       resetGalleryPreviews();
-      setNewCustomSize({ label: '', price: '', quantity: '' });
+      setNewCustomSize({ label: "", price: "", description: "" });
+      setFormError(null);
+      setSlugManuallyEdited(Boolean(product.slug));
+      setFormError(null);
+      setUploadErrors([]);
+    } else if (isCreatingNew) {
+      const form = createEmptyEditForm();
+      setEditForm(form);
+      setOriginalFormData(JSON.parse(JSON.stringify(form))); // Deep clone for comparison
+      setOriginalSlug("");
+      setSlugManuallyEdited(false);
+      setFormError(null);
+      setUploadErrors([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.id]);
+  }, [product, isCreatingNew, resetGalleryPreviews]);
+
+  useEffect(() => {
+    if (isCreatingNew || !product || !isValidProductId) {
+      return;
+    }
+    const canonicalParam = buildAdminProductRouteParam(product);
+    if (canonicalParam && params?.productId !== canonicalParam) {
+      navigate(`/admin/products/${canonicalParam}`, { replace: true });
+    }
+  }, [isCreatingNew, isValidProductId, navigate, params?.productId, product]);
 
   useEffect(() => {
     return () => {
-      resetHeroPreview();
       resetGalleryPreviews();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [resetGalleryPreviews]);
 
   const uploadImage = async (file: File, folder: string) => {
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem("adminToken");
     const formData = new FormData();
-    formData.append('image', file);
-    formData.append('folder', folder);
+    formData.append("image", file);
+    formData.append("folder", folder);
 
-    const response = await fetch('/api/admin/uploads/product-image', {
-      method: 'POST',
+    const response = await fetch("/api/admin/uploads/product-image", {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -176,7 +241,23 @@ export default function AdminProductDetail() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to upload image');
+      let message = "Failed to upload image";
+      try {
+        const details = await response.json();
+        if (details && typeof details.error === "string" && details.error.length > 0) {
+          message = details.error;
+        }
+      } catch {
+        try {
+          const text = await response.text();
+          if (text) {
+            message = text;
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+      throw new Error(message);
     }
 
     const result = await response.json();
@@ -185,173 +266,458 @@ export default function AdminProductDetail() {
 
   const updateProductMutation = useMutation({
     mutationFn: async ({ productId: id, data }: { productId: number; data: Record<string, unknown> }) => {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update product');
+        const details = await response.json().catch(() => ({}));
+        throw new Error(details.error || "Failed to update product");
       }
 
       return response.json() as Promise<Product>;
     },
     onSuccess: (updatedProduct) => {
       toast({
-        title: 'Product updated',
-        description: `${updatedProduct.display_title || updatedProduct.name} has been saved.`,
+        title: "Product updated",
+        description: `${updatedProduct.display_title || "Product"} has been saved.`,
       });
 
-      setEditForm(buildEditForm(updatedProduct));
-      setHeroUpload(null);
-      resetHeroPreview();
+      const updatedForm = buildEditForm(updatedProduct);
+      setEditForm(updatedForm);
+      setOriginalFormData(JSON.parse(JSON.stringify(updatedForm))); // Deep clone for comparison
       setGalleryUploads([]);
       resetGalleryPreviews();
+      setNewCustomSize({ label: "", price: "", description: "" });
+      setUploadErrors([]);
 
-      queryClient.setQueryData<Product>(['adminProduct', updatedProduct.id], updatedProduct);
-      queryClient.setQueryData<Product[]>(['adminProducts'], (existing) =>
-        existing?.map((item) => (item.id === updatedProduct.id ? updatedProduct : item)) ?? []
+      queryClient.setQueryData<Product>(["adminProduct", updatedProduct.id], updatedProduct);
+      queryClient.setQueryData<Product[]>(
+        ["adminProducts"],
+        (existing) => existing?.map((item) => (item.id === updatedProduct.id ? updatedProduct : item)) ?? []
       );
+      if (!isCreatingNew) {
+        const canonicalParam = buildAdminProductRouteParam(updatedProduct);
+        if (canonicalParam && params?.productId !== canonicalParam) {
+          navigate(`/admin/products/${canonicalParam}`, { replace: true });
+        }
+      }
     },
-    onError: () => {
+    onError: (mutationError: Error) => {
+      setFormError(mutationError.message || "We could not save your changes.");
       toast({
-        title: 'Save failed',
-        description: 'We could not save your changes. Please review the fields and try again.',
-        variant: 'destructive',
+        title: "Save failed",
+        description: mutationError.message || "We could not save your changes.",
+        variant: "destructive",
       });
     },
   });
 
   const createProductMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
+      const token = localStorage.getItem("adminToken");
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create product');
+        const details = await response.json().catch(() => ({}));
+        throw new Error(details.error || "Failed to create product");
       }
 
       return response.json() as Promise<Product>;
     },
     onSuccess: (newProduct) => {
       toast({
-        title: 'Product created',
-        description: `${newProduct.display_title || newProduct.name} is now available to manage.`,
+        title: "Product created",
+        description: `${newProduct.display_title || "Product"} is now available to manage.`,
       });
 
-      setEditForm(buildEditForm(newProduct));
-      queryClient.setQueryData<Product>(['adminProduct', newProduct.id], newProduct);
-      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
-      navigate(`/admin/products/${newProduct.id}`);
+      const newForm = buildEditForm(newProduct);
+      setEditForm(newForm);
+      setOriginalFormData(JSON.parse(JSON.stringify(newForm))); // Deep clone for comparison
+      setUploadErrors([]);
+      queryClient.setQueryData<Product>(["adminProduct", newProduct.id], newProduct);
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
+      navigate(`/admin/products/${buildAdminProductRouteParam(newProduct)}`);
+      setFormError(null);
     },
-    onError: () => {
+    onError: (mutationError: Error) => {
+      setFormError(mutationError.message || "We could not create this product.");
       toast({
-        title: 'Create failed',
-        description: 'We could not create this product. Please review the fields and try again.',
-        variant: 'destructive',
+        title: "Create failed",
+        description: mutationError.message || "We could not create this product.",
+        variant: "destructive",
       });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete product');
+        const details = await response.json().catch(() => ({}));
+        throw new Error(details.error || "Failed to delete product");
       }
     },
     onSuccess: () => {
       toast({
-        title: 'Product deleted',
-        description: 'The product has been deleted successfully.',
+        title: "Product deleted",
+        description: "The product has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
-      navigate('/admin/products');
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
+      navigate("/admin/products");
     },
     onError: () => {
       toast({
-        title: 'Delete failed',
-        description: 'We could not delete this product. Please try again.',
-        variant: 'destructive',
+        title: "Delete failed",
+        description: "We could not delete this product. Please try again.",
+        variant: "destructive",
       });
     },
   });
 
-  const handleHeroInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (!editForm) return;
-    const [file] = event.target.files ?? [];
-    if (!file) return;
-    setHeroUpload(file);
-    const preview = URL.createObjectURL(file);
-    setHeroPreview((previous) => {
-      if (previous) URL.revokeObjectURL(previous);
-      return preview;
+  const updateSizePriceOptions = (updater: (options: SizePriceOptionFormValue[]) => SizePriceOptionFormValue[]) => {
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      const nextOptions = updater(prev.size_price_options);
+      // Ensure displayOrder is set for all options
+      const optionsWithOrder = nextOptions.map((option, index) => ({
+        ...option,
+        displayOrder: option.displayOrder ?? index,
+      }));
+      return {
+        ...prev,
+        size_price_options: optionsWithOrder,
+        available_size_options: Array.from(new Set(optionsWithOrder.filter((option) => option.isActive).map((option) => option.label))),
+      };
     });
-    event.target.value = '';
   };
 
-  const handleHeroDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    if (!editForm) return;
-    const [file] = Array.from(event.dataTransfer.files).filter((item) => item.type.startsWith('image/'));
-    if (!file) return;
-    setHeroUpload(file);
-    const preview = URL.createObjectURL(file);
-    setHeroPreview((previous) => {
-      if (previous) URL.revokeObjectURL(previous);
-      return preview;
+  const moveSizeOption = (key: string, direction: "up" | "down") => {
+    updateSizePriceOptions((options) => {
+      // Get only active options and sort by displayOrder
+      const activeOptions = options.filter((opt) => opt.isActive).sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+      const currentIndex = activeOptions.findIndex((opt) => opt.key === key);
+      if (currentIndex === -1) return options;
+
+      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex < 0 || newIndex >= activeOptions.length) return options;
+
+      // Get the two options to swap
+      const currentOption = activeOptions[currentIndex];
+      const targetOption = activeOptions[newIndex];
+
+      // Swap display orders
+      const tempOrder = currentOption.displayOrder ?? currentIndex;
+      const targetOrder = targetOption.displayOrder ?? newIndex;
+
+      // Update all options with new display orders
+      return options.map((opt) => {
+        if (opt.key === currentOption.key) {
+          return { ...opt, displayOrder: targetOrder };
+        }
+        if (opt.key === targetOption.key) {
+          return { ...opt, displayOrder: tempOrder };
+        }
+        return opt;
+      });
     });
+  };
+
+  const handleStandardSizeToggle = (key: string, isActive: boolean) => {
+    updateSizePriceOptions((options) => {
+      const existingOption = options.find((opt) => opt.key === key);
+      if (isActive && existingOption && existingOption.displayOrder === undefined) {
+        // Assign displayOrder when activating
+        const activeOptions = options.filter((opt) => opt.isActive && opt.key !== key);
+        const maxDisplayOrder = activeOptions.length > 0 ? Math.max(...activeOptions.map((opt) => opt.displayOrder ?? 0)) : -1;
+        return options.map((option) =>
+          option.key === key
+            ? {
+                ...option,
+                isActive,
+                displayOrder: maxDisplayOrder + 1,
+              }
+            : option
+        );
+      }
+      return options.map((option) =>
+        option.key === key
+          ? {
+              ...option,
+              isActive,
+            }
+          : option
+      );
+    });
+  };
+
+  const handleSizePriceChange = (key: string, field: "price" | "description", value: string) => {
+    updateSizePriceOptions((options) =>
+      options.map((option) =>
+        option.key === key
+          ? {
+              ...option,
+              [field]: value,
+            }
+          : option
+      )
+    );
+  };
+
+  const handleCustomSizeChange = (key: string, partial: Pick<SizePriceOptionFormValue, "label" | "price" | "description">) => {
+    updateSizePriceOptions((options) => options.map((option) => (option.key === key ? { ...option, ...partial } : option)));
+  };
+
+  const handleRemoveCustomSizeOption = (key: string) => {
+    updateSizePriceOptions((options) => options.filter((option) => option.key !== key));
+  };
+
+  const handleAddCustomSizeOption = () => {
+    if (!newCustomSize.label.trim()) {
+      toast({
+        title: "Missing label",
+        description: "Give the new size a name before adding it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newKey = `${newCustomSize.label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+    updateSizePriceOptions((options) => {
+      const activeOptions = options.filter((opt) => opt.isActive);
+      const maxDisplayOrder = activeOptions.length > 0 ? Math.max(...activeOptions.map((opt) => opt.displayOrder ?? 0)) : -1;
+
+      return [
+        ...options,
+        {
+          key: newKey,
+          label: newCustomSize.label.trim(),
+          description: newCustomSize.description?.trim() || undefined,
+          image: undefined,
+          price: newCustomSize.price.trim(),
+          isActive: true,
+          inventoryQuantity: "", // Quantity moved to Pay & Pickup section
+          displayOrder: maxDisplayOrder + 1,
+        },
+      ];
+    });
+    setNewCustomSize({ label: "", price: "", description: "" });
+  };
+
+  const validateFileSize = (file: File) => {
+    if (file.size > MAX_UPLOAD_FILE_SIZE_BYTES) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const maxSizeMB = (MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+      const error = `${file.name} is too large (${fileSizeMB} MB). Maximum upload size is ${maxSizeMB} MB. Images are automatically optimized for fast loading.`;
+      setUploadErrors((prev) => [...prev, { fileName: file.name, error }]);
+      toast({
+        title: "Image too large",
+        description: `${file.name} is ${fileSizeMB} MB. Maximum size is ${maxSizeMB} MB. Images are automatically optimized on upload.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
   };
 
   const handleGalleryInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/'));
-    if (files.length === 0) return;
-    setGalleryUploads((prev) => [...prev, ...files]);
-    const previews = files.map((file) => URL.createObjectURL(file));
-    setGalleryPreviews((prev) => [...prev, ...previews]);
-    event.target.value = '';
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+
+    // Check for non-image files
+    const nonImageFiles = Array.from(event.target.files ?? []).filter((file) => !file.type.startsWith("image/"));
+    if (nonImageFiles.length > 0) {
+      nonImageFiles.forEach((file) => {
+        const error = `${file.name} is not an image file. Please select image files only.`;
+        setUploadErrors((prev) => [...prev, { fileName: file.name, error }]);
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image file.`,
+          variant: "destructive",
+        });
+      });
+    }
+
+    const validFiles = files.filter((file) => validateFileSize(file));
+    if (validFiles.length === 0 && files.length > 0) {
+      event.target.value = "";
+      return;
+    }
+
+    if (validFiles.length > 0) {
+      setGalleryUploads((prev) => [...prev, ...validFiles]);
+      const previews = validFiles.map((file) => URL.createObjectURL(file));
+      setGalleryPreviews((prev) => [...prev, ...previews]);
+
+      // Set thumbnail_index to first image if no thumbnail is selected
+      setEditForm((prev) => {
+        if (!prev) return prev;
+        if (prev.thumbnail_index < 0 && prev.additional_images.length === 0) {
+          return { ...prev, thumbnail_index: 0 };
+        }
+        return prev;
+      });
+    }
+
+    event.target.value = "";
   };
 
   const handleGalleryDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/'));
-    if (files.length === 0) return;
-    setGalleryUploads((prev) => [...prev, ...files]);
-    const previews = files.map((file) => URL.createObjectURL(file));
+    const allFiles = Array.from(event.dataTransfer.files);
+    const files = allFiles.filter((file) => file.type.startsWith("image/"));
+
+    // Check for non-image files
+    const nonImageFiles = allFiles.filter((file) => !file.type.startsWith("image/"));
+    if (nonImageFiles.length > 0) {
+      nonImageFiles.forEach((file) => {
+        const error = `${file.name} is not an image file. Please select image files only.`;
+        setUploadErrors((prev) => [...prev, { fileName: file.name, error }]);
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image file.`,
+          variant: "destructive",
+        });
+      });
+    }
+
+    const validFiles = files.filter((file) => validateFileSize(file));
+    if (validFiles.length === 0) return;
+
+    setGalleryUploads((prev) => [...prev, ...validFiles]);
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
     setGalleryPreviews((prev) => [...prev, ...previews]);
+
+    // Set thumbnail_index to first image if no thumbnail is selected
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      if (prev.thumbnail_index < 0 && prev.additional_images.length === 0) {
+        return { ...prev, thumbnail_index: 0 };
+      }
+      return prev;
+    });
   };
 
   const handleRemoveExistingGalleryImage = (image: string) => {
-    setEditForm((prev) =>
-      prev
-        ? {
-            ...prev,
-            additional_images: prev.additional_images.filter((item) => item !== image),
-          }
-        : prev
-    );
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      const imageIndex = prev.additional_images.findIndex((item) => item === image);
+      const newImages = prev.additional_images.filter((item) => item !== image);
+
+      // Adjust thumbnail_index if needed
+      let newThumbnailIndex = prev.thumbnail_index;
+      if (imageIndex >= 0 && prev.thumbnail_index === imageIndex) {
+        // If we're removing the thumbnail, set to first image or -1
+        newThumbnailIndex = newImages.length > 0 ? 0 : -1;
+      } else if (imageIndex >= 0 && prev.thumbnail_index > imageIndex) {
+        // If we're removing an image before the thumbnail, decrement the index
+        newThumbnailIndex = prev.thumbnail_index - 1;
+      }
+
+      return {
+        ...prev,
+        additional_images: newImages,
+        thumbnail_index: newThumbnailIndex,
+      };
+    });
+  };
+
+  const handleAddVideo = () => {
+    if (!newVideoUrl.trim()) return;
+
+    const videoId = extractYouTubeVideoId(newVideoUrl.trim());
+    if (!videoId) {
+      toast({
+        title: "Invalid YouTube URL",
+        description: "Please enter a valid YouTube URL (e.g., https://www.youtube.com/watch?v=... or https://youtu.be/...)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Normalize URL to standard format: https://www.youtube.com/watch?v=VIDEO_ID
+    const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      // Check if this video ID is already in the list (handle different URL formats)
+      const existingVideoIds = prev.video_urls.map((url) => extractYouTubeVideoId(url)).filter(Boolean);
+      if (existingVideoIds.includes(videoId)) {
+        toast({
+          title: "Video already added",
+          description: "This video is already in the gallery.",
+          variant: "default",
+        });
+        return prev;
+      }
+      return {
+        ...prev,
+        video_urls: [...prev.video_urls, normalizedUrl],
+      };
+    });
+
+    setNewVideoUrl("");
+    toast({
+      title: "Video added",
+      description: "The video has been added to the gallery.",
+      variant: "default",
+    });
+  };
+
+  const handleRemoveVideo = (videoUrl: string) => {
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        video_urls: prev.video_urls.filter((url) => url !== videoUrl),
+      };
+    });
   };
 
   const handleRemoveNewGalleryImage = (index: number) => {
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      const actualIndex = prev.additional_images.length + index;
+      let newThumbnailIndex = prev.thumbnail_index;
+
+      // Adjust thumbnail_index if needed
+      if (prev.thumbnail_index === actualIndex) {
+        // If we're removing the thumbnail, set to first existing image or -1
+        newThumbnailIndex = prev.additional_images.length > 0 ? 0 : -1;
+      } else if (prev.thumbnail_index > actualIndex) {
+        // If we're removing an image before the thumbnail, decrement the index
+        newThumbnailIndex = prev.thumbnail_index - 1;
+      }
+
+      return {
+        ...prev,
+        thumbnail_index: newThumbnailIndex,
+      };
+    });
+
     setGalleryUploads((prev) => prev.filter((_, idx) => idx !== index));
     setGalleryPreviews((prev) => {
       const next = [...prev];
@@ -363,216 +729,43 @@ export default function AdminProductDetail() {
     });
   };
 
-  const handleStatusChange = (status: 'active' | 'draft') => {
-    setEditForm((prev) => {
-      if (!prev) return prev;
-      if (prev.product_status === status) {
-        if (status === 'draft' && prev.is_catalog_enabled) {
-          return { ...prev, is_catalog_enabled: false };
-        }
-        if (status === 'active' && !prev.is_catalog_enabled) {
-          return { ...prev, is_catalog_enabled: true };
-        }
-        return prev;
-      }
-
-      const next: EditFormData = {
-        ...prev,
-        product_status: status,
-      };
-
-      if (status === 'draft') {
-        next.is_catalog_enabled = false;
-      } else if (!prev.is_catalog_enabled) {
-        next.is_catalog_enabled = true;
-      }
-
-      return next;
-    });
-  };
-
-  const syncAvailableSizeOptions = (options: SizePriceOptionFormValue[]) =>
-    Array.from(
-      new Set(
-        options
-          .filter((option) => option.isActive && option.label.trim().length > 0)
-          .map((option) => option.label.trim()),
-      ),
-    );
-
-  const updateSizePriceOptions = (
-    updater: (options: SizePriceOptionFormValue[]) => SizePriceOptionFormValue[],
-  ) => {
-    setEditForm((prev) => {
-      if (!prev) return prev;
-      const currentOptions = prev.size_price_options ?? [];
-      const nextOptions = updater([...currentOptions]);
-      const totalInventory = nextOptions
-        .filter((option) => option.isActive)
-        .reduce((sum, option) => {
-          const normalized = option.inventoryQuantity?.trim() ?? '';
-          if (!normalized) {
-            return sum;
-          }
-          const parsed = Number.parseInt(normalized, 10);
-          if (!Number.isFinite(parsed)) {
-            return sum;
-          }
-          return sum + Math.max(0, parsed);
-        }, 0);
-      return {
-        ...prev,
-        size_price_options: nextOptions,
-        available_size_options: syncAvailableSizeOptions(nextOptions),
-        stock_quantity: String(totalInventory),
-      };
-    });
-  };
-
-  const slugify = (value: string) =>
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-  const getCatalogEntry = (key: string) => {
-    const catalogKey = key as keyof typeof SIZE_CATALOG_BY_KEY;
-    return Object.prototype.hasOwnProperty.call(SIZE_CATALOG_BY_KEY, catalogKey)
-      ? SIZE_CATALOG_BY_KEY[catalogKey]
-      : undefined;
-  };
-
-  const handleStandardSizeToggle = (key: string, isActive: boolean) => {
-    updateSizePriceOptions((options) =>
-      options.map((option) => (option.key === key ? { ...option, isActive } : option)),
-    );
-  };
-
-  const handleStandardPriceChange = (key: string, price: string) => {
-    updateSizePriceOptions((options) =>
-      options.map((option) => (option.key === key ? { ...option, price } : option)),
-    );
-  };
-
-  const handleStandardInventoryChange = (key: string, quantity: string) => {
-    updateSizePriceOptions((options) =>
-      options.map((option) =>
-        option.key === key ? { ...option, inventoryQuantity: quantity } : option,
-      ),
-    );
-  };
-
-  const handleCustomOptionChange = (
-    key: string,
-    updates: Partial<
-      Pick<SizePriceOptionFormValue, 'label' | 'price' | 'isActive' | 'inventoryQuantity'>
-    >,
-  ) => {
-    updateSizePriceOptions((options) =>
-      options.map((option) => (option.key === key ? { ...option, ...updates } : option)),
-    );
-  };
-
-  const handleRemoveCustomSizeOption = (key: string) => {
-    updateSizePriceOptions((options) => options.filter((option) => option.key !== key));
-  };
-
-  const handleAddCustomSizeOption = () => {
-    const label = newCustomSize.label.trim();
-    const price = newCustomSize.price.trim();
-    const quantity = newCustomSize.quantity.trim();
-
-    if (!label) return;
-
-    updateSizePriceOptions((options) => {
-      const normalizedLabel = label;
-      const normalizedLabelLower = normalizedLabel.toLowerCase();
-      const existingIndex = options.findIndex(
-        (option) =>
-          option.label.toLowerCase() === normalizedLabelLower ||
-          option.key === slugify(normalizedLabel),
-      );
-
-      if (existingIndex >= 0) {
-        const next = [...options];
-        next[existingIndex] = {
-          ...next[existingIndex],
-          label: normalizedLabel,
-          price,
-          isActive: true,
-          inventoryQuantity: quantity,
-        };
-        return next;
-      }
-
-      const baseSlug = slugify(normalizedLabel);
-      const standardKeys = new Set(SIZE_CATALOG.map((entry) => entry.key));
-      let keyCandidate =
-        (baseSlug && !standardKeys.has(baseSlug) ? baseSlug : `custom-${baseSlug || 'size'}`) ||
-        `custom-size-${Date.now()}`;
-
-      let suffix = 1;
-      while (options.some((option) => option.key === keyCandidate)) {
-        keyCandidate = `${baseSlug || 'custom-size'}-${suffix++}`;
-      }
-
-      return [
-        ...options,
-        {
-          key: keyCandidate,
-          label: normalizedLabel,
-          price,
-          isActive: true,
-          inventoryQuantity: quantity,
-        },
-      ];
-    });
-
-    setNewCustomSize({ label: '', price: '', quantity: '' });
-  };
-
-  const handleSaveChanges = async () => {
-    if (!editForm || (!isValidProductId && !isCreatingNew)) return;
-
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editForm) return;
     setIsSaving(true);
+    setFormError(null);
 
     try {
-      const displayOrderInput = editForm.pay_and_pickup_display_order.trim();
-      let parsedDisplayOrder: number | null = null;
-      const catalogOrderInput = editForm.catalog_display_order.trim();
-      let parsedCatalogOrder: number | null = null;
-
-      if (displayOrderInput.length > 0) {
-        const candidate = Number.parseInt(displayOrderInput, 10);
-        if (Number.isNaN(candidate) || candidate < 0) {
-          toast({
-            title: 'Invalid display order',
-            description: 'Enter a whole number zero or greater to control the product order.',
-            variant: 'destructive',
-          });
-          setIsSaving(false);
-          return;
+      // Auto-generate slug from display_title if empty
+      let normalizedSlug = sanitizeSlug(editForm.slug);
+      if (!normalizedSlug && editForm.display_title) {
+        normalizedSlug = sanitizeSlug(editForm.display_title);
+        if (normalizedSlug) {
+          setEditForm((prev) => (prev ? { ...prev, slug: normalizedSlug } : prev));
+          setSlugManuallyEdited(false);
         }
-        parsedDisplayOrder = candidate;
       }
 
-      if (parsedDisplayOrder !== null && !Number.isInteger(parsedDisplayOrder)) {
+      if (!normalizedSlug) {
         toast({
-          title: 'Invalid display order',
-          description: 'Enter a whole number zero or greater to control the product order.',
-          variant: 'destructive',
+          title: "Missing URL",
+          description: "Set a product name or URL so the product preview page has a stable link.",
+          variant: "destructive",
         });
         setIsSaving(false);
         return;
       }
 
+      const catalogOrderInput = editForm.catalog_display_order.trim();
+      let parsedCatalogOrder: number | null = null;
+
       if (catalogOrderInput.length > 0) {
         const candidate = Number.parseInt(catalogOrderInput, 10);
         if (Number.isNaN(candidate) || candidate < 0) {
           toast({
-            title: 'Invalid catalog order',
-            description: 'Enter a whole number zero or greater to control the catalog product ordering.',
-            variant: 'destructive',
+            title: "Invalid catalog order",
+            description: "Enter a whole number zero or greater to control the product order.",
+            variant: "destructive",
           });
           setIsSaving(false);
           return;
@@ -580,63 +773,79 @@ export default function AdminProductDetail() {
         parsedCatalogOrder = candidate;
       }
 
-      if (parsedCatalogOrder !== null && !Number.isInteger(parsedCatalogOrder)) {
-        toast({
-          title: 'Invalid catalog order',
-          description: 'Enter a whole number zero or greater to control the catalog product ordering.',
-          variant: 'destructive',
-        });
-        setIsSaving(false);
-        return;
-      }
-
       const uploadFolder = isValidProductId ? `${PRODUCT_IMAGE_FOLDER}/${productId}` : PRODUCT_IMAGE_FOLDER;
-      let heroImageUrl = editForm.pay_and_pickup_hero_image;
-      if (heroUpload) {
-        heroImageUrl = await uploadImage(heroUpload, uploadFolder);
-      }
 
       let galleryImages = [...editForm.additional_images];
       if (galleryUploads.length > 0) {
-        const newGalleryUrls = await Promise.all(
-          galleryUploads.map((file, index) =>
-            uploadImage(file, `${uploadFolder}/gallery-${index + 1}`)
-          )
+        const uploadResults = await Promise.allSettled(
+          galleryUploads.map((file, index) => uploadImage(file, `${uploadFolder}/gallery-${index + 1}`))
         );
-        galleryImages = [...galleryImages, ...newGalleryUrls];
+
+        const successfulUploads: string[] = [];
+        const failedUploads: Array<{ fileName: string; error: string }> = [];
+
+        uploadResults.forEach((result, index) => {
+          if (result.status === "fulfilled") {
+            successfulUploads.push(result.value);
+          } else {
+            const file = galleryUploads[index];
+            const error = result.reason?.message || "Upload failed";
+            failedUploads.push({ fileName: file.name, error });
+            setUploadErrors((prev) => [...prev, { fileName: file.name, error }]);
+            toast({
+              title: "Upload failed",
+              description: `${file.name}: ${error}`,
+              variant: "destructive",
+            });
+          }
+        });
+
+        if (failedUploads.length > 0) {
+          // Show summary if multiple files failed
+          if (failedUploads.length > 1) {
+            toast({
+              title: "Some uploads failed",
+              description: `${failedUploads.length} image(s) could not be uploaded. Check the error messages above.`,
+              variant: "destructive",
+            });
+          }
+        }
+
+        galleryImages = [...galleryImages, ...successfulUploads];
+
+        // Remove successfully uploaded files from pending uploads
+        const successfulIndices = uploadResults
+          .map((result, index) => (result.status === "fulfilled" ? index : -1))
+          .filter((index) => index !== -1)
+          .reverse(); // Reverse to remove from end to start
+
+        successfulIndices.forEach((index) => {
+          setGalleryUploads((prev) => prev.filter((_, i) => i !== index));
+          setGalleryPreviews((prev) => {
+            const next = [...prev];
+            const [removed] = next.splice(index, 1);
+            if (removed) {
+              URL.revokeObjectURL(removed);
+            }
+            return next;
+          });
+        });
       }
 
-      const parsedPrice = parseFloat(editForm.price.replace(/[^0-9.]/g, ''));
-      const priceInCents = Number.isFinite(parsedPrice) ? Math.round(parsedPrice * 100) : null;
-
-      const priceStringToCents = (value: string): number | null => {
-        if (!value) return null;
-        const cleaned = value.replace(/[^0-9.]/g, '');
-        if (!cleaned) return null;
-        const parsed = Number.parseFloat(cleaned);
-        if (!Number.isFinite(parsed)) return null;
-        return Math.round(parsed * 100);
-      };
-
-      const parseInventoryQuantity = (value: string): number | null => {
-        if (typeof value !== 'string') return null;
-        const cleaned = value.trim();
-        if (!cleaned.length) {
-          return null;
-        }
-        const parsed = Number.parseInt(cleaned, 10);
-        if (!Number.isFinite(parsed) || parsed < 0) {
-          return null;
-        }
-        return parsed;
-      };
-
-      const supportsSizePriceOptions = product
-        ? Object.prototype.hasOwnProperty.call(product, 'size_price_options')
-        : true;
+      // Determine thumbnail from thumbnail_index
+      // If thumbnail_index is -1, use image_url (legacy support)
+      // Otherwise, use the image at that index in galleryImages
+      let thumbnailUrl = editForm.image_url || "";
+      if (editForm.thumbnail_index >= 0 && editForm.thumbnail_index < galleryImages.length) {
+        thumbnailUrl = galleryImages[editForm.thumbnail_index];
+      } else if (galleryImages.length > 0) {
+        // Fallback to first image if thumbnail_index is invalid
+        thumbnailUrl = galleryImages[0];
+      }
 
       const sizePriceOptionsPayload = editForm.size_price_options
         .filter((option) => option.label.trim().length > 0)
+        .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
         .map((option, index) => {
           const trimmedLabel = option.label.trim();
           const priceCents = priceStringToCents(option.price);
@@ -653,17 +862,11 @@ export default function AdminProductDetail() {
             image,
             description,
             is_active: isActive,
-            display_order: index,
+            display_order: option.displayOrder ?? index,
           };
         });
 
-      const availableSizeOptions = Array.from(
-        new Set(
-          sizePriceOptionsPayload
-            .filter((option) => option.is_active)
-            .map((option) => option.label),
-        ),
-      );
+      const availableSizeOptions = Array.from(new Set(sizePriceOptionsPayload.filter((option) => option.is_active).map((option) => option.label)));
 
       const inventoryUpdatesPayload = editForm.size_price_options
         .filter((option) => option.isActive)
@@ -685,1230 +888,1101 @@ export default function AdminProductDetail() {
         })
         .filter(
           (
-            entry,
+            entry
           ): entry is {
             size_option: string;
             quantity_available: number;
-          } => Boolean(entry),
+          } => Boolean(entry)
         );
 
+      const activePriceCents = sizePriceOptionsPayload.find((option) => option.is_active && option.price_cents !== null)?.price_cents ?? null;
+
       const payload: Record<string, unknown> = {
-        name: editForm.name.trim(),
+        name: editForm.display_title.trim() || "Product",
         display_title: editForm.display_title.trim() || null,
         category: editForm.category.trim() || null,
-        marketing_title: editForm.marketing_title.trim() || null,
+        slug: normalizedSlug,
         marketing_note: editForm.marketing_note.trim() || null,
-        seo_keywords: editForm.seo_keywords.trim() || null,
         description: editForm.description.trim() || null,
         ingredients: editForm.ingredients.trim() || null,
-        target_audience: editForm.target_audience.trim() || null,
         recommended_uses: editForm.recommended_uses.trim() || null,
         features: editForm.features.trim() || null,
         story: editForm.story.trim() || null,
         usage: editForm.usage.trim() || null,
-        product_status: editForm.product_status || 'draft',
+        target_audience: editForm.target_audience.trim() || null,
+        product_status: editForm.is_catalog_enabled ? "active" : "draft",
         catalog_display_order: parsedCatalogOrder ?? 0,
-        pay_and_pickup_display_order: parsedDisplayOrder ?? 0,
-        price: priceInCents,
-        stock_quantity: (() => {
-          const cleaned = editForm.stock_quantity.trim();
-          if (!cleaned) return null;
-          const parsed = Number.parseInt(cleaned, 10);
-          return Number.isFinite(parsed) ? parsed : null;
-        })(),
         is_catalog_enabled: editForm.is_catalog_enabled,
         is_pay_and_pickup_enabled: editForm.is_pay_and_pickup_enabled,
         pay_and_pickup_description: editForm.pay_and_pickup_description.trim() || null,
         pay_and_pickup_badge: editForm.pay_and_pickup_badge.trim() || null,
-        pay_and_pickup_hero_image: heroImageUrl || null,
-        texture_photo_url:
-          editForm.texture_photo_url.trim() || heroImageUrl || editForm.image_url || null,
-        image_url: editForm.image_url.trim() || heroImageUrl || null,
+        pay_and_pickup_hero_image: thumbnailUrl || null, // Use same thumbnail for pay & pickup
+        image_url: thumbnailUrl || null, // Use selected thumbnail
         additional_images: galleryImages,
+        video_urls: editForm.video_urls.length > 0 ? editForm.video_urls : null, // Save video URLs (support both single and array)
+        product_video_url: editForm.video_urls.length > 0 ? editForm.video_urls[0] : null, // Legacy support for single video
         available_size_options: availableSizeOptions,
-        product_video_url: editForm.product_video_url.trim() || null,
-        product_video_title: editForm.product_video_title.trim() || null,
       };
 
-      if (product && Object.prototype.hasOwnProperty.call(product, 'sku')) {
-        payload.sku = editForm.sku.trim() || null;
+      if (activePriceCents !== null) {
+        payload.price = activePriceCents;
       }
 
-      if (supportsSizePriceOptions) {
+      if (sizePriceOptionsPayload.length > 0) {
         payload.size_price_options = sizePriceOptionsPayload;
       }
 
       if (inventoryUpdatesPayload.length > 0) {
         payload.inventory_updates = inventoryUpdatesPayload;
-        const totalInventory = inventoryUpdatesPayload.reduce(
-          (sum, entry) => sum + entry.quantity_available,
-          0,
-        );
+        const totalInventory = inventoryUpdatesPayload.reduce((sum, entry) => sum + entry.quantity_available, 0);
         payload.stock_quantity = totalInventory;
       }
 
       if (isCreatingNew) {
         await createProductMutation.mutateAsync(payload);
-      } else {
+      } else if (productId) {
         await updateProductMutation.mutateAsync({ productId, data: payload });
       }
     } catch (mutationError) {
       console.error(mutationError);
+      const description =
+        mutationError instanceof Error && mutationError.message
+          ? mutationError.message
+          : "We hit a snag before sending your update. Double-check the fields and try again.";
+      toast({
+        title: "Save failed",
+        description,
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const heroImageForPreview = useMemo(() => {
-    if (heroPreview) return heroPreview;
-    if (!editForm) return product ? getPrimaryImage(product) : '';
-    return (
-      editForm.pay_and_pickup_hero_image ||
-      editForm.texture_photo_url ||
-      editForm.image_url ||
-      (product ? getPrimaryImage(product) : '')
-    );
-  }, [editForm, heroPreview, product]);
+  const handleDisplayTitleChange = (value: string) => {
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, display_title: value };
+      if (!slugManuallyEdited && !next.slug) {
+        // Auto-generate slug if empty
+        next.slug = sanitizeSlug(value);
+      }
+      return next;
+    });
+  };
 
-  const resolvedProductName =
-    (editForm?.display_title ||
-      editForm?.name ||
-      product?.display_title ||
-      product?.name ||
-      'New product'
-    ).trim();
-  const normalizedStatus = (editForm?.product_status || 'draft').toLowerCase();
-  const statusLabel = normalizedStatus === 'draft' ? 'Draft' : 'Active';
-  const isProcessingSave =
-    isSaving || updateProductMutation.isPending || createProductMutation.isPending;
-  const canDeleteProduct = !isCreatingNew && Boolean(productId) && Boolean(product);
-  const fallbackPrimaryImage = product ? getPrimaryImage(product) : '';
-  const quickReferencePrice = editForm?.price?.trim()
-    ? `$${editForm.price.trim()}`
-    : product?.price
-      ? `$${formatPrice(product.price)}`
-      : 'Not set';
-  const parsedStockValue = Number.parseInt(editForm?.stock_quantity ?? '', 10);
-  const quickReferenceStock = Number.isFinite(parsedStockValue)
-    ? parsedStockValue
-    : typeof product?.stock_quantity === 'number'
-      ? product.stock_quantity
-      : 0;
-  const quickReferenceImage =
-    editForm?.pay_and_pickup_hero_image ||
-    editForm?.image_url ||
-    fallbackPrimaryImage ||
-    'Not set';
+  const handleSlugChange = (value: string) => {
+    const sanitizedValue = sanitizeSlug(value);
+    if (!editForm) return;
 
-  const catalogPreviewImage =
-    editForm?.texture_photo_url?.trim() ||
-    editForm?.image_url?.trim() ||
-    (typeof quickReferenceImage === 'string' ? quickReferenceImage : '') ||
-    fallbackPrimaryImage ||
-    '';
-  const catalogPreviewDescription =
-    editForm?.marketing_note?.trim() ||
-    editForm?.marketing_title?.trim() ||
-    editForm?.description?.trim() ||
-    product?.marketing_note ||
-    product?.description ||
-    '';
-  const catalogPreviewCategory = editForm?.category?.trim() || product?.category || 'Uncategorized';
-
-  const payPickupPreviewImage =
-    editForm?.pay_and_pickup_hero_image?.trim() ||
-    heroImageForPreview ||
-    catalogPreviewImage ||
-    fallbackPrimaryImage ||
-    '';
-  const payPickupPreviewDescription =
-    editForm?.pay_and_pickup_description?.trim() ||
-    catalogPreviewDescription ||
-    '';
-  const payPickupPreviewBadge = editForm?.pay_and_pickup_badge?.trim() || '';
-  const payPickupPreviewSizes = (() => {
-    if (editForm?.available_size_options?.length) {
-      return editForm.available_size_options;
+    // If slug hasn't been manually edited before, or if it's the same as original, allow change
+    if (!slugManuallyEdited || editForm.slug === originalSlug) {
+      setSlugManuallyEdited(true);
+      setEditForm((prev) => (prev ? { ...prev, slug: sanitizedValue } : prev));
+      return;
     }
-    const fallbackSizes =
-      editForm?.size_price_options
-        ?.filter((option) => option.isActive && option.label.trim().length > 0)
-        .map((option) => option.label.trim()) ?? [];
-    return fallbackSizes.length > 0 ? fallbackSizes : ['Custom size'];
-  })();
 
-  if (!isCreatingNew && !isValidProductId) {
-    return (
-      <ProtectedAdminRoute>
-        <AdminLayout>
-          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-muted-foreground">
-            <AlertCircle className="h-6 w-6" />
-            <p>We couldn&apos;t determine which product you want to manage.</p>
-            <Button variant="outline" onClick={() => navigate('/admin/products')}>
-              Back to products
-            </Button>
-          </div>
-        </AdminLayout>
-      </ProtectedAdminRoute>
-    );
-  }
+    // If slug is being changed from a previously set value, show confirmation
+    if (editForm.slug && editForm.slug !== sanitizedValue && editForm.slug !== originalSlug) {
+      setPendingSlugChange({ oldSlug: editForm.slug, newSlug: sanitizedValue });
+      return;
+    }
+
+    // If changing from original slug, show confirmation
+    if (editForm.slug !== sanitizedValue && originalSlug && editForm.slug === originalSlug) {
+      setPendingSlugChange({ oldSlug: editForm.slug, newSlug: sanitizedValue });
+      return;
+    }
+
+    setSlugManuallyEdited(true);
+    setEditForm((prev) => (prev ? { ...prev, slug: sanitizedValue } : prev));
+  };
+
+  const confirmSlugChange = () => {
+    if (pendingSlugChange) {
+      setSlugManuallyEdited(true);
+      setEditForm((prev) => (prev ? { ...prev, slug: pendingSlugChange.newSlug } : prev));
+      setPendingSlugChange(null);
+      toast({
+        title: "URL changed",
+        description: "The product URL has been updated. Existing links may break.",
+        variant: "default",
+      });
+    }
+  };
+
+  const cancelSlugChange = () => {
+    if (pendingSlugChange) {
+      setEditForm((prev) => (prev ? { ...prev, slug: pendingSlugChange.oldSlug } : prev));
+      setPendingSlugChange(null);
+    }
+  };
+
+  const thumbnailForPreview = useMemo(() => {
+    if (!editForm) return product ? getPrimaryImage(product) : "";
+
+    // Get thumbnail from gallery based on thumbnail_index
+    if (editForm.thumbnail_index >= 0 && editForm.thumbnail_index < editForm.additional_images.length) {
+      return editForm.additional_images[editForm.thumbnail_index];
+    }
+
+    // Check if there are new previews that would be at the thumbnail_index
+    const totalImages = editForm.additional_images.length + galleryPreviews.length;
+    if (editForm.thumbnail_index >= editForm.additional_images.length && editForm.thumbnail_index < totalImages) {
+      const previewIndex = editForm.thumbnail_index - editForm.additional_images.length;
+      return galleryPreviews[previewIndex] || "";
+    }
+
+    // Fallback to first image or image_url
+    if (editForm.additional_images.length > 0) {
+      return editForm.additional_images[0];
+    }
+
+    return editForm.image_url || (product ? getPrimaryImage(product) : "");
+  }, [editForm, galleryPreviews, product]);
+
+  const payPickupPreviewSizes = useMemo(() => {
+    if (!editForm) return [];
+    const activeSizes = editForm.size_price_options.filter((option) => option.isActive);
+    if (activeSizes.length === 0) {
+      return ["Custom size"];
+    }
+    return activeSizes.map((size) => (size.price.trim().length ? `${size.label} · $${size.price}` : size.label));
+  }, [editForm]);
+
+  const isProcessingSave = isSaving || updateProductMutation.isPending || createProductMutation.isPending;
+  const canDeleteProduct = !isCreatingNew && Boolean(productId) && Boolean(product);
+  const catalogStatusLabel = editForm?.is_catalog_enabled ? "Visible in catalog" : "Hidden from catalog";
+  const payPickupStatusLabel = editForm?.is_pay_and_pickup_enabled ? "Pay & Pickup enabled" : "Pay & Pickup disabled";
+
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!editForm || !originalFormData) return false;
+    if (galleryUploads.length > 0 || galleryPreviews.length > 0) return true;
+    return JSON.stringify(editForm) !== JSON.stringify(originalFormData);
+  }, [editForm, originalFormData, galleryUploads.length, galleryPreviews.length]);
 
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
-        <div className="min-h-screen bg-gray-50 pb-20">
-          {/* Professional Header */}
-          <div className="bg-white border-b sticky top-0 z-30">
-            <div className="max-w-7xl mx-auto px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate('/admin/products')}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Products
-                  </Button>
-                  <div className="h-4 w-px bg-border" />
-                  <div>
-                    <h1 className="text-xl font-semibold text-gray-900">
-                      {resolvedProductName}
-                    </h1>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {isCreatingNew ? 'Create a new product' : 'Edit product details'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {canDeleteProduct && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => productId && deleteMutation.mutate(productId)}
-                      disabled={deleteMutation.isPending || isProcessingSave}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      {deleteMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/admin/products")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Products catalog
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold leading-tight">{editForm?.display_title || (isCreatingNew ? "Create product" : "Product")}</h1>
+                <p className="text-sm text-muted-foreground">{isCreatingNew ? "Add a new catalog item." : `Managing #${productId}`}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={editForm?.is_catalog_enabled ? "default" : "outline"}>{catalogStatusLabel}</Badge>
+              <Badge variant={editForm?.is_pay_and_pickup_enabled ? "default" : "outline"}>{payPickupStatusLabel}</Badge>
+              {canDeleteProduct && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  disabled={deleteMutation.isPending || isProcessingSave}
+                  onClick={() => productId && deleteMutation.mutate(productId)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky Save Button */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-lg">
+            <div className="container mx-auto px-4 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  {hasUnsavedChanges && <p className="text-sm font-medium text-amber-600 dark:text-amber-400">You have unsaved changes</p>}
+                  {uploadErrors.length > 0 && (
+                    <p className="text-sm text-destructive">{uploadErrors.length} upload error(s) - check notifications above</p>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={handleSaveChanges}
-                    disabled={!editForm || isProcessingSave}
-                    className="min-w-[120px]"
-                  >
-                    {isProcessingSave ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isCreatingNew ? 'Creating...' : 'Saving...'}
-                      </>
-                    ) : (
-                      (isCreatingNew ? 'Create product' : 'Save changes')
-                    )}
-                  </Button>
                 </div>
+                <Button
+                  type="submit"
+                  disabled={isProcessingSave}
+                  className={hasUnsavedChanges ? "ring-2 ring-amber-500 ring-offset-2" : ""}
+                  size="lg"
+                >
+                  {isProcessingSave ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isCreatingNew ? "Create" : "Save changes"}
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            {!isCreatingNew && isLoading ? (
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2 space-y-4">
-                  <Skeleton className="h-96 rounded-lg" />
-                  <Skeleton className="h-64 rounded-lg" />
-                </div>
-                <div className="space-y-4">
-                  <Skeleton className="h-48 rounded-lg" />
-                  <Skeleton className="h-64 rounded-lg" />
-                </div>
+          {/* Spacer to prevent content from being hidden behind sticky button */}
+          <div className="h-20" />
+
+          {isError && (
+            <div className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error instanceof Error ? error.message : "Failed to load product"}</span>
+            </div>
+          )}
+          {formError && (
+            <div className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              <div>
+                <p className="font-medium">We couldn't save your changes.</p>
+                <p>{formError}</p>
               </div>
-            ) : (!isCreatingNew && (isError || !product || !editForm)) ? (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Unable to load product</h3>
-                  <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                    {error instanceof Error ? error.message : 'Please try again or contact support.'}
-                  </p>
-                  <Button variant="outline" onClick={() => navigate('/admin/products')}>
-                    Back to products
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 lg:grid-cols-3">
-                {/* Main Content - Left 2 columns */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* SECTION 1: BASIC INFORMATION */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">1</span>
-                        Basic Information
-                      </CardTitle>
-                      <CardDescription>Essential product details and identification</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="product-name" className="text-sm font-medium">Product Name *</Label>
-                          <Input
-                            id="product-name"
-                            value={editForm.name}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, name: event.target.value })
-                            }
-                            placeholder="e.g. Artemis Root Boost Blend"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="display-title" className="text-sm font-medium">Display Title</Label>
-                          <Input
-                            id="display-title"
-                            value={editForm.display_title}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, display_title: event.target.value })
-                            }
-                            placeholder="Customer-facing title"
-                          />
-                        </div>
-                      </div>
+            </div>
+          )}
 
-                      <div className="space-y-2">
-                        <Label htmlFor="product-description" className="text-sm font-medium">Description</Label>
-                        <Textarea
-                          id="product-description"
-                          value={editForm.description || ''}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, description: event.target.value })
-                          }
-                          rows={4}
-                          placeholder="Detailed product description..."
-                          className="resize-none"
-                        />
-                        <p className="text-xs text-muted-foreground text-right">
-                          {(editForm.description || '').length} characters
-                        </p>
-                      </div>
+          {/* Upload Error Notifications */}
+          {uploadErrors.length > 0 && (
+            <div className="space-y-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span>Upload Errors ({uploadErrors.length})</span>
+              </div>
+              <div className="space-y-1">
+                {uploadErrors.map((error, index) => (
+                  <div key={index} className="text-xs text-destructive/90">
+                    <span className="font-medium">{error.fileName}:</span> {error.error}
+                  </div>
+                ))}
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setUploadErrors([])} className="mt-2">
+                Dismiss errors
+              </Button>
+            </div>
+          )}
 
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
-                          <Input
-                            id="category"
-                            value={editForm.category}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, category: event.target.value })
-                            }
-                            placeholder="e.g. Amendment"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="sku" className="text-sm font-medium">SKU</Label>
-                          <Input
-                            id="sku"
-                            value={editForm.sku}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, sku: event.target.value })
-                            }
-                            placeholder="Product SKU"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="price" className="text-sm font-medium">Base Price (USD)</Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            step="0.01"
-                            value={editForm.price}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, price: event.target.value })
-                            }
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+          {!editForm && isLoading && <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">Loading product...</div>}
 
-                  {/* SECTION 2: IMAGES */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">2</span>
-                        Images
-                      </CardTitle>
-                      <CardDescription>Product photos and gallery images</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Hero Image */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Hero Image</Label>
-                        <div
-                          className="relative group aspect-[16/10] rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={handleHeroDrop}
-                          onClick={() => heroInputRef.current?.click()}
-                        >
-                          {heroImageForPreview ? (
-                            <>
-                              <img 
-                                src={heroImageForPreview} 
-                                alt={resolvedProductName} 
-                                className="h-full w-full object-cover" 
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    className="bg-white/95 shadow-lg"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      heroInputRef.current?.click();
-                                    }}
-                                  >
-                                    <UploadCloud className="mr-2 h-4 w-4" />
-                                    Replace Image
-                                  </Button>
-                                </div>
-                              </div>
-                              {(heroUpload || editForm.pay_and_pickup_hero_image) && (
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="destructive"
-                                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 shadow-lg"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setHeroUpload(null);
-                                    resetHeroPreview();
-                                    setEditForm({
-                                      ...editForm,
-                                      pay_and_pickup_hero_image: '',
-                                    });
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white border-2 border-gray-300">
-                                <ImagePlus className="h-6 w-6" />
-                              </div>
-                              <div className="text-center">
-                                <p className="text-sm font-medium text-gray-900">Click or drag to upload</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  1600×1200 recommended · JPG, PNG, or WEBP
-                                </p>
-                              </div>
+          {editForm && (
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <div className="space-y-6">
+                <SectionCard title="Product basics" description="Essential product information shown to customers.">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="display-title">Product name</Label>
+                      <Input
+                        id="display-title"
+                        value={editForm.display_title}
+                        onChange={(event) => handleDisplayTitleChange(event.target.value)}
+                        placeholder="Organic Dairy Compost"
+                        className="text-lg"
+                      />
+                      <p className="text-xs text-muted-foreground">Main title displayed in the catalog and product page.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        minRows={4}
+                        value={editForm.description}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
+                        placeholder="Write a helpful summary that appears below the product name..."
+                      />
+                      <p className="text-xs text-muted-foreground">This description appears on the product detail page below the product name.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-border/50">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Advanced settings (URL, Category, Catalog options)
+                      </summary>
+                      <div className="mt-4 space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="slug">Product URL</Label>
+                            <Input
+                              id="slug"
+                              value={editForm.slug}
+                              onChange={(event) => handleSlugChange(event.target.value)}
+                              placeholder="organic-dairy-compost"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Final page: <code>/products/{editForm.slug || "your-slug"}</code>
+                            </p>
+                            {!editForm.slug && editForm.display_title && (
+                              <p className="text-xs text-primary">Tip: URL will auto-generate from product name when you save.</p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="category">Category</Label>
+                            <Input
+                              id="category"
+                              value={editForm.category}
+                              onChange={(event) => setEditForm((prev) => (prev ? { ...prev, category: event.target.value } : prev))}
+                              placeholder="Amendment"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3">
+                            <div>
+                              <p className="text-sm font-medium">Show in catalog</p>
+                              <p className="text-xs text-muted-foreground">Toggle visibility on the public product catalog.</p>
                             </div>
-                          )}
+                            <Switch
+                              checked={editForm.is_catalog_enabled}
+                              onCheckedChange={(checked) => setEditForm((prev) => (prev ? { ...prev, is_catalog_enabled: checked } : prev))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="catalog-order">Catalog order</Label>
+                            <Input
+                              id="catalog-order"
+                              inputMode="numeric"
+                              value={editForm.catalog_display_order}
+                              onChange={(event) => setEditForm((prev) => (prev ? { ...prev, catalog_display_order: event.target.value } : prev))}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-muted-foreground">Lower numbers appear first. Leave blank to auto-sort.</p>
+                          </div>
                         </div>
-                        <input
-                          ref={heroInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleHeroInputChange}
-                        />
                       </div>
+                    </details>
+                  </div>
+                </SectionCard>
 
-                      {/* Gallery Images */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">Gallery Images</Label>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => galleryInputRef.current?.click()}
-                          >
-                            <ImagePlus className="mr-2 h-4 w-4" />
-                            Add Images
-                          </Button>
+                <SectionCard title="Details" description="Long-form guidance for the product detail page.">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="features">Features</Label>
+                      <Textarea
+                        id="features"
+                        minRows={3}
+                        value={editForm.features}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, features: event.target.value } : prev))}
+                        placeholder="List key features and soil benefits..."
+                      />
+                      <p className="text-xs text-muted-foreground">Shown first in "Features & Soil Impact" section.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="usage">Usage instructions</Label>
+                      <Textarea
+                        id="usage"
+                        minRows={3}
+                        value={editForm.usage}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, usage: event.target.value } : prev))}
+                        placeholder="How to use this product..."
+                      />
+                      <p className="text-xs text-muted-foreground">Shown in "Usage Guidance" section.</p>
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="story">Product story</Label>
+                      <Textarea
+                        id="story"
+                        minRows={4}
+                        value={editForm.story}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, story: event.target.value } : prev))}
+                        placeholder="Share the origin story or agronomic insight..."
+                      />
+                      <p className="text-xs text-muted-foreground">Shown in "Product Narrative" section.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ingredients">Ingredients</Label>
+                      <Textarea
+                        id="ingredients"
+                        minRows={3}
+                        value={editForm.ingredients}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, ingredients: event.target.value } : prev))}
+                        placeholder="Composted dairy manure..."
+                      />
+                      <p className="text-xs text-muted-foreground">Shown in "Ingredients & Audiences" section.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="target-audience">Best for (Target audience)</Label>
+                      <Textarea
+                        id="target-audience"
+                        minRows={3}
+                        value={editForm.target_audience}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, target_audience: event.target.value } : prev))}
+                        placeholder="Ornamental plants, Landscapers, Trees, Fruit growers..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown as "Best for" tags in "Ingredients & Audiences" section. Separate items with commas.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recommended-uses">Recommended uses</Label>
+                      <Textarea
+                        id="recommended-uses"
+                        minRows={3}
+                        value={editForm.recommended_uses}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, recommended_uses: event.target.value } : prev))}
+                        placeholder="Best applications for this product..."
+                      />
+                      <p className="text-xs text-muted-foreground">Shown as tags in "Usage Guidance" section.</p>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <SectionCard
+                  title="Media"
+                  description="Upload images and YouTube videos. Select which image appears as the thumbnail in the catalog and product pages. Images up to 20MB are automatically optimized for fast loading."
+                  actions={
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()}>
+                        <UploadCloud className="mr-2 h-4 w-4" />
+                        Upload images
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleAddVideo}>
+                        <Youtube className="mr-2 h-4 w-4" />
+                        Add YouTube video
+                      </Button>
+                    </div>
+                  }
+                >
+                  <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryInputChange} />
+
+                  {/* Add YouTube Video Input */}
+                  <div className="mb-4 flex gap-2">
+                    <Input
+                      type="url"
+                      placeholder="Paste YouTube URL (e.g., https://youtube.com/watch?v=...)"
+                      value={newVideoUrl}
+                      onChange={(event) => setNewVideoUrl(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleAddVideo();
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button type="button" onClick={handleAddVideo} disabled={!newVideoUrl.trim()}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Upload Error Summary in Media Section */}
+                    {uploadErrors.length > 0 && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-destructive mb-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>Upload Issues</span>
                         </div>
-                        <input
-                          ref={galleryInputRef}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          onChange={handleGalleryInputChange}
-                        />
+                        <div className="space-y-1 text-xs text-destructive/90">
+                          {uploadErrors.map((error, index) => (
+                            <div key={index}>
+                              <span className="font-medium">{error.fileName}:</span> {error.error}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {editForm.additional_images.length === 0 && galleryPreviews.length === 0 && editForm.video_urls.length === 0 ? (
+                      <div
+                        className="flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 text-center text-sm text-muted-foreground"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={handleGalleryDrop}
+                      >
+                        <ImagePlus className="h-8 w-8" />
+                        <p>Drag images here or click "Upload images"</p>
+                        <p className="text-xs">The first image will be used as the thumbnail</p>
+                      </div>
+                    ) : (
+                      <>
                         <div
-                          className="grid grid-cols-2 md:grid-cols-3 gap-3"
+                          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4"
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={handleGalleryDrop}
                         >
-                          {editForm.additional_images.length === 0 && galleryPreviews.length === 0 ? (
-                            <div className="col-span-full flex h-32 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 text-center text-sm text-muted-foreground">
-                              <ImagePlus className="h-6 w-6" />
-                              <span>Drag images here or click "Add Images"</span>
-                            </div>
-                          ) : (
-                            <>
-                              {editForm.additional_images.map((image) => (
-                                <div
-                                  key={image}
-                                  className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-white"
-                                >
-                                  <img src={image} alt="" className="h-full w-full object-cover" />
+                          {editForm.additional_images.map((image, index) => {
+                            const isThumbnail = editForm.thumbnail_index === index;
+                            return (
+                              <div
+                                key={image}
+                                className={`group relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${
+                                  isThumbnail ? "border-primary ring-2 ring-primary/50 shadow-lg" : "border-border/70 hover:border-primary/50"
+                                }`}
+                              >
+                                <img src={image} alt="" className="h-full w-full object-cover" />
+                                {isThumbnail && (
+                                  <div className="absolute left-2 top-2 rounded bg-primary px-2 py-1 text-xs font-semibold text-white">Thumbnail</div>
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setEditForm((prev) => (prev ? { ...prev, thumbnail_index: index } : prev));
+                                    }}
+                                    className={isThumbnail ? "bg-primary text-white hover:bg-primary/90" : ""}
+                                  >
+                                    {isThumbnail ? "Selected" : "Set as thumbnail"}
+                                  </Button>
                                   <button
                                     type="button"
-                                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    className="rounded-full bg-destructive p-2 text-white hover:bg-destructive/90"
                                     onClick={(event) => {
                                       event.stopPropagation();
                                       handleRemoveExistingGalleryImage(image);
                                     }}
                                   >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
-                              ))}
-                              {galleryPreviews.map((preview, index) => (
-                                <div
-                                  key={`${preview}-${index}`}
-                                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-primary/40 bg-white"
-                                >
-                                  <img src={preview} alt="" className="h-full w-full object-cover" />
+                              </div>
+                            );
+                          })}
+                          {galleryPreviews.map((preview, index) => {
+                            const actualIndex = editForm.additional_images.length + index;
+                            const isThumbnail = editForm.thumbnail_index === actualIndex;
+                            return (
+                              <div
+                                key={`${preview}-${index}`}
+                                className={`group relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${
+                                  isThumbnail ? "border-primary ring-2 ring-primary/50 shadow-lg" : "border-primary/50"
+                                }`}
+                              >
+                                <img src={preview} alt="" className="h-full w-full object-cover" />
+                                {isThumbnail && (
+                                  <div className="absolute left-2 top-2 rounded bg-primary px-2 py-1 text-xs font-semibold text-white">Thumbnail</div>
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setEditForm((prev) => (prev ? { ...prev, thumbnail_index: actualIndex } : prev));
+                                    }}
+                                    className={isThumbnail ? "bg-primary text-white hover:bg-primary/90" : ""}
+                                  >
+                                    {isThumbnail ? "Selected" : "Set as thumbnail"}
+                                  </Button>
                                   <button
                                     type="button"
-                                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                    className="rounded-full bg-destructive p-2 text-white hover:bg-destructive/90"
                                     onClick={(event) => {
                                       event.stopPropagation();
                                       handleRemoveNewGalleryImage(index);
                                     }}
                                   >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                      </div>
+                              </div>
+                            );
+                          })}
+                          {/* Video Previews */}
+                          {editForm.video_urls.map((videoUrl) => {
+                            const videoId = extractYouTubeVideoId(videoUrl);
+                            if (!videoId) return null;
+                            const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
-                      {/* Texture Photo URL */}
-                      <div className="space-y-2">
-                        <Label htmlFor="texture-photo" className="text-sm font-medium">Texture Photo URL</Label>
-                        <Input
-                          id="texture-photo"
-                          value={editForm.texture_photo_url}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, texture_photo_url: event.target.value })
-                          }
-                          placeholder="/images/textures/..."
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                            return (
+                              <div
+                                key={videoUrl}
+                                className="group relative aspect-video overflow-hidden rounded-lg border-2 border-red-500/50 hover:border-red-500 transition-all"
+                              >
+                                <div className="relative h-full w-full">
+                                  <img
+                                    src={thumbnailUrl}
+                                    alt="YouTube video thumbnail"
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      // Fallback to default thumbnail if maxresdefault fails
+                                      (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                    }}
+                                  />
+                                  {/* Play button in bottom-right corner */}
+                                  <div className="absolute bottom-2 right-2 rounded-full bg-red-600 p-2 shadow-lg transition-transform group-hover:scale-110">
+                                    <Play className="h-5 w-5 text-white fill-white" />
+                                  </div>
+                                  {/* YouTube badge in top-left */}
+                                  <div className="absolute top-2 left-2 rounded bg-black/70 px-2 py-1 text-xs font-semibold text-white flex items-center gap-1">
+                                    <Youtube className="h-3 w-3" />
+                                    <span>Video</span>
+                                  </div>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    className="rounded-full bg-destructive p-2 text-white hover:bg-destructive/90"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleRemoveVideo(videoUrl);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Click "Set as thumbnail" on any image to make it the main image shown in the catalog and product pages. Videos are shown in
+                          the gallery but cannot be used as thumbnails.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </SectionCard>
 
-                  {/* SECTION 3: CATALOG SETTINGS */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">3</span>
-                        Catalog Settings
-                      </CardTitle>
-                      <CardDescription>Control visibility and ordering in the public Products catalog</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Show in Catalog</Label>
-                            <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
-                              {editForm.is_catalog_enabled ? 'Visible' : 'Hidden'}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Show this product on the public Products page
-                          </p>
-                        </div>
-                        <Switch
-                          checked={editForm.is_catalog_enabled}
-                          onCheckedChange={(value) =>
-                            setEditForm({ ...editForm, is_catalog_enabled: value })
-                          }
-                        />
-                      </div>
-                      {editForm.is_catalog_enabled && (
-                        <div className="space-y-2">
-                          <Label htmlFor="catalog-order" className="text-sm font-medium">Display Order</Label>
-                          <Input
-                            id="catalog-order"
-                            type="number"
-                            min={0}
-                            value={editForm.catalog_display_order}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, catalog_display_order: event.target.value })
-                            }
-                            placeholder="0"
-                            className="max-w-32"
-                          />
-                          <p className="text-xs text-muted-foreground">Lower numbers appear first in the catalog</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* SECTION 4: PAY & PICKUP */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">4</span>
-                        Pay & Pickup
-                      </CardTitle>
-                      <CardDescription>Settings for local pickup ordering</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Enable Pay & Pickup</Label>
-                            <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                              {editForm.is_pay_and_pickup_enabled ? 'Enabled' : 'Disabled'}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Make this product available for local pickup ordering
-                          </p>
-                        </div>
-                        <Switch
-                          checked={editForm.is_pay_and_pickup_enabled}
-                          onCheckedChange={(value) =>
-                            setEditForm({ ...editForm, is_pay_and_pickup_enabled: value })
-                          }
-                        />
-                      </div>
-                      {editForm.is_pay_and_pickup_enabled && (
-                        <div className="space-y-4 border-t pt-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="pay-pickup-order" className="text-sm font-medium">Display Order</Label>
-                            <Input
-                              id="pay-pickup-order"
-                              type="number"
-                              min={0}
-                              value={editForm.pay_and_pickup_display_order}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, pay_and_pickup_display_order: event.target.value })
-                              }
-                              placeholder="0"
-                              className="max-w-32"
-                            />
-                            <p className="text-xs text-muted-foreground">Lower numbers appear first in Pay & Pickup</p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="pay-pickup-badge" className="text-sm font-medium">Badge Text</Label>
-                            <Input
-                              id="pay-pickup-badge"
-                              value={editForm.pay_and_pickup_badge}
-                              maxLength={60}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, pay_and_pickup_badge: event.target.value })
-                              }
-                              placeholder="e.g., Phoenix Pickup • 24hr Turnaround"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Short label displayed above the hero image on Pay & Pickup page
-                            </p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="pay-pickup-description" className="text-sm font-medium">Description</Label>
-                            <Textarea
-                              id="pay-pickup-description"
-                              rows={4}
-                              value={editForm.pay_and_pickup_description}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, pay_and_pickup_description: event.target.value })
-                              }
-                              placeholder="Highlight pickup-ready details..."
-                              className="resize-none"
-                            />
-                            <p className="text-xs text-muted-foreground text-right">
-                              {editForm.pay_and_pickup_description.length} characters
-                            </p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="pay-pickup-hero-image" className="text-sm font-medium">Hero Image URL</Label>
-                            <Input
-                              id="pay-pickup-hero-image"
-                              value={editForm.pay_and_pickup_hero_image}
-                              onChange={(event) =>
-                                setEditForm({ ...editForm, pay_and_pickup_hero_image: event.target.value })
-                              }
-                              placeholder="/images/products/..."
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Optional: Specific image for Pay & Pickup page (uses hero image if not set)
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* SECTION 5: SIZES & PRICING */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">5</span>
-                        Sizes & Pricing
-                      </CardTitle>
-                      <CardDescription>
-                        Configure size options, prices, and inventory
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                        {SIZE_CATALOG.map((entry) => {
-                          const option =
-                            editForm.size_price_options.find((item) => item.key === entry.key) ?? {
-                              key: entry.key,
-                              label: entry.label,
-                              price: '',
-                              isActive: false,
-                              image: entry.image,
-                            };
-                          const priceInputId = `size-price-${entry.key}`;
+                <SectionCard
+                  title="Sizes & Pricing"
+                  description="Activate size options and set pricing/stock. Edit directly in catalog preview or here."
+                >
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4">
+                      Standard sizes (
+                      {editForm.size_price_options.filter((opt) => SIZE_CATALOG.some((e) => e.key === opt.key) && opt.isActive).length} active)
+                    </summary>
+                    <div className="mt-4 space-y-3">
+                      {editForm.size_price_options
+                        .filter((opt) => SIZE_CATALOG.some((e) => e.key === opt.key))
+                        .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+                        .map((option) => {
+                          const entry = SIZE_CATALOG.find((e) => e.key === option.key);
+                          if (!entry) return null;
+                          const isActive = option.isActive;
+                          const activeOptions = editForm.size_price_options
+                            .filter((opt) => SIZE_CATALOG.some((e) => e.key === opt.key) && opt.isActive)
+                            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+                          const currentIndex = activeOptions.findIndex((opt) => opt.key === option.key);
+                          const canMoveUp = isActive && currentIndex > 0;
+                          const canMoveDown = isActive && currentIndex < activeOptions.length - 1;
 
                           return (
                             <div
                               key={entry.key}
-                              className={`rounded-lg border p-4 transition ${
-                                option.isActive ? 'border-primary bg-primary/5' : 'border-gray-200 bg-gray-50'
+                              className={`rounded-lg border p-3 transition-colors ${
+                                isActive ? "border-primary/30 bg-primary/5" : "border-border/50 bg-muted/10"
                               }`}
                             >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-sm font-medium">{entry.label}</p>
-                                    <Switch
-                                      checked={Boolean(option.isActive)}
-                                      onCheckedChange={(value) => handleStandardSizeToggle(entry.key, value)}
-                                      className="scale-90"
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex-1 flex items-center gap-2">
+                                  {isActive && (
+                                    <div className="flex flex-col gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => moveSizeOption(entry.key, "up")}
+                                        disabled={!canMoveUp}
+                                        className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                        aria-label="Move up"
+                                      >
+                                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => moveSizeOption(entry.key, "down")}
+                                        disabled={!canMoveDown}
+                                        className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                        aria-label="Move down"
+                                      >
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <Checkbox
+                                      checked={isActive}
+                                      onCheckedChange={(checked) => handleStandardSizeToggle(entry.key, Boolean(checked))}
                                     />
+                                    <Label className="text-sm font-medium cursor-pointer">{entry.label}</Label>
+                                    {isActive && (
+                                      <span className="text-xs text-muted-foreground">(Order: {option.displayOrder ?? currentIndex + 1})</span>
+                                    )}
                                   </div>
-                                  <p className="text-xs text-muted-foreground">{entry.description}</p>
                                 </div>
                               </div>
-                              {option.isActive && (
-                                <div className="grid gap-3 md:grid-cols-2">
-                                  <div className="space-y-1.5">
-                                    <Label htmlFor={priceInputId} className="text-xs">Price (USD)</Label>
+                              {isActive && (
+                                <div className="ml-6 mt-2 space-y-3">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Description</Label>
                                     <Input
-                                      id={priceInputId}
-                                      placeholder="0.00"
-                                      value={option.price}
-                                      onChange={(event) =>
-                                        handleStandardPriceChange(entry.key, event.target.value)
-                                      }
-                                      className="h-9"
+                                      value={option.description ?? entry.description}
+                                      onChange={(event) => handleSizePriceChange(entry.key, "description", event.target.value)}
+                                      placeholder={entry.description}
+                                      className="h-8 text-sm"
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                      Customize the size description (e.g., "144 units (36 cases of 4 units)")
+                                    </p>
                                   </div>
-                                  <div className="space-y-1.5">
-                                    <Label className="text-xs">Available Units</Label>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Price ($)</Label>
                                     <Input
-                                      type="number"
-                                      min="0"
-                                      placeholder="0"
-                                      value={option.inventoryQuantity}
-                                      onChange={(event) =>
-                                        handleStandardInventoryChange(entry.key, event.target.value)
-                                      }
-                                      className="h-9"
+                                      value={option.price ?? ""}
+                                      onChange={(event) => handleSizePriceChange(entry.key, "price", event.target.value)}
+                                      placeholder="0.00"
+                                      className="h-8 text-sm"
                                     />
                                   </div>
                                 </div>
                               )}
                             </div>
                           );
-                        })}
-                      </div>
+                        })
+                        .filter((item): item is JSX.Element => item !== null)}
+                    </div>
+                  </details>
 
-                      <Separator />
-
+                  <details className="group mt-4">
+                    <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3">
+                      Custom sizes (
+                      {
+                        editForm.size_price_options.filter((option) => !SIZE_CATALOG.some((entry) => entry.key === option.key) && option.isActive)
+                          .length
+                      }{" "}
+                      active)
+                    </summary>
+                    <div className="mt-3">
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Custom Sizes</p>
-                          <span className="text-xs text-muted-foreground">
-                            {editForm.size_price_options.filter(o => !SIZE_CATALOG.some(e => e.key === o.key) && o.isActive).length} active
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                          {editForm.size_price_options
-                            .filter((option) => !SIZE_CATALOG.some((entry) => entry.key === option.key))
-                            .map((option) => (
-                              <div
-                                key={option.key}
-                                className="rounded-lg border border-gray-200 bg-white p-3 space-y-2"
-                              >
-                                <Input
-                                  value={option.label}
-                                  onChange={(event) =>
-                                    handleCustomOptionChange(option.key, { label: event.target.value })
-                                  }
-                                  placeholder="Size label"
-                                  className="h-9"
-                                />
-                                <div className="grid grid-cols-2 gap-2">
-                                  <Input
-                                    value={option.price}
-                                    onChange={(event) =>
-                                      handleCustomOptionChange(option.key, { price: event.target.value })
-                                    }
-                                    placeholder="Price"
-                                    className="h-9"
-                                  />
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={option.inventoryQuantity}
-                                    onChange={(event) =>
-                                      handleCustomOptionChange(option.key, {
-                                        inventoryQuantity: event.target.value,
-                                      })
-                                    }
-                                    placeholder="Units"
-                                    className="h-9"
-                                  />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <Switch
-                                      checked={Boolean(option.isActive)}
-                                      onCheckedChange={(value) =>
-                                        handleCustomOptionChange(option.key, { isActive: value })
-                                      }
-                                      className="scale-90"
-                                    />
-                                    <span className="text-xs text-muted-foreground">Active</span>
+                        {editForm.size_price_options
+                          .filter((option) => !SIZE_CATALOG.some((entry) => entry.key === option.key))
+                          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+                          .map((option, index, array) => {
+                            const activeCustomOptions = array.filter((opt) => opt.isActive);
+                            const currentIndex = activeCustomOptions.findIndex((opt) => opt.key === option.key);
+                            const canMoveUp = option.isActive && currentIndex > 0;
+                            const canMoveDown = option.isActive && currentIndex < activeCustomOptions.length - 1;
+                            return (
+                              <Card key={option.key}>
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-3">
+                                    {option.isActive && (
+                                      <div className="flex flex-col gap-1 pt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => moveSizeOption(option.key, "up")}
+                                          disabled={!canMoveUp}
+                                          className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                          aria-label="Move up"
+                                        >
+                                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => moveSizeOption(option.key, "down")}
+                                          disabled={!canMoveDown}
+                                          className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                          aria-label="Move down"
+                                        >
+                                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    <div className="flex-1 grid gap-3 sm:grid-cols-3">
+                                      <Input
+                                        value={option.label}
+                                        onChange={(event) =>
+                                          handleCustomSizeChange(option.key, {
+                                            label: event.target.value,
+                                            price: option.price,
+                                            description: option.description,
+                                          })
+                                        }
+                                        placeholder="Size label"
+                                      />
+                                      <Input
+                                        value={option.description ?? ""}
+                                        onChange={(event) =>
+                                          handleCustomSizeChange(option.key, {
+                                            label: option.label,
+                                            price: option.price,
+                                            description: event.target.value,
+                                          })
+                                        }
+                                        placeholder="Description (e.g., 144 units)"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <Input
+                                          value={option.price}
+                                          onChange={(event) =>
+                                            handleCustomSizeChange(option.key, {
+                                              label: option.label,
+                                              price: event.target.value,
+                                              description: option.description,
+                                            })
+                                          }
+                                          placeholder="Price"
+                                          className="flex-1"
+                                        />
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveCustomSizeOption(option.key)}>
+                                          Remove
+                                        </Button>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive"
-                                    onClick={() => handleRemoveCustomSizeOption(option.key)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-
-                        <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 pt-2 border-t">
-                          <Input
-                            value={newCustomSize.label}
-                            onChange={(event) =>
-                              setNewCustomSize((prev) => ({ ...prev, label: event.target.value }))
-                            }
-                            placeholder="Size label"
-                            className="h-9"
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
-                                event.preventDefault();
-                                handleAddCustomSizeOption();
-                              }
-                            }}
-                          />
-                          <Input
-                            value={newCustomSize.price}
-                            onChange={(event) =>
-                              setNewCustomSize((prev) => ({ ...prev, price: event.target.value }))
-                            }
-                            placeholder="Price"
-                            className="h-9"
-                          />
-                          <Input
-                            value={newCustomSize.quantity}
-                            onChange={(event) =>
-                              setNewCustomSize((prev) => ({ ...prev, quantity: event.target.value }))
-                            }
-                            placeholder="Units"
-                            inputMode="numeric"
-                            className="h-9"
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleAddCustomSizeOption}
-                            size="sm"
-                            className="h-9"
-                          >
-                            Add
-                          </Button>
-                        </div>
+                                  {option.isActive && (
+                                    <p className="text-xs text-muted-foreground mt-2 ml-10">
+                                      Display order: {option.displayOrder ?? currentIndex + 1}
+                                    </p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* SECTION 6: ADDITIONAL INFO */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">6</span>
-                        Additional Information
-                      </CardTitle>
-                      <CardDescription>Optional content for product detail pages</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="features" className="text-sm font-medium">Features</Label>
-                        <Textarea
-                          id="features"
-                          value={editForm.features || ''}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, features: event.target.value })
-                          }
-                          rows={3}
-                          placeholder="List key features (separate with | or commas)..."
-                          className="resize-none"
-                        />
-                        <p className="text-xs text-muted-foreground">Separate multiple features with | or commas</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="usage" className="text-sm font-medium">Usage Instructions</Label>
-                        <Textarea
-                          id="usage"
-                          value={editForm.usage || ''}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, usage: event.target.value })
-                          }
-                          rows={3}
-                          placeholder="How to use this product..."
-                          className="resize-none"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="story" className="text-sm font-medium">Product Story</Label>
-                        <Textarea
-                          id="story"
-                          value={editForm.story || ''}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, story: event.target.value })
-                          }
-                          rows={3}
-                          placeholder="Origin story or agronomic insight..."
-                          className="resize-none"
-                        />
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="ingredients" className="text-sm font-medium">Ingredients</Label>
-                          <Textarea
-                            id="ingredients"
-                            value={editForm.ingredients || ''}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, ingredients: event.target.value })
-                            }
-                            rows={2}
-                            placeholder="List ingredients (separate with | or commas)..."
-                            className="resize-none"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="target-audience" className="text-sm font-medium">Target Audience</Label>
-                          <Textarea
-                            id="target-audience"
-                            value={editForm.target_audience || ''}
-                            onChange={(event) =>
-                              setEditForm({ ...editForm, target_audience: event.target.value })
-                            }
-                            rows={2}
-                            placeholder="Who this is for (separate with | or commas)..."
-                            className="resize-none"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="recommended-uses" className="text-sm font-medium">Recommended Uses</Label>
-                        <Textarea
-                          id="recommended-uses"
-                          value={editForm.recommended_uses || ''}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, recommended_uses: event.target.value })
-                          }
-                          rows={2}
-                          placeholder="Use cases (separate with | or commas)..."
-                          className="resize-none"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* SECTION 7: MEDIA */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">7</span>
-                        Media
-                      </CardTitle>
-                      <CardDescription>Video and image URLs</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="product-video-url" className="text-sm font-medium">Video URL</Label>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <Input
-                          id="product-video-url"
-                          value={editForm.product_video_url}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, product_video_url: event.target.value })
-                          }
-                          placeholder="https://youtube.com/watch?v=..."
+                          value={newCustomSize.label}
+                          onChange={(event) => setNewCustomSize((prev) => ({ ...prev, label: event.target.value }))}
+                          placeholder="New size label"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="product-video-title" className="text-sm font-medium">Video Title</Label>
                         <Input
-                          id="product-video-title"
-                          value={editForm.product_video_title}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, product_video_title: event.target.value })
-                          }
-                          placeholder="Optional video title"
+                          value={newCustomSize.description ?? ""}
+                          onChange={(event) => setNewCustomSize((prev) => ({ ...prev, description: event.target.value }))}
+                          placeholder="Description (e.g., 144 units)"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="image-url" className="text-sm font-medium">Primary Image URL</Label>
                         <Input
-                          id="image-url"
-                          value={editForm.image_url}
-                          onChange={(event) =>
-                            setEditForm({ ...editForm, image_url: event.target.value })
-                          }
-                          placeholder="/images/products/..."
+                          value={newCustomSize.price}
+                          onChange={(event) => setNewCustomSize((prev) => ({ ...prev, price: event.target.value }))}
+                          placeholder="Price"
                         />
-                        <p className="text-xs text-muted-foreground">Fallback image URL if hero image not uploaded</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <div className="mt-2 flex justify-end">
+                        <Button type="button" variant="outline" size="sm" onClick={handleAddCustomSizeOption}>
+                          Add custom size
+                        </Button>
+                      </div>
+                    </div>
+                  </details>
+                </SectionCard>
 
-                {/* Sidebar - Right Column */}
-                <div className="space-y-6 lg:sticky lg:top-24">
-                  {/* Quick Summary Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Quick Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant={normalizedStatus === 'active' ? 'default' : 'secondary'}>
-                              {statusLabel}
-                            </Badge>
-                            <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
-                              {editForm.is_catalog_enabled ? 'Catalog' : 'Hidden'}
-                            </Badge>
-                            <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                              {editForm.is_pay_and_pickup_enabled ? 'Pickup' : 'Hidden'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={normalizedStatus === 'active' ? 'default' : 'outline'}
-                              onClick={() => handleStatusChange('active')}
-                              className="h-8 px-3 text-xs"
-                            >
-                              Active
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={normalizedStatus === 'draft' ? 'default' : 'outline'}
-                              onClick={() => handleStatusChange('draft')}
-                              className="h-8 px-3 text-xs"
-                            >
-                              Draft
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Draft items stay hidden from the public catalog.
-                          </p>
-                        </div>
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Price</p>
-                            <p className="text-lg font-semibold">{quickReferencePrice}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Stock</p>
-                            <p
-                              className={`text-lg font-semibold ${
-                                quickReferenceStock < 10 ? 'text-destructive' : ''
-                              }`}
-                            >
-                              {quickReferenceStock}
-                            </p>
-                          </div>
-                        </div>
-                        {editForm.sku && (
-                          <>
-                            <Separator />
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">SKU</p>
-                              <p className="text-sm font-mono">{editForm.sku}</p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Catalog Preview</CardTitle>
-                      <CardDescription>Snapshot of how this appears on /products</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border">
-                        {catalogPreviewImage ? (
-                          <img
-                            src={catalogPreviewImage}
-                            alt="Catalog preview"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-muted-foreground">
-                            <Package className="h-10 w-10" />
-                          </div>
-                        )}
-                        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                          <Badge variant={editForm.is_catalog_enabled ? 'default' : 'secondary'}>
-                            {editForm.is_catalog_enabled ? 'Visible' : 'Hidden'}
-                          </Badge>
-                          <Badge variant="outline">
-                            #{editForm.catalog_display_order || '0'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {catalogPreviewCategory}
-                        </p>
-                        <p className="text-base font-semibold leading-tight">
-                          {resolvedProductName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {catalogPreviewDescription || 'Add marketing copy to complete this preview.'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Pay & Pickup Preview</CardTitle>
-                      <CardDescription>Hero, badge, and sizes shown in the checkout wizard</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="relative aspect-video overflow-hidden rounded-xl border">
-                        {payPickupPreviewImage ? (
-                          <img
-                            src={payPickupPreviewImage}
-                            alt="Pay & Pickup preview"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-muted-foreground">
-                            <Package className="h-10 w-10" />
-                          </div>
-                        )}
-                        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                          {payPickupPreviewBadge && (
-                            <Badge className="bg-primary text-primary-foreground hover:bg-primary/90">
-                              {payPickupPreviewBadge}
-                            </Badge>
-                          )}
-                          <Badge variant={editForm.is_pay_and_pickup_enabled ? 'default' : 'secondary'}>
-                            {editForm.is_pay_and_pickup_enabled ? 'Enabled' : 'Hidden'}
-                          </Badge>
-                          <Badge variant="outline">
-                            #{editForm.pay_and_pickup_display_order || '0'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-base font-semibold leading-tight">
-                          {resolvedProductName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {payPickupPreviewDescription || 'Add a Pay & Pickup description so customers know what to expect.'}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {payPickupPreviewSizes.map((size) => (
-                            <span
-                              key={size}
-                              className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                            >
-                              {size}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sticky Save Button Bar */}
-          <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-50 border-t bg-white/95 backdrop-blur-sm shadow-lg">
-            <div className="mx-auto max-w-7xl px-6 py-3">
-              <div className="flex items-center justify-end gap-2">
-                {productId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => productId && deleteMutation.mutate(productId)}
-                    disabled={deleteMutation.isPending || isSaving}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    {deleteMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
-                    )}
-                    Delete
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={handleSaveChanges}
-                  disabled={!editForm || isSaving || updateProductMutation.isPending}
-                  className="min-w-[120px]"
+                <SectionCard
+                  title={
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-primary" />
+                      <span>Pay & Pickup</span>
+                    </div>
+                  }
+                  description="Configure pickup availability and messaging for customers."
                 >
-                  {(isSaving || updateProductMutation.isPending) ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
+                  <div className="flex items-center justify-between rounded-lg border-2 border-primary/20 bg-primary/5 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <Truck className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Enable Pay & Pickup</p>
+                        <p className="text-xs text-muted-foreground">Allow customers to schedule pickup for this product.</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={editForm.is_pay_and_pickup_enabled}
+                      onCheckedChange={(checked) => setEditForm((prev) => (prev ? { ...prev, is_pay_and_pickup_enabled: checked } : prev))}
+                    />
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="paypickup-badge" className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        Badge/label
+                      </Label>
+                      <Input
+                        id="paypickup-badge"
+                        value={editForm.pay_and_pickup_badge}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, pay_and_pickup_badge: event.target.value } : prev))}
+                        placeholder="Ready for pickup"
+                        className="font-medium"
+                      />
+                      <p className="text-xs text-muted-foreground">Text shown on the product badge (e.g., "Pay & Pickup Ready").</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="paypickup-description" className="flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                        Pickup description
+                      </Label>
+                      <Textarea
+                        id="paypickup-description"
+                        minRows={4}
+                        value={editForm.pay_and_pickup_description}
+                        onChange={(event) => setEditForm((prev) => (prev ? { ...prev, pay_and_pickup_description: event.target.value } : prev))}
+                        placeholder="What customers should know about picking this up..."
+                      />
+                      <p className="text-xs text-muted-foreground">Detailed information shown to customers about pickup options and instructions.</p>
+                    </div>
+
+                    {/* Quantity Selection for Pay & Pickup */}
+                    {editForm.is_pay_and_pickup_enabled && (
+                      <div className="space-y-3 pt-4 border-t border-border/50">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          Available Quantities for Pickup
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Set inventory quantities for each size option available for pickup.</p>
+                        <div className="space-y-2">
+                          {editForm.size_price_options
+                            .filter((option) => option.isActive)
+                            .map((option) => {
+                              const catalogEntry = SIZE_CATALOG.find((entry) => entry.key === option.key);
+                              return (
+                                <div key={option.key} className="flex items-center gap-3 rounded-lg border p-3 bg-muted/30">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{option.label}</p>
+                                    {option.description && <p className="text-xs text-muted-foreground">{option.description}</p>}
+                                  </div>
+                                  <div className="w-24">
+                                    <Input
+                                      value={option.inventoryQuantity ?? ""}
+                                      onChange={(event) =>
+                                        updateSizePriceOptions((options) =>
+                                          options.map((opt) => (opt.key === option.key ? { ...opt, inventoryQuantity: event.target.value } : opt))
+                                        )
+                                      }
+                                      placeholder="Qty"
+                                      className="h-9 text-sm"
+                                      type="number"
+                                      min="0"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {editForm.size_price_options.filter((option) => option.isActive).length === 0 && (
+                            <p className="text-xs text-muted-foreground italic">
+                              Enable size options in the "Sizes & Pricing" section above to set quantities here.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </SectionCard>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Catalog preview</CardTitle>
+                    <CardDescription>Edit directly in the preview. Changes sync to the form.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="overflow-hidden rounded-xl border border-border/60">
+                      {thumbnailForPreview ? (
+                        <img src={thumbnailForPreview} alt="" className="h-48 w-full object-cover" />
+                      ) : (
+                        <div className="flex h-48 items-center justify-center bg-muted text-muted-foreground">No image</div>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground mb-2">{editForm.category || "Category"}</p>
+                        <Input
+                          value={editForm.display_title}
+                          onChange={(event) => handleDisplayTitleChange(event.target.value)}
+                          placeholder="Product name"
+                          className="text-lg font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          value={editForm.marketing_note}
+                          onChange={(event) => setEditForm((prev) => (prev ? { ...prev, marketing_note: event.target.value } : prev))}
+                          placeholder="Highlight line (appears below product name)"
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Available sizes</Label>
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-lg">
+                        {editForm.size_price_options
+                          .filter((option) => SIZE_CATALOG.some((entry) => entry.key === option.key))
+                          .map((option) => {
+                            const catalogEntry = SIZE_CATALOG.find((entry) => entry.key === option.key);
+                            return (
+                              <div key={option.key} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={option.isActive}
+                                  onCheckedChange={(checked) => handleStandardSizeToggle(option.key, Boolean(checked))}
+                                />
+                                <Label className="text-sm font-normal cursor-pointer">{catalogEntry?.label || option.label}</Label>
+                              </div>
+                            );
+                          })}
+                        {editForm.size_price_options
+                          .filter((option) => !SIZE_CATALOG.some((entry) => entry.key === option.key))
+                          .map((option) => (
+                            <div key={option.key} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={option.isActive}
+                                onCheckedChange={(checked) =>
+                                  updateSizePriceOptions((options) =>
+                                    options.map((opt) => (opt.key === option.key ? { ...opt, isActive: checked } : opt))
+                                  )
+                                }
+                              />
+                              <Label className="text-sm font-normal cursor-pointer">{option.label}</Label>
+                            </div>
+                          ))}
+                      </div>
+                      {editForm.available_size_options.length === 0 && <p className="text-xs text-muted-foreground">No sizes selected</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Pay & Pickup preview</CardTitle>
+                    <CardDescription>Shows the badge, hero, and CTA copy.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium">{payPickupStatusLabel}</span>
+                    </div>
+                    {editForm.pay_and_pickup_badge && <Badge variant="outline">{editForm.pay_and_pickup_badge}</Badge>}
+                    <p className="text-sm text-muted-foreground">{editForm.pay_and_pickup_description || "Add pickup instructions."}</p>
+                    <div className="space-y-1">
+                      {payPickupPreviewSizes.map((size) => (
+                        <div key={size} className="rounded-lg border border-border/60 px-3 py-2 text-sm">
+                          {size}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+          <AlertDialog open={pendingSlugChange !== null} onOpenChange={(open) => !open && cancelSlugChange()}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Change Product URL?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Changing the product URL will break any existing links to this product. This includes:
+                  <ul className="mt-2 ml-4 list-disc space-y-1">
+                    <li>Bookmarked pages</li>
+                    <li>Shared links</li>
+                    <li>Search engine results</li>
+                    <li>External references</li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">Current URL:</p>
+                    <code className="text-xs">/products/{pendingSlugChange?.oldSlug || "current-slug"}</code>
+                    <p className="text-sm font-medium mt-2">New URL:</p>
+                    <code className="text-xs">/products/{pendingSlugChange?.newSlug || "new-slug"}</code>
+                  </div>
+                  <p className="mt-4 font-medium">Are you sure you want to change the URL?</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={cancelSlugChange}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmSlugChange} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, change URL
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </form>
       </AdminLayout>
     </ProtectedAdminRoute>
   );

@@ -4,13 +4,16 @@ import multer from "multer";
 
 import { supabase } from "../../supabaseClient";
 import { tempAdminAuthMiddleware, type AdminRequest } from "../../middleware/tempAdminAuth";
+import { optimizeProductImage, type OptimizedImageResult } from "../../utils/imageOptimizer";
 
 const router = Router();
 
+// Increased limit to 20MB to allow high-quality originals
+// Images will be automatically optimized to < 500KB on upload
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 20 * 1024 * 1024, // 20 MB (will be optimized down)
   },
 });
 
@@ -63,10 +66,21 @@ const ensureExtension = (filename: string, mimetype: string) => {
 
 router.use(tempAdminAuthMiddleware);
 
-router.post(
-  "/product-image",
-  upload.single("image"),
-  async (req: AdminRequest, res) => {
+router.post("/product-image", (req: AdminRequest, res) => {
+  upload.single("image")(req as any, res as any, async (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(413)
+          .json({ error: "That file is too large. Please upload an image under 20 MB. It will be automatically optimized for fast loading." });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+
     try {
       const file = req.file;
 
@@ -84,15 +98,38 @@ router.post(
           : "products";
       const folder = sanitizeSegment(rawFolder);
 
-      const extension = ensureExtension(file.originalname, file.mimetype);
+      // Optimize image before upload
+      let optimizedImage: OptimizedImageResult;
+      let uploadBuffer: Buffer;
+      let uploadMimeType: string;
+      let uploadExtension: string;
+
+      try {
+        console.log(`Optimizing image: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        optimizedImage = await optimizeProductImage(file.buffer);
+        
+        uploadBuffer = optimizedImage.buffer;
+        uploadMimeType = `image/${optimizedImage.format}`;
+        uploadExtension = `.${optimizedImage.format}`;
+        
+        const compressionInfo = `Optimized: ${(optimizedImage.originalSize / 1024 / 1024).toFixed(2)} MB → ${(optimizedImage.size / 1024 / 1024).toFixed(2)} MB (${optimizedImage.compressionRatio.toFixed(1)}% reduction)`;
+        console.log(compressionInfo);
+      } catch (optimizationError) {
+        console.error("Image optimization failed, using original:", optimizationError);
+        // Fallback to original if optimization fails
+        uploadBuffer = file.buffer;
+        uploadMimeType = file.mimetype;
+        uploadExtension = ensureExtension(file.originalname, file.mimetype);
+      }
+
       const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const filename = `${uniqueId}${extension}`;
+      const filename = `${uniqueId}${uploadExtension}`;
       const objectPath = path.posix.join(folder, filename);
 
       // Try Supabase first, fall back to local storage
       try {
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(objectPath, file.buffer, {
-          contentType: file.mimetype,
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(objectPath, uploadBuffer, {
+          contentType: uploadMimeType,
           cacheControl: "3600",
           upsert: false,
         });
@@ -123,7 +160,7 @@ router.post(
       }
 
       const localFilePath = path.join(folderPath, filename);
-      fs.writeFileSync(localFilePath, file.buffer);
+      fs.writeFileSync(localFilePath, uploadBuffer);
 
       // Return local URL
       const localUrl = `/uploads/${folder}/${filename}`;
@@ -137,7 +174,7 @@ router.post(
       console.error("Upload route error:", error);
       return res.status(500).json({ error: "Unexpected error while uploading image" });
     }
-  }
-);
+  });
+});
 
 export default router;

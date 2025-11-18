@@ -65,11 +65,7 @@ const parseInventoryUpdates = (input: unknown): InventoryUpdateInput[] => {
     }
 
     const locationId =
-      typeof record.location_id === "number"
-        ? record.location_id
-        : typeof record.locationId === "number"
-          ? record.locationId
-          : undefined;
+      typeof record.location_id === "number" ? record.location_id : typeof record.locationId === "number" ? record.locationId : undefined;
 
     updates.push({
       size_option: label,
@@ -166,12 +162,7 @@ const extractSizeOptionMeta = (raw: unknown) => {
       priceMap.set(lowerLabel, resolvedPrice);
     }
 
-    const activeField =
-      record.is_active ??
-      record.isActive ??
-      record.active ??
-      record.enabled ??
-      record.visible;
+    const activeField = record.is_active ?? record.isActive ?? record.active ?? record.enabled ?? record.visible;
 
     const isActive =
       typeof activeField === "boolean"
@@ -189,7 +180,6 @@ const extractSizeOptionMeta = (raw: unknown) => {
 
   return { priceMap, activeSizes };
 };
-
 
 // Apply admin auth to all routes
 router.use(tempAdminAuthMiddleware);
@@ -224,7 +214,17 @@ router.get("/:id", async (req: AdminRequest, res) => {
 
     const { data: product, error } = await supabase.from("products").select("*").eq("id", productId).single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle case where product doesn't exist (PGRST116 = 0 rows)
+      if (error.code === "PGRST116" || error.message?.includes("0 rows")) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      throw error;
+    }
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
     const inventory = await InventoryService.getProductInventory(productId);
 
@@ -253,12 +253,30 @@ router.post("/", async (req: AdminRequest, res) => {
       productPayload.additional_images = [];
     }
 
+    // Ensure video_urls is properly formatted as an array
+    if (productPayload.video_urls !== undefined && !Array.isArray(productPayload.video_urls)) {
+      productPayload.video_urls = null;
+    }
+    // Normalize empty arrays to null for database
+    if (Array.isArray(productPayload.video_urls) && productPayload.video_urls.length === 0) {
+      productPayload.video_urls = null;
+    }
+
+    const sizePriceOptionsInput = productPayload.size_price_options ?? (productPayload as Record<string, unknown>).sizePriceOptions ?? null;
+
+    // Keep size_price_options in the payload for database storage
+    // Don't delete it - it needs to be saved to the database
+    if (productPayload.sizePriceOptions && !productPayload.size_price_options) {
+      productPayload.size_price_options = productPayload.sizePriceOptions;
+    }
+    delete (productPayload as Record<string, unknown>).sizePriceOptions;
+
     const { data: product, error } = await supabase.from("products").insert(productPayload).select().single();
 
     if (error) throw error;
 
     if (product && inventoryUpdates.length > 0) {
-      const { priceMap, activeSizes } = extractSizeOptionMeta(product.size_price_options);
+      const { priceMap, activeSizes } = extractSizeOptionMeta(sizePriceOptionsInput);
       await InventoryService.upsertInventoryEntries({
         productId: product.id,
         entries: inventoryUpdates,
@@ -304,6 +322,24 @@ router.put("/:id", async (req: AdminRequest, res) => {
       productPayload.additional_images = [];
     }
 
+    // Ensure video_urls is properly formatted as an array
+    if (productPayload.video_urls !== undefined && !Array.isArray(productPayload.video_urls)) {
+      productPayload.video_urls = null;
+    }
+    // Normalize empty arrays to null for database
+    if (Array.isArray(productPayload.video_urls) && productPayload.video_urls.length === 0) {
+      productPayload.video_urls = null;
+    }
+
+    const sizePriceOptionsInput = productPayload.size_price_options ?? productPayload.sizePriceOptions ?? null;
+
+    // Keep size_price_options in the payload for database storage
+    // Don't delete it - it needs to be saved to the database
+    if (productPayload.sizePriceOptions && !productPayload.size_price_options) {
+      productPayload.size_price_options = productPayload.sizePriceOptions;
+    }
+    delete productPayload.sizePriceOptions;
+
     const { data: product, error } = await supabase.from("products").update(productPayload).eq("id", id).select().single();
 
     if (error) {
@@ -319,7 +355,7 @@ router.put("/:id", async (req: AdminRequest, res) => {
     console.log("✅ Product updated successfully:", product.id);
 
     if (product && inventoryUpdates.length > 0) {
-      const { priceMap, activeSizes } = extractSizeOptionMeta(product.size_price_options);
+      const { priceMap, activeSizes } = extractSizeOptionMeta(sizePriceOptionsInput);
       await InventoryService.upsertInventoryEntries({
         productId: product.id,
         entries: inventoryUpdates,
