@@ -25,6 +25,7 @@ interface Product {
   id: number;
   name: string;
   description?: string;
+  previewCopy?: string;
   category: string;
   ingredients?: string;
   targetAudience?: string;
@@ -39,6 +40,9 @@ interface Product {
   imageUrl?: string;
   texturePhotoUrl?: string;
   displayTitle?: string;
+  marketingTitle?: string;
+  marketingNote?: string;
+  seoKeywords?: string;
   certifications?:
     | string
     | Array<{
@@ -66,13 +70,7 @@ const getProductDisplayName = (product: Product): string => {
   return product.displayTitle || product.productType || product.name;
 };
 
-export default function ProductShowcase({
-  products,
-  loading = false,
-  onProductSelect,
-  initialCategory = "all",
-  categories,
-}: ProductShowcaseProps) {
+export default function ProductShowcase({ products, loading = false, onProductSelect, initialCategory = "all", categories }: ProductShowcaseProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [, navigate] = useLocation();
@@ -82,8 +80,7 @@ export default function ProductShowcase({
     setSelectedCategory(initialCategory);
   }, [initialCategory]);
 
-  const categoryOptions =
-    categories && categories.length > 0 ? categories : PRODUCT_CATEGORIES;
+  const categoryOptions = categories && categories.length > 0 ? categories : PRODUCT_CATEGORIES;
 
   // Filter products based on search term and category
   const filteredProducts = useMemo(() => {
@@ -92,8 +89,7 @@ export default function ProductShowcase({
 
     return products.filter((product) => {
       const productCategory = product.category?.toLowerCase() ?? "";
-      const matchesCategory =
-        normalizedCategory === "all" || productCategory === normalizedCategory;
+      const matchesCategory = normalizedCategory === "all" || productCategory === normalizedCategory;
       if (!matchesCategory) {
         return false;
       }
@@ -103,9 +99,17 @@ export default function ProductShowcase({
       }
 
       const description = product.description?.toLowerCase() ?? "";
+      const preview = product.previewCopy?.toLowerCase() ?? "";
+      const marketingTitle = product.marketingTitle?.toLowerCase() ?? "";
+      const displayTitle = product.displayTitle?.toLowerCase() ?? "";
+      const keywords = product.seoKeywords?.toLowerCase() ?? "";
       return (
         product.name.toLowerCase().includes(normalizedSearch) ||
+        displayTitle.includes(normalizedSearch) ||
+        marketingTitle.includes(normalizedSearch) ||
         description.includes(normalizedSearch) ||
+        preview.includes(normalizedSearch) ||
+        keywords.includes(normalizedSearch) ||
         productCategory.includes(normalizedSearch)
       );
     });
@@ -116,9 +120,8 @@ export default function ProductShowcase({
     if (onProductSelect) {
       onProductSelect(product);
     } else {
-      // Always use product ID for reliable routing, with slug as fallback
-      // This ensures each product has a unique URL even if slugs collide
-      const identifier = product.id ? String(product.id) : (product.slug || generateProductSlug(product.productType ?? undefined, product.name));
+      // Prefer slug for SEO-friendly URLs, fall back to ID if slug is missing
+      const identifier = product.slug || (product.id ? String(product.id) : generateProductSlug(product.productType ?? undefined, product.name));
 
       // Route mulch products to the MulchDetail page
       if ((product.category || "").toLowerCase() === "mulch") {
@@ -216,10 +219,7 @@ export default function ProductShowcase({
               key={product.id}
               className="overflow-hidden transition-all duration-300 border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group relative"
             >
-              <div 
-                className="relative aspect-[4/3] overflow-hidden rounded-t-2xl cursor-pointer"
-                onClick={() => handleProductClick(product)}
-              >
+              <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
                   <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
@@ -227,26 +227,32 @@ export default function ProductShowcase({
                   </div>
                 </div>
                 <OptimizedImage
-                  src={product.texturePhotoUrl || product.additionalImages?.[0] || product.imageUrl || DEFAULT_IMAGE}
+                  src={product.imageUrl || product.additionalImages?.[0] || product.texturePhotoUrl || DEFAULT_IMAGE}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
-
               </div>
 
-              <div className="p-6">
-                <h3 className="text-xl font-heading font-bold text-foreground mb-2 group-hover:text-primary transition-colors duration-200">
-                  {getProductDisplayName(product)}
-                </h3>
-                {/* Show description only if it is different from the display name */}
-                {product.description && product.description !== getProductDisplayName(product) && (
-                  <p className="text-foreground/70 line-clamp-2 mb-4 text-sm">{product.description}</p>
-                )}
+              <div className="p-6 flex flex-col gap-4 h-full">
+                <div className="flex items-center justify-between text-xs text-muted-foreground uppercase tracking-wide">
+                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                    {product.category || "Uncategorized"}
+                  </Badge>
+                  {product.previewCopy && <span className="text-primary/80 font-semibold">Catalog Preview</span>}
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors duration-200">
+                    {getProductDisplayName(product)}
+                  </h3>
+                </div>
+
+                {product.description && <p className="text-foreground/70 line-clamp-3 text-sm">{product.description}</p>}
 
                 {product.certifications && (
-                  <div className="flex flex-wrap gap-1 mb-6">
+                  <div className="flex flex-wrap gap-1">
                     {(typeof product.certifications === "string"
                       ? product.certifications.split(",").map((cert: string) => cert.trim())
                       : product.certifications

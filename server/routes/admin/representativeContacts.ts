@@ -1,19 +1,16 @@
 import { Router } from "express";
 import { supabase } from "../../supabaseClient";
-import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
+import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 
 const router = Router();
 
-router.use(tempAdminAuthMiddleware);
+router.use(adminAuthMiddleware);
 
 router.get("/", async (req: AdminRequest, res) => {
   try {
     const { status, search, representativeId } = req.query;
 
-    let query = supabase
-      .from("representative_contacts")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("representative_contacts").select("*").order("created_at", { ascending: false });
 
     if (status) {
       query = query.eq("status", status);
@@ -25,18 +22,14 @@ router.get("/", async (req: AdminRequest, res) => {
 
     if (search) {
       const term = `%${search}%`;
-      query = query.or(
-        `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`
-      );
+      query = query.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`);
     }
 
     const { data: contacts, error } = await query;
 
     if (error) throw error;
 
-    const representativeIds = Array.from(
-      new Set((contacts || []).map((contact) => contact.representative_id).filter(Boolean))
-    );
+    const representativeIds = Array.from(new Set((contacts || []).map((contact) => contact.representative_id).filter(Boolean)));
 
     let representativesMap: Record<number, any> = {};
 
@@ -48,10 +41,13 @@ router.get("/", async (req: AdminRequest, res) => {
 
       if (repsError) throw repsError;
 
-      representativesMap = (reps || []).reduce((acc, rep) => {
-        acc[rep.id] = rep;
-        return acc;
-      }, {} as Record<number, any>);
+      representativesMap = (reps || []).reduce(
+        (acc, rep) => {
+          acc[rep.id] = rep;
+          return acc;
+        },
+        {} as Record<number, any>
+      );
     }
 
     const enriched = (contacts || []).map((contact) => ({
@@ -75,12 +71,7 @@ router.patch("/:contactId", async (req: AdminRequest, res) => {
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
 
-    const { data, error } = await supabase
-      .from("representative_contacts")
-      .update(updateData)
-      .eq("id", contactId)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("representative_contacts").update(updateData).eq("id", contactId).select().single();
 
     if (error) throw error;
 

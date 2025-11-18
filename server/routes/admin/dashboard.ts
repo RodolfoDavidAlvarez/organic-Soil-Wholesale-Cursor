@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { supabase } from "../../supabaseClient";
-import { tempAdminAuthMiddleware } from "../../middleware/tempAdminAuth";
+import { adminAuthMiddleware } from "../../middleware/adminAuth";
 
 const router = Router();
 
 // Apply admin auth to all routes
-router.use(tempAdminAuthMiddleware);
+router.use(adminAuthMiddleware);
 
 // Get dashboard stats
 router.get("/stats", async (req, res) => {

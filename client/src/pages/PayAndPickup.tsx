@@ -348,7 +348,7 @@ const buildPayAndPickupProduct = (product: any): PayAndPickupProduct => {
 
 // Fetch Pay & Pickup products (restored for new system)
 const fetchPayAndPickupProducts = async (): Promise<PayAndPickupProduct[]> => {
-  const response = await fetch("/api/inventory/products/1?payAndPickup=true");
+  const response = await fetch("/api/inventory/products/1?payAndPickup=true&includeOutOfStock=true");
   if (!response.ok) {
     throw new Error("Failed to load Pay & Pickup products");
   }

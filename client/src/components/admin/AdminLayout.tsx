@@ -1,5 +1,5 @@
-import React, { useState, ReactNode } from 'react';
-import { useNavigate, useLocation } from 'wouter';
+import React, { useState, ReactNode } from "react";
+import { useNavigate, useLocation } from "wouter";
 import {
   LayoutDashboard,
   Package,
@@ -14,11 +14,11 @@ import {
   BarChart3,
   Bell,
   UserCircle,
-  BookUser
-} from 'lucide-react';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+  BookUser,
+} from "lucide-react";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   label: string;
@@ -28,55 +28,55 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    label: 'Dashboard',
+    label: "Dashboard",
     icon: <LayoutDashboard className="w-5 h-5" />,
-    href: '/admin'
+    href: "/admin",
   },
   {
-    label: 'Products',
+    label: "Products",
     icon: <Package className="w-5 h-5" />,
-    href: '/admin/products'
+    href: "/admin/products",
   },
   {
-    label: 'Orders',
+    label: "Orders",
     icon: <ShoppingCart className="w-5 h-5" />,
-    href: '/admin/orders'
+    href: "/admin/orders",
   },
   {
-    label: 'Customers',
+    label: "Customers",
     icon: <Users className="w-5 h-5" />,
-    href: '/admin/customers'
+    href: "/admin/customers",
   },
   {
-    label: 'Inventory',
+    label: "Inventory",
     icon: <AlertCircle className="w-5 h-5" />,
-    href: '/admin/inventory'
+    href: "/admin/inventory",
   },
   {
-    label: 'Analytics',
+    label: "Analytics",
     icon: <BarChart3 className="w-5 h-5" />,
-    href: '/admin/analytics'
+    href: "/admin/analytics",
   },
   {
-    label: 'Notifications',
+    label: "Notifications",
     icon: <Bell className="w-5 h-5" />,
-    href: '/admin/notifications'
+    href: "/admin/notifications",
   },
   {
-    label: 'Representatives',
+    label: "Representatives",
     icon: <UserCircle className="w-5 h-5" />,
-    href: '/admin/representatives'
+    href: "/admin/representatives",
   },
   {
-    label: 'CRM Contacts',
+    label: "CRM Contacts",
     icon: <BookUser className="w-5 h-5" />,
-    href: '/admin/representative-contacts'
+    href: "/admin/representative-contacts",
   },
   {
-    label: 'Settings',
+    label: "Settings",
     icon: <Settings className="w-5 h-5" />,
-    href: '/admin/settings'
-  }
+    href: "/admin/settings",
+  },
 ];
 
 interface AdminLayoutProps {
@@ -88,68 +88,56 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location, navigate] = useLocation();
   const { admin, signOut } = useAdminAuth();
 
-  const normalizedLocation = location.split('?')[0];
+  const normalizedLocation = location.split("?")[0];
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/admin/login');
+    // Ensure navigation happens after state is cleared
+    setTimeout(() => {
+      navigate("/admin/login");
+    }, 100);
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-          <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
-              <button
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
+            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="w-6 h-6" />
             </button>
-            </div>
+          </div>
 
-            {/* Admin info */}
-            <div className="p-4 border-b space-y-1">
-              <p className="text-sm text-gray-600">Welcome back,</p>
-              <div className="min-w-0">
-                <p
-                  className="font-medium text-gray-900 truncate"
-                  title={admin?.full_name || admin?.email || undefined}
-                >
-                  {admin?.full_name || admin?.email || 'Admin'}
-                </p>
-                {admin?.full_name && admin?.email && (
-                  <p className="text-xs text-gray-500 truncate" title={admin.email}>
-                    {admin.email}
-                  </p>
-                )}
-              </div>
-              {admin?.role && (
-                <p className="text-xs text-gray-500 capitalize">
-                  {admin.role.replace('_', ' ')}
+          {/* Admin info */}
+          <div className="p-4 border-b space-y-1">
+            <p className="text-sm text-gray-600">Welcome back,</p>
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900 truncate" title={admin?.full_name || admin?.email || undefined}>
+                {admin?.full_name || admin?.email || "Admin"}
+              </p>
+              {admin?.full_name && admin?.email && (
+                <p className="text-xs text-gray-500 truncate" title={admin.email}>
+                  {admin.email}
                 </p>
               )}
             </div>
+            {admin?.role && <p className="text-xs text-gray-500 capitalize">{admin.role.replace("_", " ")}</p>}
+          </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2">
-              {navItems.map((item) => (
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -159,12 +147,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   setSidebarOpen(false);
                 }}
                 className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors',
-                  (item.href === '/admin'
-                    ? normalizedLocation === item.href
-                    : normalizedLocation.startsWith(item.href))
-                    ? 'bg-green-50 text-green-800 font-medium'
-                    : 'hover:bg-gray-100'
+                  "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors",
+                  (item.href === "/admin" ? normalizedLocation === item.href : normalizedLocation.startsWith(item.href))
+                    ? "bg-green-50 text-green-800 font-medium"
+                    : "hover:bg-gray-100"
                 )}
               >
                 {item.icon}
@@ -175,11 +161,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Sign out */}
           <div className="p-4 border-t">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={handleSignOut}
-            >
+            <Button variant="outline" className="w-full justify-start gap-3" onClick={handleSignOut}>
               <LogOut className="w-5 h-5" />
               Sign Out
             </Button>
@@ -192,10 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Top bar */}
         <header className="bg-white shadow-sm border-b">
           <div className="flex items-center justify-between p-4">
-            <button
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
+            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
 
@@ -217,9 +196,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="container mx-auto p-4 lg:p-6">
-            {children}
-          </div>
+          <div className="container mx-auto p-4 lg:p-6">{children}</div>
         </main>
       </div>
     </div>

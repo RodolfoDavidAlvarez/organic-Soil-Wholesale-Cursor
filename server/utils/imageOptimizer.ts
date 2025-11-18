@@ -20,23 +20,14 @@ export interface OptimizedImageResult {
 
 /**
  * Optimizes an image buffer for web use
- * 
+ *
  * Best practices:
  * - Product images: max 1920px width, quality 85, WebP format
  * - Thumbnails: max 400px width, quality 80, WebP format
  * - Target file size: < 500KB for product images, < 100KB for thumbnails
  */
-export async function optimizeImage(
-  inputBuffer: Buffer,
-  options: ImageOptimizationOptions = {}
-): Promise<OptimizedImageResult> {
-  const {
-    maxWidth = 1920,
-    maxHeight = 1920,
-    quality = 85,
-    format,
-    convertToWebP = true,
-  } = options;
+export async function optimizeImage(inputBuffer: Buffer, options: ImageOptimizationOptions = {}): Promise<OptimizedImageResult> {
+  const { maxWidth = 1920, maxHeight = 1920, quality = 85, format, convertToWebP = true } = options;
 
   const originalSize = inputBuffer.length;
   let sharpInstance = sharp(inputBuffer);
@@ -58,7 +49,7 @@ export async function optimizeImage(
 
   // Determine output format
   let outputFormat: "jpeg" | "webp" | "png" = format || "jpeg";
-  
+
   if (convertToWebP && metadata.format !== "gif") {
     // Convert to WebP for better compression (except GIFs which should stay animated)
     outputFormat = "webp";
@@ -78,7 +69,7 @@ export async function optimizeImage(
       break;
     case "png":
       optimizedBuffer = await sharpInstance
-        .png({ 
+        .png({
           quality,
           compressionLevel: 9, // Maximum compression
           adaptiveFiltering: true,
@@ -88,7 +79,7 @@ export async function optimizeImage(
     case "jpeg":
     default:
       optimizedBuffer = await sharpInstance
-        .jpeg({ 
+        .jpeg({
           quality,
           mozjpeg: true, // Use mozjpeg for better compression
           progressive: true, // Progressive JPEG for better perceived performance
@@ -140,4 +131,3 @@ export async function optimizeThumbnail(inputBuffer: Buffer): Promise<OptimizedI
     convertToWebP: true,
   });
 }
-

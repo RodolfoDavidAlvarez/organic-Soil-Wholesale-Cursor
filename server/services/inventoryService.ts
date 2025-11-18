@@ -113,15 +113,34 @@ export class InventoryService {
       }
 
       if (existing) {
-        const { error: updateError } = await supabase
-          .from("inventory")
-          .update(payload)
-          .eq("id", existing.id);
+        const { error: updateError } = await supabase.from("inventory").update(payload).eq("id", existing.id);
 
         if (updateError) {
           console.error(`Failed to update inventory for ${normalizedLabel}:`, updateError);
         }
       } else {
+        // Determine unit based on size option label
+        const getUnitFromSizeOption = (sizeLabel: string): string => {
+          const lowerLabel = sizeLabel.toLowerCase();
+          if (lowerLabel.includes("bag") || lowerLabel.includes("lb")) {
+            return "bag";
+          }
+          if (lowerLabel.includes("cf") || lowerLabel.includes("cubic foot")) {
+            return "cubic_foot";
+          }
+          if (lowerLabel.includes("cy") || lowerLabel.includes("cubic yard")) {
+            return "cubic_yard";
+          }
+          if (lowerLabel.includes("ton") || lowerLabel.includes("truckload")) {
+            return "ton";
+          }
+          if (lowerLabel.includes("tote")) {
+            return "tote";
+          }
+          // Default to 'unit' for unknown sizes
+          return "unit";
+        };
+
         const insertPayload = {
           product_id: productId,
           location_id: targetLocationId,
@@ -130,6 +149,7 @@ export class InventoryService {
           quantity_reserved: 0,
           price: price ?? 0,
           unit_price: price ?? 0,
+          unit: getUnitFromSizeOption(normalizedLabel),
           last_updated: new Date().toISOString(),
         };
 
@@ -153,11 +173,7 @@ export class InventoryService {
   /**
    * Set quantity to zero for inventory rows no longer active.
    */
-  static async deactivateMissingSizes(params: {
-    productId: number;
-    locationId?: number;
-    activeSizes: Set<string>;
-  }) {
+  static async deactivateMissingSizes(params: { productId: number; locationId?: number; activeSizes: Set<string> }) {
     const { productId, locationId, activeSizes } = params;
     const targetLocationId = locationId ?? DEFAULT_LOCATION_ID;
 
@@ -196,10 +212,7 @@ export class InventoryService {
    * Recalculate product stock quantity from inventory totals.
    */
   static async recalculateProductStock(productId: number) {
-    const { data, error } = await supabase
-      .from("inventory")
-      .select("quantity_available")
-      .eq("product_id", productId);
+    const { data, error } = await supabase.from("inventory").select("quantity_available").eq("product_id", productId);
 
     if (error) {
       console.error("Failed to recalculate product stock:", error);
@@ -221,4 +234,3 @@ export class InventoryService {
     }
   }
 }
-

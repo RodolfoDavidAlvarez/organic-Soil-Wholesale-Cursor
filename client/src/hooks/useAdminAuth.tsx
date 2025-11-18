@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface AdminUser {
-  id: number;
+  id: string;
   email: string;
-  full_name: string;
+  full_name?: string;
   role: string;
   permissions?: any;
 }
@@ -24,32 +24,21 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TEMPORARY: Auto-authenticate for development
-    // TODO: Re-enable authentication before deployment
-    setAdmin({
-      id: 1,
-      email: 'admin@soilseedandwater.com',
-      full_name: 'Admin User',
-      role: 'super_admin',
-      permissions: { all: true }
-    });
-    setLoading(false);
-    
-    /* ORIGINAL AUTH CODE - DISABLED FOR DEVELOPMENT
     // Check for stored admin token
     const token = localStorage.getItem("adminToken");
     if (token) {
       // Validate token and get admin info
       validateToken(token);
     } else {
+      // No token, ensure admin state is cleared
+      setAdmin(null);
       setLoading(false);
     }
-    */
   }, []);
 
   const validateToken = async (token: string) => {
     try {
-      const response = await fetch("/api/admin/simple/validate", {
+      const response = await fetch("/api/admin/auth/validate", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -67,7 +56,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Token validation error:", error);
-      // On network error, keep the token but clear admin state
+      // On network error, remove token and clear admin state
+      localStorage.removeItem("adminToken");
       setAdmin(null);
       setError("Network error during authentication");
     } finally {
@@ -80,7 +70,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/admin/simple/simple-login", {
+      const response = await fetch("/api/admin/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -93,6 +83,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         localStorage.setItem("adminToken", data.token);
         setAdmin(data.admin);
+        setError(null);
       } else {
         setError(data.error || "Login failed");
         throw new Error(data.error || "Login failed");
@@ -107,9 +98,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    localStorage.removeItem("adminToken");
+    // Clear admin state first
     setAdmin(null);
     setError(null);
+    // Then clear token from localStorage
+    localStorage.removeItem("adminToken");
+    // Force state update to ensure UI reflects logout
+    setLoading(false);
+    // Small delay to ensure state is fully cleared
+    await new Promise((resolve) => setTimeout(resolve, 50));
   };
 
   return (

@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { supabase } from "../../supabaseClient";
-import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
+import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 
 const router = Router();
 
 // Apply admin auth middleware to all routes
-router.use(tempAdminAuthMiddleware);
+router.use(adminAuthMiddleware);
 
 // Get all representatives
 router.get("/", async (req: AdminRequest, res) => {
@@ -30,11 +30,7 @@ router.get("/:id", async (req: AdminRequest, res) => {
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
-      .from("representatives")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const { data, error } = await supabase.from("representatives").select("*").eq("id", id).single();
 
     if (error) throw error;
 
@@ -84,11 +80,7 @@ router.post("/", async (req: AdminRequest, res) => {
     }
 
     // Check if slug already exists
-    const { data: existing } = await supabase
-      .from("representatives")
-      .select("id")
-      .eq("slug", slug)
-      .single();
+    const { data: existing } = await supabase.from("representatives").select("id").eq("slug", slug).single();
 
     if (existing) {
       return res.status(400).json({ error: "A representative with this slug already exists" });
@@ -105,9 +97,7 @@ router.post("/", async (req: AdminRequest, res) => {
         bio: bio || null,
         photo_url: photoUrl || null,
         banner_image_url: bannerImageUrl || null,
-        gallery_images: Array.isArray(galleryImages)
-          ? galleryImages.filter((url: string) => !!url)
-          : [],
+        gallery_images: Array.isArray(galleryImages) ? galleryImages.filter((url: string) => !!url) : [],
         company_name: companyName || null,
         title: title || null,
         address: address || null,
@@ -166,11 +156,7 @@ router.put("/:id", async (req: AdminRequest, res) => {
     } = req.body;
 
     // Check if representative exists
-    const { data: existing } = await supabase
-      .from("representatives")
-      .select("id, slug")
-      .eq("id", id)
-      .single();
+    const { data: existing } = await supabase.from("representatives").select("id, slug").eq("id", id).single();
 
     if (!existing) {
       return res.status(404).json({ error: "Representative not found" });
@@ -178,11 +164,7 @@ router.put("/:id", async (req: AdminRequest, res) => {
 
     // If slug is being changed, check if new slug already exists
     if (slug && slug !== existing.slug) {
-      const { data: slugExists } = await supabase
-        .from("representatives")
-        .select("id")
-        .eq("slug", slug)
-        .single();
+      const { data: slugExists } = await supabase.from("representatives").select("id").eq("slug", slug).single();
 
       if (slugExists) {
         return res.status(400).json({ error: "A representative with this slug already exists" });
@@ -199,9 +181,7 @@ router.put("/:id", async (req: AdminRequest, res) => {
     if (photoUrl !== undefined) updateData.photo_url = photoUrl;
     if (bannerImageUrl !== undefined) updateData.banner_image_url = bannerImageUrl;
     if (galleryImages !== undefined) {
-      updateData.gallery_images = Array.isArray(galleryImages)
-        ? galleryImages.filter((url: string) => !!url)
-        : [];
+      updateData.gallery_images = Array.isArray(galleryImages) ? galleryImages.filter((url: string) => !!url) : [];
     }
     if (companyName !== undefined) updateData.company_name = companyName;
     if (title !== undefined) updateData.title = title;
@@ -218,12 +198,7 @@ router.put("/:id", async (req: AdminRequest, res) => {
     if (isActive !== undefined) updateData.is_active = isActive;
     if (displayOrder !== undefined) updateData.display_order = displayOrder;
 
-    const { data, error } = await supabase
-      .from("representatives")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("representatives").update(updateData).eq("id", id).select().single();
 
     if (error) throw error;
 
@@ -256,11 +231,7 @@ router.get("/:id/contacts", async (req: AdminRequest, res) => {
     const { id } = req.params;
     const { status } = req.query;
 
-    let query = supabase
-      .from("representative_contacts")
-      .select("*")
-      .eq("representative_id", id)
-      .order("created_at", { ascending: false });
+    let query = supabase.from("representative_contacts").select("*").eq("representative_id", id).order("created_at", { ascending: false });
 
     if (status) {
       query = query.eq("status", status);
@@ -287,12 +258,7 @@ router.patch("/contacts/:contactId", async (req: AdminRequest, res) => {
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
 
-    const { data, error } = await supabase
-      .from("representative_contacts")
-      .update(updateData)
-      .eq("id", contactId)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("representative_contacts").update(updateData).eq("id", contactId).select().single();
 
     if (error) throw error;
 

@@ -1,42 +1,38 @@
-import { Resend } from 'resend';
-import { supabase } from '../db/supabase.js';
+import { Resend } from "resend";
+import { supabase } from "../db/supabase.js";
 
 // Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY || 're_H3Q7nu34_QAFnBmaCJr7qBwpHU5pnKmSg');
+const resend = new Resend(process.env.RESEND_API_KEY || "re_jUf6QpaW_4yMduvZiHiYg5CQGP6dhxyJi");
 
 // Email configuration
-const FROM_EMAIL = 'Organic Soil Wholesale <ralvarez@bettersystems.ai>';
-const COMPANY_NAME = 'Organic Soil Wholesale';
-const COMPANY_PHONE = '(928) 550-1649';
-const COMPANY_ADDRESS = 'Flagstaff, AZ';
+const FROM_EMAIL = "Organic Soil Wholesale <ralvarez@soilseedandwater.com>";
+const COMPANY_NAME = "Organic Soil Wholesale";
+const COMPANY_PHONE = "(928) 550-1649";
+const COMPANY_ADDRESS = "Flagstaff, AZ";
 
 // Get active admin emails for a specific notification type
 async function getAdminEmailsForNotification(notificationType: string): Promise<string[]> {
   try {
-    const { data, error } = await supabase
-      .from('admin_notifications')
-      .select('email')
-      .eq('active', true)
-      .eq(notificationType, true);
+    const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq(notificationType, true);
 
     if (error) {
-      console.error('Error fetching admin emails:', error);
+      console.error("Error fetching admin emails:", error);
       // Fallback to default admin
-      return ['ralvarez@soilseedandwater.com'];
+      return ["ralvarez@soilseedandwater.com"];
     }
 
-    const emails = data?.map(admin => admin.email) || [];
-    
+    const emails = data?.map((admin) => admin.email) || [];
+
     // If no admins found, use fallback
     if (emails.length === 0) {
-      return ['ralvarez@soilseedandwater.com'];
+      return ["ralvarez@soilseedandwater.com"];
     }
 
     return emails;
   } catch (error) {
-    console.error('Error in getAdminEmailsForNotification:', error);
+    console.error("Error in getAdminEmailsForNotification:", error);
     // Fallback to default admin
-    return ['ralvarez@soilseedandwater.com'];
+    return ["ralvarez@soilseedandwater.com"];
   }
 }
 
@@ -56,27 +52,29 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       to,
       subject,
       html,
-      text: text || '',
+      text: text || "",
     });
 
     if (error) {
-      console.error('Email send error:', error);
+      console.error("Email send error:", error);
       throw error;
     }
 
-    console.log('Email sent successfully:', data);
+    console.log("Email sent successfully:", data);
     return data;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error("Failed to send email:", error);
     throw error;
   }
 }
 
 // Email verification template
 export async function sendVerificationEmail(email: string, token: string) {
-  const baseUrl = process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const verificationUrl = `${baseUrl}/verify-email/${token}`;
-  
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -126,9 +124,11 @@ export async function sendVerificationEmail(email: string, token: string) {
 
 // Password reset template
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const baseUrl = process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const resetUrl = `${baseUrl}/reset-password/${token}`;
-  
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -215,7 +215,7 @@ export async function sendWholesaleApprovalEmail(email: string, companyName: str
           
           <p>You can now log in to view wholesale pricing and place orders:</p>
           <center>
-            <a href="${process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/signin" class="button">Sign In to Your Account</a>
+            <a href="${process.env.CLIENT_URL || (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")}/signin" class="button">Sign In to Your Account</a>
           </center>
           
           <p>If you have any questions, please don't hesitate to contact us at ${COMPANY_PHONE}.</p>
@@ -259,7 +259,7 @@ export async function sendOrderConfirmationEmail(
         </tr>
       `
     )
-    .join('');
+    .join("");
 
   const html = `
     <!DOCTYPE html>
@@ -288,7 +288,7 @@ export async function sendOrderConfirmationEmail(
           <div class="order-info">
             <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
             <p><strong>Delivery Method:</strong> ${orderDetails.deliveryMethod}</p>
-            ${orderDetails.estimatedDelivery ? `<p><strong>Estimated Delivery:</strong> ${orderDetails.estimatedDelivery}</p>` : ''}
+            ${orderDetails.estimatedDelivery ? `<p><strong>Estimated Delivery:</strong> ${orderDetails.estimatedDelivery}</p>` : ""}
           </div>
           
           <h3>Order Details</h3>
@@ -371,7 +371,7 @@ export async function sendOrderReadyEmail(email: string, orderNumber: string, pi
           <p>Your order will be held for 7 days. Please pick up at your earliest convenience.</p>
           
           <center>
-            <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, '')}" class="button">Call Us: ${COMPANY_PHONE}</a>
+            <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}" class="button">Call Us: ${COMPANY_PHONE}</a>
           </center>
           
           <p>Thank you for your business!</p>
@@ -413,13 +413,13 @@ export async function sendAdminOrderNotification(orderDetails: {
     .map(
       (item) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}${item.size ? ` (${item.size})` : ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}${item.size ? ` (${item.size})` : ""}</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
         </tr>
       `
     )
-    .join('');
+    .join("");
 
   const html = `
     <!DOCTYPE html>
@@ -565,27 +565,31 @@ export async function sendAdminOrderNotification(orderDetails: {
             <h1>${COMPANY_NAME}</h1>
           </div>
           <div class="content">
-            <h2>New ${orderDetails.orderType === 'pay_and_pickup' ? 'Pay & Pickup' : 'Order'} Received</h2>
+            <h2>New ${orderDetails.orderType === "pay_and_pickup" ? "Pay & Pickup" : "Order"} Received</h2>
             
             <div class="order-info">
               <p><strong>Order Number:</strong> ${orderDetails.orderNumber}</p>
               <p><strong>Customer:</strong> ${orderDetails.customerName}</p>
-              ${orderDetails.customerEmail ? `<p><strong>Email:</strong> ${orderDetails.customerEmail}</p>` : ''}
+              ${orderDetails.customerEmail ? `<p><strong>Email:</strong> ${orderDetails.customerEmail}</p>` : ""}
               <p><strong>Phone:</strong> ${orderDetails.customerPhone}</p>
-              <p><strong>Order Type:</strong> ${orderDetails.orderType === 'pay_and_pickup' ? 'Pay & Pickup' : orderDetails.orderType}</p>
+              <p><strong>Order Type:</strong> ${orderDetails.orderType === "pay_and_pickup" ? "Pay & Pickup" : orderDetails.orderType}</p>
               <p><strong>Delivery Method:</strong> ${orderDetails.deliveryMethod}</p>
-              ${orderDetails.paymentMethod ? `<p><strong>Payment Method:</strong> ${orderDetails.paymentMethod}</p>` : ''}
-              ${orderDetails.paymentStatus ? `<p><strong>Payment Status:</strong> ${orderDetails.paymentStatus}</p>` : ''}
-              ${orderDetails.pickupLocation ? `<p><strong>Pickup Location:</strong> ${orderDetails.pickupLocation}</p>` : ''}
-              ${orderDetails.estimatedReadyTime ? `<p><strong>Estimated Ready:</strong> ${new Date(orderDetails.estimatedReadyTime).toLocaleString()}</p>` : ''}
+              ${orderDetails.paymentMethod ? `<p><strong>Payment Method:</strong> ${orderDetails.paymentMethod}</p>` : ""}
+              ${orderDetails.paymentStatus ? `<p><strong>Payment Status:</strong> ${orderDetails.paymentStatus}</p>` : ""}
+              ${orderDetails.pickupLocation ? `<p><strong>Pickup Location:</strong> ${orderDetails.pickupLocation}</p>` : ""}
+              ${orderDetails.estimatedReadyTime ? `<p><strong>Estimated Ready:</strong> ${new Date(orderDetails.estimatedReadyTime).toLocaleString()}</p>` : ""}
             </div>
             
-            ${orderDetails.notes ? `
+            ${
+              orderDetails.notes
+                ? `
             <div class="highlight">
               <strong>Customer Notes:</strong><br>
               ${orderDetails.notes}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <h3>Order Items</h3>
             <table>
@@ -629,13 +633,13 @@ export async function sendAdminOrderNotification(orderDetails: {
   `;
 
   // Get all admins who want order notifications
-  const adminEmails = await getAdminEmailsForNotification('notify_new_orders');
-  
+  const adminEmails = await getAdminEmailsForNotification("notify_new_orders");
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
-      subject: `[NEW ORDER] ${orderDetails.paymentStatus === 'paid' ? '[PAID] ' : ''}#${orderDetails.orderNumber} - $${orderDetails.total.toFixed(2)} - ${orderDetails.customerName}`,
+      subject: `[NEW ORDER] ${orderDetails.paymentStatus === "paid" ? "[PAID] " : ""}#${orderDetails.orderNumber} - $${orderDetails.total.toFixed(2)} - ${orderDetails.customerName}`,
       html,
     })
   );
@@ -799,12 +803,16 @@ export async function sendAdminArrivalNotification(arrivalDetails: {
                   <a href="tel:${arrivalDetails.customerPhone}">${arrivalDetails.customerPhone}</a>
                 </span>
               </div>
-              ${arrivalDetails.vehicleInfo ? `
+              ${
+                arrivalDetails.vehicleInfo
+                  ? `
               <div class="info-row">
                 <span class="info-label">Vehicle:</span>
                 <span class="info-value">${arrivalDetails.vehicleInfo}</span>
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
               <div class="info-row">
                 <span class="info-label">Notification ID:</span>
                 <span class="info-value">#${arrivalDetails.notificationId}</span>
@@ -833,13 +841,13 @@ export async function sendAdminArrivalNotification(arrivalDetails: {
   `;
 
   // Get all admins who want arrival notifications
-  const adminEmails = await getAdminEmailsForNotification('notify_arrivals');
-  
+  const adminEmails = await getAdminEmailsForNotification("notify_arrivals");
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
-      subject: `[URGENT] Customer Arrival: ${arrivalDetails.customerName} - ${arrivalDetails.vehicleInfo || 'Vehicle Info Not Provided'}`,
+      subject: `[URGENT] Customer Arrival: ${arrivalDetails.customerName} - ${arrivalDetails.vehicleInfo || "Vehicle Info Not Provided"}`,
       html,
     })
   );
@@ -1013,24 +1021,24 @@ export async function sendAdminTriviaLeadNotification(leadDetails: {
               <p><strong>Name:</strong> ${leadDetails.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${leadDetails.email}">${leadDetails.email}</a></p>
               <p><strong>Quiz Score:</strong> ${leadDetails.score}/5 
-                <span class="score-badge">${leadDetails.score === 5 ? 'PERFECT SCORE' : leadDetails.score >= 4 ? 'HIGH SCORE' : leadDetails.score >= 3 ? 'GOOD SCORE' : 'PARTICIPATED'}</span>
+                <span class="score-badge">${leadDetails.score === 5 ? "PERFECT SCORE" : leadDetails.score >= 4 ? "HIGH SCORE" : leadDetails.score >= 3 ? "GOOD SCORE" : "PARTICIPATED"}</span>
               </p>
               <p><strong>Submitted:</strong> ${new Date(leadDetails.submittedAt).toLocaleString()}</p>
             </div>
             
             <h3>Growing Interests</h3>
             <div class="interests-container">
-              ${leadDetails.interests.map(interest => `<span class="interest-tag">${interest}</span>`).join('')}
+              ${leadDetails.interests.map((interest) => `<span class="interest-tag">${interest}</span>`).join("")}
             </div>
             
-            <div class="quality-indicator ${leadDetails.score >= 4 ? 'hot-lead' : leadDetails.score >= 3 ? 'warm-lead' : 'cold-lead'}">
+            <div class="quality-indicator ${leadDetails.score >= 4 ? "hot-lead" : leadDetails.score >= 3 ? "warm-lead" : "cold-lead"}">
               <div class="quality-metric">
                 <strong>Lead Quality:</strong>
-                <span>${leadDetails.score >= 4 ? 'HOT LEAD' : leadDetails.score >= 3 ? 'WARM LEAD' : 'COLD LEAD'}</span>
+                <span>${leadDetails.score >= 4 ? "HOT LEAD" : leadDetails.score >= 3 ? "WARM LEAD" : "COLD LEAD"}</span>
               </div>
               <div class="quality-metric">
                 <strong>Engagement Level:</strong>
-                <span>${leadDetails.interests.length > 3 ? 'HIGH' : leadDetails.interests.length > 1 ? 'MEDIUM' : 'LOW'}</span>
+                <span>${leadDetails.interests.length > 3 ? "HIGH" : leadDetails.interests.length > 1 ? "MEDIUM" : "LOW"}</span>
               </div>
             </div>
             
@@ -1049,10 +1057,10 @@ export async function sendAdminTriviaLeadNotification(leadDetails: {
   `;
 
   // Get all admins who want trivia lead notifications
-  const adminEmails = await getAdminEmailsForNotification('notify_trivia_leads');
-  
+  const adminEmails = await getAdminEmailsForNotification("notify_trivia_leads");
+
   // Send to all admins
-  const emailPromises = adminEmails.map(email => 
+  const emailPromises = adminEmails.map((email) =>
     sendEmail({
       to: email,
       subject: `[TRIVIA LEAD] ${leadDetails.name} - Score: ${leadDetails.score}/5 - ${leadDetails.interests.length} interests`,
@@ -1063,5 +1071,175 @@ export async function sendAdminTriviaLeadNotification(leadDetails: {
   return Promise.all(emailPromises);
 }
 
+// Admin invitation email
+export async function sendAdminInvitationEmail(invitationDetails: { email: string; full_name: string | null; token: string }) {
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const invitationUrl = `${baseUrl}/admin/invite/${invitationDetails.token}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          line-height: 1.6;
+          color: #1a1a1a;
+          margin: 0;
+          padding: 0;
+          background-color: #f5f5f5;
+        }
+        .wrapper {
+          background-color: #f5f5f5;
+          padding: 40px 20px;
+        }
+        .container { 
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header { 
+          background: linear-gradient(135deg, #2c5530 0%, #1e3a21 100%);
+          color: white;
+          padding: 32px;
+          text-align: center;
+        }
+        h1 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 300;
+          letter-spacing: -0.5px;
+        }
+        .content { 
+          padding: 40px 32px;
+        }
+        h2 {
+          color: #2c5530;
+          font-size: 22px;
+          margin: 0 0 24px 0;
+          font-weight: 600;
+        }
+        .invitation-info { 
+          background-color: #f9fafb;
+          padding: 24px;
+          border-radius: 8px;
+          margin: 24px 0;
+          border: 1px solid #e5e7eb;
+        }
+        .invitation-info p {
+          margin: 8px 0;
+          color: #4b5563;
+        }
+        .button { 
+          display: inline-block;
+          background: linear-gradient(135deg, #2c5530 0%, #1e3a21 100%);
+          color: white;
+          padding: 14px 32px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          margin: 24px 0;
+          text-align: center;
+        }
+        .button-container {
+          text-align: center;
+          margin: 32px 0;
+        }
+        .link-fallback {
+          background-color: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          margin: 24px 0;
+          word-break: break-all;
+          font-size: 13px;
+          color: #6b7280;
+        }
+        .footer { 
+          text-align: center;
+          padding: 24px 32px;
+          color: #9ca3af;
+          font-size: 13px;
+          background-color: #f9fafb;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+          margin: 4px 0;
+        }
+        .security-note {
+          background-color: #fef3c7;
+          padding: 16px;
+          border-left: 4px solid #f59e0b;
+          margin: 24px 0;
+          border-radius: 4px;
+          font-size: 14px;
+          color: #92400e;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="container">
+          <div class="header">
+            <h1>${COMPANY_NAME}</h1>
+          </div>
+          <div class="content">
+            <h2>You've Been Invited!</h2>
+            <p>${invitationDetails.full_name ? `Hi ${invitationDetails.full_name},` : "Hello,"}</p>
+            <p>You've been invited to join the ${COMPANY_NAME} admin panel as an administrator.</p>
+            
+            <div class="invitation-info">
+              <p><strong>Email:</strong> ${invitationDetails.email}</p>
+              <p><strong>Role:</strong> Administrator</p>
+            </div>
+            
+            <p>Click the button below to accept your invitation and create your account:</p>
+            
+            <div class="button-container">
+              <a href="${invitationUrl}" class="button">Accept Invitation & Create Account</a>
+            </div>
+            
+            <p>Or copy and paste this link into your browser:</p>
+            <div class="link-fallback">
+              ${invitationUrl}
+            </div>
+            
+            <div class="security-note">
+              <strong>Security Note:</strong> This invitation link will expire in 7 days. If you didn't expect this invitation, please ignore this email.
+            </div>
+            
+            <p>Once you accept the invitation, you'll be able to:</p>
+            <ul style="color: #4b5563; line-height: 2;">
+              <li>Access the admin dashboard</li>
+              <li>Manage products and inventory</li>
+              <li>Process orders and customer requests</li>
+              <li>View analytics and reports</li>
+            </ul>
+          </div>
+          <div class="footer">
+            <p>${COMPANY_NAME} Admin System</p>
+            <p>${COMPANY_ADDRESS} • ${COMPANY_PHONE}</p>
+            <p>If you have questions, please contact your administrator.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: invitationDetails.email,
+    subject: `Admin Invitation - ${COMPANY_NAME}`,
+    html,
+  });
+}
+
 // Re-export additional notification functions
-export { sendAdminContactFormNotification, sendAdminQuoteRequestNotification, sendAdminSpecialRequestNotification } from './emailNotifications.js';
+export { sendAdminContactFormNotification, sendAdminQuoteRequestNotification, sendAdminSpecialRequestNotification } from "./emailNotifications.js";

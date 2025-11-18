@@ -19,8 +19,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import {
   Dialog,
   DialogContent,
@@ -193,6 +191,28 @@ export default function RepresentativeLanding() {
   const socialLinks = representative.social_links || {};
   const hasBanner = Boolean(representative.banner_image_url);
 
+  const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return phone;
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    // Format as (XXX) XXX-XXXX if it's 10 digits
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    // Format as (XXX) XXX-XXXX XXXX if it's 11 digits (with country code)
+    if (cleaned.length === 11 && cleaned[0] === '1') {
+      return `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+    }
+    // Return original if it doesn't match expected format
+    return phone;
+  };
+
+  const getPhoneNumberForTel = (phone: string): string => {
+    if (!phone) return phone;
+    // Remove all non-digit characters for tel: link
+    return phone.replace(/\D/g, '');
+  };
+
   const handleDownloadContactCard = async () => {
     if (!representative) return;
     try {
@@ -227,61 +247,246 @@ export default function RepresentativeLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50/60 via-white to-white">
-      <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 space-y-10">
-          <div className="relative overflow-hidden rounded-3xl shadow-xl">
-            {hasBanner && representative.banner_image_url && (
-              <div className="absolute inset-0">
-                <img
-                  src={representative.banner_image_url}
-                  alt={`${representative.name} banner`}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
+    <div className="min-h-screen bg-gradient-to-b from-emerald-950/5 via-white to-emerald-50/40 text-slate-900">
+      <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-8 sm:px-6 lg:px-0">
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100/80 bg-white shadow-2xl shadow-emerald-900/10">
+          <div className="absolute inset-0">
+            {hasBanner && representative.banner_image_url ? (
+              <img
+                src={representative.banner_image_url}
+                alt={`${representative.name} banner`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-700" />
+            )}
+            <div className="absolute inset-0 bg-emerald-950/60" />
+          </div>
+          <div className="relative flex flex-col items-center px-6 py-12 text-center text-white sm:px-10 md:py-14">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.4em] text-emerald-100/90">
+              Soil Seed &amp; Water
+            </span>
+            {representative.photo_url ? (
+              <img
+                src={representative.photo_url}
+                alt={representative.name}
+                className="my-6 h-28 w-28 rounded-full border-4 border-white/60 object-cover shadow-lg shadow-black/20"
+              />
+            ) : (
+              <div className="my-6 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/60 bg-white/15 text-3xl font-semibold uppercase text-white">
+                {representative.name?.charAt(0) || '?'}
               </div>
             )}
-            <div
-              className={`relative px-6 py-14 md:px-12 md:py-20 ${
-                hasBanner ? 'text-white' : 'bg-gradient-to-br from-white to-green-50 text-gray-900'
-              }`}
-            >
-              <div className="mb-6 flex flex-col items-center">
-                {representative.photo_url && (
-                  <img
-                    src={representative.photo_url}
-                    alt={representative.name}
-                    className="mb-5 h-28 w-28 rounded-full border-4 border-white/60 object-cover shadow-lg"
-                  />
+            <h1 className="text-3xl font-heading font-semibold sm:text-4xl md:text-5xl">
+              Hey there, I'm {representative.name}
+            </h1>
+            {representative.title && (
+              <p className="mt-2 text-base text-emerald-100/90">{representative.title}</p>
+            )}
+            {representative.company_name && (
+              <p className="text-sm uppercase tracking-[0.3em] text-emerald-100/70">
+                {representative.company_name}
+              </p>
+            )}
+            <p className="mt-4 max-w-2xl text-base text-emerald-50/90">
+              I help Soil Seed &amp; Water partners dial in bulk soil, seed, and irrigation blends
+              for their projects. Drop a quick note and I'll get right back to you.
+            </p>
+            <div className="mt-8 grid w-full gap-3 sm:max-w-xl sm:grid-cols-2">
+              <Button size="lg" className="w-full" onClick={() => setIsContactDialogOpen(true)}>
+                {contactButtonLabel}
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:text-white disabled:border-white/30 disabled:bg-white/5 disabled:text-white/60"
+                onClick={handleDownloadContactCard}
+                disabled={isDownloadingCard}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isDownloadingCard ? 'Preparing...' : contactCardLabel}
+              </Button>
+            </div>
+            <p className="mt-4 text-sm text-emerald-100/80">
+              Prefer to call or email? Everything you need lives below.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:mt-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
+              <h2 className="mb-4 text-2xl font-semibold text-emerald-900">Direct contact</h2>
+              <div className="space-y-5">
+                {representative.email && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
+                    <Mail className="mt-1 h-5 w-5 text-emerald-700" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">Email</p>
+                      <a
+                        href={`mailto:${representative.email}`}
+                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                      >
+                        {representative.email}
+                      </a>
+                    </div>
+                  </div>
                 )}
-                <h1 className="text-4xl font-bold md:text-5xl">{representative.name}</h1>
-                {representative.title && (
-                  <p
-                    className={`mt-2 text-lg ${
-                      hasBanner ? 'text-white/80' : 'text-gray-600'
-                    }`}
-                  >
-                    {representative.title}
-                  </p>
+                {representative.phone && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
+                    <Phone className="mt-1 h-5 w-5 text-emerald-700" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">Phone</p>
+                      <a
+                        href={`tel:${getPhoneNumberForTel(representative.phone)}`}
+                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                      >
+                        {formatPhoneNumber(representative.phone)}
+                      </a>
+                    </div>
+                  </div>
                 )}
-                {representative.company_name && (
-                  <p
-                    className={`text-base ${
-                      hasBanner ? 'text-white/70' : 'text-gray-500'
-                    }`}
-                  >
-                    {representative.company_name}
-                  </p>
+                {representative.website && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
+                    <Globe className="mt-1 h-5 w-5 text-emerald-700" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">
+                        Website
+                      </p>
+                      <a
+                        href={representative.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                      >
+                        {representative.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {locationLine && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
+                    <MapPin className="mt-1 h-5 w-5 text-emerald-700" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">
+                        Location
+                      </p>
+                      <p className="font-semibold text-emerald-900">{locationLine}</p>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button size="lg" onClick={() => setIsContactDialogOpen(true)}>
+
+              {(socialLinks.facebook ||
+                socialLinks.twitter ||
+                socialLinks.linkedin ||
+                socialLinks.instagram) && (
+                <div className="mt-6 border-t border-emerald-100 pt-6">
+                  <p className="mb-3 text-sm font-medium text-emerald-800">Connect online</p>
+                  <div className="flex flex-wrap gap-3">
+                    {socialLinks.facebook && (
+                      <a
+                        href={socialLinks.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-emerald-600/90 p-2 text-white transition hover:bg-emerald-600"
+                      >
+                        <Facebook className="h-5 w-5" />
+                      </a>
+                    )}
+                    {socialLinks.twitter && (
+                      <a
+                        href={socialLinks.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-emerald-500 p-2 text-white transition hover:bg-emerald-400"
+                      >
+                        <Twitter className="h-5 w-5" />
+                      </a>
+                    )}
+                    {socialLinks.linkedin && (
+                      <a
+                        href={socialLinks.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-emerald-700 p-2 text-white transition hover:bg-emerald-600"
+                      >
+                        <Linkedin className="h-5 w-5" />
+                      </a>
+                    )}
+                    {socialLinks.instagram && (
+                      <a
+                        href={socialLinks.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-pink-600 p-2 text-white transition hover:bg-pink-500"
+                      >
+                        <Instagram className="h-5 w-5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {representative.bio && (
+              <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
+                <h2 className="mb-4 text-2xl font-semibold text-emerald-900">About Soil Seed &amp; Water</h2>
+                <p className="leading-relaxed text-emerald-900/90">{representative.bio}</p>
+              </div>
+            )}
+
+            {galleryImages.length > 0 && (
+              <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
+                <h2 className="mb-4 text-2xl font-semibold text-emerald-900">Project snapshots</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {galleryImages.map((image, index) => (
+                    <div
+                      key={`${image}-${index}`}
+                      className="overflow-hidden rounded-2xl border border-emerald-50 bg-muted/20"
+                    >
+                      <img
+                        src={image}
+                        alt={`${representative.name} gallery ${index + 1}`}
+                        className="h-48 w-full object-cover transition duration-300 hover:scale-105"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-emerald-300/40 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-700 p-6 text-white shadow-xl shadow-emerald-900/30">
+              <h2 className="text-2xl font-semibold">{contactFormTitle}</h2>
+              <p className="mt-2 text-emerald-50/90">{contactFormDescription}</p>
+              <ul className="mt-6 space-y-3 text-sm text-emerald-50/90">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
+                  <span>Direct access to {representative.name}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
+                  <span>Customized wholesale recommendations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-200" />
+                  <span>Fast follow-up within 1 business day</span>
+                </li>
+              </ul>
+              <div className="mt-8 space-y-3">
+                <Button
+                  size="lg"
+                  className="w-full bg-white text-emerald-900 hover:bg-emerald-50"
+                  onClick={() => setIsContactDialogOpen(true)}
+                >
                   {contactButtonLabel}
                 </Button>
                 <Button
                   size="lg"
-                  variant={hasBanner ? 'secondary' : 'outline'}
+                  variant="outline"
+                  className="w-full border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white disabled:border-white/30 disabled:bg-white/5 disabled:text-white/60"
                   onClick={handleDownloadContactCard}
                   disabled={isDownloadingCard}
                 >
@@ -289,206 +494,23 @@ export default function RepresentativeLanding() {
                   {isDownloadingCard ? 'Preparing...' : contactCardLabel}
                 </Button>
               </div>
-              <p
-                className={`mt-4 text-sm ${
-                  hasBanner ? 'text-white/80' : 'text-gray-500'
-                }`}
-              >
-                Instantly add {representative.name} to your contacts or message them for a tailored
-                recommendation.
+            </div>
+
+            <div className="rounded-3xl border border-dashed border-emerald-200 bg-emerald-50/80 p-6 text-emerald-900 shadow-inner">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                Quick note
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-emerald-900/80">
+                Once you hit send, {representative.name.split(' ')[0]} sees your details instantly
+                inside the Soil Seed &amp; Water CRM. Expect a friendly follow-up shortly after.
               </p>
             </div>
           </div>
-
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-6">
-              <div className="rounded-2xl bg-white p-6 shadow-md">
-                <h2 className="mb-4 text-2xl font-semibold text-gray-900">Contact Information</h2>
-                <div className="space-y-5">
-                  {representative.email && (
-                    <div className="flex items-start gap-3">
-                      <Mail className="mt-1 h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <a
-                          href={`mailto:${representative.email}`}
-                          className="font-medium text-green-700 hover:text-green-800 hover:underline"
-                        >
-                          {representative.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {representative.phone && (
-                    <div className="flex items-start gap-3">
-                      <Phone className="mt-1 h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <a
-                          href={`tel:${representative.phone}`}
-                          className="font-medium text-green-700 hover:text-green-800 hover:underline"
-                        >
-                          {representative.phone}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {representative.website && (
-                    <div className="flex items-start gap-3">
-                      <Globe className="mt-1 h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-500">Website</p>
-                        <a
-                          href={representative.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-green-700 hover:text-green-800 hover:underline"
-                        >
-                          {representative.website.replace(/^https?:\/\//, '')}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {locationLine && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-1 h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-500">Location</p>
-                        <p className="font-medium text-gray-900">{locationLine}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {(socialLinks.facebook ||
-                  socialLinks.twitter ||
-                  socialLinks.linkedin ||
-                  socialLinks.instagram) && (
-                  <div className="mt-6 border-t pt-6">
-                    <p className="mb-3 text-sm font-medium text-gray-500">Connect With Me</p>
-                    <div className="flex gap-3">
-                      {socialLinks.facebook && (
-                        <a
-                          href={socialLinks.facebook}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-full bg-blue-600 p-2 text-white transition hover:bg-blue-700"
-                        >
-                          <Facebook className="h-5 w-5" />
-                        </a>
-                      )}
-                      {socialLinks.twitter && (
-                        <a
-                          href={socialLinks.twitter}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-full bg-blue-400 p-2 text-white transition hover:bg-blue-500"
-                        >
-                          <Twitter className="h-5 w-5" />
-                        </a>
-                      )}
-                      {socialLinks.linkedin && (
-                        <a
-                          href={socialLinks.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-full bg-blue-700 p-2 text-white transition hover:bg-blue-800"
-                        >
-                          <Linkedin className="h-5 w-5" />
-                        </a>
-                      )}
-                      {socialLinks.instagram && (
-                        <a
-                          href={socialLinks.instagram}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-full bg-pink-600 p-2 text-white transition hover:bg-pink-700"
-                        >
-                          <Instagram className="h-5 w-5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {representative.bio && (
-                <div className="rounded-2xl bg-white p-6 shadow-md">
-                  <h2 className="mb-4 text-2xl font-semibold text-gray-900">About</h2>
-                  <p className="text-gray-700 leading-relaxed">{representative.bio}</p>
-                </div>
-              )}
-
-              {galleryImages.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-md">
-                  <h2 className="mb-4 text-2xl font-semibold text-gray-900">Featured Highlights</h2>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {galleryImages.map((image, index) => (
-                      <div
-                        key={`${image}-${index}`}
-                        className="overflow-hidden rounded-xl border bg-muted/20"
-                      >
-                        <img
-                          src={image}
-                          alt={`${representative.name} gallery ${index + 1}`}
-                          className="h-48 w-full object-cover transition duration-300 hover:scale-105"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <div className="rounded-2xl bg-white p-6 shadow-md">
-                <h2 className="text-2xl font-semibold text-gray-900">{contactFormTitle}</h2>
-                <p className="mt-2 text-gray-600">{contactFormDescription}</p>
-                <ul className="mt-6 space-y-3 text-sm text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-600" />
-                    <span>Direct access to {representative.name}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-600" />
-                    <span>Customized wholesale recommendations</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-600" />
-                    <span>Fast follow-up within 1 business day</span>
-                  </li>
-                </ul>
-                <div className="mt-6 flex flex-col gap-3">
-                  <Button size="lg" onClick={() => setIsContactDialogOpen(true)}>
-                    {contactButtonLabel}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleDownloadContactCard}
-                    disabled={isDownloadingCard}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {isDownloadingCard ? 'Preparing...' : contactCardLabel}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/60 p-6">
-                <p className="text-sm font-medium text-green-900">Quick note</p>
-                <p className="text-sm text-green-800">
-                  Once you submit your information, {representative.name.split(' ')[0]} will receive
-                  it instantly in the CRM dashboard.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        </section>
       </main>
-      <Footer />
 
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[92vw] max-w-lg rounded-3xl border-none p-6 sm:w-full sm:p-8">
           <DialogHeader>
             <DialogTitle>{contactFormTitle}</DialogTitle>
             <DialogDescription>
@@ -510,7 +532,7 @@ export default function RepresentativeLanding() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">
                     First Name <span className="text-red-500">*</span>

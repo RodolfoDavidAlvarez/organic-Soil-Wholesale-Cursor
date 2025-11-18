@@ -23,7 +23,6 @@ import {
   Tractor,
   Flower,
   Apple,
-  ShoppingBag,
   ArrowUpRight,
   Building2,
   Clock,
@@ -117,7 +116,7 @@ const Home = () => {
       name: "Andre",
       title: "Do they use little toilets to collect the poop?",
       date: "September 28, 2024",
-      size: "9 lbs", 
+      size: "9 lbs",
       body: "The bag was a nice gauge plastic. A nice consistency with no long turds. It had a fresh worm poo smell. It looks like ground coco but doesn't taste like it. Very earthy with a hint of beetle larvae.",
       rating: 5,
     },
@@ -141,7 +140,7 @@ const Home = () => {
     },
     {
       id: 5,
-      name: "Bopper", 
+      name: "Bopper",
       title: "Great value, well packaged for shipping, and good quality castings",
       date: "July 15, 2024",
       size: "9 lbs",
@@ -337,14 +336,14 @@ const Home = () => {
 
   // Handle selection of a product
   const handleProductSelect = (product: Product) => {
-    // Generate slug from product type or name for better URLs
-    const slug = generateProductSlug(product.productType, product.name);
+    // Prefer slug for SEO-friendly URLs, fall back to generated slug or ID
+    const identifier = product.slug || generateProductSlug(product.productType, product.name) || product.id;
 
     // Navigate to product detail page
     if (product.category === "Mulch") {
-      navigate(`/products/mulch/${slug || product.id}`);
+      navigate(`/products/mulch/${identifier}`);
     } else {
-      navigate(`/products/${slug || product.id}`);
+      navigate(`/products/${identifier}`);
     }
   };
 
@@ -685,95 +684,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Pay & Pickup Promotion */}
-      <section className="py-16 px-4 md:px-8 bg-muted/40">
-        <div className="max-w-6xl mx-auto rounded-3xl border border-border shadow-lg bg-white">
-          <div className="grid gap-10 lg:grid-cols-[1fr,0.9fr] items-stretch">
-            <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="space-y-5"
-              >
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                  <Truck className="h-4 w-4" />
-                  Pay & Pickup
-                </div>
-                <h2 className="text-[clamp(2rem,3.6vw,2.75rem)] font-bold text-foreground">Pay & Pickup in Phoenix</h2>
-                <p className="text-base md:text-lg text-muted-foreground">
-                  Order online, choose a pickup window, and collect from our Phoenix yard. The crew stages pallets, totes, or bulk before you pull in.
-                </p>
-                <ul className="space-y-3 text-sm md:text-base text-muted-foreground">
-                  <li className="flex items-start gap-3">
-                    <Clock className="mt-0.5 h-4 w-4 text-primary" />
-                    <span>Pickup windows run 8:00&nbsp;AM–4:30&nbsp;PM, Monday through Friday.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-4 w-4 text-primary" />
-                    <span>Location: 1634&nbsp;N&nbsp;19th Ave, Phoenix AZ 85009.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
-                    <span>Stripe checkout with QR confirmation keeps loading quick.</span>
-                  </li>
-                </ul>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href="/pay-and-pickup">
-                    <Button size="lg" className="w-full sm:w-auto">
-                      View pickup details
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                    <a href={PHOENIX_DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
-                      Open directions
-                    </a>
-                  </Button>
-                </div>
-              </motion.div>
-            </div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: 0.1 }}
-              className="relative flex items-center justify-center px-6 pb-10 pt-6 lg:pb-0"
-            >
-              <div className="w-full max-w-md">
-                <Card className="border border-muted-foreground/10 bg-white shadow-lg">
-                  <CardHeader className="space-y-2 pb-3">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span className="text-sm font-semibold uppercase tracking-wide">Next window</span>
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-[clamp(1.35rem,2.4vw,1.8rem)] text-foreground">Today · 2:30 – 4:30 PM</CardTitle>
-                    <CardDescription className="text-sm md:text-base">1634 N 19th Ave, Phoenix AZ</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-muted-foreground">
-                    <div className="flex items-start gap-3 rounded-xl border border-muted-foreground/15 px-4 py-3">
-                      <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">Pay online</p>
-                        <p>Invoices clear through Stripe and trigger your pickup QR code.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 rounded-xl border border-muted-foreground/15 px-4 py-3">
-                      <Truck className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">Arrive during your slot</p>
-                        <p>Pull into the loading lane and show the QR code on your phone.</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
       {/* Showcase Photos Section */}
       <section className="py-16 px-4 md:px-8 bg-muted/50">
         <div className="max-w-7xl mx-auto">
@@ -876,44 +786,6 @@ const Home = () => {
               </Card>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-
-      {/* CTA Section */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary-dark z-0"></div>
-        <div className="absolute inset-0 leaf-pattern opacity-10 z-0"></div>
-        <div className="absolute -left-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-3xl z-0"></div>
-        <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-white/10 rounded-full blur-3xl z-0"></div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm p-10 md:p-16 rounded-3xl shadow-xl border border-white/20">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-6">
-                  <ShoppingBag className="h-8 w-8 text-white" />
-                </div>
-
-                <h2 className="text-4xl font-heading font-bold mb-6 text-white">Looking for Small Quantities?</h2>
-
-                <p className="text-xl mb-10 text-white/90 max-w-2xl mx-auto">
-                  For orders of 1-2 units, please visit our retail store at Soil Seed and Water. We offer the same premium quality products in smaller
-                  quantities for home gardeners and small projects.
-                </p>
-
-                <a
-                  href="https://soilseedandwater.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-primary bg-white rounded-full shadow-lg hover:bg-white/90 transition-all duration-300"
-                >
-                  Visit Retail Store
-                  <ArrowUpRight className="ml-2 h-5 w-5" />
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>

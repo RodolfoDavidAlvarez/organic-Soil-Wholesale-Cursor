@@ -1,8 +1,4 @@
-export type SizeCatalogKey =
-  | "pallet-9lb"
-  | "pallet-1cf"
-  | "bulk-delivery"
-  | "bulk-pickup";
+export type SizeCatalogKey = "pallet-9lb" | "pallet-1cf" | "2-cy" | "2.2-cy-tote" | "bulk-delivery" | "truckload" | "bulk-pickup";
 
 export interface SizeCatalogEntry {
   key: SizeCatalogKey;
@@ -25,8 +21,26 @@ export const SIZE_CATALOG: SizeCatalogEntry[] = [
     image: "/Size Category - pallet of 50 1 CF bags.png",
   },
   {
+    key: "2-cy",
+    label: "2 Cubic Yard",
+    description: "2 cubic yards",
+    image: "/Size Categories- Pallet of Box.png",
+  },
+  {
+    key: "2.2-cy-tote",
+    label: "2.2 Cubic Yard Tote",
+    description: "2.2 cubic yard tote",
+    image: "/Size Categories- Pallet of Box.png",
+  },
+  {
     key: "bulk-delivery",
     label: "Bulk Delivery",
+    description: "Delivery involved",
+    image: "/Truckload Bulk delivery.png",
+  },
+  {
+    key: "truckload",
+    label: "Truckload",
     description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
     image: "/Truckload Bulk delivery.png",
   },
@@ -43,8 +57,7 @@ export const SIZE_CATALOG_BY_KEY: Record<SizeCatalogKey, SizeCatalogEntry> = SIZ
     accumulator[entry.key] = entry;
     return accumulator;
   },
-  {} as Record<SizeCatalogKey, SizeCatalogEntry>,
+  {} as Record<SizeCatalogKey, SizeCatalogEntry>
 );
 
 export const DEFAULT_SIZE_ORDER: SizeCatalogKey[] = SIZE_CATALOG.map((entry) => entry.key);
-

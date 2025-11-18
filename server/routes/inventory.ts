@@ -217,10 +217,16 @@ router.get('/sync/:locationId', async (req, res) => {
 router.get('/products/:locationId', async (req, res) => {
   try {
     const { locationId } = req.params;
-    const { category, customerType = 'regular', payAndPickup = 'false' } = req.query;
+    const {
+      category,
+      customerType = 'regular',
+      payAndPickup = 'false',
+      includeOutOfStock = 'false',
+    } = req.query;
     
     const parsedLocationId = parseInt(locationId);
     const payAndPickupOnly = payAndPickup === 'true';
+    const includeSoldOut = includeOutOfStock === 'true' || payAndPickupOnly;
 
     let query = supabase
       .from('inventory')
@@ -249,13 +255,15 @@ router.get('/products/:locationId', async (req, res) => {
           pay_and_pickup_hero_image,
           pay_and_pickup_display_order,
           is_pay_and_pickup_enabled,
-          size_price_options,
           product_video_url,
           product_video_title
         )
       `)
-      .eq('location_id', locationId)
-      .gt('quantity_available', 0);
+      .eq('location_id', locationId);
+
+    if (!includeSoldOut) {
+      query = query.gt('quantity_available', 0);
+    }
 
     // Filter by category if provided
     if (category) {

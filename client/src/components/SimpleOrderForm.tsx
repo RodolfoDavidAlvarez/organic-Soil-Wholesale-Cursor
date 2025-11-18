@@ -127,8 +127,7 @@ export const SimpleOrderForm: React.FC = () => {
   return (
     <div className="max-w-lg mx-auto p-6 space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Get in Touch</h1>
-        <p className="text-gray-600">Tell us about your soil and compost needs</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Request a Quote</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

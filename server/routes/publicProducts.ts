@@ -309,6 +309,7 @@ const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
 type RawProduct = {
   id: number;
   name: string;
+  slug?: string | null;
   description: string;
   category: string;
   price: number | null;
@@ -360,10 +361,20 @@ const slugifyValue = (value?: string | null) =>
 
 const buildProductSlug = (record?: Partial<RawProduct & FallbackProduct>): string => {
   if (!record) return '';
-  
+
+  const providedSlug =
+    'slug' in record &&
+    typeof record.slug === 'string' &&
+    record.slug.trim().length > 0
+      ? slugifyValue(record.slug)
+      : undefined;
+  if (providedSlug) {
+    return providedSlug;
+  }
+
   // Always include ID in slug to ensure uniqueness
   const id = 'id' in record && record.id !== undefined && record.id !== null ? String(record.id) : '';
-  
+
   const source =
     (record as RawProduct).product_type ??
     (record as FallbackProduct).productType ??
@@ -373,14 +384,11 @@ const buildProductSlug = (record?: Partial<RawProduct & FallbackProduct>): strin
     '';
 
   const normalized = slugifyValue(source);
-  
-  // If we have both a normalized name and an ID, combine them for uniqueness
-  // Format: "product-name-123" instead of just "product-name"
+
   if (normalized && id) {
     return `${normalized}-${id}`;
   }
-  
-  // Fallback to just normalized name or ID
+
   if (normalized) return normalized;
   if (id) return id;
 
@@ -394,18 +402,22 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
   const fallbackProduct = findFallbackProduct(record, fallbackId);
 
   const primaryImageUrl =
+    (typeof record.image_url === 'string' && record.image_url.trim().length > 0
+      ? record.image_url
+      : undefined) ??
+    (typeof record.pay_and_pickup_hero_image === 'string' &&
+    record.pay_and_pickup_hero_image.trim().length > 0
+      ? record.pay_and_pickup_hero_image
+      : undefined) ??
     (typeof record.texture_photo_url === 'string' && record.texture_photo_url.trim().length > 0
       ? record.texture_photo_url
       : undefined) ??
-    (typeof record.image_url === 'string' && record.image_url.trim().length > 0
-      ? record.image_url
+    (typeof fallbackProduct?.imageUrl === 'string' && fallbackProduct.imageUrl.trim().length > 0
+      ? fallbackProduct.imageUrl
       : undefined) ??
     (typeof fallbackProduct?.texturePhotoUrl === 'string' &&
     fallbackProduct.texturePhotoUrl.trim().length > 0
       ? fallbackProduct.texturePhotoUrl
-      : undefined) ??
-    (typeof fallbackProduct?.imageUrl === 'string' && fallbackProduct.imageUrl.trim().length > 0
-      ? fallbackProduct.imageUrl
       : undefined);
 
   const textureImageUrl =
@@ -538,6 +550,20 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
   const normalizedSlug = slugifyValue(slug);
   if (!normalizedSlug) {
     return null;
+  }
+
+  const { data: slugMatch, error: slugError } = await supabase
+    .from<RawProduct>('products')
+    .select('*')
+    .eq('slug', normalizedSlug)
+    .single();
+
+  if (slugMatch) {
+    return slugMatch;
+  }
+
+  if (slugError && slugError.code && slugError.code !== 'PGRST116') {
+    throw slugError;
   }
 
   // First, try to extract ID from slug (format: "product-name-123" or just "123")

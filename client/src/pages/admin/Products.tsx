@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Product, formatPrice, getPrimaryImage } from './product-utils';
+import { Product, formatPrice, getPrimaryImage, buildAdminProductRouteParam } from './product-utils';
 
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -334,8 +334,8 @@ export default function AdminProducts() {
     },
   });
 
-  const handleCardClick = (productId: number) => {
-    navigate(`/admin/products/${productId}`);
+  const handleCardClick = (product: Product) => {
+    navigate(`/admin/products/${buildAdminProductRouteParam(product)}`);
   };
 
   const toggleProductSelection = (productId: number) => {
@@ -551,7 +551,7 @@ export default function AdminProducts() {
                             className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
                               isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
                             }`}
-                            onClick={() => handleCardClick(product.id)}
+                            onClick={() => handleCardClick(product)}
                           >
                             <div className="absolute right-4 top-4 z-10">
                               <Checkbox
@@ -649,7 +649,7 @@ export default function AdminProducts() {
                                 className="mt-auto"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  handleCardClick(product.id);
+                                  handleCardClick(product);
                                 }}
                               >
                                 Manage product
@@ -696,7 +696,7 @@ export default function AdminProducts() {
                                 className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
                                   isSelected ? 'bg-primary/5' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                                 }`}
-                                onClick={() => handleCardClick(product.id)}
+                                onClick={() => handleCardClick(product)}
                               >
                                 <td className="p-4" onClick={(event) => event.stopPropagation()}>
                                   <Checkbox
@@ -774,7 +774,7 @@ export default function AdminProducts() {
                                   </span>
                                 </td>
                                 <td className="p-4 text-center" onClick={(event) => event.stopPropagation()}>
-                                  <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>
+                                  <Button size="sm" variant="ghost" onClick={() => handleCardClick(product)}>
                                     Edit
                                   </Button>
                                 </td>
@@ -825,7 +825,7 @@ export default function AdminProducts() {
                                 className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-white/50 shadow-sm opacity-75 transition hover:opacity-100 hover:shadow ${
                                   isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
                                 }`}
-                                onClick={() => handleCardClick(product.id)}
+                                onClick={() => handleCardClick(product)}
                               >
                                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted" aria-hidden="true">
                                   {primaryImage ? (
@@ -856,7 +856,7 @@ export default function AdminProducts() {
                                     className="mt-auto text-xs"
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      handleCardClick(product.id);
+                                      handleCardClick(product);
                                     }}
                                   >
                                     Activate
@@ -881,7 +881,7 @@ export default function AdminProducts() {
                                 <tr
                                   key={product.id}
                                   className="cursor-pointer border-b transition-colors hover:bg-muted/30"
-                                  onClick={() => handleCardClick(product.id)}
+                                  onClick={() => handleCardClick(product)}
                                 >
                                   <td className="p-3">
                                     <p className="text-sm font-medium">{product.display_title || product.name}</p>
@@ -893,7 +893,7 @@ export default function AdminProducts() {
                                     </Badge>
                                   </td>
                                   <td className="p-3 text-center">
-                                    <Button size="sm" variant="ghost" onClick={() => handleCardClick(product.id)}>
+                                    <Button size="sm" variant="ghost" onClick={() => handleCardClick(product)}>
                                       Edit
                                     </Button>
                                   </td>

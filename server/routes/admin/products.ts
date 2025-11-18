@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabase } from "../../supabaseClient";
-import { tempAdminAuthMiddleware, AdminRequest } from "../../middleware/tempAdminAuth";
+import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 import { ProductSyncService } from "../../services/productSyncService.js";
 import { InventoryService, type InventoryUpdateInput } from "../../services/inventoryService.js";
 
@@ -182,7 +182,7 @@ const extractSizeOptionMeta = (raw: unknown) => {
 };
 
 // Apply admin auth to all routes
-router.use(tempAdminAuthMiddleware);
+router.use(adminAuthMiddleware);
 
 // Get all products
 router.get("/", async (req: AdminRequest, res) => {

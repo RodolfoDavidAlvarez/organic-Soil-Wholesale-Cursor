@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import SEO from "@/components/layout/SEO";
 import ProductShowcase from "@/components/ProductShowcase";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
 import { generateProductSlug } from "@/utils/generateSlug";
 
 type ApiProduct = {
@@ -16,12 +15,18 @@ type ApiProduct = {
   product_type?: string | null;
   displayTitle?: string | null;
   display_title?: string | null;
+  marketingTitle?: string | null;
+  marketing_title?: string | null;
+  marketingNote?: string | null;
+  marketing_note?: string | null;
   imageUrl?: string | null;
   image_url?: string | null;
   texturePhotoUrl?: string | null;
   texture_photo_url?: string | null;
   additionalImages?: string[] | null;
   additional_images?: string[] | null;
+  availableSizeOptions?: string[] | null;
+  available_size_options?: string[] | null;
   targetAudience?: string | null;
   target_audience?: string | null;
   recommendedUses?: string | null;
@@ -30,6 +35,8 @@ type ApiProduct = {
   usage?: string | null;
   ingredients?: string | null;
   features?: string | null;
+  seoKeywords?: string | null;
+  seo_keywords?: string | null;
   catalog?: { isEnabled?: boolean; displayOrder?: number | null };
   isCatalogEnabled?: boolean | null;
   is_catalog_enabled?: boolean | null;
@@ -61,6 +68,7 @@ const normalizeProduct = (record: ApiProduct) => {
     : Array.isArray(record.additional_images)
       ? record.additional_images
       : [];
+  const availableSizeOptions = record.availableSizeOptions ?? record.available_size_options ?? undefined;
 
   const catalogOrder =
     record.catalogDisplayOrder ??
@@ -70,11 +78,21 @@ const normalizeProduct = (record: ApiProduct) => {
 
   const imageUrl = record.imageUrl ?? record.image_url ?? undefined;
   const texturePhotoUrl = record.texturePhotoUrl ?? record.texture_photo_url ?? undefined;
+  const marketingTitle = record.marketingTitle ?? record.marketing_title ?? undefined;
+  const marketingNote = record.marketingNote ?? record.marketing_note ?? undefined;
+  const seoKeywords = record.seoKeywords ?? record.seo_keywords ?? undefined;
+  const previewCopy =
+    marketingNote?.trim().length
+      ? marketingNote.trim()
+      : marketingTitle?.trim().length
+        ? marketingTitle.trim()
+        : record.description?.trim();
 
   return {
     id: record.id,
     name: record.name ?? "Product",
     description: record.description ?? undefined,
+    previewCopy: previewCopy ?? undefined,
     category: record.category ?? "Uncategorized",
     ingredients: record.ingredients ?? undefined,
     targetAudience: record.targetAudience ?? record.target_audience ?? undefined,
@@ -83,7 +101,11 @@ const normalizeProduct = (record: ApiProduct) => {
     usage: record.usage ?? undefined,
     features: record.features ?? undefined,
     productType: record.productType ?? record.product_type ?? undefined,
+    marketingTitle,
+    marketingNote,
+    seoKeywords,
     additionalImages,
+    availableSizeOptions,
     price:
       typeof record.price === "number"
         ? record.price
@@ -136,8 +158,6 @@ const Products = () => {
     return Array.from(options.entries()).map(([value, label]) => ({ value, label }));
   }, [products]);
 
-  const heroProduct = products[0];
-
   return (
     <>
       <SEO
@@ -149,58 +169,22 @@ const Products = () => {
 
       <section className="bg-gradient-to-br from-primary/5 via-white to-white py-12 sm:py-16">
         <div className="container mx-auto px-4">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-primary">Premium Catalog</p>
-              <h1 className="mt-4 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-                All Soil Seed &amp; Water products, kept perfectly in sync
-              </h1>
-              <p className="mt-4 text-base text-muted-foreground">
-                These listings pull directly from the live database used by the admin console and Pay &amp;
-                Pickup system. Edit once in the dashboard and the entire site updates instantly.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
-                  <a href="#catalog">Explore Catalog</a>
-                </Button>
-                <Button size="lg" variant="ghost" asChild>
-                  <a href="/order">Place an Order</a>
-                </Button>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 rounded-3xl bg-primary/10 blur-3xl" />
-              <div className="relative rounded-3xl border bg-white/80 p-6 shadow-xl backdrop-blur">
-                <div className="flex items-center gap-3">
-                  <Package className="h-10 w-10 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Now editing</p>
-                    <p className="text-lg font-semibold">
-                      {heroProduct?.displayTitle || heroProduct?.name || "Catalog synced"}
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-muted-foreground">
-                  {heroProduct?.description ??
-                    "Choose any product below to see the full set of content, imagery, and Pay & Pickup data."}
-                </p>
-                <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                  <div className="rounded-xl border bg-muted/30 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Live images</p>
-                    <p className="text-lg font-semibold">{heroProduct?.additionalImages?.length ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">Pulled from admin gallery</p>
-                  </div>
-                  <div className="rounded-xl border bg-muted/30 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Size options</p>
-                    <p className="text-lg font-semibold">
-                      {heroProduct?.additionalImages?.length
-                        ? "Customized"
-                        : "Standard"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Updated instantly</p>
-                  </div>
-                </div>
-              </div>
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-primary">Premium Catalog</p>
+            <h1 className="mt-4 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              All Soil Seed &amp; Water products, kept perfectly in sync
+            </h1>
+            <p className="mt-4 text-base text-muted-foreground">
+              These listings pull directly from the live database used by the admin console and Pay &amp;
+              Pickup system. Edit once in the dashboard and the entire site updates instantly.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
+                <a href="#catalog">Explore Catalog</a>
+              </Button>
+              <Button size="lg" variant="ghost" asChild>
+                <a href="/order">Place an Order</a>
+              </Button>
             </div>
           </div>
         </div>

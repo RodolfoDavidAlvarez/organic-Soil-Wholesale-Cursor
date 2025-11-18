@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { supabase } from '../supabaseClient';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { supabase } from "../supabaseClient";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export interface AdminRequest extends Request {
   admin?: {
@@ -14,50 +14,44 @@ export interface AdminRequest extends Request {
 }
 
 export async function adminAuthMiddleware(req: AdminRequest, res: Response, next: NextFunction) {
-  // TEMPORARY: Bypass authentication for development
-  // TODO: Re-enable authentication before deployment
-  req.admin = {
-    id: '1',
-    email: 'admin@soilseedandwater.com',
-    role: 'super_admin',
-    permissions: { all: true }
-  };
-  next();
-  
-  /* ORIGINAL AUTH CODE - DISABLED FOR DEVELOPMENT
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const token = req.headers.authorization?.replace("Bearer ", "");
 
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ error: "No token provided" });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-    // Verify admin exists in database
+    // Verify admin exists in database and get full details including permissions
     const { data: admin, error } = await supabase
-      .from('admin_users')
-      .select('id, email, role')
-      .eq('id', decoded.id)
+      .from("admin_users")
+      .select("id, email, role, permissions, full_name, is_active")
+      .eq("id", decoded.id)
       .single();
 
     if (error || !admin) {
-      return res.status(401).json({ error: 'Invalid admin credentials' });
+      return res.status(401).json({ error: "Invalid admin credentials" });
     }
 
-    req.admin = admin;
+    // Check if admin is active
+    if (!admin.is_active) {
+      return res.status(403).json({ error: "Admin account is inactive" });
+    }
+
+    req.admin = {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+      permissions: admin.permissions || {},
+    };
     next();
   } catch (error) {
-    console.error('Admin auth error:', error);
-    res.status(401).json({ error: 'Invalid or expired token' });
+    console.error("Admin auth error:", error);
+    res.status(401).json({ error: "Invalid or expired token" });
   }
-  */
 }
 
 export function createAdminToken(admin: { id: string; email: string; role: string }) {
-  return jwt.sign(
-    { id: admin.id, email: admin.email, role: admin.role },
-    JWT_SECRET,
-    { expiresIn: '8h' }
-  );
+  return jwt.sign({ id: admin.id, email: admin.email, role: admin.role }, JWT_SECRET, { expiresIn: "8h" });
 }

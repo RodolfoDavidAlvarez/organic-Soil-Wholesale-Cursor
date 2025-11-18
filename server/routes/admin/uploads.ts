@@ -3,7 +3,7 @@ import { Router } from "express";
 import multer from "multer";
 
 import { supabase } from "../../supabaseClient";
-import { tempAdminAuthMiddleware, type AdminRequest } from "../../middleware/tempAdminAuth";
+import { adminAuthMiddleware, type AdminRequest } from "../../middleware/adminAuth";
 import { optimizeProductImage, type OptimizedImageResult } from "../../utils/imageOptimizer";
 
 const router = Router();
@@ -64,7 +64,7 @@ const ensureExtension = (filename: string, mimetype: string) => {
   }
 };
 
-router.use(tempAdminAuthMiddleware);
+router.use(adminAuthMiddleware);
 
 router.post("/product-image", (req: AdminRequest, res) => {
   upload.single("image")(req as any, res as any, async (err: unknown) => {
@@ -92,10 +92,7 @@ router.post("/product-image", (req: AdminRequest, res) => {
         return res.status(400).json({ error: "Only image uploads are allowed" });
       }
 
-      const rawFolder =
-        typeof req.body.folder === "string" && req.body.folder.trim().length > 0
-          ? req.body.folder
-          : "products";
+      const rawFolder = typeof req.body.folder === "string" && req.body.folder.trim().length > 0 ? req.body.folder : "products";
       const folder = sanitizeSegment(rawFolder);
 
       // Optimize image before upload
@@ -107,11 +104,11 @@ router.post("/product-image", (req: AdminRequest, res) => {
       try {
         console.log(`Optimizing image: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         optimizedImage = await optimizeProductImage(file.buffer);
-        
+
         uploadBuffer = optimizedImage.buffer;
         uploadMimeType = `image/${optimizedImage.format}`;
         uploadExtension = `.${optimizedImage.format}`;
-        
+
         const compressionInfo = `Optimized: ${(optimizedImage.originalSize / 1024 / 1024).toFixed(2)} MB → ${(optimizedImage.size / 1024 / 1024).toFixed(2)} MB (${optimizedImage.compressionRatio.toFixed(1)}% reduction)`;
         console.log(compressionInfo);
       } catch (optimizationError) {
@@ -154,7 +151,7 @@ router.post("/product-image", (req: AdminRequest, res) => {
       // Fallback to local file system
       const uploadDir = ensureUploadDir();
       const folderPath = path.join(uploadDir, folder);
-      
+
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
       }
@@ -164,7 +161,7 @@ router.post("/product-image", (req: AdminRequest, res) => {
 
       // Return local URL
       const localUrl = `/uploads/${folder}/${filename}`;
-      
+
       return res.status(201).json({
         url: localUrl,
         path: `uploads/${folder}/${filename}`,

@@ -56,6 +56,8 @@ const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
 const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"));
 const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
+const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
+const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
@@ -112,6 +114,7 @@ function Router() {
 
         {/* Admin Routes */}
         <Route path="/admin/login" component={AdminLogin} />
+        <Route path="/admin/invite/:token" component={AcceptInvitation} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products/:productId" component={AdminProductDetail} />
         <Route path="/admin/products" component={AdminProducts} />
@@ -122,6 +125,7 @@ function Router() {
         <Route path="/admin/notifications" component={AdminNotifications} />
         <Route path="/admin/representatives" component={AdminRepresentatives} />
         <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
+        <Route path="/admin/settings" component={AdminSettings} />
 
         <Route component={NotFound} />
       </Switch>
@@ -136,7 +140,8 @@ function App() {
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel;
+  const isRepresentativeLanding = location.startsWith("/rep/");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding;
 
   return (
     <QueryClientProvider client={queryClient}>
