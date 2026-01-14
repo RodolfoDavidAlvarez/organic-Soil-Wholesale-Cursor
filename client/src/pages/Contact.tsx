@@ -206,7 +206,7 @@ const Contact = () => {
                       <Mail className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
                       <div>
                         <h4 className="font-medium">Email</h4>
-                        <p className="text-neutral-700">wholesale@soilseedwater.com</p>
+                        <p className="text-neutral-700">info@soilseedandwater.com</p>
                       </div>
                     </div>
 

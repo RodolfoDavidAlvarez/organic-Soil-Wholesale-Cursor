@@ -57,3 +57,4 @@ WHERE rc.representative_id = r.id
 COMMENT ON COLUMN representatives.admin_id IS 'Links contact card to admin user. Contacts from this card will be associated with this admin.';
 
 
+

@@ -41,7 +41,11 @@ import { Product, formatPrice, getPrimaryImage, buildAdminProductRouteParam } fr
 
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // Initialize viewMode from localStorage, defaulting to 'grid' if not set
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    const saved = localStorage.getItem('adminProductsViewMode');
+    return (saved === 'grid' || saved === 'list') ? saved : 'grid';
+  });
   const [activeTab, setActiveTab] = useState<'catalog' | 'payPickup'>('catalog');
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -51,6 +55,11 @@ export default function AdminProducts() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Save viewMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminProductsViewMode', viewMode);
+  }, [viewMode]);
 
   const getDisplayOrder = (value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) {

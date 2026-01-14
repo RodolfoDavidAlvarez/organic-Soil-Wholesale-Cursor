@@ -218,28 +218,28 @@ const Home = () => {
       id: "pallet-boxes",
       name: "Pallet of 9 lb bags",
       description: "144 units (36 cases of 4 units)",
-      image: "/Size Categories- Pallet of Box.png",
+      image: "/images/categories/sizes/Size Categories- Pallet of Box.png",
       icon: <Box className="h-6 w-6" />,
     },
     {
       id: "pallet-bags",
       name: "Pallet of 1CF bags",
       description: "50 bags (1CF each)",
-      image: "/Size Category - pallet of 50 1 CF bags.png",
+      image: "/images/categories/sizes/Size Category - pallet of 50 1 CF bags.png",
       icon: <Package className="h-6 w-6" />,
     },
     {
       id: "bulk",
       name: "Bulk Delivery",
       description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-      image: "/Truckload Bulk delivery.png",
+      image: "/images/categories/sizes/Bulk delivery.png",
       icon: <Container className="h-6 w-6" />,
     },
     {
       id: "cubic-yard",
       name: "Buy in Cubic Yard",
       description: "Bulk pickup only",
-      image: "/CY of Bulk for pick only.png",
+      image: "/images/categories/sizes/CY of Bulk for pick only.png",
       icon: <Container className="h-6 w-6" />,
     },
   ];
@@ -616,70 +616,179 @@ const Home = () => {
       </section>
 
       {/* Amazon Reviews - Mikey's Worm Poop */}
-      <section className="py-12 md:py-16 px-4 md:px-8 bg-muted/20">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center text-center mb-8 md:mb-12"
-          >
-            <h2 className="text-2xl md:text-4xl lg:text-5xl font-extrabold text-primary tracking-tight">Mikey&apos;s Worm Poop Reviews</h2>
-            <p className="text-muted-foreground mt-2 md:mt-3 text-sm md:text-base">Real Amazon customers on our worm castings</p>
-          </motion.div>
+      <section className="py-20 md:py-28 px-4 md:px-8 bg-gradient-to-br from-emerald-50/30 via-amber-50/20 to-white relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+            {/* Left Side: Header & Product Info */}
+            <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-28">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="text-left space-y-6"
+              >
+                {/* Rating Badge */}
+                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-amber-50 border border-amber-200/50 rounded-full px-4 py-2.5 shadow-sm">
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className="w-4 h-4 fill-amber-500 text-amber-500" />
+                    ))}
+                  </div>
+                  <span className="ml-1 font-bold text-amber-900 text-sm">5.0</span>
+                  <span className="text-amber-700 text-xs font-medium">Customer Rating</span>
+                </div>
+                
+                {/* Title */}
+                <div className="space-y-3">
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold text-primary tracking-tight leading-[1.1]">
+                    Mikey&apos;s Worm Poop
+                  </h2>
+                  <p className="text-xl md:text-2xl text-muted-foreground font-medium">
+                    Real Customer Reviews
+                  </p>
+                </div>
+                
+                <p className="text-muted-foreground text-base leading-relaxed">
+                  See what gardeners and growers are saying about our premium organic worm castings on Amazon.
+                </p>
+              </motion.div>
 
-          <div className="max-w-5xl mx-auto flex flex-col gap-8 lg:flex-row lg:items-start">
-            {/* Product Images */}
-            <div className="flex justify-center gap-4 lg:flex-col lg:items-start lg:justify-start">
-              <div className="relative">
-                <OptimizedImage
-                  src="/images/optimized/mikeys-worm-poop9lbs.jpg"
-                  alt="Mikey's Worm Poop 9lb bag"
-                  className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-xl shadow-sm"
-                  sizes="(max-width: 768px) 96px, 112px"
-                />
-                <p className="text-xs text-center mt-2 text-muted-foreground">Product</p>
-              </div>
-              <div className="relative">
-                <OptimizedImage
-                  src="/images/optimized/worm-castting-product-texture.jpg"
-                  alt="Worm castings texture"
-                  className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-xl shadow-sm"
-                  sizes="(max-width: 768px) 96px, 112px"
-                />
-                <p className="text-xs text-center mt-2 text-muted-foreground">Texture</p>
-              </div>
+              {/* Product Visuals */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="grid grid-cols-2 gap-4"
+              >
+                <div className="group relative rounded-3xl overflow-hidden shadow-lg border-2 border-white/50 bg-gradient-to-br from-white to-gray-50 aspect-square hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
+                  <OptimizedImage
+                    src="/images/optimized/mikeys-worm-poop9lbs.jpg"
+                    alt="Mikey's Worm Poop 9lb bag"
+                    className="w-full h-full object-contain p-3 transition-transform duration-700 group-hover:scale-110"
+                    sizes="(max-width: 768px) 50vw, 200px"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent text-white text-xs font-semibold py-3 px-3 text-center backdrop-blur-md">
+                    The Product
+                  </div>
+                </div>
+                <div className="group relative rounded-3xl overflow-hidden shadow-lg border-2 border-white/50 bg-gradient-to-br from-white to-gray-50 aspect-square hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
+                  <OptimizedImage
+                    src="/images/optimized/worm-castting-product-texture.jpg"
+                    alt="Worm castings texture"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    sizes="(max-width: 768px) 50vw, 200px"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent text-white text-xs font-semibold py-3 px-3 text-center backdrop-blur-md">
+                    Rich Texture
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* CTA Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="pt-2"
+              >
+                <Button 
+                  className="w-full gap-2 h-14 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
+                  size="lg" 
+                  onClick={() => handleProductSelect(products.find(p => p.name === "Mikey's Worm Poop") || products[0])}
+                >
+                  Shop Worm Castings <ArrowRight className="w-5 h-5" />
+                </Button>
+              </motion.div>
             </div>
 
-            {/* Reviews Carousel */}
-            <div className="relative w-full">
-              <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                <CarouselContent className="-ml-3 md:-ml-4">
-                  {reviews.map((review) => (
-                    <CarouselItem key={review.id} className="pl-3 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                      <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                        <div className="flex items-center gap-1 mb-3">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          ))}
-                        </div>
-                        <h3 className="font-semibold text-gray-900 mb-2 leading-snug">{review.title}</h3>
-                        <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                          {review.body.length > 150 ? `${review.body.substring(0, 150)}...` : review.body}
-                        </p>
-                        <div className="mt-auto flex items-center justify-between text-xs text-gray-500">
-                          <span>{review.name}</span>
-                          <span>Verified Purchase</span>
-                        </div>
-                      </div>
+            {/* Right Side: Reviews Carousel */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="lg:col-span-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-10 border border-gray-200/50"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Recent Reviews</h3>
+                  <p className="text-sm text-muted-foreground">From verified Amazon customers</p>
+                </div>
+              </div>
+
+              <Carousel 
+                opts={{ 
+                  align: "start", 
+                  loop: true,
+                }} 
+                className="w-full"
+              >
+                <div className="flex items-center justify-end mb-4 gap-2">
+                  <CarouselPrevious className="static translate-y-0 hover:bg-primary hover:text-white border-gray-300 shadow-md hover:shadow-lg transition-all" />
+                  <CarouselNext className="static translate-y-0 hover:bg-primary hover:text-white border-gray-300 shadow-md hover:shadow-lg transition-all" />
+                </div>
+                <CarouselContent className="-ml-4">
+                  {reviews.map((review, index) => (
+                    <CarouselItem key={review.id} className="pl-4 md:basis-1/2">
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                      >
+                        <Card className="h-full border-2 border-gray-100 bg-gradient-to-br from-white to-gray-50/50 hover:from-white hover:to-white hover:border-primary/20 hover:shadow-xl transition-all duration-500 flex flex-col group">
+                          <CardHeader className="pb-4">
+                            <div className="flex justify-between items-start gap-3 mb-3">
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400 drop-shadow-sm" />
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full font-bold shadow-sm">
+                                <CheckCircle className="w-3.5 h-3.5" /> Verified
+                              </div>
+                            </div>
+                            <CardTitle className="text-xl font-bold text-gray-900 leading-tight mt-2 line-clamp-2 group-hover:text-primary transition-colors duration-300">
+                              &quot;{review.title}&quot;
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pb-5 flex-grow">
+                            <p className="text-muted-foreground text-sm leading-relaxed line-clamp-5">
+                              {review.body}
+                            </p>
+                          </CardContent>
+                          <CardFooter className="pt-4 border-t-2 border-gray-100 mt-auto bg-gradient-to-r from-gray-50/50 to-transparent">
+                            <div className="flex justify-between items-center w-full">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm border-2 border-primary/10">
+                                  {review.name.charAt(0)}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-sm text-gray-900">{review.name}</span>
+                                  <span className="text-xs text-muted-foreground font-medium">{review.size} Purchase</span>
+                                </div>
+                              </div>
+                              <span className="text-xs text-muted-foreground font-medium">{review.date}</span>
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2 bg-white/90 shadow-md" />
-                <CarouselNext className="right-2 top-1/2 -translate-y-1/2 bg-white/90 shadow-md" />
               </Carousel>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

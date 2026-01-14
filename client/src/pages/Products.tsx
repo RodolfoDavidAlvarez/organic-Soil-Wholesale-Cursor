@@ -167,18 +167,18 @@ const Products = () => {
         canonical="https://organicsoilwholesale.com/products"
       />
 
-      <section className="bg-gradient-to-br from-primary/5 via-white to-white py-12 sm:py-16">
+      <section className="bg-gradient-to-br from-primary/5 via-white to-white py-6 sm:py-8">
         <div className="container mx-auto px-4">
           <div>
             <p className="text-sm uppercase tracking-[0.2em] text-primary">Premium Catalog</p>
-            <h1 className="mt-4 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            <h1 className="mt-2 text-2xl font-heading font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
               All Soil Seed &amp; Water products, kept perfectly in sync
             </h1>
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               These listings pull directly from the live database used by the admin console and Pay &amp;
               Pickup system. Edit once in the dashboard and the entire site updates instantly.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <Button size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
                 <a href="#catalog">Explore Catalog</a>
               </Button>
@@ -190,7 +190,7 @@ const Products = () => {
         </div>
       </section>
 
-      <section id="catalog" className="bg-white py-12 sm:py-16">
+      <section id="catalog" className="bg-white py-6 sm:py-8">
         <div className="container mx-auto px-4">
           {error ? (
             <div className="rounded-3xl border border-destructive/20 bg-destructive/5 p-10 text-center">

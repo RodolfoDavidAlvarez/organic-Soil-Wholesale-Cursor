@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, type KeyboardEvent } from "react";
+import { useMemo, useState, useCallback, useEffect, type KeyboardEvent, type ReactNode } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,24 @@ import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
-import { ArrowLeft, Leaf, ShoppingBag, Truck, Sparkles, Maximize2, ChevronLeft, ChevronRight, Youtube, ImagePlus, Play } from "lucide-react";
+import {
+  ArrowLeft,
+  Leaf,
+  ShoppingBag,
+  Truck,
+  Sparkles,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
+  Youtube,
+  ImagePlus,
+  Play,
+  ShieldCheck,
+  Phone,
+  MapPin,
+  Package,
+} from "lucide-react";
+import { SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
 
 type ApiProduct = {
   id: number;
@@ -101,6 +118,13 @@ type NormalizedProduct = {
   };
 };
 
+type InfoTab = {
+  id: string;
+  label: string;
+  content: ReactNode;
+  helper?: string;
+};
+
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -118,6 +142,7 @@ const parseSizeOptions = (input: unknown): SizeOption[] => {
       if (!option) return null;
       const label = (option.label ?? option.name ?? option.title ?? "").toString().trim();
       if (!label) return null;
+      const key = option.key ?? slugify(label);
       const price =
         typeof option.price === "number"
           ? option.price
@@ -129,9 +154,14 @@ const parseSizeOptions = (input: unknown): SizeOption[] => {
       const displayOrder =
         typeof option.display_order === "number" ? option.display_order : typeof option.displayOrder === "number" ? option.displayOrder : undefined;
       const description = typeof option.description === "string" && option.description.trim().length > 0 ? option.description.trim() : undefined;
-      const image = typeof option.image === "string" && option.image.trim().length > 0 ? option.image.trim() : undefined;
+      // Fall back to SIZE_CATALOG image if option doesn't have one
+      // Check for empty strings, null, or undefined
+      const optionImage = typeof option.image === "string" && option.image.trim().length > 0 ? option.image.trim() : undefined;
+      const catalogEntry = SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY];
+      // Prioritize uploaded image, but fall back to catalog default if missing
+      const image = optionImage || catalogEntry?.image;
       return {
-        key: option.key ?? slugify(label),
+        key,
         label,
         ...(price !== undefined && { price }),
         ...(displayOrder !== undefined && { displayOrder }),
@@ -324,6 +354,7 @@ const ProductDetail = () => {
   const recommendedUses = useMemo(() => parseList(product?.recommendedUses), [product]);
   const targetAudiences = useMemo(() => parseList(product?.targetAudience), [product]);
   const ingredients = useMemo(() => parseList(product?.ingredients), [product]);
+  const featureSpotlights = featureList.slice(0, 3);
 
   const sizesToDisplay = useMemo(() => {
     if (product?.sizeOptions?.length) {
@@ -335,6 +366,163 @@ const ProductDetail = () => {
       price: undefined,
     }));
   }, [product]);
+
+  const heroStats = useMemo(
+    () =>
+      product
+        ? [
+            {
+              label: "Category",
+              value: product.category ?? "Specialty soil",
+              icon: Leaf,
+            },
+            {
+              label: "Format",
+              value: product.productType ?? "Custom blend",
+              icon: Sparkles,
+            },
+            {
+              label: "Sizes",
+              value: sizesToDisplay.length ? `${sizesToDisplay.length} option${sizesToDisplay.length > 1 ? "s" : ""}` : "Request sizing",
+              icon: Package,
+            },
+            {
+              label: "Availability",
+              value: product.payAndPickup?.isEnabled ? "Pay & Pickup ready" : "Delivery planning included",
+              icon: Truck,
+            },
+          ]
+        : [],
+    [product, sizesToDisplay.length]
+  );
+
+  const confidencePoints = [
+    {
+      icon: ShieldCheck,
+      title: "Agronomist verified",
+      description: "Every batch is checked for consistency and moisture before release.",
+    },
+    {
+      icon: MapPin,
+      title: "Regional logistics",
+      description: "Coordinated delivery and pickup scheduling across California & Nevada.",
+    },
+    {
+      icon: Phone,
+      title: "Live soil reps",
+      description: "Talk to Soil Seed & Water specialists for blends, sizing, and lead times.",
+    },
+  ];
+
+  const infoTabs = useMemo<InfoTab[]>(() => {
+    if (!product) {
+      return [];
+    }
+
+    return [
+      {
+        id: "overview",
+        label: "Overview",
+        content: (
+          <div className="space-y-4">
+            <p className="text-base leading-relaxed text-muted-foreground">{primaryDescription}</p>
+            {product.marketingNote && (
+              <p className="rounded-2xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{product.marketingNote}</p>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "features",
+        label: "Highlights",
+        content: featureList.length ? (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {featureList.map((item) => (
+              <li key={item} className="flex items-start gap-3 rounded-2xl border bg-muted/30 px-4 py-3 text-sm leading-relaxed">
+                <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Add feature bullets in the admin editor to showcase agronomic benefits here.</p>
+        ),
+      },
+      {
+        id: "usage",
+        label: "Usage",
+        content: (
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {product.usage ?? "Include application guidance text in the admin editor so crews know how to deploy the material."}
+            </p>
+            {recommendedUses.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {recommendedUses.map((item) => (
+                  <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "story",
+        label: "Story",
+        content: (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {product.story ?? "Share what makes this blend unique — growers love knowing the backstory and sourcing details."}
+          </p>
+        ),
+      },
+      {
+        id: "composition",
+        label: "Ingredients",
+        content: (
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Ingredients</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {ingredients.length > 0 ? (
+                  ingredients.map((item) => (
+                    <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">Populate the ingredient field to display the blend details.</p>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Ideal for</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {targetAudiences.length > 0 ? (
+                  targetAudiences.map((item) => (
+                    <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">Fill in the “target audience” field in the CMS to tailor this list.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+    ];
+  }, [featureList, ingredients, primaryDescription, product, recommendedUses, targetAudiences]);
+
+  const [activeInfoTab, setActiveInfoTab] = useState("overview");
+
+  useEffect(() => {
+    setActiveInfoTab("overview");
+  }, [product?.id]);
+
+  const activeTabContent = infoTabs.find((tab) => tab.id === activeInfoTab) ?? infoTabs[0];
 
   return (
     <>
@@ -377,186 +565,281 @@ const ProductDetail = () => {
             </Card>
           )}
 
+
           {!isLoading && product && (
-            <div className="grid gap-10 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  {heroImage ? (
-                    <>
-                      <div
-                        className="group relative overflow-hidden rounded-3xl border bg-white shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                        role={totalGalleryItems > 0 ? "button" : undefined}
-                        tabIndex={totalGalleryItems > 0 ? 0 : -1}
-                        onClick={() => totalGalleryItems > 0 && openGalleryAt(0)}
-                        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-                          if (!totalGalleryItems) return;
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            openGalleryAt(0);
-                          }
-                        }}
-                      >
-                        <OptimizedImage
-                          src={heroImage}
-                          alt={product.displayTitle}
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                        />
-                        <div className="absolute left-6 top-6 flex flex-wrap gap-2">
-                          <Badge
-                            variant="secondary"
-                            className="bg-gray-900/90 backdrop-blur-sm text-white font-semibold px-3 py-1.5 shadow-lg border border-gray-700/50"
-                          >
+            <div className="space-y-10">
+              <div className="grid gap-10 items-start xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
+                <section className="space-y-8">
+                  <div className="relative overflow-hidden rounded-[32px] border bg-gradient-to-br from-white via-primary/5 to-primary/10 shadow-2xl">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.7),_transparent_55%)]" />
+                    <div className="relative z-10 grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+                      <div className="space-y-6 p-6 sm:p-10">
+                        <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide text-gray-600">
+                          <Badge variant="secondary" className="bg-white/80 text-gray-900 shadow-sm">
                             {product.category}
                           </Badge>
+                          {product.productType && (
+                            <Badge variant="outline" className="border-white/70 bg-white/60 text-gray-900">
+                              {product.productType}
+                            </Badge>
+                          )}
                           {product.payAndPickup?.isEnabled && (
-                            <Badge className="bg-primary text-white shadow-2xl text-base font-bold px-5 py-2.5 border-2 border-white/60 ring-2 ring-primary/50">
-                              <Truck className="mr-2 h-5 w-5 inline-block" />
-                              {product.payAndPickup?.badge ?? "Pay & Pickup Ready"}
+                            <Badge className="bg-primary text-primary-foreground font-semibold shadow-lg">
+                              <Truck className="mr-2 h-4 w-4" />
+                              {product.payAndPickup?.badge ?? "Pay & Pickup"}
                             </Badge>
                           )}
                         </div>
-                        {totalGalleryItems > 0 && (
-                          <div className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/80 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-                            <Maximize2 className="h-3.5 w-3.5" />
-                            <span>Open gallery</span>
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Soil Seed &amp; Water</p>
+                            <h1 className="mt-2 text-3xl font-semibold leading-tight text-foreground sm:text-4xl">{product.displayTitle}</h1>
+                          </div>
+                          <p className="text-base leading-relaxed text-muted-foreground">
+                            {product.previewCopy ?? primaryDescription ?? "Sustainable soil solutions for thriving landscapes."}
+                          </p>
+                          {featureSpotlights.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {featureSpotlights.map((item) => (
+                                <span key={item} className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {recommendedUses.length > 0 && (
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Top uses</p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {recommendedUses.map((item) => (
+                                  <span
+                                    key={item}
+                                    className="rounded-full border border-white/60 bg-white/40 px-3 py-1 text-xs text-foreground backdrop-blur"
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
+                            <Leaf className="h-4 w-4 text-primary" />
+                            <span>{product.category}</span>
+                          </div>
+                          {product.productType && (
+                            <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                              <span>{product.productType}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
+                            {product.payAndPickup?.isEnabled ? <Truck className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4 text-primary" />}
+                            <span>{product.payAndPickup?.isEnabled ? "Pickup ready" : "Delivery planning included"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="px-6 pb-6 sm:pb-10">
+                        {heroImage ? (
+                          <div
+                            className="group relative overflow-hidden rounded-[28px] border bg-white shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            role={totalGalleryItems > 0 ? "button" : undefined}
+                            tabIndex={totalGalleryItems > 0 ? 0 : -1}
+                            onClick={() => totalGalleryItems > 0 && openGalleryAt(0)}
+                            onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                              if (!totalGalleryItems) return;
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openGalleryAt(0);
+                              }
+                            }}
+                          >
+                            <OptimizedImage
+                              src={heroImage}
+                              alt={product.displayTitle}
+                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                            />
+                            {totalGalleryItems > 0 && (
+                              <div className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/80 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+                                <Maximize2 className="h-3.5 w-3.5" />
+                                <span>Open gallery</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex min-h-[280px] items-center justify-center rounded-[28px] border border-dashed border-muted bg-white/40 text-sm text-muted-foreground">
+                            Upload a feature image or video in the admin editor to showcase this blend.
                           </div>
                         )}
                       </div>
+                    </div>
+                  </div>
 
-                      {galleryItems.length > 1 && (
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                          {galleryItems.slice(0, 4).map((item, index) => {
-                            if (item.type === "image") {
-                              return (
-                                <button
-                                  key={item.url}
-                                  type="button"
-                                  className="overflow-hidden rounded-2xl border bg-white ring-offset-background transition hover:ring-2 hover:ring-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                                  onClick={() => openGalleryAt(index)}
-                                  aria-label={`View image ${index + 1}`}
-                                >
-                                  <OptimizedImage src={item.url} alt={`${product.displayTitle} ${index + 1}`} className="h-24 w-full object-cover" />
-                                </button>
-                              );
-                            } else {
-                              const thumbnailUrl = `https://img.youtube.com/vi/${item.videoId}/maxresdefault.jpg`;
-                              return (
-                                <button
-                                  key={item.url}
-                                  type="button"
-                                  className="group relative overflow-hidden rounded-2xl border bg-white ring-offset-background transition hover:ring-2 hover:ring-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                                  onClick={() => openGalleryAt(index)}
-                                  aria-label={`View video ${index + 1}`}
-                                >
-                                  <img
-                                    src={thumbnailUrl}
-                                    alt="Video thumbnail"
-                                    className="h-24 w-full object-cover"
-                                    onError={(e) => {
-                                      // Fallback to hqdefault if maxresdefault fails
-                                      (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`;
-                                    }}
-                                  />
-                                  {/* Play button in bottom-right corner */}
-                                  <div className="absolute bottom-2 right-2 rounded-full bg-red-600 p-2 shadow-lg transition-transform group-hover:scale-110">
-                                    <Play className="h-4 w-4 text-white fill-white" />
-                                  </div>
-                                  {/* YouTube badge in top-left */}
-                                  <div className="absolute top-2 left-2 rounded bg-black/70 px-2 py-1 text-xs font-semibold text-white flex items-center gap-1">
-                                    <Youtube className="h-3 w-3" />
-                                    <span>Video</span>
-                                  </div>
-                                </button>
-                              );
-                            }
-                          })}
+                  {heroStats.length > 0 && (
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      {heroStats.map((stat) => {
+                        const Icon = stat.icon;
+                        return (
+                          <div key={stat.label} className="rounded-2xl border bg-white/90 p-4 shadow-sm backdrop-blur">
+                            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                              <Icon className="h-4 w-4 text-primary" />
+                              {stat.label}
+                            </div>
+                            <p className="mt-2 text-lg font-semibold text-foreground">{stat.value}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {galleryItems.length > 1 && (
+                    <div className="rounded-3xl border bg-white/90 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Media</p>
+                          <h2 className="text-lg font-semibold text-foreground">Gallery preview</h2>
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex h-96 items-center justify-center rounded-3xl border-2 border-dashed border-border/50 bg-muted/20">
-                      <div className="text-center">
-                        <ImagePlus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-lg font-medium text-muted-foreground">No media available</p>
-                        <p className="text-sm text-muted-foreground mt-2">Images and videos will appear here once added</p>
+                        <Button variant="ghost" size="sm" className="text-sm font-semibold" onClick={() => openGalleryAt(activeGalleryIndex)}>
+                          <Maximize2 className="mr-2 h-4 w-4" />
+                          View all
+                        </Button>
+                      </div>
+                      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                        {galleryItems.map((item, index) => {
+                          if (item.type === "image") {
+                            return (
+                              <button
+                                key={item.url}
+                                type="button"
+                                onClick={() => openGalleryAt(index)}
+                                className="h-28 w-40 flex-shrink-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                aria-label={`View image ${index + 1}`}
+                              >
+                                <OptimizedImage src={item.url} alt={`${product.displayTitle} ${index + 1}`} className="h-full w-full object-cover" />
+                              </button>
+                            );
+                          }
+                          const thumbnailUrl = `https://img.youtube.com/vi/${item.videoId}/maxresdefault.jpg`;
+                          return (
+                            <button
+                              key={item.url}
+                              type="button"
+                              onClick={() => openGalleryAt(index)}
+                              className="group relative h-28 w-40 flex-shrink-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                              aria-label={`View video ${index + 1}`}
+                            >
+                              <img
+                                src={thumbnailUrl}
+                                alt="Video thumbnail"
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`;
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-3 text-white">
+                                <div className="rounded-full bg-red-600/90 p-2 shadow-lg transition-transform group-hover:scale-110">
+                                  <Play className="h-4 w-4 fill-white text-white" />
+                                </div>
+                                <div className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">Video</div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
-                </div>
 
-                <Card className="rounded-3xl border bg-white p-6 shadow-sm">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Product Overview</p>
-                    <h1 className="mt-2 text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl">{product.displayTitle}</h1>
-                  </div>
-                  <p className="mt-4 text-base leading-relaxed text-muted-foreground">{primaryDescription}</p>
-                  <div className="mt-6">
-                    <div className="rounded-2xl border bg-muted/30 p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Category</p>
-                      <p className="mt-2 text-xl font-semibold">{product.category}</p>
-                    </div>
-                  </div>
-                </Card>
-
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <Card className="rounded-3xl border bg-white p-6">
-                    <div className="flex items-center gap-3">
-                      <Leaf className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Benefits</p>
-                        <h2 className="text-xl font-semibold">Features &amp; Soil Impact</h2>
+                  {featureList.length > 0 && (
+                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Highlights</p>
+                          <h2 className="text-xl font-semibold">Why crews love it</h2>
+                        </div>
                       </div>
-                    </div>
-                    <ul className="mt-4 space-y-3">
-                      {featureList.length > 0 ? (
-                        featureList.map((feature) => (
-                          <li key={feature} className="flex items-start gap-3 text-sm text-muted-foreground">
-                            <span className="mt-1 h-2 w-2 rounded-full bg-primary/70" />
-                            {feature}
-                          </li>
-                        ))
-                      ) : (
-                        <li className="text-sm text-muted-foreground">
-                          Update the &quot;features&quot; field in the admin detail page to populate this list.
-                        </li>
-                      )}
-                    </ul>
-                  </Card>
-
-                  <Card className="rounded-3xl border bg-white p-6">
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Application</p>
-                        <h2 className="text-xl font-semibold">Usage Guidance</h2>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                      {product.usage ?? "Add usage instructions in the admin editor to provide application guidance here."}
-                    </p>
-                    {recommendedUses.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {recommendedUses.map((item) => (
-                          <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                      <ul className="mt-6 grid gap-3 md:grid-cols-2">
+                        {featureList.map((item) => (
+                          <li key={item} className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
                             {item}
-                          </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  )}
+
+                  {infoTabs.length > 0 && (
+                    <Card className="rounded-3xl border bg-white p-4 shadow-lg">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Leaf className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Knowledge base</p>
+                          <h2 className="text-lg font-semibold">Details at a glance</h2>
+                        </div>
+                      </div>
+                      <div className="hidden md:block">
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {infoTabs.map((tab) => (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setActiveInfoTab(tab.id)}
+                              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                activeInfoTab === tab.id ? "bg-primary text-primary-foreground shadow" : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+                        {activeTabContent && <div className="mt-6 text-sm text-muted-foreground">{activeTabContent.content}</div>}
+                      </div>
+                      <div className="mt-4 space-y-3 md:hidden">
+                        {infoTabs.map((tab, index) => (
+                          <details key={tab.id} className="rounded-2xl border bg-muted/30 p-4" open={index === 0}>
+                            <summary className="cursor-pointer text-sm font-semibold text-foreground">{tab.label}</summary>
+                            <div className="mt-3 text-sm text-muted-foreground">{tab.content}</div>
+                          </details>
                         ))}
                       </div>
-                    )}
-                  </Card>
-                </div>
+                    </Card>
+                  )}
 
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <Card className="rounded-3xl border bg-white p-6">
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Story</p>
-                    <h2 className="mt-1 text-xl font-semibold">Product Narrative</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      {product.story ?? "Share the origin story or agronomic insight within the admin editor to highlight it here."}
-                    </p>
-                  </Card>
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Application</p>
+                          <h2 className="text-xl font-semibold">Usage guidance</h2>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                        {product.usage ?? "Add usage instructions in the admin editor to provide application guidance here."}
+                      </p>
+                      {recommendedUses.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {recommendedUses.map((item) => (
+                            <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
 
-                  <Card className="rounded-3xl border bg-white p-6">
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Ingredients &amp; Audiences</p>
+                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Story</p>
+                      <h2 className="mt-1 text-xl font-semibold">Product narrative</h2>
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                        {product.story ?? "Share the origin story or agronomic insight within the admin editor to highlight it here."}
+                      </p>
+                    </Card>
+                  </div>
+
+                  <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Ingredients &amp; audiences</p>
                     <h2 className="mt-1 text-xl font-semibold">What’s inside &amp; who it’s for</h2>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <div>
@@ -589,70 +872,135 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   </Card>
-                </div>
-              </div>
+                </section>
 
-              <aside className="space-y-6">
-                <div className="sticky top-6 space-y-3">
-                  <Button size="lg" className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                    <Link href="/order">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      Request a Quote
-                    </Link>
-                  </Button>
-                  {product.payAndPickup?.isEnabled && (
-                    <Button size="lg" variant="secondary" className="w-full border-2" asChild>
-                      <Link href={`/pay-and-pickup${product.id ? `?product=${product.id}` : ""}`}>
-                        <Truck className="mr-2 h-4 w-4" />
-                        Pay &amp; Pickup
-                      </Link>
-                    </Button>
-                  )}
-                </div>
+                <aside className="space-y-6">
+                  <Card className="rounded-3xl border bg-gray-950 p-6 text-white shadow-2xl">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/70">Order direct</p>
+                    <h3 className="mt-2 text-2xl font-semibold leading-tight">Stage your soil order with Soil Seed &amp; Water</h3>
+                    <p className="mt-3 text-sm text-white/80">
+                      Dedicated reps coordinate blending, packaging, and logistics so you can focus on installs.
+                    </p>
+                    <div className="mt-6 space-y-3">
+                      <Button size="lg" className="w-full text-base" asChild>
+                        <Link href="/order">
+                          <ShoppingBag className="mr-2 h-4 w-4" />
+                          Request a Quote
+                        </Link>
+                      </Button>
+                      {product.payAndPickup?.isEnabled && (
+                        <Button
+                          size="lg"
+                          variant="secondary"
+                          className="w-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                          asChild
+                        >
+                          <Link href={`/pay-and-pickup${product.id ? `?product=${product.id}` : ""}`}>
+                            <Truck className="mr-2 h-4 w-4" />
+                            Pay &amp; Pickup
+                          </Link>
+                        </Button>
+                      )}
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full border-white/30 bg-transparent text-white hover:bg-white/10"
+                        asChild
+                      >
+                        <Link href="/contact">
+                          <Phone className="mr-2 h-4 w-4" />
+                          Talk to an Expert
+                        </Link>
+                      </Button>
+                    </div>
+                    <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
+                      <Phone className="h-4 w-4" />
+                      <span>Live support 7a–7p PT • Same-week scheduling available</span>
+                    </div>
+                  </Card>
 
-                <Card className="rounded-3xl border bg-white p-6">
-                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">Available sizes</p>
-                  <div className="space-y-2">
-                    {sizesToDisplay.length === 0 && (
-                      <div className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">
-                        Activate a size or add pricing in the admin editor to show options here.
+                  <Card id="size-options" className="rounded-3xl border bg-white p-6 shadow-lg">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Available sizes</p>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {sizesToDisplay.length > 0 ? `${sizesToDisplay.length} size option${sizesToDisplay.length > 1 ? "s" : ""}` : "Size catalog"}
+                        </h3>
                       </div>
-                    )}
-                    {sizesToDisplay.map((option) => (
-                      <div key={option.key} className="rounded-lg border bg-muted/10 px-3 py-2 text-sm hover:bg-muted/20 transition-colors">
-                        <div className="flex items-start gap-3">
-                          {option.image && (
+                      {sizesToDisplay.length > 0 && <span className="text-xs text-muted-foreground">Tap to inspect imagery</span>}
+                    </div>
+                    <div className="mt-4 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
+                      {sizesToDisplay.length === 0 && (
+                        <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                          Activate a size or add pricing in the admin editor to show options here.
+                        </div>
+                      )}
+                      {sizesToDisplay.map((option) => {
+                        const cardContent = (
+                          <>
+                            {option.image && (
+                              <img src={option.image} alt={option.label} className="h-28 w-full rounded-xl object-cover" loading="lazy" />
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-semibold">{option.label}</span>
+                                {option.price && <span className="text-sm font-semibold text-primary">{formatCurrency(option.price)}</span>}
+                              </div>
+                              {option.description && <p className="text-xs text-muted-foreground">{option.description}</p>}
+                            </div>
+                          </>
+                        );
+
+                        if (option.image) {
+                          return (
                             <button
+                              key={option.key}
                               type="button"
+                              className="min-w-[220px] rounded-2xl border bg-muted/10 p-4 text-left shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                               onClick={() => setExpandedSizeImage({ url: option.image!, label: option.label })}
-                              className="relative group flex-shrink-0"
                               aria-label={`View larger image of ${option.label}`}
                             >
-                              <img
-                                src={option.image}
-                                alt={option.label}
-                                className="h-16 w-16 rounded-lg object-cover border cursor-pointer transition-transform group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                <Maximize2 className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
+                              {cardContent}
                             </button>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-foreground">{option.label}</span>
-                              {option.price ? (
-                                <span className="text-sm font-semibold text-foreground ml-2">{formatCurrency(option.price)}</span>
-                              ) : null}
-                            </div>
-                            {option.description && <p className="text-xs text-muted-foreground mt-1">{option.description}</p>}
+                          );
+                        }
+
+                        return (
+                          <div key={option.key} className="min-w-[220px] rounded-2xl border bg-muted/10 p-4 shadow-sm">
+                            {cardContent}
                           </div>
-                        </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Confidence</p>
+                        <h3 className="text-lg font-semibold">Why teams trust us</h3>
                       </div>
-                    ))}
-                  </div>
-                </Card>
-              </aside>
+                    </div>
+                    <ul className="mt-6 space-y-4">
+                      {confidencePoints.map((point) => {
+                        const Icon = point.icon;
+                        return (
+                          <li key={point.title} className="flex gap-3">
+                            <div className="rounded-full bg-muted/60 p-2">
+                              <Icon className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{point.title}</p>
+                              <p className="text-sm text-muted-foreground">{point.description}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </Card>
+                </aside>
+              </div>
             </div>
           )}
         </div>

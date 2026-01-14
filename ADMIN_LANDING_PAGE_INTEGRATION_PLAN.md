@@ -121,3 +121,4 @@ CREATE INDEX IF NOT EXISTS idx_representative_contacts_admin_id ON representativ
 - ✅ Backward compatible: Existing representatives still work
 - ✅ Flexible: Admins can opt-in to landing pages
 
+

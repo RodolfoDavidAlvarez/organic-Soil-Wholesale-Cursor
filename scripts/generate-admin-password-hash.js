@@ -48,3 +48,4 @@ WHERE email = '${email}';
 
 generateHash();
 
+

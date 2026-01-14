@@ -52,3 +52,4 @@ ON products USING gin (size_price_options);
 -- Image URLs are stored as strings in the image field of each size option
 
 
+

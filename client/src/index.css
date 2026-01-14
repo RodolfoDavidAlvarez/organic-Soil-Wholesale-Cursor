@@ -74,9 +74,16 @@
     /* @apply border; */
   }
 
+  html {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     @apply font-sans antialiased bg-white text-black;
     scroll-padding-top: var(--app-header-height);
+    min-height: 100%;
+    overflow-x: hidden;
   }
 
   h1,
@@ -205,4 +212,28 @@
 
 .animate-fade-in-delay {
   animation: fade-in 0.8s ease-out 0.2s both;
+}
+
+/* Footer stability - prevent layout shifts */
+footer {
+  contain: layout style paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Prevent extra white space in admin pages */
+.admin-layout main {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.admin-layout main > div {
+  min-height: 0;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure forms in admin don't create extra scroll space */
+.admin-layout form {
+  margin-bottom: 0;
+  padding-bottom: 0;
 }

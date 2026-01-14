@@ -3,7 +3,7 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-primary-foreground text-primary">
+    <footer className="bg-primary-foreground text-primary relative z-10 mt-auto">
       <div className="leaf-pattern py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -15,6 +15,8 @@ const Footer = () => {
                   alt="Soil Seed and Water logo"
                   className="h-12 w-auto"
                   loading="lazy"
+                  width="48"
+                  height="48"
                 />
                 <div>
                   <span className="text-xl font-heading font-bold">
@@ -107,7 +109,7 @@ const Footer = () => {
                   <div className="bg-white/10 rounded-full p-1.5 mr-3">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="text-foreground/80">ralvarez@soilseedandwater.com</span>
+                  <span className="text-foreground/80">info@soilseedandwater.com</span>
                 </li>
                 <li className="flex items-start">
                   <div className="bg-white/10 rounded-full p-1.5 mr-3 mt-0.5">

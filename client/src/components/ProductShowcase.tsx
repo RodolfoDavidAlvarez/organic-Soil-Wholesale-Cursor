@@ -134,7 +134,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="overflow-hidden animate-pulse">
@@ -161,9 +161,9 @@ export default function ProductShowcase({ products, loading = false, onProductSe
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4">
       {/* Search and Filter Section */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -193,7 +193,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-16 bg-neutral-50 rounded-xl">
+        <div className="text-center py-12 bg-neutral-50 rounded-xl">
           <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Filter className="h-10 w-10 text-neutral-400" />
           </div>
@@ -213,7 +213,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
@@ -235,7 +235,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                 />
               </div>
 
-              <div className="p-6 flex flex-col gap-4 h-full">
+              <div className="p-5 flex flex-col gap-3 h-full">
                 <div className="flex items-center justify-between text-xs text-muted-foreground uppercase tracking-wide">
                   <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground">
                     {product.category || "Uncategorized"}

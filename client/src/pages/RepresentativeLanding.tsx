@@ -12,7 +12,8 @@ import {
   Instagram,
   Send,
   CheckCircle2,
-  IdCard,
+  CreditCard,
+  Camera,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import BusinessCardCapture from '@/components/BusinessCardCapture';
 
 interface Representative {
   id: number;
@@ -140,6 +142,7 @@ export default function RepresentativeLanding() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isDownloadingCard, setIsDownloadingCard] = useState(false);
+  const [isBusinessCardDialogOpen, setIsBusinessCardDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isContactDialogOpen) {
@@ -280,10 +283,6 @@ export default function RepresentativeLanding() {
     'w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300 shadow-lg font-semibold border border-emerald-50/70';
   const secondaryCtaClasses =
     'w-full border border-white/80 bg-white/15 text-white hover:bg-white/25 hover:text-white shadow-lg backdrop-blur-sm disabled:border-white/40 disabled:bg-white/5 disabled:text-white/50';
-  const inputClasses =
-    'h-12 rounded-2xl border border-emerald-100 bg-white/90 text-emerald-900 placeholder:text-emerald-400 shadow-inner transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/70';
-  const textareaClasses =
-    'rounded-3xl border border-emerald-100 bg-white/90 text-emerald-900 placeholder:text-emerald-400 shadow-inner transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/70';
 
   const handleDownloadContactCard = async () => {
     if (!representative) return;
@@ -320,8 +319,8 @@ export default function RepresentativeLanding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-950/5 via-white to-emerald-50/40 text-slate-900">
-      <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-8 sm:px-6 lg:px-0">
-        <section className="relative overflow-hidden rounded-3xl border border-emerald-100/80 bg-white shadow-2xl shadow-emerald-900/10">
+      <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-0 lg:py-10">
+        <section className="relative overflow-hidden rounded-2xl border border-emerald-100/80 bg-white shadow-2xl shadow-emerald-900/10 sm:rounded-3xl">
           <div className="absolute inset-0">
             {hasBanner && representative.banner_image_url ? (
               <img
@@ -334,33 +333,33 @@ export default function RepresentativeLanding() {
             )}
             <div className="absolute inset-0 bg-emerald-950/60" />
           </div>
-          <div className="relative flex flex-col items-center px-6 py-12 text-center text-white sm:px-10 md:py-14">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.4em] text-emerald-100/90">
+          <div className="relative flex flex-col items-center px-4 py-10 text-center text-white sm:px-6 sm:py-12 md:px-10 md:py-14">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-100/90 sm:text-[11px] sm:tracking-[0.4em]">
               Soil Seed &amp; Water
             </span>
             {representative.photo_url ? (
               <img
                 src={representative.photo_url}
                 alt={representative.name}
-                className="my-6 h-28 w-28 rounded-full border-4 border-white/60 object-cover shadow-lg shadow-black/20"
+                className="my-5 h-24 w-24 rounded-full border-4 border-white/60 object-cover shadow-lg shadow-black/20 sm:my-6 sm:h-28 sm:w-28"
               />
             ) : (
-              <div className="my-6 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/60 bg-white/15 text-3xl font-semibold uppercase text-white">
+              <div className="my-5 flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/60 bg-white/15 text-2xl font-semibold uppercase text-white sm:my-6 sm:h-28 sm:w-28 sm:text-3xl">
                 {representative.name?.charAt(0) || '?'}
               </div>
             )}
-            <h1 className="text-3xl font-heading font-semibold sm:text-4xl md:text-5xl">
+            <h1 className="text-2xl font-heading font-semibold sm:text-3xl md:text-4xl lg:text-5xl">
               Hey there, I'm {representative.name}
             </h1>
             {representative.title && (
-              <p className="mt-2 text-base text-emerald-100/90">{representative.title}</p>
+              <p className="mt-2 text-sm text-emerald-100/90 sm:text-base">{representative.title}</p>
             )}
             {representative.company_name && (
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-100/70">
+              <p className="mt-1 text-xs uppercase tracking-[0.2em] text-emerald-100/70 sm:text-sm sm:tracking-[0.3em]">
                 {representative.company_name}
               </p>
             )}
-            <div className="mt-8 grid w-full gap-3 sm:max-w-xl sm:grid-cols-2">
+            <div className="mt-6 grid w-full gap-3 sm:mt-8 sm:max-w-xl sm:grid-cols-2">
               <Button
                 size="lg"
                 className={primaryCtaClasses}
@@ -375,29 +374,40 @@ export default function RepresentativeLanding() {
                 onClick={handleDownloadContactCard}
                 disabled={isDownloadingCard}
               >
-                <IdCard className="mr-2 h-4 w-4" />
+                <CreditCard className="mr-2 h-4 w-4" />
                 {isDownloadingCard ? 'Preparing...' : contactCardLabel}
               </Button>
             </div>
-            <p className="mt-4 text-sm text-emerald-100/80">
+            <div className="mt-3 w-full sm:max-w-xl">
+              <Button
+                size="lg"
+                variant="outline"
+                className={secondaryCtaClasses}
+                onClick={() => setIsBusinessCardDialogOpen(true)}
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Submit Business Card
+              </Button>
+            </div>
+            <p className="mt-4 text-xs text-emerald-100/80 sm:text-sm">
               Prefer to call or email? Everything you need lives below.
             </p>
           </div>
         </section>
 
-        <section className="mt-8 grid gap-6 lg:mt-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
-              <h2 className="mb-4 text-2xl font-semibold text-emerald-900">Direct contact</h2>
-              <div className="space-y-5">
+        <section className="mt-6 sm:mt-8 lg:mt-10">
+          <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+            <div className="rounded-2xl border border-emerald-300/40 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-700 p-5 text-white shadow-xl shadow-emerald-900/30 sm:rounded-3xl sm:p-6">
+              <h2 className="mb-4 text-xl font-semibold text-white sm:text-2xl">Direct contact</h2>
+              <div className="space-y-4 sm:space-y-5">
                 {representative.email && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
-                    <Mail className="mt-1 h-5 w-5 text-emerald-700" />
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">Email</p>
+                  <div className="flex items-start gap-3 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4">
+                    <Mail className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-100 sm:mt-1 sm:h-5 sm:w-5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-100/80 sm:text-xs sm:tracking-[0.25em]">Email</p>
                       <a
                         href={`mailto:${representative.email}`}
-                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                        className="mt-0.5 block break-words text-sm font-semibold text-white underline-offset-4 hover:underline sm:text-base"
                       >
                         {representative.email}
                       </a>
@@ -405,18 +415,18 @@ export default function RepresentativeLanding() {
                   </div>
                 )}
                 {representative.phone && (
-                  <div 
-                    className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4"
+                  <div
+                    className="flex items-start gap-3 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4"
                     data-callrail-ignore="true"
                     data-dynamic-number-ignore="true"
                     data-call-tracking-ignore="true"
                   >
-                    <Phone className="mt-1 h-5 w-5 text-emerald-700" />
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">Phone</p>
+                    <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-100 sm:mt-1 sm:h-5 sm:w-5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-100/80 sm:text-xs sm:tracking-[0.25em]">Phone</p>
                       <a
                         href={`tel:${getPhoneNumberForTel(representative.phone)}`}
-                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline no-call-tracking"
+                        className="mt-0.5 block text-sm font-semibold text-white underline-offset-4 hover:underline no-call-tracking sm:text-base"
                         data-callrail-ignore="true"
                         data-dynamic-number-ignore="true"
                         data-call-tracking-ignore="true"
@@ -428,17 +438,17 @@ export default function RepresentativeLanding() {
                   </div>
                 )}
                 {representative.website && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
-                    <Globe className="mt-1 h-5 w-5 text-emerald-700" />
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">
+                  <div className="flex items-start gap-3 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4">
+                    <Globe className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-100 sm:mt-1 sm:h-5 sm:w-5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-100/80 sm:text-xs sm:tracking-[0.25em]">
                         Website
                       </p>
                       <a
                         href={representative.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-emerald-900 underline-offset-4 hover:underline"
+                        className="mt-0.5 block break-words text-sm font-semibold text-white underline-offset-4 hover:underline sm:text-base"
                       >
                         {representative.website.replace(/^https?:\/\//, '')}
                       </a>
@@ -446,13 +456,13 @@ export default function RepresentativeLanding() {
                   </div>
                 )}
                 {locationLine && (
-                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-50 bg-emerald-50/60 p-4">
-                    <MapPin className="mt-1 h-5 w-5 text-emerald-700" />
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-emerald-700/70">
+                  <div className="flex items-start gap-3 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm sm:rounded-2xl sm:p-4">
+                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-100 sm:mt-1 sm:h-5 sm:w-5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-100/80 sm:text-xs sm:tracking-[0.25em]">
                         Location
                       </p>
-                      <p className="font-semibold text-emerald-900">{locationLine}</p>
+                      <p className="mt-0.5 text-sm font-semibold text-white sm:text-base">{locationLine}</p>
                     </div>
                   </div>
                 )}
@@ -462,17 +472,18 @@ export default function RepresentativeLanding() {
                 socialLinks.twitter ||
                 socialLinks.linkedin ||
                 socialLinks.instagram) && (
-                <div className="mt-6 border-t border-emerald-100 pt-6">
-                  <p className="mb-3 text-sm font-medium text-emerald-800">Connect online</p>
-                  <div className="flex flex-wrap gap-3">
+                <div className="mt-5 border-t border-white/20 pt-5 sm:mt-6 sm:pt-6">
+                  <p className="mb-3 text-xs font-medium text-emerald-100 sm:text-sm">Connect online</p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {socialLinks.facebook && (
                       <a
                         href={socialLinks.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-emerald-600/90 p-2 text-white transition hover:bg-emerald-600"
+                        className="rounded-full bg-white/20 p-2 text-white transition hover:bg-white/30 backdrop-blur-sm"
+                        aria-label="Facebook"
                       >
-                        <Facebook className="h-5 w-5" />
+                        <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     {socialLinks.twitter && (
@@ -480,9 +491,10 @@ export default function RepresentativeLanding() {
                         href={socialLinks.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-emerald-500 p-2 text-white transition hover:bg-emerald-400"
+                        className="rounded-full bg-white/20 p-2 text-white transition hover:bg-white/30 backdrop-blur-sm"
+                        aria-label="Twitter"
                       >
-                        <Twitter className="h-5 w-5" />
+                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     {socialLinks.linkedin && (
@@ -490,9 +502,10 @@ export default function RepresentativeLanding() {
                         href={socialLinks.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-emerald-700 p-2 text-white transition hover:bg-emerald-600"
+                        className="rounded-full bg-white/20 p-2 text-white transition hover:bg-white/30 backdrop-blur-sm"
+                        aria-label="LinkedIn"
                       >
-                        <Linkedin className="h-5 w-5" />
+                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     {socialLinks.instagram && (
@@ -500,9 +513,10 @@ export default function RepresentativeLanding() {
                         href={socialLinks.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-full bg-pink-600 p-2 text-white transition hover:bg-pink-500"
+                        className="rounded-full bg-white/20 p-2 text-white transition hover:bg-white/30 backdrop-blur-sm"
+                        aria-label="Instagram"
                       >
-                        <Instagram className="h-5 w-5" />
+                        <Instagram className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                   </div>
@@ -510,67 +524,48 @@ export default function RepresentativeLanding() {
               )}
             </div>
 
-            {representative.bio && (
-              <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
-                <h2 className="mb-4 text-2xl font-semibold text-emerald-900">About Soil Seed &amp; Water</h2>
-                <p className="leading-relaxed text-emerald-900/90">{representative.bio}</p>
-              </div>
-            )}
-
-            {galleryImages.length > 0 && (
-              <div className="rounded-3xl border border-emerald-100 bg-white/90 p-6 shadow-lg shadow-emerald-900/5">
-                <h2 className="mb-4 text-2xl font-semibold text-emerald-900">Project snapshots</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
+            {(galleryImages.length > 0 || videoUrls.length > 0) && (
+              <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg shadow-emerald-900/5 sm:rounded-3xl sm:p-6">
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                   {galleryImages.map((image, index) => (
                     <div
                       key={`${image}-${index}`}
-                      className="overflow-hidden rounded-2xl border border-emerald-50 bg-muted/20"
+                      className="overflow-hidden rounded-xl border border-emerald-50 bg-muted/20 sm:rounded-2xl"
                     >
                       <img
                         src={image}
                         alt={`${representative.name} gallery ${index + 1}`}
-                        className="h-48 w-full object-cover transition duration-300 hover:scale-105"
+                        className="h-40 w-full object-cover transition duration-300 hover:scale-105 sm:h-48"
                       />
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {videoUrls.length > 0 && (
-              <div className="rounded-3xl border border-emerald-100 bg-white/95 p-6 shadow-lg shadow-emerald-900/5">
-                <h2 className="mb-2 text-2xl font-semibold text-emerald-900">Video spotlight</h2>
-                <p className="text-sm text-emerald-800/80">
-                  Tap play to meet {representative.name} and learn how we support partners at Soil Seed &amp; Water.
-                </p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   {videoUrls.map((url, index) => {
                     const embedUrl = getYouTubeEmbedUrl(url);
                     return (
-                      <div key={`${url}-${index}`} className="space-y-2">
-                        <div className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-900/20 shadow-inner aspect-video">
-                          {embedUrl ? (
-                            <iframe
-                              src={embedUrl}
-                              title={`Video ${index + 1}`}
-                              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                              allowFullScreen
-                              loading="lazy"
-                              className="h-full w-full"
-                            />
-                          ) : (
-                            <video
-                              src={url}
-                              className="h-full w-full object-cover"
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
-                              controls
-                            />
-                          )}
-                        </div>
-                        <p className="text-sm font-medium text-emerald-900">Video highlight {index + 1}</p>
+                      <div
+                        key={`${url}-${index}`}
+                        className="relative overflow-hidden rounded-xl border border-emerald-100 bg-emerald-900/20 shadow-inner aspect-video sm:rounded-2xl"
+                      >
+                        {embedUrl ? (
+                          <iframe
+                            src={embedUrl}
+                            title={`Video ${index + 1}`}
+                            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            className="h-full w-full"
+                          />
+                        ) : (
+                          <video
+                            src={url}
+                            className="h-full w-full object-cover"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            controls
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -579,124 +574,125 @@ export default function RepresentativeLanding() {
             )}
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-emerald-300/40 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-700 p-6 text-white shadow-xl shadow-emerald-900/30">
-              <h2 className="text-2xl font-semibold">{contactFormTitle}</h2>
-              <p className="mt-2 text-emerald-50/90">{contactFormDescription}</p>
-              <div className="mt-6 space-y-3 text-sm text-emerald-50/90">
-                <div className="rounded-2xl bg-white/10 px-4 py-3">
-                  <p className="font-semibold text-white">1:1 connection</p>
-                  <p>Skip phone trees—chat directly with {representative.name} about your project.</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 px-4 py-3">
-                  <p className="font-semibold text-white">Fast follow-up</p>
-                  <p>Average response time is under one business day with curated recommendations.</p>
-                </div>
-              </div>
-              <div className="mt-8 space-y-3">
-                <Button
-                  size="lg"
-                  className={primaryCtaClasses}
-                  onClick={() => setIsContactDialogOpen(true)}
-                >
-                  {contactButtonLabel}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={secondaryCtaClasses}
-                  onClick={handleDownloadContactCard}
-                  disabled={isDownloadingCard}
-                >
-                  <IdCard className="mr-2 h-4 w-4" />
-                  {isDownloadingCard ? 'Preparing...' : contactCardLabel}
-                </Button>
-              </div>
+          {representative.bio && (
+            <div className="mt-6 rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg shadow-emerald-900/5 sm:mt-8 sm:rounded-3xl sm:p-6">
+              <h2 className="mb-3 text-xl font-semibold text-emerald-900 sm:mb-4 sm:text-2xl">About Soil Seed &amp; Water</h2>
+              <p className="text-sm leading-relaxed text-emerald-900/90 sm:text-base">{representative.bio}</p>
             </div>
-          </div>
+          )}
         </section>
       </main>
 
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent className="w-[94vw] max-w-xl rounded-[32px] border border-emerald-100 bg-gradient-to-b from-white via-emerald-50/70 to-white p-5 shadow-2xl shadow-emerald-900/15 sm:p-8">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-emerald-900">{contactFormTitle}</DialogTitle>
-            <DialogDescription className="text-emerald-700">
+        <DialogContent className="w-[94vw] max-w-xl rounded-xl border border-gray-200 bg-white p-5 shadow-xl sm:p-6 md:p-8">
+          <DialogHeader className="space-y-2 pb-3 sm:pb-4">
+            <DialogTitle className="text-xl font-bold text-gray-900 tracking-tight sm:text-2xl">
+              {contactFormTitle}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-gray-600 leading-relaxed sm:text-sm">
               Provide a few quick details so {representative.name} can follow up within one business day.
             </DialogDescription>
           </DialogHeader>
 
           {isSubmitted ? (
-            <div className="py-8 text-center">
-              <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-600" />
-              <h3 className="mb-2 text-xl font-semibold text-gray-900">Thank You!</h3>
-              <p className="text-gray-600">
+            <div className="py-6 text-center sm:py-8">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 sm:mb-4 sm:h-16 sm:w-16">
+                <CheckCircle2 className="h-8 w-8 text-blue-600 sm:h-10 sm:w-10" />
+              </div>
+              <h3 className="mb-2 text-lg font-bold text-gray-900 sm:text-xl">Thank You!</h3>
+              <p className="mb-5 text-xs text-gray-600 leading-relaxed sm:mb-6 sm:text-sm">
                 Your message has been sent successfully. {representative.name} will get back to you
                 soon.
               </p>
-              <Button className="mt-6 w-full" onClick={() => setIsContactDialogOpen(false)}>
+              <Button 
+                className="w-full h-10 rounded-lg bg-gray-900 text-white text-sm font-medium shadow-sm hover:bg-gray-800 transition-colors sm:h-11 sm:text-base" 
+                onClick={() => setIsContactDialogOpen(false)}
+              >
                 Close
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label 
+                    htmlFor="firstName"
+                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide sm:text-xs"
+                  >
                     First Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="firstName"
-                    className={inputClasses}
+                    className="h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 sm:h-11 sm:text-base"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="John"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label 
+                    htmlFor="lastName"
+                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide sm:text-xs"
+                  >
                     Last Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="lastName"
-                    className={inputClasses}
+                    className="h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 sm:h-11 sm:text-base"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="Doe"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label 
+                  htmlFor="email"
+                  className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide sm:text-xs"
+                >
                   Email <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  className={inputClasses}
+                  className="h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 sm:h-11 sm:text-base"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="you@example.com"
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label 
+                  htmlFor="phone"
+                  className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide sm:text-xs"
+                >
+                  Phone
+                </Label>
                 <Input
                   id="phone"
                   type="tel"
-                  className={inputClasses}
+                  className="h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 sm:h-11 sm:text-base"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label 
+                  htmlFor="notes"
+                  className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide sm:text-xs"
+                >
+                  Notes
+                </Label>
                 <Textarea
                   id="notes"
-                  className={textareaClasses}
+                  className="min-h-[90px] rounded-lg border border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-150 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 resize-none sm:min-h-[100px] sm:text-base"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={4}
@@ -706,7 +702,7 @@ export default function RepresentativeLanding() {
 
               <Button
                 type="submit"
-                className="w-full h-12 rounded-full bg-emerald-500 text-white font-semibold tracking-wide shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-400 focus:ring-4 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-1 w-full h-11 rounded-lg bg-gray-900 text-white text-sm font-semibold tracking-wide shadow-sm transition-all duration-150 hover:bg-gray-800 hover:shadow-md focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:text-base"
                 disabled={submitMutation.isPending}
               >
                 {submitMutation.isPending ? (
@@ -725,6 +721,13 @@ export default function RepresentativeLanding() {
           )}
         </DialogContent>
       </Dialog>
+
+      <BusinessCardCapture
+        isOpen={isBusinessCardDialogOpen}
+        onClose={() => setIsBusinessCardDialogOpen(false)}
+        representativeSlug={slug}
+        representativeName={representative.name}
+      />
     </div>
   );
 }

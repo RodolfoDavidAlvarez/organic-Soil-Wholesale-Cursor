@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Phone, Search, User, NotebookPen } from 'lucide-react';
+import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface RepresentativeSummary {
@@ -35,6 +35,14 @@ interface RepresentativeSummary {
   email?: string;
   phone?: string;
   photo_url?: string;
+}
+
+interface ContactMetadata {
+  title?: string;
+  address?: string;
+  website?: string;
+  business_card_image_url?: string;
+  scanned_at?: string;
 }
 
 interface RepresentativeContactRecord {
@@ -48,6 +56,8 @@ interface RepresentativeContactRecord {
   message?: string;
   status: string;
   notes?: string;
+  source?: string;
+  metadata?: ContactMetadata;
   created_at: string;
   representative?: RepresentativeSummary | null;
 }
@@ -64,6 +74,7 @@ export default function AdminRepresentativeContacts() {
   const [selectedContact, setSelectedContact] = useState<RepresentativeContactRecord | null>(null);
   const [detailStatus, setDetailStatus] = useState<typeof statusOptions[number]>('new');
   const [detailNotes, setDetailNotes] = useState('');
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -274,14 +285,40 @@ export default function AdminRepresentativeContacts() {
                       {contacts.map((contact) => (
                         <TableRow key={contact.id}>
                           <TableCell>
-                            <div className="font-medium">
-                              {contact.first_name} {contact.last_name}
-                            </div>
-                            {contact.company_name && (
-                              <div className="text-sm text-muted-foreground">
-                                {contact.company_name}
+                            <div className="flex items-start gap-3">
+                              {contact.metadata?.business_card_image_url && (
+                                <button
+                                  onClick={() => setExpandedImageUrl(contact.metadata!.business_card_image_url!)}
+                                  className="flex-shrink-0 w-12 h-8 rounded overflow-hidden border bg-muted hover:ring-2 hover:ring-primary/50 transition-all cursor-zoom-in group relative"
+                                  title="Click to expand"
+                                >
+                                  <img
+                                    src={contact.metadata.business_card_image_url}
+                                    alt="Business card"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                    <ZoomIn className="h-3 w-3 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                </button>
+                              )}
+                              <div>
+                                <div className="font-medium flex items-center gap-2">
+                                  {contact.first_name} {contact.last_name}
+                                  {contact.source === 'business_card_scan' && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      <CreditCard className="h-3 w-3 mr-1" />
+                                      Scanned
+                                    </Badge>
+                                  )}
+                                </div>
+                                {contact.company_name && (
+                                  <div className="text-sm text-muted-foreground">
+                                    {contact.company_name}
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1 text-sm">
@@ -380,6 +417,34 @@ export default function AdminRepresentativeContacts() {
 
             {selectedContact && (
               <div className="space-y-6">
+                {/* Business Card Image */}
+                {selectedContact.metadata?.business_card_image_url && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Scanned Business Card
+                      </p>
+                      <button
+                        onClick={() => setExpandedImageUrl(selectedContact.metadata!.business_card_image_url!)}
+                        className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        View Full Size <ZoomIn className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setExpandedImageUrl(selectedContact.metadata!.business_card_image_url!)}
+                      className="rounded-lg border overflow-hidden bg-muted/30 w-full cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                    >
+                      <img
+                        src={selectedContact.metadata.business_card_image_url}
+                        alt="Business card"
+                        className="w-full max-h-48 object-contain"
+                      />
+                    </button>
+                  </div>
+                )}
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Prospect</p>
@@ -389,6 +454,11 @@ export default function AdminRepresentativeContacts() {
                     {selectedContact.company_name && (
                       <p className="text-sm text-muted-foreground">
                         {selectedContact.company_name}
+                      </p>
+                    )}
+                    {selectedContact.metadata?.title && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedContact.metadata.title}
                       </p>
                     )}
                   </div>
@@ -409,6 +479,31 @@ export default function AdminRepresentativeContacts() {
                     )}
                   </div>
                 </div>
+
+                {/* Additional metadata from business card */}
+                {(selectedContact.metadata?.address || selectedContact.metadata?.website) && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {selectedContact.metadata.address && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Address</p>
+                        <p className="text-sm">{selectedContact.metadata.address}</p>
+                      </div>
+                    )}
+                    {selectedContact.metadata.website && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Website</p>
+                        <a
+                          href={selectedContact.metadata.website.startsWith('http') ? selectedContact.metadata.website : `https://${selectedContact.metadata.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          {selectedContact.metadata.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Message / Notes</p>
@@ -457,6 +552,28 @@ export default function AdminRepresentativeContacts() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Image Lightbox */}
+        {expandedImageUrl && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            onClick={() => setExpandedImageUrl(null)}
+          >
+            <button
+              onClick={() => setExpandedImageUrl(null)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-8 w-8" />
+            </button>
+            <img
+              src={expandedImageUrl}
+              alt="Business card expanded"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
       </AdminLayout>
     </ProtectedAdminRoute>
   );

@@ -6,6 +6,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Serve uploads directory statically (business card images, etc.)
+const uploadsPath = path.join(__dirname, "../../client/public/uploads");
+
 // Import actual route modules
 import publicProductRoutes from "./publicProducts.js";
 import payAndPickupRoutes from "./payAndPickup.js";
@@ -26,6 +29,7 @@ import quoteRequestRoutes from "./quoteRequests.js";
 import specialRequestRoutes from "./specialRequests.js";
 import leadRoutes from "./leads.js";
 import representativeRoutes from "./representatives.js";
+import businessCardRoutes from "./businessCard.js";
 // import authRoutes from "./auth.js";
 import checkoutRoutes from "./checkout.js";
 import inventoryRoutes from "./inventory.js";
@@ -33,6 +37,9 @@ import grokRoutes from "./grok.js";
 // import pricingRoutes from "./pricing.js";
 
 export function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploads directory explicitly for business card images
+  app.use("/uploads", express.static(uploadsPath));
+
   // Serve static files from client/public in development
   if (process.env.NODE_ENV !== "production") {
     app.use(express.static(path.join(__dirname, "../../client/public")));
@@ -59,6 +66,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/representative-contacts", adminRepresentativeContactsRoutes);
   app.use("/api/admin/invitations", adminInvitationRoutes);
   app.use("/api/representatives", representativeRoutes);
+  app.use("/api/representatives", businessCardRoutes);
   app.use("/api/contact", contactRoutes);
   app.use("/api/quote", quoteRequestRoutes);
   app.use("/api/special-request", specialRequestRoutes);

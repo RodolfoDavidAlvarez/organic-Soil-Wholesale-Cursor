@@ -1241,5 +1241,969 @@ export async function sendAdminInvitationEmail(invitationDetails: { email: strin
   });
 }
 
+// Welcome email for new CRM contacts
+export async function sendWelcomeEmail(email: string, name?: string) {
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background-color: #ffffff;
+        }
+        .email-wrapper {
+          max-width: 600px;
+          margin: 0 auto;
+          background: #ffffff;
+        }
+        .header {
+          background: #2c5530;
+          padding: 40px 30px;
+          text-align: center;
+        }
+        .logo {
+          color: #ffffff;
+          font-size: 28px;
+          font-weight: 600;
+          letter-spacing: -0.5px;
+          margin: 0;
+        }
+        .hero-image {
+          width: 100%;
+          height: 300px;
+          object-fit: cover;
+          display: block;
+        }
+        .content {
+          padding: 50px 40px;
+        }
+        .greeting {
+          font-size: 24px;
+          color: #1a1a1a;
+          margin-bottom: 20px;
+          font-weight: 500;
+        }
+        .intro {
+          font-size: 16px;
+          color: #666;
+          line-height: 1.8;
+          margin-bottom: 40px;
+        }
+        .divider {
+          height: 1px;
+          background: #e5e7eb;
+          margin: 50px 0;
+        }
+        .section-title {
+          font-size: 20px;
+          color: #2c5530;
+          margin-bottom: 15px;
+          font-weight: 600;
+        }
+        .section-description {
+          font-size: 15px;
+          color: #666;
+          line-height: 1.7;
+          margin-bottom: 30px;
+        }
+        .product-grid {
+          display: table;
+          width: 100%;
+          margin: 40px 0;
+        }
+        .product-item {
+          display: table-cell;
+          width: 50%;
+          padding: 0 10px;
+          vertical-align: top;
+        }
+        .product-image {
+          width: 100%;
+          height: 180px;
+          object-fit: cover;
+          border-radius: 8px;
+          margin-bottom: 15px;
+        }
+        .product-name {
+          font-size: 14px;
+          color: #1a1a1a;
+          font-weight: 500;
+          text-align: center;
+          margin-bottom: 5px;
+        }
+        .product-desc {
+          font-size: 13px;
+          color: #999;
+          text-align: center;
+        }
+        .features {
+          margin: 30px 0;
+        }
+        .feature {
+          display: table;
+          width: 100%;
+          margin-bottom: 20px;
+        }
+        .feature-icon {
+          display: table-cell;
+          width: 40px;
+          vertical-align: top;
+          padding-top: 2px;
+        }
+        .feature-icon-circle {
+          width: 24px;
+          height: 24px;
+          background: #2c5530;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 12px;
+        }
+        .feature-text {
+          display: table-cell;
+          vertical-align: top;
+          font-size: 15px;
+          color: #666;
+          line-height: 1.6;
+        }
+        .cta-container {
+          text-align: center;
+          margin: 50px 0;
+          padding: 40px 30px;
+          background: #f9fafb;
+          border-radius: 8px;
+        }
+        .cta-title {
+          font-size: 22px;
+          color: #1a1a1a;
+          margin-bottom: 12px;
+          font-weight: 600;
+        }
+        .cta-subtitle {
+          font-size: 15px;
+          color: #999;
+          margin-bottom: 30px;
+        }
+        .button {
+          display: inline-block;
+          background: #2c5530;
+          color: #ffffff !important;
+          padding: 14px 32px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin: 8px;
+        }
+        .button-outline {
+          background: transparent;
+          border: 2px solid #2c5530;
+          color: #2c5530 !important;
+          padding: 12px 30px;
+        }
+        .contact-section {
+          padding: 40px 30px;
+          background: #f9fafb;
+          text-align: center;
+        }
+        .contact-title {
+          font-size: 18px;
+          color: #1a1a1a;
+          margin-bottom: 20px;
+          font-weight: 600;
+        }
+        .contact-details {
+          font-size: 14px;
+          color: #666;
+          line-height: 2;
+        }
+        .contact-details a {
+          color: #2c5530;
+          text-decoration: none;
+        }
+        .footer {
+          text-align: center;
+          padding: 30px;
+          background: #1a1a1a;
+          color: #999;
+          font-size: 13px;
+        }
+        .footer-brand {
+          color: #fff;
+          font-weight: 500;
+          margin-bottom: 10px;
+        }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 40px 25px; }
+          .greeting { font-size: 22px; }
+          .hero-image { height: 220px; }
+          .product-grid { display: block; }
+          .product-item {
+            display: block;
+            width: 100%;
+            padding: 0;
+            margin-bottom: 30px;
+          }
+          .product-image { height: 200px; }
+          .cta-container { padding: 30px 20px; }
+          .button {
+            display: block;
+            margin: 8px 0;
+            width: 100%;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-wrapper">
+        <!-- Header -->
+        <div class="header">
+          <h1 class="logo">Soil, Seed, and Water</h1>
+        </div>
+
+        <!-- Hero Image -->
+        <img src="${baseUrl}/V2%20Hero%20Page%20Photo.png" alt="Premium Organic Soil" class="hero-image" />
+
+        <!-- Main Content -->
+        <div class="content">
+          <h2 class="greeting">${name ? `Welcome, ${name}!` : "Welcome!"}</h2>
+
+          <p class="intro">
+            Thank you for connecting with us. We're excited to support your growing journey with premium organic soil amendments and professional gardening solutions.
+          </p>
+
+          <div class="divider"></div>
+
+          <!-- Wholesale Section -->
+          <h3 class="section-title">Organic Soil Wholesale</h3>
+          <p class="section-description">
+            Professional-grade bulk organic soil amendments for landscapers, contractors, and commercial growers.
+          </p>
+
+          <!-- Product Grid -->
+          <div class="product-grid">
+            <div class="product-item">
+              <img src="${baseUrl}/dans-gold-batch-22.png" alt="Premium Worm Castings" class="product-image" />
+              <div class="product-name">Premium Worm Castings</div>
+              <div class="product-desc">Organic soil enhancement</div>
+            </div>
+            <div class="product-item">
+              <img src="${baseUrl}/dans-gold-batch-24.png" alt="Dairy Compost" class="product-image" />
+              <div class="product-name">Organic Dairy Compost</div>
+              <div class="product-desc">Rich nutrient blend</div>
+            </div>
+          </div>
+
+          <!-- Features -->
+          <div class="features">
+            <div class="feature">
+              <div class="feature-icon">
+                <div class="feature-icon-circle">✓</div>
+              </div>
+              <div class="feature-text">
+                <strong>Bulk Pricing</strong> — Competitive rates on pallets, totes, and truckloads
+              </div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">
+                <div class="feature-icon-circle">✓</div>
+              </div>
+              <div class="feature-text">
+                <strong>Flexible Delivery</strong> — Scheduled delivery or convenient pickup
+              </div>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">
+                <div class="feature-icon-circle">✓</div>
+              </div>
+              <div class="feature-text">
+                <strong>Professional Support</strong> — Dedicated account managers and product guidance
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Retail Store Section -->
+          <h3 class="section-title">Retail Store in Flagstaff</h3>
+          <p class="section-description">
+            Visit our local store for gardening supplies, seeds, expert advice, and everything you need to grow successfully.
+          </p>
+
+          <!-- CTA Section -->
+          <div class="cta-container">
+            <h3 class="cta-title">Ready to Get Growing?</h3>
+            <p class="cta-subtitle">Explore our products and connect with our team</p>
+            <a href="${baseUrl}/products" class="button">Browse Products</a>
+            <a href="${baseUrl}/contact" class="button button-outline">Contact Us</a>
+          </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="contact-section">
+          <h4 class="contact-title">Get in Touch</h4>
+          <div class="contact-details">
+            <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}">${COMPANY_PHONE}</a><br>
+            <a href="mailto:ralvarez@soilseedandwater.com">ralvarez@soilseedandwater.com</a><br>
+            Flagstaff, Arizona<br>
+            Monday-Saturday, 7:00 AM - 5:00 PM
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <div class="footer-brand">Soil, Seed, and Water</div>
+          Premium Organic Growing Solutions<br>
+          © ${new Date().getFullYear()} All rights reserved
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textVersion = `
+SOIL, SEED, AND WATER
+
+${name ? `Welcome, ${name}!` : "Welcome!"}
+
+Thank you for connecting with us. We're excited to support your growing journey with premium organic soil amendments and professional gardening solutions.
+
+ORGANIC SOIL WHOLESALE
+Professional-grade bulk organic soil amendments for landscapers, contractors, and commercial growers.
+
+✓ Bulk Pricing — Competitive rates on pallets, totes, and truckloads
+✓ Flexible Delivery — Scheduled delivery or convenient pickup
+✓ Professional Support — Dedicated account managers and product guidance
+
+RETAIL STORE IN FLAGSTAFF
+Visit our local store for gardening supplies, seeds, expert advice, and everything you need to grow successfully.
+
+READY TO GET GROWING?
+Browse Products: ${baseUrl}/products
+Contact Us: ${baseUrl}/contact
+
+GET IN TOUCH
+Phone: ${COMPANY_PHONE}
+Email: ralvarez@soilseedandwater.com
+Location: Flagstaff, Arizona
+Hours: Monday-Saturday, 7:00 AM - 5:00 PM
+
+© ${new Date().getFullYear()} Soil, Seed, and Water - Premium Organic Growing Solutions
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Welcome to Soil, Seed, and Water`,
+    html,
+    text: textVersion,
+  });
+}
+
+// Follow-up email - Check in with customers
+export async function sendFollowUpEmail(email: string, name?: string) {
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background-color: #ffffff;
+        }
+        .email-wrapper {
+          max-width: 580px;
+          margin: 0 auto;
+          background: #ffffff;
+        }
+        .header {
+          background: #2c5530;
+          padding: 35px 30px;
+          text-align: center;
+        }
+        .logo {
+          color: #ffffff;
+          font-size: 24px;
+          font-weight: 600;
+          margin: 0;
+        }
+        .content {
+          padding: 45px 35px;
+        }
+        .greeting {
+          font-size: 22px;
+          color: #1a1a1a;
+          margin-bottom: 25px;
+          font-weight: 500;
+        }
+        .message {
+          font-size: 16px;
+          color: #666;
+          line-height: 1.8;
+          margin-bottom: 25px;
+        }
+        .question-box {
+          background: #f9fafb;
+          padding: 30px;
+          border-radius: 8px;
+          margin: 35px 0;
+          border-left: 4px solid #2c5530;
+        }
+        .question {
+          font-size: 17px;
+          color: #1a1a1a;
+          font-weight: 500;
+          margin-bottom: 15px;
+        }
+        .question-text {
+          font-size: 15px;
+          color: #666;
+          line-height: 1.7;
+        }
+        .cta-container {
+          text-align: center;
+          margin: 40px 0;
+        }
+        .button {
+          display: inline-block;
+          background: #2c5530;
+          color: #ffffff !important;
+          padding: 14px 32px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin: 8px;
+        }
+        .help-section {
+          background: #f9fafb;
+          padding: 30px;
+          border-radius: 8px;
+          margin: 35px 0;
+          text-align: center;
+        }
+        .help-title {
+          font-size: 18px;
+          color: #1a1a1a;
+          margin-bottom: 12px;
+          font-weight: 600;
+        }
+        .help-text {
+          font-size: 15px;
+          color: #666;
+          margin-bottom: 20px;
+        }
+        .contact-link {
+          color: #2c5530;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .signature {
+          margin-top: 40px;
+          padding-top: 30px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .signature-text {
+          font-size: 15px;
+          color: #666;
+          line-height: 1.6;
+        }
+        .signature-name {
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-top: 8px;
+        }
+        .footer {
+          text-align: center;
+          padding: 25px;
+          background: #f9fafb;
+          color: #999;
+          font-size: 13px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer-contact {
+          color: #666;
+          margin-top: 10px;
+        }
+        .footer-contact a {
+          color: #2c5530;
+          text-decoration: none;
+        }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 35px 25px; }
+          .greeting { font-size: 20px; }
+          .question-box { padding: 25px 20px; }
+          .help-section { padding: 25px 20px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-wrapper">
+        <div class="header">
+          <h1 class="logo">Soil, Seed, and Water</h1>
+        </div>
+
+        <div class="content">
+          <h2 class="greeting">${name ? `Hi ${name},` : "Hi there,"}</h2>
+
+          <p class="message">
+            We wanted to check in and see how your growing season is going!
+          </p>
+
+          <p class="message">
+            Whether you're working on landscaping projects, managing a commercial operation, or tending to your garden, we'd love to hear about your progress and see if there's anything we can help with.
+          </p>
+
+          <div class="question-box">
+            <div class="question">How are your projects coming along?</div>
+            <div class="question-text">
+              We're always here to provide guidance on soil amendments, product recommendations, or answer any questions you might have about getting the best results from your growing efforts.
+            </div>
+          </div>
+
+          <p class="message">
+            Our team has been helping growers throughout Arizona achieve amazing results with our premium organic soil amendments. We'd be happy to share some insights that might help you too.
+          </p>
+
+          <div class="help-section">
+            <h3 class="help-title">Need Assistance?</h3>
+            <p class="help-text">
+              Have questions about products, pricing, or delivery? Our team is here to help.
+            </p>
+            <a href="${baseUrl}/contact" class="button">Get in Touch</a>
+            <br><br>
+            <span class="help-text">
+              Or call us directly at <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}" class="contact-link">${COMPANY_PHONE}</a>
+            </span>
+          </div>
+
+          <p class="message">
+            We appreciate your business and look forward to supporting your continued success!
+          </p>
+
+          <div class="signature">
+            <p class="signature-text">
+              Best regards,
+            </p>
+            <p class="signature-name">
+              The Soil, Seed, and Water Team
+            </p>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="footer-contact">
+            <a href="mailto:ralvarez@soilseedandwater.com">ralvarez@soilseedandwater.com</a><br>
+            ${COMPANY_PHONE} • Flagstaff, Arizona
+          </div>
+          <p style="margin-top: 15px; font-size: 12px;">
+            © ${new Date().getFullYear()} Soil, Seed, and Water. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textVersion = `
+SOIL, SEED, AND WATER
+
+${name ? `Hi ${name},` : "Hi there,"}
+
+We wanted to check in and see how your growing season is going!
+
+Whether you're working on landscaping projects, managing a commercial operation, or tending to your garden, we'd love to hear about your progress and see if there's anything we can help with.
+
+HOW ARE YOUR PROJECTS COMING ALONG?
+We're always here to provide guidance on soil amendments, product recommendations, or answer any questions you might have about getting the best results from your growing efforts.
+
+Our team has been helping growers throughout Arizona achieve amazing results with our premium organic soil amendments. We'd be happy to share some insights that might help you too.
+
+NEED ASSISTANCE?
+Have questions about products, pricing, or delivery? Our team is here to help.
+
+Contact us: ${baseUrl}/contact
+Call us: ${COMPANY_PHONE}
+
+We appreciate your business and look forward to supporting your continued success!
+
+Best regards,
+The Soil, Seed, and Water Team
+
+---
+ralvarez@soilseedandwater.com
+${COMPANY_PHONE} • Flagstaff, Arizona
+© ${new Date().getFullYear()} Soil, Seed, and Water
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `How are your projects going?`,
+    html,
+    text: textVersion,
+  });
+}
+
+// Specialized email for avocado growers
+export async function sendAvocadoGrowersEmail(email: string, name?: string) {
+  const baseUrl =
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === "production" && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background-color: #ffffff;
+        }
+        .email-wrapper {
+          max-width: 600px;
+          margin: 0 auto;
+          background: #ffffff;
+        }
+        .header {
+          background: #2c5530;
+          padding: 40px 30px;
+          text-align: center;
+        }
+        .logo {
+          color: #ffffff;
+          font-size: 26px;
+          font-weight: 600;
+          margin: 0;
+        }
+        .tagline {
+          color: #a7f3d0;
+          font-size: 14px;
+          margin-top: 8px;
+        }
+        .content {
+          padding: 45px 35px;
+        }
+        .greeting {
+          font-size: 24px;
+          color: #1a1a1a;
+          margin-bottom: 20px;
+          font-weight: 500;
+        }
+        .intro {
+          font-size: 16px;
+          color: #666;
+          line-height: 1.8;
+          margin-bottom: 30px;
+        }
+        .highlight-box {
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          padding: 30px;
+          border-radius: 8px;
+          margin: 35px 0;
+          border-left: 4px solid #22c55e;
+        }
+        .highlight-title {
+          font-size: 19px;
+          color: #166534;
+          font-weight: 600;
+          margin-bottom: 15px;
+        }
+        .highlight-text {
+          font-size: 15px;
+          color: #15803d;
+          line-height: 1.7;
+        }
+        .benefits-section {
+          margin: 40px 0;
+        }
+        .section-title {
+          font-size: 20px;
+          color: #2c5530;
+          margin-bottom: 20px;
+          font-weight: 600;
+        }
+        .benefit-item {
+          display: table;
+          width: 100%;
+          margin-bottom: 20px;
+        }
+        .benefit-icon {
+          display: table-cell;
+          width: 35px;
+          vertical-align: top;
+          padding-top: 3px;
+        }
+        .benefit-icon-circle {
+          width: 20px;
+          height: 20px;
+          background: #22c55e;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .benefit-text {
+          display: table-cell;
+          vertical-align: top;
+          font-size: 15px;
+          color: #666;
+          line-height: 1.7;
+        }
+        .benefit-text strong {
+          color: #1a1a1a;
+        }
+        .cta-section {
+          text-align: center;
+          margin: 45px 0;
+          padding: 40px 30px;
+          background: #f9fafb;
+          border-radius: 8px;
+        }
+        .cta-title {
+          font-size: 22px;
+          color: #1a1a1a;
+          margin-bottom: 15px;
+          font-weight: 600;
+        }
+        .cta-subtitle {
+          font-size: 15px;
+          color: #666;
+          margin-bottom: 25px;
+        }
+        .button {
+          display: inline-block;
+          background: #2c5530;
+          color: #ffffff !important;
+          padding: 14px 32px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin: 8px;
+        }
+        .button-outline {
+          background: transparent;
+          border: 2px solid #2c5530;
+          color: #2c5530 !important;
+          padding: 12px 30px;
+        }
+        .expert-tip {
+          background: #fef3c7;
+          padding: 25px;
+          border-radius: 8px;
+          margin: 35px 0;
+          border-left: 4px solid #f59e0b;
+        }
+        .tip-label {
+          color: #92400e;
+          font-weight: 600;
+          font-size: 13px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 10px;
+        }
+        .tip-text {
+          color: #78350f;
+          font-size: 15px;
+          line-height: 1.7;
+        }
+        .footer {
+          text-align: center;
+          padding: 30px;
+          background: #1a1a1a;
+          color: #999;
+          font-size: 13px;
+        }
+        .footer-brand {
+          color: #fff;
+          font-weight: 500;
+          margin-bottom: 10px;
+        }
+        @media only screen and (max-width: 600px) {
+          .content { padding: 35px 25px; }
+          .greeting { font-size: 22px; }
+          .highlight-box { padding: 25px 20px; }
+          .cta-section { padding: 30px 20px; }
+          .button {
+            display: block;
+            margin: 8px 0;
+            width: 100%;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-wrapper">
+        <div class="header">
+          <h1 class="logo">Soil, Seed, and Water</h1>
+          <p class="tagline">Premium Organic Solutions for Avocado Growers</p>
+        </div>
+
+        <div class="content">
+          <h2 class="greeting">${name ? `Hi ${name},` : "Hello Avocado Grower,"}</h2>
+
+          <p class="intro">
+            Growing exceptional avocados requires more than just good weather and water—it starts with the right soil foundation. We specialize in providing premium organic soil amendments specifically formulated to help avocado orchards thrive.
+          </p>
+
+          <div class="highlight-box">
+            <div class="highlight-title">Why Avocado Trees Love Our Organic Amendments</div>
+            <div class="highlight-text">
+              Avocados need well-draining, nutrient-rich soil with the right microbial balance. Our organic worm castings and dairy compost deliver exactly that—improving soil structure, enhancing water retention, and providing slow-release nutrients that support healthy root development and consistent fruit production.
+            </div>
+          </div>
+
+          <div class="benefits-section">
+            <h3 class="section-title">Perfect for Avocado Orchards</h3>
+
+            <div class="benefit-item">
+              <div class="benefit-icon">
+                <span class="benefit-icon-circle"></span>
+              </div>
+              <div class="benefit-text">
+                <strong>Improved Drainage & Aeration</strong> — Essential for preventing root rot in avocado trees
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-icon">
+                <span class="benefit-icon-circle"></span>
+              </div>
+              <div class="benefit-text">
+                <strong>Enhanced Nutrient Availability</strong> — Slow-release organic nutrition for consistent growth and fruiting
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-icon">
+                <span class="benefit-icon-circle"></span>
+              </div>
+              <div class="benefit-text">
+                <strong>Beneficial Microorganisms</strong> — Living soil biology that supports tree health and disease resistance
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-icon">
+                <span class="benefit-icon-circle"></span>
+              </div>
+              <div class="benefit-text">
+                <strong>pH Balance</strong> — Helps maintain the slightly acidic soil conditions avocados prefer (6.0-6.5 pH)
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-icon">
+                <span class="benefit-icon-circle"></span>
+              </div>
+              <div class="benefit-text">
+                <strong>Bulk Availability</strong> — Perfect for orchards of all sizes, from backyard groves to commercial operations
+              </div>
+            </div>
+          </div>
+
+          <div class="expert-tip">
+            <div class="tip-label">🌱 Expert Tip</div>
+            <div class="tip-text">
+              Apply our organic compost around the drip line of your avocado trees 2-3 times per year. This supports the feeder roots where the tree absorbs most of its nutrients and water, leading to healthier trees and better yields.
+            </div>
+          </div>
+
+          <p class="intro">
+            Whether you're managing a commercial avocado operation or tending to a few backyard trees, we have the right products and expertise to help you succeed.
+          </p>
+
+          <div class="cta-section">
+            <h3 class="cta-title">Ready to Enhance Your Orchard?</h3>
+            <p class="cta-subtitle">Get wholesale pricing and delivery options</p>
+            <a href="${baseUrl}/products" class="button">View Products</a>
+            <a href="${baseUrl}/contact" class="button button-outline">Request Quote</a>
+          </div>
+
+          <p class="intro" style="text-align: center;">
+            <strong>Questions about application rates or products?</strong><br>
+            Call us at ${COMPANY_PHONE} — We're here to help your avocados thrive.
+          </p>
+        </div>
+
+        <div class="footer">
+          <div class="footer-brand">Soil, Seed, and Water</div>
+          Premium Organic Growing Solutions<br>
+          Flagstaff, Arizona • ${COMPANY_PHONE}<br>
+          © ${new Date().getFullYear()} All rights reserved
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textVersion = `
+SOIL, SEED, AND WATER
+Premium Organic Solutions for Avocado Growers
+
+${name ? `Hi ${name},` : "Hello Avocado Grower,"}
+
+Growing exceptional avocados requires more than just good weather and water—it starts with the right soil foundation. We specialize in providing premium organic soil amendments specifically formulated to help avocado orchards thrive.
+
+WHY AVOCADO TREES LOVE OUR ORGANIC AMENDMENTS
+Avocados need well-draining, nutrient-rich soil with the right microbial balance. Our organic worm castings and dairy compost deliver exactly that—improving soil structure, enhancing water retention, and providing slow-release nutrients that support healthy root development and consistent fruit production.
+
+PERFECT FOR AVOCADO ORCHARDS
+• Improved Drainage & Aeration — Essential for preventing root rot in avocado trees
+• Enhanced Nutrient Availability — Slow-release organic nutrition for consistent growth and fruiting
+• Beneficial Microorganisms — Living soil biology that supports tree health and disease resistance
+• pH Balance — Helps maintain the slightly acidic soil conditions avocados prefer (6.0-6.5 pH)
+• Bulk Availability — Perfect for orchards of all sizes, from backyard groves to commercial operations
+
+🌱 EXPERT TIP
+Apply our organic compost around the drip line of your avocado trees 2-3 times per year. This supports the feeder roots where the tree absorbs most of its nutrients and water, leading to healthier trees and better yields.
+
+Whether you're managing a commercial avocado operation or tending to a few backyard trees, we have the right products and expertise to help you succeed.
+
+READY TO ENHANCE YOUR ORCHARD?
+View Products: ${baseUrl}/products
+Request Quote: ${baseUrl}/contact
+
+Questions about application rates or products?
+Call us at ${COMPANY_PHONE} — We're here to help your avocados thrive.
+
+---
+SOIL, SEED, AND WATER
+Premium Organic Growing Solutions
+Flagstaff, Arizona • ${COMPANY_PHONE}
+© ${new Date().getFullYear()} All rights reserved
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Premium Organic Solutions for Your Avocado Orchard`,
+    html,
+    text: textVersion,
+  });
+}
+
 // Re-export additional notification functions
 export { sendAdminContactFormNotification, sendAdminQuoteRequestNotification, sendAdminSpecialRequestNotification } from "./emailNotifications.js";

@@ -27,3 +27,24 @@
 
 ## Database Management
 - Use Supabase MPC when needed modifications in the database
+
+## API Keys Location (.env)
+
+| Service | Key | Purpose |
+|---------|-----|---------|
+| **Supabase** | `VITE_SUPABASE_ANON_KEY` | Public/client-side - safe to expose, limited by Row Level Security (RLS) |
+| **Supabase** | `SUPABASE_SERVICE_ROLE_KEY` | Server-side ONLY - bypasses RLS, full admin access. NEVER expose to client |
+| **Stripe** | `STRIPE_SECRET_KEY` | Server-side - process payments, create invoices |
+| **Stripe** | `VITE_STRIPE_PUBLISHABLE_KEY` | Client-side - safe to expose, used for Stripe.js |
+| **HubSpot** | `HUBSPOT_ACCESS_TOKEN` | Server-side - API calls to create/read contacts |
+| **HubSpot** | `HUBSPOT_CLIENT_SECRET` | Server-side - webhook signature validation |
+| **Resend** | `RESEND_API_KEY` | Server-side - send transactional emails |
+| **Grok** | `XAI_API_KEY` | Server-side - AI features |
+
+### Key Types Explained
+
+| Type | Can Expose? | Use Case |
+|------|-------------|----------|
+| **Anon/Public/Publishable** | ✅ Yes | Frontend code, browser - limited permissions |
+| **Secret/Service Role** | ❌ Never | Backend only - full access, bypasses security |
+| **Access Token** | ❌ Never | API authentication - treat like password |

@@ -1087,7 +1087,7 @@ export default function AdminProductDetail() {
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6 pb-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/admin/products")}>
@@ -1118,7 +1118,7 @@ export default function AdminProductDetail() {
           </div>
 
           {/* Sticky Save Button */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-lg">
+          <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-lg">
             <div className="container mx-auto px-4 py-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
@@ -1139,9 +1139,6 @@ export default function AdminProductDetail() {
               </div>
             </div>
           </div>
-
-          {/* Spacer to prevent content from being hidden behind sticky button */}
-          <div className="h-20" />
 
           {isError && (
             <div className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
@@ -1628,17 +1625,19 @@ export default function AdminProductDetail() {
                                   <div className="space-y-1">
                                     <Label className="text-xs">Image</Label>
                                     <div className="flex items-center gap-2">
-                                      {option.image ? (
+                                      {(option.image || entry.image) ? (
                                         <div className="relative group">
-                                          <img src={option.image} alt={entry.label} className="h-16 w-16 rounded-lg object-cover border" />
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSizePriceChange(entry.key, "image", "")}
-                                            className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                            aria-label="Remove image"
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </button>
+                                          <img src={option.image || entry.image} alt={entry.label} className="h-16 w-16 rounded-lg object-cover border" />
+                                          {option.image && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSizePriceChange(entry.key, "image", "")}
+                                              className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                              aria-label="Remove image"
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </button>
+                                          )}
                                         </div>
                                       ) : null}
                                       <div className="flex-1">
@@ -2102,6 +2101,9 @@ export default function AdminProductDetail() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          
+          {/* Spacer to prevent content from being hidden behind sticky button (py-3 + button height ≈ 68px) */}
+          <div className="h-[68px]" aria-hidden="true" style={{ marginBottom: 0, paddingBottom: 0 }} />
         </form>
       </AdminLayout>
     </ProtectedAdminRoute>

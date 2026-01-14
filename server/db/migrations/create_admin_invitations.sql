@@ -34,3 +34,4 @@ CREATE TRIGGER admin_invitations_updated_at
   EXECUTE FUNCTION update_admin_invitations_updated_at();
 
 
+

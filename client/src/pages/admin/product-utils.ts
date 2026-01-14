@@ -723,7 +723,9 @@ export const buildEditForm = (product: Product): EditFormData => {
   const baseSizePriceFormValues: SizePriceOptionFormValue[] = SIZE_CATALOG.map((entry) => {
     const existing = findSizeOptionByCatalog(entry);
     const priceCents = getProductSizePriceCents(existing);
-    const image = existing?.image ?? entry.image;
+    // Use uploaded image if it exists and is not empty, otherwise fall back to catalog default
+    const existingImage = existing?.image && typeof existing.image === "string" && existing.image.trim().length > 0 ? existing.image.trim() : undefined;
+    const image = existingImage ?? entry.image;
     const inventoryQuantity = inventoryMap.get(entry.label.toLowerCase());
 
     const isActive =
@@ -731,16 +733,16 @@ export const buildEditForm = (product: Product): EditFormData => {
         ? Boolean(existing.is_active)
         : availableSizeSet.has(entry.label.toLowerCase()) || availableSizeSet.has(entry.key.toLowerCase());
 
-    return {
-      key: entry.key,
-      label: entry.label,
-      description: entry.description,
-      image: image ?? entry.image,
-      price: priceCents !== null ? formatPrice(priceCents) : "",
-      isActive,
-      inventoryQuantity: inventoryQuantity != null && Number.isFinite(inventoryQuantity) ? String(inventoryQuantity) : "",
-      displayOrder: existing?.display_order ?? undefined,
-    };
+      return {
+        key: entry.key,
+        label: entry.label,
+        description: entry.description,
+        image: image, // Already has fallback to entry.image above
+        price: priceCents !== null ? formatPrice(priceCents) : "",
+        isActive,
+        inventoryQuantity: inventoryQuantity != null && Number.isFinite(inventoryQuantity) ? String(inventoryQuantity) : "",
+        displayOrder: existing?.display_order ?? undefined,
+      };
   });
 
   const catalogKeys = new Set<string>(SIZE_CATALOG.map((entry) => entry.key));

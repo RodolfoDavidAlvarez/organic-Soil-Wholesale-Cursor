@@ -47,3 +47,4 @@ ON products USING gin (size_price_options);
 -- LIMIT 5;
 
 
+
