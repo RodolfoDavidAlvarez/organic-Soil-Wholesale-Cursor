@@ -24,6 +24,7 @@ import adminNotificationRoutes from "./admin/notifications.js";
 import adminRepresentativeRoutes from "./admin/representatives.js";
 import adminRepresentativeContactsRoutes from "./admin/representativeContacts.js";
 import adminInvitationRoutes from "./admin/invitations.js";
+import adminAnalyticsRoutes from "./admin/analytics.js";
 import contactRoutes from "./contact.js";
 import quoteRequestRoutes from "./quoteRequests.js";
 import specialRequestRoutes from "./specialRequests.js";
@@ -65,6 +66,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/admin/representatives", adminRepresentativeRoutes);
   app.use("/api/admin/representative-contacts", adminRepresentativeContactsRoutes);
   app.use("/api/admin/invitations", adminInvitationRoutes);
+  app.use("/api/admin/analytics", adminAnalyticsRoutes);
   app.use("/api/representatives", representativeRoutes);
   app.use("/api/representatives", businessCardRoutes);
   app.use("/api/contact", contactRoutes);

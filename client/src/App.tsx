@@ -45,6 +45,7 @@ const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Admin Pages
+const Register = lazy(() => import("@/pages/Register"));
 const AdminLogin = lazy(() => import("@/pages/admin/Login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
 const AdminProducts = lazy(() => import("@/pages/admin/Products"));
@@ -59,6 +60,7 @@ const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/Representat
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
+const CRMCapture = lazy(() => import("@/pages/CRMCapture"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
 
@@ -103,6 +105,9 @@ function Router() {
         {GROK_ASSISTANT_ENABLED && <Route path="/grok" component={GrokAssistant} />}
         <Route path="/video-demo" component={VideoDemo} />
         <Route path="/rep/:slug" component={RepresentativeLanding} />
+        <Route path="/crm" component={CRMCapture} />
+        <Route path="/crm/ssw" component={CRMCapture} />
+        <Route path="/crm/ufe" component={CRMCapture} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />
@@ -113,6 +118,7 @@ function Router() {
         <Route path="/verify-email/:token" component={VerifyEmail} />
 
         {/* Admin Routes */}
+        <Route path="/register" component={Register} />
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/invite/:token" component={AcceptInvitation} />
         <Route path="/admin" component={AdminDashboard} />
@@ -141,7 +147,8 @@ function App() {
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
   const isRepresentativeLanding = location.startsWith("/rep/");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding;
+  const isCRMCapture = location.startsWith("/crm");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture;
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn } from 'lucide-react';
+import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn, Building2, Leaf, GraduationCap, MapPin, Tractor, Truck, Trees, Factory, Shield, Heart, BookOpen, Calendar } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface RepresentativeSummary {
@@ -43,6 +43,12 @@ interface ContactMetadata {
   website?: string;
   business_card_image_url?: string;
   scanned_at?: string;
+  company_research?: string;
+  ai_generated_email?: {
+    subject?: string;
+    body?: string;
+  };
+  voice_notes?: string;
 }
 
 interface RepresentativeContactRecord {
@@ -53,14 +59,60 @@ interface RepresentativeContactRecord {
   email: string;
   phone?: string;
   company_name?: string;
+  title?: string;
+  website?: string;
   message?: string;
   status: string;
   notes?: string;
   source?: string;
+  segment?: string;
+  lead_source?: string;
+  partner_owner?: string;
+  context_notes?: string;
+  company_context?: string;
+  first_email_sent_at?: string;
+  first_email_subject?: string;
+  first_email_body?: string;
   metadata?: ContactMetadata;
   created_at: string;
   representative?: RepresentativeSummary | null;
 }
+
+// Segment configuration with colors and icons
+const SEGMENT_CONFIG: Record<string, { label: string; color: string; icon: typeof Building2 }> = {
+  operator: { label: 'Operator', color: 'bg-amber-500', icon: Factory },
+  farmer_vineyard: { label: 'Vineyard', color: 'bg-purple-500', icon: MapPin },
+  farmer_orchard: { label: 'Orchard', color: 'bg-orange-500', icon: Trees },
+  farmer_general: { label: 'Farmer', color: 'bg-green-600', icon: Tractor },
+  waste_hauler: { label: 'Hauler', color: 'bg-slate-600', icon: Truck },
+  landscaper: { label: 'Landscaper', color: 'bg-emerald-500', icon: Trees },
+  municipal: { label: 'Municipal', color: 'bg-blue-500', icon: Building2 },
+  equipment: { label: 'Equipment', color: 'bg-slate-500', icon: Factory },
+  policy: { label: 'Policy', color: 'bg-indigo-500', icon: Shield },
+  esg: { label: 'ESG', color: 'bg-teal-500', icon: Heart },
+  education: { label: 'Education', color: 'bg-cyan-500', icon: BookOpen },
+  other: { label: 'Other', color: 'bg-gray-500', icon: Building2 },
+};
+
+// Partner owner configuration
+const PARTNER_CONFIG: Record<string, { label: string; color: string; icon: typeof Leaf }> = {
+  ssw: { label: 'SSW', color: 'bg-emerald-600', icon: Leaf },
+  ufe: { label: 'UFE', color: 'bg-blue-600', icon: GraduationCap },
+  both: { label: 'Both', color: 'bg-purple-600', icon: Building2 },
+};
+
+// Lead source options
+const LEAD_SOURCE_OPTIONS = [
+  'USCC 2026',
+  'Trade Show',
+  'AZCC',
+  'Referral',
+  'Website',
+  'Conference',
+  'Cold Outreach',
+  'Partner Intro',
+  'Other',
+];
 
 const statusOptions = ['new', 'contacted', 'qualified', 'converted', 'archived'] as const;
 
@@ -68,6 +120,9 @@ export default function AdminRepresentativeContacts() {
   const { admin } = useAdminAuth();
   const isSuperAdmin = admin?.role === 'super_admin';
   const [statusFilter, setStatusFilter] = useState<'all' | typeof statusOptions[number]>('all');
+  const [segmentFilter, setSegmentFilter] = useState<string>('all');
+  const [ownerFilter, setOwnerFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -75,6 +130,8 @@ export default function AdminRepresentativeContacts() {
   const [detailStatus, setDetailStatus] = useState<typeof statusOptions[number]>('new');
   const [detailNotes, setDetailNotes] = useState('');
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,12 +152,21 @@ export default function AdminRepresentativeContacts() {
     data: contacts = [],
     isLoading,
   } = useQuery<RepresentativeContactRecord[]>({
-    queryKey: ['adminRepresentativeContacts', statusFilter, searchTerm],
+    queryKey: ['adminRepresentativeContacts', statusFilter, segmentFilter, ownerFilter, sourceFilter, searchTerm],
     queryFn: async () => {
       const token = localStorage.getItem('adminToken');
       const params = new URLSearchParams();
       if (statusFilter !== 'all') {
         params.append('status', statusFilter);
+      }
+      if (segmentFilter !== 'all') {
+        params.append('segment', segmentFilter);
+      }
+      if (ownerFilter !== 'all') {
+        params.append('partner_owner', ownerFilter);
+      }
+      if (sourceFilter !== 'all') {
+        params.append('lead_source', sourceFilter);
       }
       if (searchTerm) {
         params.append('search', searchTerm);
@@ -121,6 +187,68 @@ export default function AdminRepresentativeContacts() {
       return response.json();
     },
   });
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/representative-contacts/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete contacts');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, deletedIds) => {
+      queryClient.invalidateQueries({ queryKey: ['adminRepresentativeContacts'] });
+      setSelectedIds(new Set());
+      toast({
+        title: 'Contacts deleted',
+        description: `Successfully deleted ${deletedIds.length} contact(s)`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === contacts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(contacts.map(c => c.id)));
+    }
+  };
+
+  const handleSelectOne = (id: number) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.size} contact(s)? This cannot be undone.`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedIds));
+    }
+  };
 
   const updateContactMutation = useMutation({
     mutationFn: async ({
@@ -172,6 +300,13 @@ export default function AdminRepresentativeContacts() {
     setIsDialogOpen(true);
   };
 
+  const handleOpenSidePanel = (contact: RepresentativeContactRecord) => {
+    setSelectedContact(contact);
+    setDetailStatus((contact.status as typeof statusOptions[number]) || 'new');
+    setDetailNotes(contact.notes || '');
+    setIsSidePanelOpen(true);
+  };
+
   const handleSaveDetail = async () => {
     if (!selectedContact) return;
 
@@ -204,6 +339,40 @@ export default function AdminRepresentativeContacts() {
     }
   };
 
+  const renderSegmentBadge = (segment?: string) => {
+    if (!segment) return null;
+    const config = SEGMENT_CONFIG[segment] || SEGMENT_CONFIG.other;
+    const Icon = config.icon;
+    return (
+      <Badge className={`${config.color} text-white text-xs`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const renderOwnerBadge = (owner?: string) => {
+    if (!owner) return null;
+    const config = PARTNER_CONFIG[owner] || PARTNER_CONFIG.both;
+    const Icon = config.icon;
+    return (
+      <Badge className={`${config.color} text-white text-xs`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const renderSourceBadge = (source?: string) => {
+    if (!source) return null;
+    return (
+      <Badge variant="outline" className="text-xs">
+        <Calendar className="h-3 w-3 mr-1" />
+        {source}
+      </Badge>
+    );
+  };
+
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
@@ -219,22 +388,39 @@ export default function AdminRepresentativeContacts() {
 
           <Card>
             <CardHeader>
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle>Contact Submissions</CardTitle>
-                  <CardDescription>
-                    {contacts.length} contact{contacts.length === 1 ? '' : 's'} tracked
-                  </CardDescription>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <CardTitle>Contact Submissions</CardTitle>
+                    <CardDescription>
+                      {contacts.length} contact{contacts.length === 1 ? '' : 's'} tracked
+                      {selectedIds.size > 0 && ` • ${selectedIds.size} selected`}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {selectedIds.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleteMutation.isPending}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Delete {selectedIds.size}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <div className="w-full md:w-60">
+                {/* Filters Row */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <div className="w-full sm:w-36">
                     <Select
                       value={statusFilter}
                       onValueChange={(value) =>
                         setStatusFilter(value as 'all' | typeof statusOptions[number])
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -247,13 +433,58 @@ export default function AdminRepresentativeContacts() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="relative w-full md:w-64">
+                  <div className="w-full sm:w-36">
+                    <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Segment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Segments</SelectItem>
+                        {Object.entries(SEGMENT_CONFIG).map(([key, config]) => (
+                          <SelectItem key={key} value={key}>
+                            {config.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full sm:w-36">
+                    <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Owner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Owners</SelectItem>
+                        {Object.entries(PARTNER_CONFIG).map(([key, config]) => (
+                          <SelectItem key={key} value={key}>
+                            {config.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full sm:w-40">
+                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Lead Source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        {LEAD_SOURCE_OPTIONS.map((source) => (
+                          <SelectItem key={source} value={source}>
+                            {source}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search by name, email, or phone"
+                      placeholder="Search name, email, phone..."
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
-                      className="pl-9"
+                      className="pl-9 h-9"
                     />
                   </div>
                 </div>
@@ -273,7 +504,16 @@ export default function AdminRepresentativeContacts() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === contacts.length && contacts.length > 0}
+                            onChange={handleSelectAll}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                        </TableHead>
                         <TableHead>Prospect</TableHead>
+                        <TableHead>Tags</TableHead>
                         <TableHead>Contact</TableHead>
                         {isSuperAdmin && <TableHead>Representative</TableHead>}
                         <TableHead>Status</TableHead>
@@ -283,12 +523,27 @@ export default function AdminRepresentativeContacts() {
                     </TableHeader>
                     <TableBody>
                       {contacts.map((contact) => (
-                        <TableRow key={contact.id}>
+                        <TableRow
+                          key={contact.id}
+                          className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(contact.id) ? 'bg-muted/30' : ''}`}
+                          onClick={() => handleOpenSidePanel(contact)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(contact.id)}
+                              onChange={() => handleSelectOne(contact.id)}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-start gap-3">
                               {contact.metadata?.business_card_image_url && (
                                 <button
-                                  onClick={() => setExpandedImageUrl(contact.metadata!.business_card_image_url!)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedImageUrl(contact.metadata!.business_card_image_url!);
+                                  }}
                                   className="flex-shrink-0 w-12 h-8 rounded overflow-hidden border bg-muted hover:ring-2 hover:ring-primary/50 transition-all cursor-zoom-in group relative"
                                   title="Click to expand"
                                 >
@@ -317,7 +572,19 @@ export default function AdminRepresentativeContacts() {
                                     {contact.company_name}
                                   </div>
                                 )}
+                                {contact.metadata?.title && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {contact.metadata.title}
+                                  </div>
+                                )}
                               </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {renderOwnerBadge(contact.partner_owner)}
+                              {renderSegmentBadge(contact.segment)}
+                              {renderSourceBadge(contact.lead_source)}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -327,6 +594,7 @@ export default function AdminRepresentativeContacts() {
                                 <a
                                   href={`mailto:${contact.email}`}
                                   className="hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   {contact.email}
                                 </a>
@@ -334,7 +602,7 @@ export default function AdminRepresentativeContacts() {
                               {contact.phone && (
                                 <div className="flex items-center gap-2">
                                   <Phone className="h-3.5 w-3.5" />
-                                  <a href={`tel:${contact.phone}`} className="hover:underline">
+                                  <a href={`tel:${contact.phone}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
                                     {contact.phone}
                                   </a>
                                 </div>
@@ -355,6 +623,7 @@ export default function AdminRepresentativeContacts() {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs text-green-600 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       /rep/{contact.representative.slug}
                                     </a>
@@ -365,14 +634,14 @@ export default function AdminRepresentativeContacts() {
                               )}
                             </TableCell>
                           )}
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex flex-col gap-2">
                               {renderStatusBadge(contact.status)}
                               <Select
                                 value={contact.status}
                                 onValueChange={(value) => handleInlineStatusChange(contact.id, value)}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -387,11 +656,14 @@ export default function AdminRepresentativeContacts() {
                           </TableCell>
                           <TableCell>
                             <div className="text-sm text-muted-foreground">
-                              {new Date(contact.created_at).toLocaleString()}
+                              {new Date(contact.created_at).toLocaleDateString()}
+                              <div className="text-xs">
+                                {new Date(contact.created_at).toLocaleTimeString()}
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenContact(contact)}>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenSidePanel(contact)}>
                               <NotebookPen className="mr-2 h-4 w-4" />
                               View
                             </Button>
@@ -572,6 +844,235 @@ export default function AdminRepresentativeContacts() {
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        )}
+
+        {/* Side Panel for Contact Details */}
+        {isSidePanelOpen && selectedContact && (
+          <div className="fixed inset-0 z-40 flex justify-end">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsSidePanelOpen(false)}
+            />
+            {/* Panel */}
+            <div className="relative w-full max-w-xl bg-background shadow-xl overflow-y-auto animate-in slide-in-from-right">
+              {/* Header */}
+              <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between z-10">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {selectedContact.first_name} {selectedContact.last_name}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedContact.company_name || 'No company'}
+                    {selectedContact.metadata?.title && ` • ${selectedContact.metadata.title}`}
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsSidePanelOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="p-4 space-y-6">
+                {/* Tags Section */}
+                <div className="flex flex-wrap gap-2">
+                  {renderOwnerBadge(selectedContact.partner_owner)}
+                  {renderSegmentBadge(selectedContact.segment)}
+                  {renderSourceBadge(selectedContact.lead_source)}
+                  {renderStatusBadge(selectedContact.status)}
+                </div>
+
+                {/* Business Card Image */}
+                {selectedContact.metadata?.business_card_image_url && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Business Card
+                    </h3>
+                    <button
+                      onClick={() => setExpandedImageUrl(selectedContact.metadata!.business_card_image_url!)}
+                      className="rounded-lg border overflow-hidden bg-muted/30 w-full cursor-zoom-in hover:ring-2 hover:ring-primary/50 transition-all"
+                    >
+                      <img
+                        src={selectedContact.metadata.business_card_image_url}
+                        alt="Business card"
+                        className="w-full max-h-48 object-contain"
+                      />
+                    </button>
+                  </div>
+                )}
+
+                {/* Contact Info */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Contact Information</h3>
+                  <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${selectedContact.email}`} className="hover:underline">
+                        {selectedContact.email}
+                      </a>
+                    </div>
+                    {selectedContact.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <a href={`tel:${selectedContact.phone}`} className="hover:underline">
+                          {selectedContact.phone}
+                        </a>
+                      </div>
+                    )}
+                    {(selectedContact.website || selectedContact.metadata?.website) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        <a
+                          href={(selectedContact.website || selectedContact.metadata?.website || '').startsWith('http')
+                            ? (selectedContact.website || selectedContact.metadata?.website)
+                            : `https://${selectedContact.website || selectedContact.metadata?.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline text-blue-600"
+                        >
+                          {selectedContact.website || selectedContact.metadata?.website}
+                        </a>
+                      </div>
+                    )}
+                    {selectedContact.metadata?.address && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <span>{selectedContact.metadata.address}</span>
+                      </div>
+                    )}
+                    {(selectedContact.title || selectedContact.metadata?.title) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedContact.title || selectedContact.metadata?.title}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Company Research */}
+                {selectedContact.company_context && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      AI Company Research
+                    </h3>
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+                      {selectedContact.company_context}
+                    </div>
+                  </div>
+                )}
+
+                {/* Voice Notes / Message */}
+                {(selectedContact.message || selectedContact.context_notes || selectedContact.metadata?.voice_notes) && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Notes from Capture</h3>
+                    <div className="bg-muted/30 rounded-lg p-3 text-sm whitespace-pre-wrap">
+                      {selectedContact.context_notes || selectedContact.metadata?.voice_notes || selectedContact.message || 'No notes'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sent Email */}
+                {selectedContact.first_email_sent_at && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Follow-up Email Sent
+                      <Badge className="bg-green-600 text-xs">Sent</Badge>
+                    </h3>
+                    <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">Sent: {new Date(selectedContact.first_email_sent_at).toLocaleString()}</p>
+                      {selectedContact.first_email_subject && (
+                        <>
+                          <p className="text-xs text-muted-foreground mt-2">Subject:</p>
+                          <p className="text-sm font-medium">{selectedContact.first_email_subject}</p>
+                        </>
+                      )}
+                      {selectedContact.first_email_body && (
+                        <>
+                          <p className="text-xs text-muted-foreground mt-2">Body:</p>
+                          <p className="text-sm whitespace-pre-wrap">{selectedContact.first_email_body}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Generated Email (not sent yet) */}
+                {selectedContact.metadata?.ai_generated_email && !selectedContact.first_email_sent_at && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      AI Generated Follow-up Email
+                      <Badge variant="outline" className="text-xs">Draft</Badge>
+                    </h3>
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">Subject:</p>
+                      <p className="text-sm font-medium">{selectedContact.metadata.ai_generated_email.subject}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Body:</p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedContact.metadata.ai_generated_email.body}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Timeline
+                  </h3>
+                  <div className="bg-muted/30 rounded-lg p-3 text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span>{new Date(selectedContact.created_at).toLocaleString()}</span>
+                    </div>
+                    {selectedContact.metadata?.scanned_at && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Scanned:</span>
+                        <span>{new Date(selectedContact.metadata.scanned_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status & Notes */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label htmlFor="sidePanelStatus">Status</Label>
+                    <Select value={detailStatus} onValueChange={(value) => setDetailStatus(value as typeof statusOptions[number])}>
+                      <SelectTrigger id="sidePanelStatus">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sidePanelNotes">Internal Notes</Label>
+                    <Textarea
+                      id="sidePanelNotes"
+                      value={detailNotes}
+                      onChange={(e) => setDetailNotes(e.target.value)}
+                      placeholder="Add follow-up notes, meeting details, etc."
+                      rows={4}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSaveDetail}
+                    disabled={updateContactMutation.isPending}
+                    className="w-full"
+                  >
+                    {updateContactMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </AdminLayout>

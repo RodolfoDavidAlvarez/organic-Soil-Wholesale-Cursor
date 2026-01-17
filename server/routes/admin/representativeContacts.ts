@@ -8,7 +8,7 @@ router.use(adminAuthMiddleware);
 
 router.get("/", async (req: AdminRequest, res) => {
   try {
-    const { status, search, representativeId } = req.query;
+    const { status, search, representativeId, segment, partner_owner, lead_source } = req.query;
 
     let query = supabase.from("representative_contacts").select("*").order("created_at", { ascending: false });
 
@@ -38,6 +38,18 @@ router.get("/", async (req: AdminRequest, res) => {
 
     if (representativeId) {
       query = query.eq("representative_id", representativeId);
+    }
+
+    if (segment) {
+      query = query.eq("segment", segment);
+    }
+
+    if (partner_owner) {
+      query = query.eq("partner_owner", partner_owner);
+    }
+
+    if (lead_source) {
+      query = query.eq("lead_source", lead_source);
     }
 
     if (search) {
@@ -112,6 +124,23 @@ router.patch("/:contactId", async (req: AdminRequest, res) => {
     const { contactId } = req.params;
     const { status, notes } = req.body;
 
+    // Verify ownership: regular admins can only update their own contacts
+    if (req.admin?.role !== "super_admin") {
+      const { data: contact, error: fetchError } = await supabase
+        .from("representative_contacts")
+        .select("admin_id")
+        .eq("id", contactId)
+        .single();
+
+      if (fetchError || !contact) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+
+      if (contact.admin_id !== req.admin?.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+    }
+
     const updateData: any = {};
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
@@ -124,6 +153,53 @@ router.patch("/:contactId", async (req: AdminRequest, res) => {
   } catch (error: any) {
     console.error("Error updating representative contact:", error);
     res.status(500).json({ error: error.message || "Failed to update contact" });
+  }
+});
+
+// Bulk delete contacts
+router.post("/bulk-delete", async (req: AdminRequest, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No contact IDs provided" });
+    }
+
+    // Verify ownership: regular admins can only delete their own contacts
+    if (req.admin?.role !== "super_admin") {
+      // Fetch all contacts to verify ownership
+      const { data: contacts, error: fetchError } = await supabase
+        .from("representative_contacts")
+        .select("id, admin_id")
+        .in("id", ids);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // Check if any contact doesn't belong to this admin
+      const unauthorizedContact = contacts?.find(
+        (contact) => contact.admin_id !== req.admin?.id
+      );
+
+      if (unauthorizedContact) {
+        return res.status(403).json({
+          error: "Access denied. You can only delete your own contacts."
+        });
+      }
+    }
+
+    const { error } = await supabase
+      .from("representative_contacts")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+
+    res.json({ success: true, deletedCount: ids.length });
+  } catch (error: any) {
+    console.error("Error bulk deleting contacts:", error);
+    res.status(500).json({ error: error.message || "Failed to delete contacts" });
   }
 });
 
