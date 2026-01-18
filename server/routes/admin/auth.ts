@@ -1,9 +1,19 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
+import rateLimit from "express-rate-limit";
 import { supabase } from "../../supabaseClient";
 import { createAdminToken, adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 
 const router = Router();
+
+// Rate limiter for registration endpoint (5 attempts per 15 minutes per IP)
+const registrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: "Too many registration attempts from this IP, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Admin login
 router.post("/login", async (req, res) => {
@@ -51,6 +61,111 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.error("Admin login error:", error);
     res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// Public registration endpoint for new users
+router.post("/register", registrationLimiter, async (req, res) => {
+  try {
+    const { email, password, full_name, company_name, phone } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ error: "Email, password, and full name are required" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Validate password strength (minimum 8 characters)
+    if (password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters long" });
+    }
+
+    // Check if email already exists
+    const { data: existingUser } = await supabase
+      .from("admin_users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existingUser) {
+      return res.status(409).json({ error: "An account with this email already exists" });
+    }
+
+    // Hash password
+    const password_hash = await bcrypt.hash(password, 10);
+
+    // Generate unique slug from full name
+    const baseSlug = full_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    let slug = baseSlug;
+    let slugExists = true;
+    let counter = 1;
+
+    // Ensure slug is unique
+    while (slugExists) {
+      const { data: slugCheck } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+
+      if (!slugCheck) {
+        slugExists = false;
+      } else {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+    }
+
+    // Create new user
+    const { data: newUser, error } = await supabase
+      .from("admin_users")
+      .insert({
+        email,
+        password_hash,
+        full_name,
+        company_name: company_name || null,
+        phone: phone || null,
+        slug,
+        role: "admin", // Regular user role
+        is_active: true,
+        has_landing_page: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Registration error:", error);
+      throw error;
+    }
+
+    // Create token
+    const token = createAdminToken({
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    });
+
+    res.status(201).json({
+      token,
+      admin: {
+        id: newUser.id,
+        email: newUser.email,
+        full_name: newUser.full_name,
+        role: newUser.role,
+      },
+    });
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    res.status(500).json({ error: error.message || "Failed to create account" });
   }
 });
 

@@ -14,6 +14,7 @@ import productSyncRoutes from "./routes/productSync";
 import orderManagementRoutes from "./routes/orderManagement";
 import payAndPickupRoutes from "./routes/payAndPickup";
 import leadsRoutes from "./routes/leads";
+import resendWebhookRoutes from "./routes/resendWebhook";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -50,6 +51,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Leads routes
   app.use("/api/leads", leadsRoutes);
+
+  // Resend webhook routes (email tracking: opens, clicks, bounces, replies)
+  app.use("/api/resend", resendWebhookRoutes);
 
   // Legacy Products routes for backward compatibility
   app.get("/api/products", async (req, res) => {

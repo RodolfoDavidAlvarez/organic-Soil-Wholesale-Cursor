@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn, Building2, Leaf, GraduationCap, MapPin, Tractor, Truck, Trees, Factory, Shield, Heart, BookOpen, Calendar } from 'lucide-react';
+import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn, Building2, Leaf, GraduationCap, MapPin, Tractor, Truck, Trees, Factory, Shield, Heart, BookOpen, Calendar, Copy, Check } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface RepresentativeSummary {
@@ -115,6 +115,52 @@ const LEAD_SOURCE_OPTIONS = [
 ];
 
 const statusOptions = ['new', 'contacted', 'qualified', 'converted', 'archived'] as const;
+
+// Copy CRM Link Button Component
+function CopyLinkButton({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleCopy = async () => {
+    const crmLink = `${window.location.origin}/rep/${slug}`;
+    try {
+      await navigator.clipboard.writeText(crmLink);
+      setCopied(true);
+      toast({
+        title: 'CRM link copied!',
+        description: 'Your contact landing page link is ready to share.',
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: 'Failed to copy',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleCopy}
+      className="gap-2"
+    >
+      {copied ? (
+        <>
+          <Check className="h-4 w-4 text-green-600" />
+          Copied!
+        </>
+      ) : (
+        <>
+          <Copy className="h-4 w-4" />
+          Copy My CRM Link
+        </>
+      )}
+    </Button>
+  );
+}
 
 export default function AdminRepresentativeContacts() {
   const { admin } = useAdminAuth();
@@ -398,6 +444,7 @@ export default function AdminRepresentativeContacts() {
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
+                    {admin?.slug && <CopyLinkButton slug={admin.slug} />}
                     {selectedIds.size > 0 && (
                       <Button
                         variant="destructive"
@@ -466,7 +513,7 @@ export default function AdminRepresentativeContacts() {
                   <div className="w-full sm:w-40">
                     <Select value={sourceFilter} onValueChange={setSourceFilter}>
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Lead Source" />
+                        <SelectValue placeholder="How did you meet?" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Sources</SelectItem>

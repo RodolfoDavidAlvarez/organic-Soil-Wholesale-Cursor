@@ -55,3 +55,19 @@ export async function adminAuthMiddleware(req: AdminRequest, res: Response, next
 export function createAdminToken(admin: { id: string; email: string; role: string }) {
   return jwt.sign({ id: admin.id, email: admin.email, role: admin.role }, JWT_SECRET, { expiresIn: "8h" });
 }
+
+// Middleware to require super admin role
+export function requireSuperAdmin(req: AdminRequest, res: Response, next: NextFunction) {
+  if (!req.admin || req.admin.role !== "super_admin") {
+    return res.status(403).json({ error: "Super admin access required" });
+  }
+  next();
+}
+
+// Middleware to require admin or super admin role
+export function requireAdmin(req: AdminRequest, res: Response, next: NextFunction) {
+  if (!req.admin || !["admin", "super_admin"].includes(req.admin.role)) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}

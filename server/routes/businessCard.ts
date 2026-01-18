@@ -3,6 +3,18 @@ import { supabase } from "../supabaseClient";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { Resend } from "resend";
+import {
+  classifySegment,
+  enrichCompany,
+  generateFollowUpEmail,
+  validateEmail,
+  type ContactInfo,
+  type EmailGenerationInput,
+} from "../services/aiEmailService";
+import { syncCRMContactToHubSpot } from "../services/hubspot";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const router = Router();
 
@@ -34,78 +46,134 @@ const upload = multer({
   },
 });
 
-// Analyze business card using Grok Vision API
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Configure multer for audio uploads
+const audioUploadDir = path.join(process.cwd(), "client", "public", "uploads", "audio");
+if (!fs.existsSync(audioUploadDir)) {
+  fs.mkdirSync(audioUploadDir, { recursive: true });
+}
+
+const audioStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, audioUploadDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    cb(null, `${uniqueSuffix}${path.extname(file.originalname) || '.webm'}`);
+  },
+});
+
+const audioUpload = multer({
+  storage: audioStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit for audio
+  fileFilter: (req, file, cb) => {
+    // Accept any audio type - be very permissive for mobile browser compatibility
+    // iOS Safari uses audio/mp4, Chrome uses audio/webm, etc.
+    console.log('[Audio Upload] Received file:', file.originalname, 'mimetype:', file.mimetype);
+    if (file.mimetype.startsWith('audio/') || file.mimetype === 'application/octet-stream') {
+      cb(null, true);
+    } else {
+      console.log('[Audio Upload] Rejected file type:', file.mimetype);
+      cb(new Error(`Invalid file type: ${file.mimetype}. Only audio files are allowed.`));
+    }
+  },
+});
+
+// Analyze business card using Claude Vision API (faster, more accurate)
+// Accepts EITHER: multipart form with "image" file OR JSON with "imageBase64"
 router.post("/:slug/analyze-business-card", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No image provided" });
+    let base64Image: string;
+    let mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+    let imagePath: string | null = null;
+
+    // Check if we received base64 JSON (new flow) or file upload (old flow)
+    if (req.body?.imageBase64) {
+      // New flow: base64 JSON
+      let imageData = req.body.imageBase64;
+      mimeType = (req.body.mimeType || "image/jpeg") as typeof mimeType;
+
+      // Extract base64 data from data URL if present
+      if (imageData.includes(",")) {
+        const parts = imageData.split(",");
+        imageData = parts[1];
+        // Detect mime type from data URL
+        const dataUrlMatch = parts[0].match(/data:([^;]+)/);
+        if (dataUrlMatch) {
+          mimeType = dataUrlMatch[1] as typeof mimeType;
+        }
+      }
+      base64Image = imageData;
+    } else if (req.file) {
+      // Old flow: file upload
+      imagePath = `/uploads/business-cards/${req.file.filename}`;
+      const fullPath = path.join(process.cwd(), "client", "public", imagePath);
+      const imageBuffer = fs.readFileSync(fullPath);
+      base64Image = imageBuffer.toString("base64");
+      mimeType = req.file.mimetype as typeof mimeType;
+    } else {
+      return res.status(400).json({ error: "No image provided. Send imageBase64 field or upload a file." });
     }
 
-    const imagePath = `/uploads/business-cards/${req.file.filename}`;
-    const fullPath = path.join(process.cwd(), "client", "public", imagePath);
+    // Validate mime type
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(mimeType)) {
+      mimeType = "image/jpeg";
+    }
 
-    // Read image and convert to base64
-    const imageBuffer = fs.readFileSync(fullPath);
-    const base64Image = imageBuffer.toString("base64");
-    const mimeType = req.file.mimetype;
-
-    // Call Grok Vision API
-    const xaiApiKey = process.env.XAI_API_KEY;
-    if (!xaiApiKey) {
+    // Call Claude Vision API
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
       return res.status(500).json({ error: "AI service not configured" });
     }
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${xaiApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "grok-2-vision-1212",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`,
-                },
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 500,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType,
+                data: base64Image,
               },
-              {
-                type: "text",
-                text: `Analyze this business card image and extract all contact information. Return ONLY a valid JSON object with these exact fields (use empty string "" for any field you cannot find):
+            },
+            {
+              type: "text",
+              text: `Extract contact information from this business card. Return ONLY a valid JSON object with these exact fields (use empty string "" for any field you cannot find or read clearly - DO NOT GUESS or make up information):
 
 {
-  "firstName": "first name",
-  "lastName": "last name",
-  "email": "email address",
-  "phone": "phone number",
+  "firstName": "first name only",
+  "lastName": "last name only",
+  "email": "email address exactly as shown",
+  "phone": "phone number exactly as shown",
   "companyName": "company or organization name",
   "title": "job title or position",
   "address": "full address if visible",
-  "website": "website URL"
+  "website": "website URL if shown"
 }
 
-Important: Return ONLY the JSON object, no other text or markdown formatting.`,
-              },
-            ],
-          },
-        ],
-        max_tokens: 500,
-        temperature: 0.1,
-      }),
+CRITICAL: Only include information you can clearly read. If a phone number is partially visible or unclear, use "". Never guess or fabricate data.
+Return ONLY the JSON object, no other text.`,
+            },
+          ],
+        },
+      ],
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Grok API error:", error);
-      throw new Error("AI analysis failed");
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content = (response.content[0] as any).text || "";
 
     // Parse the JSON response
     let extractedData;
@@ -149,7 +217,7 @@ Important: Return ONLY the JSON object, no other text or markdown formatting.`,
     res.json({
       success: true,
       extractedData,
-      imagePath,
+      ...(imagePath && { imagePath }),
     });
   } catch (error: any) {
     console.error("Error analyzing business card:", error);
@@ -306,6 +374,454 @@ router.post("/:slug/submit-business-card", upload.single("image"), async (req, r
     res.status(201).json({
       success: true,
       data,
+    });
+  } catch (error: any) {
+    console.error("Error submitting business card:", error);
+    res.status(500).json({ error: error.message || "Failed to submit business card" });
+  }
+});
+
+// ============================================================================
+// CRM SEGMENTATION SYSTEM - NEW ENDPOINTS
+// ============================================================================
+
+/**
+ * Auto-classify a contact into a segment based on title and company
+ */
+router.post("/classify-segment", async (req, res) => {
+  try {
+    const { title, company } = req.body;
+
+    if (!title && !company) {
+      return res.status(400).json({ error: "Title or company required" });
+    }
+
+    const segment = classifySegment(title || "", company || "");
+
+    res.json({ segment });
+  } catch (error: any) {
+    console.error("Error classifying segment:", error);
+    res.status(500).json({ error: error.message || "Failed to classify segment" });
+  }
+});
+
+/**
+ * Enrich company information by fetching website
+ * Only returns verified information - never makes up data
+ */
+router.post("/enrich-company", async (req, res) => {
+  try {
+    const { company, website } = req.body;
+
+    if (!company && !website) {
+      return res.status(400).json({ error: "Company or website required" });
+    }
+
+    const companyContext = await enrichCompany(company, website);
+
+    res.json({
+      success: true,
+      companyContext, // null if couldn't find info
+      hasData: !!companyContext,
+    });
+  } catch (error: any) {
+    console.error("Error enriching company:", error);
+    res.status(500).json({ error: error.message || "Failed to enrich company" });
+  }
+});
+
+/**
+ * Transcribe audio using OpenAI Whisper
+ * For voice notes during lead capture
+ * Accepts EITHER: multipart form with "audio" file OR JSON with "audioBase64"
+ */
+router.post("/transcribe", audioUpload.single("audio"), async (req, res) => {
+  let tempAudioPath: string | null = null;
+
+  try {
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        error: "Voice transcription not configured. Please add OPENAI_API_KEY to enable this feature."
+      });
+    }
+
+    let audioPath: string;
+
+    // Check if we received base64 JSON (new flow) or file upload (old flow)
+    if (req.body?.audioBase64) {
+      // New flow: base64 JSON
+      let audioData = req.body.audioBase64;
+      const mimeType = req.body.mimeType || "audio/webm";
+
+      // Extract base64 data from data URL if present
+      if (audioData.includes(",")) {
+        audioData = audioData.split(",")[1];
+      }
+
+      // Determine file extension from mime type
+      const mimeToExt: Record<string, string> = {
+        "audio/webm": "webm",
+        "audio/webm;codecs=opus": "webm",
+        "audio/mp4": "mp4",
+        "audio/mpeg": "mp3",
+        "audio/mp3": "mp3",
+        "audio/wav": "wav",
+        "audio/ogg": "ogg",
+        "audio/flac": "flac",
+        "audio/m4a": "m4a",
+      };
+      const ext = mimeToExt[mimeType] || mimeToExt[mimeType.split(";")[0]] || "webm";
+
+      // Convert base64 to buffer and write to temp file
+      const audioBuffer = Buffer.from(audioData, "base64");
+      tempAudioPath = path.join(audioUploadDir, `temp-${Date.now()}.${ext}`);
+      fs.writeFileSync(tempAudioPath, audioBuffer);
+      audioPath = tempAudioPath;
+    } else if (req.file) {
+      // Old flow: file upload
+      audioPath = path.join(audioUploadDir, req.file.filename);
+      tempAudioPath = audioPath;
+    } else {
+      return res.status(400).json({ error: "No audio provided. Send audioBase64 field or upload a file." });
+    }
+
+    // Transcribe using Whisper
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(audioPath),
+      model: "whisper-1",
+      language: "en",
+    });
+
+    // Clean up the audio file after transcription
+    if (tempAudioPath && fs.existsSync(tempAudioPath)) {
+      fs.unlinkSync(tempAudioPath);
+    }
+
+    res.json({
+      success: true,
+      text: transcription.text,
+    });
+  } catch (error: any) {
+    console.error("Error transcribing audio:", error);
+    // Clean up on error
+    if (tempAudioPath && fs.existsSync(tempAudioPath)) {
+      fs.unlinkSync(tempAudioPath);
+    }
+    res.status(500).json({ error: error.message || "Failed to transcribe audio" });
+  }
+});
+
+/**
+ * Generate a human-sounding follow-up email using AI
+ * CRITICAL: Only uses verified information, never makes up data
+ */
+router.post("/generate-email", async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      company,
+      title,
+      website,
+      segment,
+      event,
+      contextNotes,
+      companyContext,
+    } = req.body;
+
+    if (!firstName || !email) {
+      return res.status(400).json({ error: "First name and email required" });
+    }
+
+    const contact: ContactInfo = {
+      firstName,
+      lastName: lastName || "",
+      email,
+      company: company || "",
+      title: title || "",
+      website,
+    };
+
+    const input: EmailGenerationInput = {
+      contact,
+      segment: segment || "other",
+      event: event || "the conference",
+      contextNotes: contextNotes || undefined,
+      companyResearch: companyContext || undefined,
+    };
+
+    const generatedEmail = await generateFollowUpEmail(input);
+
+    // Validate the email before returning
+    const validation = validateEmail(generatedEmail);
+    if (!validation.valid) {
+      console.warn("Email validation issues:", validation.issues);
+    }
+
+    res.json({
+      success: true,
+      email: generatedEmail,
+      validation,
+    });
+  } catch (error: any) {
+    console.error("Error generating email:", error);
+    res.status(500).json({ error: error.message || "Failed to generate email" });
+  }
+});
+
+/**
+ * Send the follow-up email via Resend
+ */
+router.post("/send-email", async (req, res) => {
+  try {
+    const { contactId, to, subject, body, from } = req.body;
+
+    if (!to || !subject || !body) {
+      return res.status(400).json({ error: "To, subject, and body required" });
+    }
+
+    // Send email via Resend
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+      to: [to],
+      subject,
+      text: body,
+    });
+
+    if (emailError) {
+      throw new Error(emailError.message);
+    }
+
+    // Update contact record if contactId provided
+    if (contactId) {
+      await supabase
+        .from("representative_contacts")
+        .update({
+          first_email_sent_at: new Date().toISOString(),
+          first_email_subject: subject,
+          first_email_body: body,
+          status: "contacted",
+          pipeline_stage: "awareness",
+        })
+        .eq("id", contactId);
+    }
+
+    res.json({
+      success: true,
+      messageId: emailData?.id,
+      sentAt: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Error sending email:", error);
+    res.status(500).json({ error: error.message || "Failed to send email" });
+  }
+});
+
+/**
+ * Enhanced submit business card with CRM fields
+ * Captures segment, lead source, context notes, and optionally generates/sends email
+ */
+router.post("/:slug/submit-business-card-enhanced", upload.single("image"), async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      companyName,
+      title,
+      address,
+      website,
+      // New CRM fields
+      segment,
+      leadSource,
+      partnerOwner,
+      contextNotes,
+      companyContext,
+      // Email options
+      generateEmail,
+      sendEmail,
+      event,
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: "First name and last name are required" });
+    }
+
+    // Get the image path if uploaded
+    let businessCardImageUrl = null;
+    if (req.file) {
+      businessCardImageUrl = `/uploads/business-cards/${req.file.filename}`;
+    }
+
+    // Find the representative or admin by slug
+    let adminId = null;
+    let representativeId = null;
+
+    const { data: representative } = await supabase
+      .from("representatives")
+      .select("id, admin_id")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .single();
+
+    if (representative) {
+      representativeId = representative.id;
+      adminId = representative.admin_id;
+    } else {
+      const { data: admin } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("slug", slug)
+        .eq("has_landing_page", true)
+        .eq("is_active", true)
+        .single();
+
+      if (admin) {
+        adminId = admin.id;
+        representativeId = await ensureRepresentativeForAdmin(admin.id);
+        if (!representativeId) {
+          return res.status(500).json({ error: "Failed to process contact card" });
+        }
+      } else {
+        return res.status(404).json({ error: "Contact card not found" });
+      }
+    }
+
+    // Auto-classify segment if not provided
+    const finalSegment = segment || classifySegment(title || "", companyName || "");
+
+    // Insert contact with enhanced CRM fields
+    const contactData = {
+      representative_id: representativeId,
+      admin_id: adminId,
+      first_name: firstName,
+      last_name: lastName,
+      email: email || null,
+      phone: phone || null,
+      company_name: companyName || null,
+      title: title || null,
+      website: website || null,
+      message: contextNotes || null,
+      source: "business_card_scan",
+      status: "new",
+      // New CRM fields
+      segment: finalSegment,
+      lead_source: leadSource || "other",
+      partner_owner: partnerOwner || "ssw",
+      context_notes: contextNotes || null,
+      company_context: companyContext || null,
+      pipeline_stage: "awareness",
+      metadata: {
+        address: address || null,
+        business_card_image_url: businessCardImageUrl,
+        scanned_at: new Date().toISOString(),
+        event: event || null,
+      },
+    };
+
+    const { data: contact, error: insertError } = await supabase
+      .from("representative_contacts")
+      .insert(contactData)
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    // Sync to HubSpot (non-blocking - don't fail if HubSpot fails)
+    let hubspotResult = null;
+    if (email) {
+      try {
+        hubspotResult = await syncCRMContactToHubSpot({
+          firstName,
+          lastName,
+          email,
+          phone,
+          company: companyName,
+          title,
+          website,
+          segment: finalSegment,
+          event: event || leadSource,
+          notes: contextNotes,
+        });
+        console.log('[HubSpot] Sync result:', hubspotResult);
+      } catch (hubspotError) {
+        console.error('[HubSpot] Sync failed (non-blocking):', hubspotError);
+      }
+    }
+
+    // Generate and optionally send email
+    let emailResult = null;
+    if (generateEmail === "true" || generateEmail === true) {
+      const contactInfo: ContactInfo = {
+        firstName,
+        lastName: lastName || "",
+        email: email || "",
+        company: companyName || "",
+        title: title || "",
+        website,
+      };
+
+      const emailInput: EmailGenerationInput = {
+        contact: contactInfo,
+        segment: finalSegment,
+        event: event || "the conference",
+        contextNotes: contextNotes || undefined,
+        companyResearch: companyContext || undefined,
+      };
+
+      const generatedEmail = await generateFollowUpEmail(emailInput);
+      const validation = validateEmail(generatedEmail);
+
+      emailResult = {
+        generated: true,
+        email: generatedEmail,
+        validation,
+        sent: false,
+      };
+
+      // Send email if requested and valid
+      if ((sendEmail === "true" || sendEmail === true) && email && validation.valid) {
+        try {
+          const { data: sendData, error: sendError } = await resend.emails.send({
+            from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+            to: [email],
+            subject: generatedEmail.subject,
+            text: generatedEmail.body,
+          });
+
+          if (!sendError) {
+            emailResult.sent = true;
+            emailResult.messageId = sendData?.id;
+
+            // Update contact with email info
+            await supabase
+              .from("representative_contacts")
+              .update({
+                first_email_sent_at: new Date().toISOString(),
+                first_email_subject: generatedEmail.subject,
+                first_email_body: generatedEmail.body,
+                status: "contacted",
+              })
+              .eq("id", contact.id);
+          }
+        } catch (emailError) {
+          console.error("Error sending email:", emailError);
+          emailResult.sendError = (emailError as Error).message;
+        }
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      contact,
+      segment: finalSegment,
+      email: emailResult,
+      hubspot: hubspotResult,
     });
   } catch (error: any) {
     console.error("Error submitting business card:", error);

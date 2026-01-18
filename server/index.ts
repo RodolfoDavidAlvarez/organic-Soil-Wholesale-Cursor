@@ -14,16 +14,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 // Apply JSON middleware to all routes except uploads
+// Increase limit to 50MB to handle base64 encoded images and audio
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/admin/uploads")) {
     // Skip JSON parsing for upload routes
     next();
   } else {
-    express.json()(req, res, next);
+    express.json({ limit: '50mb' })(req, res, next);
   }
 });
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Trust proxy for Vercel deployment
 app.set("trust proxy", 1);

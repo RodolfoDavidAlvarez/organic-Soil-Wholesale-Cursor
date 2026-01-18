@@ -190,8 +190,20 @@ export default function AdminLogin() {
                 )}
               </form>
 
-              {/* Security Notice */}
+              {/* Create Account Link */}
               <div className="pt-4 border-t border-gray-200">
+                <p className="text-sm text-center text-gray-600">
+                  Don't have an account?{" "}
+                  <Link href="/register">
+                    <a className="font-medium text-green-600 hover:text-green-500 transition-colors">
+                      Create one here
+                    </a>
+                  </Link>
+                </p>
+              </div>
+
+              {/* Security Notice */}
+              <div className="pt-2">
                 <p className="text-xs text-center text-gray-500">🔒 This is a secure admin area. Unauthorized access is prohibited.</p>
               </div>
             </CardContent>

@@ -727,6 +727,8 @@ export default function RepresentativeLanding() {
         onClose={() => setIsBusinessCardDialogOpen(false)}
         representativeSlug={slug}
         representativeName={representative.name}
+        isRepMode={new URLSearchParams(window.location.search).get('crm') === 'true'}
+        defaultLeadSource={new URLSearchParams(window.location.search).get('source') || 'uscc_2026'}
       />
     </div>
   );
