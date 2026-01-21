@@ -389,3 +389,79 @@ export type Representative = typeof representatives.$inferSelect;
 
 export type InsertRepresentativeContact = z.infer<typeof insertRepresentativeContactSchema>;
 export type RepresentativeContact = typeof representativeContacts.$inferSelect;
+
+// Operations System - BOL Management
+export const opsBols = pgTable("ops_bols", {
+  id: serial("id").primaryKey(),
+  bolNumber: text("bol_number").notNull().unique(), // BOL-20260121-001
+  ticketNumber: text("ticket_number"), // Optional manual ticket reference
+  date: timestamp("date").notNull(),
+
+  // Origin Information
+  originName: text("origin_name").notNull().default("SSW BioSoils"),
+  originAddress: text("origin_address").notNull().default("18980 Stanton Rd, Congress, AZ 85332"),
+  originPhone: text("origin_phone").default("(928) 632-7125"),
+
+  // Destination Information
+  customerName: text("customer_name").notNull(),
+  destinationAddress: text("destination_address").notNull(),
+  destinationCity: text("destination_city"),
+  destinationState: text("destination_state"),
+  destinationZip: text("destination_zip"),
+  onsiteContactName: text("onsite_contact_name"),
+  onsiteContactPhone: text("onsite_contact_phone"),
+
+  // Material Information
+  materialType: text("material_type").notNull(), // e.g., "Orchard Compost (Pistachio Blend)"
+  materialDescription: text("material_description"),
+  loadType: text("load_type").notNull().default("Bulk Material (Walking Floor)"),
+
+  // Weight Information
+  grossWeight: integer("gross_weight").notNull(), // in pounds
+  tareWeight: integer("tare_weight").notNull(), // in pounds
+  netWeight: integer("net_weight").notNull(), // in pounds (auto-calculated)
+  netWeightTons: text("net_weight_tons"), // calculated display value
+
+  // Carrier/Transport Information
+  carrierName: text("carrier_name").default("James Bond Trucking"),
+  driverName: text("driver_name"),
+  truckNumber: text("truck_number"),
+  licensePlate: text("license_plate"),
+  trailerNumber: text("trailer_number"),
+
+  // Timing
+  timeIn: text("time_in"),
+  timeOut: text("time_out"),
+
+  // Signatures (Base64 encoded images or text)
+  driverSignature: text("driver_signature"),
+  sswRepSignature: text("ssw_rep_signature"),
+  receiverSignature: text("receiver_signature"),
+  scaleOperatorInitials: text("scale_operator_initials"),
+
+  // Additional Information
+  notes: text("notes"),
+  referenceNumber: text("reference_number"), // Project name or PO number
+
+  // Status & Tracking
+  status: text("status").default("draft").notNull(), // draft, sent, delivered, signed
+  createdBy: text("created_by").notNull(), // email of admin who created it
+  sentToEmail: text("sent_to_email"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Schema for inserting BOL data
+export const insertOpsBolSchema = createInsertSchema(opsBols).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type definitions
+export type InsertOpsBol = z.infer<typeof insertOpsBolSchema>;
+export type OpsBol = typeof opsBols.$inferSelect;

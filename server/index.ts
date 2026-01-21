@@ -33,6 +33,7 @@ app.set("trust proxy", 1);
 app.post("/api/admin-login-temp", (req, res) => {
   const { email, password } = req.body;
 
+  // Super Admin
   if (email === "ralvarez@soilseedandwater.com" && password === "admin123") {
     const token = jwt.sign({ id: "1", email: email, role: "super_admin" }, process.env.JWT_SECRET || "your-secret-key", { expiresIn: "8h" });
 
@@ -41,11 +42,26 @@ app.post("/api/admin-login-temp", (req, res) => {
       admin: {
         id: "1",
         email: email,
-        full_name: "Admin User",
+        full_name: "Rodolfo Alvarez",
         role: "super_admin",
       },
     });
-  } else {
+  }
+  // General Operations Login
+  else if (email === "operations@soilseedandwater.com" && password === "ops2026") {
+    const token = jwt.sign({ id: "2", email: email, role: "operations" }, process.env.JWT_SECRET || "your-secret-key", { expiresIn: "8h" });
+
+    res.json({
+      token,
+      admin: {
+        id: "2",
+        email: email,
+        full_name: "Operations Team",
+        role: "operations",
+      },
+    });
+  }
+  else {
     res.status(401).json({ error: "Invalid credentials" });
   }
 });

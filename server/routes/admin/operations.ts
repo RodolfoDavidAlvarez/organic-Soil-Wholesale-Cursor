@@ -1,0 +1,582 @@
+/**
+ * Operations System - BOL Management API
+ * Create, manage, and generate PDF BOLs/Weight Tickets
+ */
+
+import { Router } from "express";
+import { supabase } from "../../supabaseClient";
+import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
+import puppeteer from "puppeteer";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const router = Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+router.use(adminAuthMiddleware);
+
+/**
+ * Generate BOL number (BOL-YYYYMMDD-NNN)
+ */
+async function generateBOLNumber(): Promise<string> {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+
+  // Count existing BOLs today
+  const { count, error } = await supabase
+    .from('ops_bols')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', `${today.toISOString().split('T')[0]}T00:00:00`)
+    .lte('created_at', `${today.toISOString().split('T')[0]}T23:59:59`);
+
+  if (error) throw error;
+
+  const sequence = ((count || 0) + 1).toString().padStart(3, '0');
+  return `BOL-${dateStr}-${sequence}`;
+}
+
+/**
+ * GET /api/admin/operations/bols
+ * List all BOLs with filters
+ */
+router.get("/bols", async (req: AdminRequest, res) => {
+  try {
+    const { status, dateFilter } = req.query;
+
+    let query = supabase
+      .from('ops_bols')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply status filter
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    // Apply date filter
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (dateFilter) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case '3months':
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+      }
+
+      query = query.gte('created_at', startDate.toISOString());
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching BOLs:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch BOLs' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/bols
+ * Create a new BOL
+ */
+router.post("/bols", async (req: AdminRequest, res) => {
+  try {
+    const {
+      date,
+      customerName,
+      destinationAddress,
+      destinationCity,
+      destinationState,
+      destinationZip,
+      onsiteContactName,
+      onsiteContactPhone,
+      materialType,
+      materialDescription,
+      grossWeight,
+      tareWeight,
+      netWeight,
+      netWeightTons,
+      carrierName,
+      driverName,
+      truckNumber,
+      licensePlate,
+      trailerNumber,
+      notes,
+      referenceNumber
+    } = req.body;
+
+    // Validation
+    if (!customerName || !destinationAddress || !materialType) {
+      return res.status(400).json({ message: 'Missing required fields: customerName, destinationAddress, materialType' });
+    }
+
+    if (!grossWeight || !tareWeight) {
+      return res.status(400).json({ message: 'Missing required weight information' });
+    }
+
+    // Generate BOL number
+    const bolNumber = await generateBOLNumber();
+
+    // Get admin email from token
+    const createdBy = req.adminEmail || 'admin@ssw.com';
+
+    // Insert BOL
+    const { data, error } = await supabase
+      .from('ops_bols')
+      .insert({
+        bol_number: bolNumber,
+        date: date || new Date().toISOString(),
+        customer_name: customerName,
+        destination_address: destinationAddress,
+        destination_city: destinationCity,
+        destination_state: destinationState,
+        destination_zip: destinationZip,
+        onsite_contact_name: onsiteContactName,
+        onsite_contact_phone: onsiteContactPhone,
+        material_type: materialType,
+        material_description: materialDescription,
+        gross_weight: parseInt(grossWeight),
+        tare_weight: parseInt(tareWeight),
+        net_weight: parseInt(netWeight),
+        net_weight_tons: netWeightTons,
+        carrier_name: carrierName || 'James Bond Trucking',
+        driver_name: driverName,
+        truck_number: truckNumber,
+        license_plate: licensePlate,
+        trailer_number: trailerNumber,
+        notes,
+        reference_number: referenceNumber,
+        status: 'draft',
+        created_by: createdBy
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error('Error creating BOL:', error);
+    res.status(500).json({ message: error.message || 'Failed to create BOL' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/bols/:id
+ * Get a single BOL by ID
+ */
+router.get("/bols/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('ops_bols')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'BOL not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching BOL:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch BOL' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/bols/:id/pdf
+ * Generate and download BOL PDF
+ */
+router.get("/bols/:id/pdf", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch BOL data
+    const { data: bol, error } = await supabase
+      .from('ops_bols')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    if (!bol) {
+      return res.status(404).json({ message: 'BOL not found' });
+    }
+
+    // Generate HTML for PDF
+    const html = generateBOLHTML(bol);
+
+    // Generate PDF using Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: {
+        top: '0.3in',
+        right: '0.3in',
+        bottom: '0.3in',
+        left: '0.3in'
+      }
+    });
+
+    await browser.close();
+
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${bol.bol_number}.pdf"`);
+    res.send(pdfBuffer);
+
+  } catch (error: any) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ message: error.message || 'Failed to generate PDF' });
+  }
+});
+
+/**
+ * Generate HTML for BOL PDF
+ */
+function generateBOLHTML(bol: any): string {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${bol.bol_number} - SSW BioSoils</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.3in;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #000;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #264027;
+    }
+    .logo-section {
+      flex: 1;
+    }
+    .company-name {
+      font-size: 22pt;
+      font-weight: bold;
+      color: #264027;
+      margin-bottom: 4px;
+    }
+    .tagline {
+      font-size: 10pt;
+      color: #6f732f;
+      margin-bottom: 8px;
+    }
+    .contact-info {
+      font-size: 9pt;
+      color: #333;
+    }
+    .doc-title {
+      text-align: right;
+      flex: 1;
+    }
+    .doc-title h1 {
+      font-size: 20pt;
+      color: #264027;
+      margin-bottom: 8px;
+    }
+    .bol-number {
+      font-size: 12pt;
+      font-weight: bold;
+      color: #000;
+      margin-bottom: 4px;
+    }
+    .doc-date {
+      font-size: 10pt;
+      color: #666;
+    }
+    .section {
+      margin-bottom: 18px;
+    }
+    .section-title {
+      font-size: 11pt;
+      font-weight: bold;
+      color: #264027;
+      background: #f8f9f8;
+      padding: 6px 10px;
+      border-left: 4px solid #264027;
+      margin-bottom: 8px;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 6px;
+      font-size: 10pt;
+    }
+    .label {
+      font-weight: bold;
+      width: 140px;
+      color: #333;
+    }
+    .value {
+      flex: 1;
+      color: #000;
+    }
+    .weight-summary {
+      background: #e8f5e9;
+      border: 2px solid #264027;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .weight-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 11pt;
+    }
+    .weight-row.total {
+      border-top: 2px solid #264027;
+      margin-top: 8px;
+      padding-top: 10px;
+      font-weight: bold;
+      font-size: 13pt;
+    }
+    .signature-section {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    .signature-box {
+      border-top: 1px solid #000;
+      padding-top: 6px;
+      min-height: 50px;
+    }
+    .signature-label {
+      font-size: 9pt;
+      color: #666;
+      margin-top: 4px;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ccc;
+      font-size: 8pt;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-section">
+      <div class="company-name">SSW BioSoils</div>
+      <div class="tagline">Regenerative Soil Solutions</div>
+      <div class="contact-info">
+        18980 Stanton Rd, Congress, AZ 85332<br>
+        Phone: (928) 632-7125<br>
+        Email: ralvarez@soilseedandwater.com
+      </div>
+    </div>
+    <div class="doc-title">
+      <h1>Bill of Lading / Weight Ticket</h1>
+      <div class="bol-number">BOL #: ${bol.bol_number}</div>
+      <div class="doc-date">Date: ${formatDate(bol.date)}</div>
+      ${bol.reference_number ? `<div class="doc-date">Reference: ${bol.reference_number}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="section">
+        <div class="section-title">Origin</div>
+        <div class="info-row">
+          <span class="label">From:</span>
+          <span class="value">${bol.origin_name}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Address:</span>
+          <span class="value">${bol.origin_address}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Phone:</span>
+          <span class="value">${bol.origin_phone}</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section">
+        <div class="section-title">Destination</div>
+        <div class="info-row">
+          <span class="label">Customer:</span>
+          <span class="value">${bol.customer_name}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Address:</span>
+          <span class="value">${bol.destination_address}</span>
+        </div>
+        ${bol.destination_city || bol.destination_state || bol.destination_zip ? `
+        <div class="info-row">
+          <span class="label">City, State ZIP:</span>
+          <span class="value">${[bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ')}</span>
+        </div>
+        ` : ''}
+        ${bol.onsite_contact_name ? `
+        <div class="info-row">
+          <span class="label">On-Site Contact:</span>
+          <span class="value">${bol.onsite_contact_name}${bol.onsite_contact_phone ? ` - ${bol.onsite_contact_phone}` : ''}</span>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Material / Load Information</div>
+    <div class="info-row">
+      <span class="label">Material Type:</span>
+      <span class="value">${bol.material_type}</span>
+    </div>
+    ${bol.material_description ? `
+    <div class="info-row">
+      <span class="label">Description:</span>
+      <span class="value">${bol.material_description}</span>
+    </div>
+    ` : ''}
+    <div class="info-row">
+      <span class="label">Load Type:</span>
+      <span class="value">${bol.load_type}</span>
+    </div>
+  </div>
+
+  <div class="weight-summary">
+    <div class="weight-row">
+      <span>Gross Weight:</span>
+      <span>${parseInt(bol.gross_weight).toLocaleString()} lbs</span>
+    </div>
+    <div class="weight-row">
+      <span>Tare Weight:</span>
+      <span>${parseInt(bol.tare_weight).toLocaleString()} lbs</span>
+    </div>
+    <div class="weight-row total">
+      <span>Net Weight:</span>
+      <span>${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)</span>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <div class="section-title">Carrier Information</div>
+      <div class="info-row">
+        <span class="label">Carrier/Company:</span>
+        <span class="value">${bol.carrier_name || '_______________________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Driver Name:</span>
+        <span class="value">${bol.driver_name || '_______________________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Truck #:</span>
+        <span class="value">${bol.truck_number || '___________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">License Plate:</span>
+        <span class="value">${bol.license_plate || '___________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Trailer #:</span>
+        <span class="value">${bol.trailer_number || '___________'}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Timing</div>
+      <div class="info-row">
+        <span class="label">Time In:</span>
+        <span class="value">${bol.time_in || '_______________________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Time Out:</span>
+        <span class="value">${bol.time_out || '_______________________'}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Scale Operator:</span>
+        <span class="value">${bol.scale_operator_initials || '_______________________'}</span>
+      </div>
+    </div>
+  </div>
+
+  ${bol.notes ? `
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <div style="padding: 8px 10px; background: #fafafa; border-radius: 4px; font-size: 10pt;">
+      ${bol.notes}
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="signature-section">
+    <div class="signature-box">
+      <div class="signature-label">Driver Signature</div>
+    </div>
+    <div class="signature-box">
+      <div class="signature-label">SSW Representative</div>
+    </div>
+    <div class="signature-box">
+      <div class="signature-label">Receiver Signature</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    This document serves as a Bill of Lading and Weight Ticket for the delivery of materials from SSW BioSoils.
+  </div>
+</body>
+</html>
+  `;
+}
+
+export default router;
