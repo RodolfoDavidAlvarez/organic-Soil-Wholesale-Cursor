@@ -427,6 +427,9 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Arizona Accent Strip */}
+      <div className="h-1.5 bg-gradient-to-r from-arizona-copper via-arizona-sunset to-arizona-terracotta" />
+
       <SEO
         title="Arizona-Made Organic Compost & Soil | Wholesale Bulk Supplier"
         description="Arizona's leading wholesale supplier of locally-produced organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads. Made in Arizona."
