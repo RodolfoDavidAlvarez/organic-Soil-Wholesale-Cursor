@@ -138,19 +138,21 @@ const parseSizeOptions = (input: unknown): SizeOption[] => {
   }
 
   return input
+    .filter((option: any) => option?.is_active === true) // Only show active size options
     .map((option: any): SizeOption | null => {
       if (!option) return null;
       const label = (option.label ?? option.name ?? option.title ?? "").toString().trim();
       if (!label) return null;
       const key = option.key ?? slugify(label);
-      const price =
-        typeof option.price === "number"
-          ? option.price
-          : typeof option.priceCents === "number"
-            ? option.priceCents / 100
-            : typeof option.price_cents === "number"
-              ? option.price_cents / 100
-              : undefined;
+      // Prices hidden for now - uncomment when ready to show pricing
+      // const price =
+      //   typeof option.price === "number"
+      //     ? option.price
+      //     : typeof option.priceCents === "number"
+      //       ? option.priceCents / 100
+      //       : typeof option.price_cents === "number"
+      //         ? option.price_cents / 100
+      //         : undefined;
       const displayOrder =
         typeof option.display_order === "number" ? option.display_order : typeof option.displayOrder === "number" ? option.displayOrder : undefined;
       const description = typeof option.description === "string" && option.description.trim().length > 0 ? option.description.trim() : undefined;
@@ -163,7 +165,7 @@ const parseSizeOptions = (input: unknown): SizeOption[] => {
       return {
         key,
         label,
-        ...(price !== undefined && { price }),
+        // price hidden for now
         ...(displayOrder !== undefined && { displayOrder }),
         ...(description !== undefined && { description }),
         ...(image !== undefined && { image }),
@@ -388,7 +390,7 @@ const ProductDetail = () => {
             },
             {
               label: "Availability",
-              value: product.payAndPickup?.isEnabled ? "Pay & Pickup ready" : "Delivery planning included",
+              value: "Delivery planning included",
               icon: Truck,
             },
           ]
@@ -533,10 +535,14 @@ const ProductDetail = () => {
         keywords={keywordList}
       />
 
-      <section className="bg-gradient-to-br from-muted/20 via-white to-white py-6 sm:py-10">
-        <div className="container mx-auto px-4">
-          <div className="mb-6">
-            <Button variant="ghost" className="text-muted-foreground" asChild>
+      <section className="relative bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-8 sm:py-12 overflow-hidden">
+        {/* Subtle background accents */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.05),_transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(181,84,26,0.03),_transparent_50%)]" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="mb-8">
+            <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-white/80" asChild>
               <Link href="/products">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Products
@@ -570,38 +576,34 @@ const ProductDetail = () => {
             <div className="space-y-10">
               <div className="grid gap-10 items-start xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
                 <section className="space-y-8">
-                  <div className="relative overflow-hidden rounded-[32px] border bg-gradient-to-br from-white via-primary/5 to-primary/10 shadow-2xl">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.7),_transparent_55%)]" />
+                  <div className="relative overflow-hidden rounded-[32px] border border-arizona-sage/10 bg-gradient-to-br from-white via-arizona-sand/20 to-arizona-desert/30 shadow-2xl">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.8),_transparent_55%)]" />
                     <div className="relative z-10 grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
                       <div className="space-y-6 p-6 sm:p-10">
-                        <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide text-gray-600">
-                          <Badge variant="secondary" className="bg-white/80 text-gray-900 shadow-sm">
+                        <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide">
+                          <Badge className="bg-arizona-sage/10 text-arizona-sage border-0 shadow-sm">
+                            <Leaf className="h-3 w-3 mr-1" />
                             {product.category}
                           </Badge>
                           {product.productType && (
-                            <Badge variant="outline" className="border-white/70 bg-white/60 text-gray-900">
+                            <Badge variant="outline" className="border-arizona-copper/20 bg-arizona-copper/5 text-arizona-copper">
                               {product.productType}
                             </Badge>
                           )}
-                          {product.payAndPickup?.isEnabled && (
-                            <Badge className="bg-primary text-primary-foreground font-semibold shadow-lg">
-                              <Truck className="mr-2 h-4 w-4" />
-                              {product.payAndPickup?.badge ?? "Pay & Pickup"}
-                            </Badge>
-                          )}
+                          {/* Pay & Pickup badge hidden until feature is live */}
                         </div>
                         <div className="space-y-4">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Soil Seed &amp; Water</p>
-                            <h1 className="mt-2 text-3xl font-semibold leading-tight text-foreground sm:text-4xl">{product.displayTitle}</h1>
+                            <p className="text-xs uppercase tracking-[0.3em] text-arizona-sage font-semibold">Organic Soil Wholesale</p>
+                            <h1 className="mt-3 text-3xl font-heading font-bold leading-tight text-foreground sm:text-4xl lg:text-5xl">{product.displayTitle}</h1>
                           </div>
-                          <p className="text-base leading-relaxed text-muted-foreground">
-                            {product.previewCopy ?? primaryDescription ?? "Sustainable soil solutions for thriving landscapes."}
+                          <p className="text-base leading-relaxed text-muted-foreground max-w-lg">
+                            {product.previewCopy ?? primaryDescription ?? "Premium Arizona-produced soil solutions for thriving landscapes."}
                           </p>
                           {featureSpotlights.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {featureSpotlights.map((item) => (
-                                <span key={item} className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+                                <span key={item} className="rounded-full bg-white/90 border border-arizona-sage/20 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
                                   {item}
                                 </span>
                               ))}
@@ -624,19 +626,19 @@ const ProductDetail = () => {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
-                            <Leaf className="h-4 w-4 text-primary" />
-                            <span>{product.category}</span>
+                          <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
+                            <Leaf className="h-4 w-4 text-arizona-sage" />
+                            <span className="font-medium">{product.category}</span>
                           </div>
                           {product.productType && (
-                            <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              <span>{product.productType}</span>
+                            <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
+                              <Sparkles className="h-4 w-4 text-arizona-copper" />
+                              <span className="font-medium">{product.productType}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-sm">
-                            {product.payAndPickup?.isEnabled ? <Truck className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4 text-primary" />}
-                            <span>{product.payAndPickup?.isEnabled ? "Pickup ready" : "Delivery planning included"}</span>
+                          <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span className="font-medium">Delivery available</span>
                           </div>
                         </div>
                       </div>
@@ -678,12 +680,13 @@ const ProductDetail = () => {
 
                   {heroStats.length > 0 && (
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                      {heroStats.map((stat) => {
+                      {heroStats.map((stat, index) => {
                         const Icon = stat.icon;
+                        const iconColors = ["text-arizona-sage", "text-arizona-copper", "text-primary", "text-arizona-sage"];
                         return (
-                          <div key={stat.label} className="rounded-2xl border bg-white/90 p-4 shadow-sm backdrop-blur">
-                            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                              <Icon className="h-4 w-4 text-primary" />
+                          <div key={stat.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+                            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">
+                              <Icon className={`h-4 w-4 ${iconColors[index % iconColors.length]}`} />
                               {stat.label}
                             </div>
                             <p className="mt-2 text-lg font-semibold text-foreground">{stat.value}</p>
@@ -875,47 +878,39 @@ const ProductDetail = () => {
                 </section>
 
                 <aside className="space-y-6">
-                  <Card className="rounded-3xl border bg-gray-950 p-6 text-white shadow-2xl">
-                    <p className="text-xs uppercase tracking-[0.3em] text-white/70">Order direct</p>
-                    <h3 className="mt-2 text-2xl font-semibold leading-tight">Stage your soil order with Soil Seed &amp; Water</h3>
-                    <p className="mt-3 text-sm text-white/80">
-                      Dedicated reps coordinate blending, packaging, and logistics so you can focus on installs.
-                    </p>
-                    <div className="mt-6 space-y-3">
-                      <Button size="lg" className="w-full text-base" asChild>
-                        <Link href="/order">
-                          <ShoppingBag className="mr-2 h-4 w-4" />
-                          Request a Quote
-                        </Link>
-                      </Button>
-                      {product.payAndPickup?.isEnabled && (
-                        <Button
-                          size="lg"
-                          variant="secondary"
-                          className="w-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
-                          asChild
-                        >
-                          <Link href={`/pay-and-pickup${product.id ? `?product=${product.id}` : ""}`}>
-                            <Truck className="mr-2 h-4 w-4" />
-                            Pay &amp; Pickup
+                  <Card className="rounded-3xl border-0 bg-gradient-to-br from-gray-900 via-gray-900 to-arizona-sage/30 p-6 text-white shadow-2xl overflow-hidden relative">
+                    {/* Subtle pattern overlay */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.15),_transparent_50%)]" />
+                    <div className="relative z-10">
+                      <p className="text-xs uppercase tracking-[0.3em] text-arizona-sage font-semibold">Order Direct</p>
+                      <h3 className="mt-3 text-2xl font-heading font-bold leading-tight">Get a wholesale quote today</h3>
+                      <p className="mt-3 text-sm text-white/80 leading-relaxed">
+                        Our team coordinates blending, packaging, and logistics across Arizona so you can focus on your projects.
+                      </p>
+                      <div className="mt-6 space-y-3">
+                        <Button size="lg" className="w-full text-base bg-arizona-sage hover:bg-arizona-sage/90 shadow-lg" asChild>
+                          <Link href="/order">
+                            <ShoppingBag className="mr-2 h-4 w-4" />
+                            Request a Quote
                           </Link>
                         </Button>
-                      )}
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="w-full border-white/30 bg-transparent text-white hover:bg-white/10"
-                        asChild
-                      >
-                        <Link href="/contact">
-                          <Phone className="mr-2 h-4 w-4" />
-                          Talk to an Expert
-                        </Link>
-                      </Button>
-                    </div>
-                    <div className="mt-6 flex items-center gap-3 text-xs text-white/70">
-                      <Phone className="h-4 w-4" />
-                      <span>Live support 7a–7p PT • Same-week scheduling available</span>
+                        {/* Pay & Pickup button hidden until feature is live */}
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30"
+                          asChild
+                        >
+                          <Link href="/contact">
+                            <Phone className="mr-2 h-4 w-4" />
+                            Talk to an Expert
+                          </Link>
+                        </Button>
+                      </div>
+                      <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-3 text-xs text-white/60">
+                        <MapPin className="h-4 w-4 text-arizona-copper" />
+                        <span>Arizona-produced • Local delivery available</span>
+                      </div>
                     </div>
                   </Card>
 
@@ -944,7 +939,7 @@ const ProductDetail = () => {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-3">
                                 <span className="font-semibold">{option.label}</span>
-                                {option.price && <span className="text-sm font-semibold text-primary">{formatCurrency(option.price)}</span>}
+                                {/* Pricing hidden until ready to show */}
                               </div>
                               {option.description && <p className="text-xs text-muted-foreground">{option.description}</p>}
                             </div>
@@ -974,25 +969,29 @@ const ProductDetail = () => {
                     </div>
                   </Card>
 
-                  <Card className="rounded-3xl border bg-white p-6 shadow-lg">
+                  <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
                     <div className="flex items-center gap-3">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <div className="rounded-full bg-arizona-sage/10 p-2">
+                        <ShieldCheck className="h-5 w-5 text-arizona-sage" />
+                      </div>
                       <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Confidence</p>
-                        <h3 className="text-lg font-semibold">Why teams trust us</h3>
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">Confidence</p>
+                        <h3 className="text-lg font-heading font-semibold">Why teams trust us</h3>
                       </div>
                     </div>
                     <ul className="mt-6 space-y-4">
-                      {confidencePoints.map((point) => {
+                      {confidencePoints.map((point, index) => {
                         const Icon = point.icon;
+                        const bgColors = ["bg-arizona-sage/10", "bg-arizona-copper/10", "bg-primary/10"];
+                        const iconColors = ["text-arizona-sage", "text-arizona-copper", "text-primary"];
                         return (
                           <li key={point.title} className="flex gap-3">
-                            <div className="rounded-full bg-muted/60 p-2">
-                              <Icon className="h-4 w-4 text-primary" />
+                            <div className={`rounded-full ${bgColors[index % bgColors.length]} p-2.5 flex-shrink-0`}>
+                              <Icon className={`h-4 w-4 ${iconColors[index % iconColors.length]}`} />
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-foreground">{point.title}</p>
-                              <p className="text-sm text-muted-foreground">{point.description}</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{point.description}</p>
                             </div>
                           </li>
                         );
@@ -1005,6 +1004,34 @@ const ProductDetail = () => {
           )}
         </div>
       </section>
+
+      {/* Bottom CTA Section */}
+      {!isLoading && product && (
+        <section className="bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-16">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-2xl font-heading font-bold text-foreground sm:text-3xl">
+              Ready to order <span className="text-primary">{product.displayTitle}</span>?
+            </h2>
+            <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
+              Get wholesale pricing and delivery scheduling for your project.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" asChild>
+                <Link href="/order">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Request a Quote
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="border-arizona-copper/30 hover:bg-arizona-copper/5" asChild>
+                <Link href="/products">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Catalog
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
         <DialogContent className="sm:max-w-5xl border-none bg-black/90 text-white duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-100 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
           <DialogHeader className="sr-only">

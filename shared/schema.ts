@@ -398,9 +398,11 @@ export const opsBols = pgTable("ops_bols", {
   date: timestamp("date").notNull(),
 
   // Origin Information
-  originName: text("origin_name").notNull().default("SSW BioSoils"),
-  originAddress: text("origin_address").notNull().default("18980 Stanton Rd, Congress, AZ 85332"),
-  originPhone: text("origin_phone").default("(928) 632-7125"),
+  originLocation: text("origin_location").notNull().default("Phoenix, AZ Facility"),
+  originAddress: text("origin_address").notNull().default("1634 North 19th Avenue"),
+  originCity: text("origin_city").notNull().default("Phoenix"),
+  originState: text("origin_state").notNull().default("AZ"),
+  originZip: text("origin_zip").notNull().default("85007"),
 
   // Destination Information
   customerName: text("customer_name").notNull(),

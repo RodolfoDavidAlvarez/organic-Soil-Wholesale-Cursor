@@ -32,7 +32,12 @@ export default function AdminLogin() {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && admin) {
-      navigate("/admin");
+      // Operations users go directly to Operations page
+      if (admin.role === 'operations') {
+        navigate("/admin/operations");
+      } else {
+        navigate("/admin");
+      }
     }
   }, [admin, loading, navigate]);
 
@@ -54,9 +59,15 @@ export default function AdminLogin() {
 
     try {
       const normalizedEmail = data.email.trim();
-      await signIn(normalizedEmail, data.password);
+      const result = await signIn(normalizedEmail, data.password);
       setStatusMessage("Login successful! Redirecting...");
-      navigate("/admin");
+
+      // Check if operations user and redirect accordingly
+      if (result?.role === 'operations') {
+        navigate("/admin/operations");
+      } else {
+        navigate("/admin");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid credentials";
       setStatusMessage(null);
@@ -87,7 +98,7 @@ export default function AdminLogin() {
 
   // Redirect if already authenticated
   if (admin) {
-    return <Redirect to="/admin" />;
+    return <Redirect to={admin.role === 'operations' ? "/admin/operations" : "/admin"} />;
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation } from '@tantml:react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Save, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,11 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import AdminLayout from '@/components/admin/AdminLayout';
+import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 
 interface BOLFormData {
   date: string;
+  originLocation: string;
+  originAddress: string;
+  originCity: string;
+  originState: string;
+  originZip: string;
   customerName: string;
   destinationAddress: string;
   destinationCity: string;
@@ -43,7 +48,28 @@ const MATERIAL_TYPES = [
   'Worm Castings',
   'Mulch - Hardwood',
   'Mulch - Cypress',
-  'Custom Blend'
+  'Palletized Product',
+  'Bagged Product',
+  'Equipment/Items',
+  'Custom Blend',
+  'Other'
+];
+
+const ORIGIN_LOCATIONS = [
+  {
+    name: 'Congress, AZ Plant',
+    address: 'Congress Plant Road',
+    city: 'Congress',
+    state: 'AZ',
+    zip: '85332'
+  },
+  {
+    name: 'Phoenix, AZ Facility',
+    address: '1634 North 19th Avenue',
+    city: 'Phoenix',
+    state: 'AZ',
+    zip: '85007'
+  }
 ];
 
 export default function CreateBOL() {
@@ -51,6 +77,11 @@ export default function CreateBOL() {
   const { toast } = useToast();
   const [formData, setFormData] = useState<BOLFormData>({
     date: new Date().toISOString().split('T')[0],
+    originLocation: 'Phoenix, AZ Facility',
+    originAddress: '1634 North 19th Avenue',
+    originCity: 'Phoenix',
+    originState: 'AZ',
+    originZip: '85007',
     customerName: '',
     destinationAddress: '',
     destinationCity: '',
@@ -62,7 +93,7 @@ export default function CreateBOL() {
     materialDescription: '',
     grossWeight: '',
     tareWeight: '',
-    carrierName: 'James Bond Trucking',
+    carrierName: '',
     driverName: '',
     truckNumber: '',
     licensePlate: '',
@@ -133,21 +164,16 @@ export default function CreateBOL() {
       return;
     }
 
-    if (!formData.grossWeight || !formData.tareWeight) {
-      toast({
-        title: 'Missing Weight Information',
-        description: 'Please enter gross and tare weight.',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // Weight is optional - only include if provided
+    const hasWeight = formData.grossWeight && formData.tareWeight;
 
     const bolData = {
       ...formData,
-      grossWeight: parseInt(formData.grossWeight),
-      tareWeight: parseInt(formData.tareWeight),
-      netWeight,
-      netWeightTons
+      grossWeight: hasWeight ? parseInt(formData.grossWeight) : 0,
+      tareWeight: hasWeight ? parseInt(formData.tareWeight) : 0,
+      netWeight: hasWeight ? netWeight : 0,
+      netWeightTons: hasWeight ? netWeightTons : '0.00',
+      hasWeight // Pass this flag to indicate if weight info is included
     };
 
     createBOLMutation.mutate(bolData);
@@ -157,65 +183,138 @@ export default function CreateBOL() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleOriginChange = (locationName: string) => {
+    const location = ORIGIN_LOCATIONS.find(loc => loc.name === locationName);
+    if (location) {
+      setFormData(prev => ({
+        ...prev,
+        originLocation: location.name,
+        originAddress: location.address,
+        originCity: location.city,
+        originState: location.state,
+        originZip: location.zip
+      }));
+    }
+  };
+
   return (
     <ProtectedAdminRoute>
-      <AdminLayout>
-        <div className="space-y-6">
+      <OperationsLayout>
+        <div className="space-y-4 md:space-y-6 p-4 md:p-6">
           {/* Header */}
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               onClick={() => navigate('/admin/operations')}
+              size="sm"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Operations
+              Back
             </Button>
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Create New BOL / Weight Ticket</h1>
-            <p className="text-sm text-gray-500 mt-1">Fill in the delivery details to generate a professional BOL</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">Create New BOL / Weight Ticket</h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">Fill in the delivery details to generate a professional BOL</p>
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
               {/* Left Column */}
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 {/* Delivery Information */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Delivery Information</CardTitle>
-                    <CardDescription>Basic delivery details</CardDescription>
+                  <CardHeader className="px-4 py-4">
+                    <CardTitle className="text-base md:text-lg">Delivery Information</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">Basic delivery details</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 md:space-y-4 px-4 pb-4">
                     <div>
-                      <Label htmlFor="date">Delivery Date *</Label>
+                      <Label htmlFor="date" className="text-xs md:text-sm">Delivery Date *</Label>
                       <Input
                         id="date"
                         type="date"
                         value={formData.date}
                         onChange={(e) => handleChange('date', e.target.value)}
+                        className="text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="customerName">Customer Name *</Label>
+                      <Label htmlFor="customerName" className="text-xs md:text-sm">Customer Name *</Label>
                       <Input
                         id="customerName"
                         value={formData.customerName}
                         onChange={(e) => handleChange('customerName', e.target.value)}
                         placeholder="e.g., Shawn (Pistachio Project)"
+                        className="text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="referenceNumber">Project Reference / PO Number</Label>
+                      <Label htmlFor="referenceNumber" className="text-xs md:text-sm">Project Reference / PO Number</Label>
                       <Input
                         id="referenceNumber"
                         value={formData.referenceNumber}
                         onChange={(e) => handleChange('referenceNumber', e.target.value)}
                         placeholder="Optional project name or PO#"
+                        className="text-sm"
                       />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Origin Information */}
+                <Card>
+                  <CardHeader className="px-4 py-4">
+                    <CardTitle className="text-base md:text-lg">Origin Information</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">Where is the material coming from?</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4 px-4 pb-4">
+                    <div>
+                      <Label htmlFor="originLocation" className="text-xs md:text-sm">Quick Select Location</Label>
+                      <Select value={formData.originLocation} onValueChange={handleOriginChange}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select origin location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ORIGIN_LOCATIONS.map(loc => (
+                            <SelectItem key={loc.name} value={loc.name}>{loc.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="originAddress" className="text-xs md:text-sm">Origin Address</Label>
+                      <Input
+                        id="originAddress"
+                        value={formData.originAddress}
+                        onChange={(e) => handleChange('originAddress', e.target.value)}
+                        placeholder="Street address"
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="originCity" className="text-xs md:text-sm">City</Label>
+                        <Input
+                          id="originCity"
+                          value={formData.originCity}
+                          onChange={(e) => handleChange('originCity', e.target.value)}
+                          placeholder="e.g., Phoenix"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="originZip" className="text-xs md:text-sm">ZIP Code</Label>
+                        <Input
+                          id="originZip"
+                          value={formData.originZip}
+                          onChange={(e) => handleChange('originZip', e.target.value)}
+                          placeholder="e.g., 85007"
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -333,43 +432,43 @@ export default function CreateBOL() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Weight Information</CardTitle>
-                    <CardDescription>Enter weights in pounds (lbs)</CardDescription>
+                    <CardDescription>Optional - for bulk material loads (not required for pallets/items)</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="grossWeight">Gross Weight (lbs) *</Label>
+                      <Label htmlFor="grossWeight">Gross Weight (lbs)</Label>
                       <Input
                         id="grossWeight"
                         type="number"
                         value={formData.grossWeight}
                         onChange={(e) => handleChange('grossWeight', e.target.value)}
                         placeholder="e.g., 83780"
-                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="tareWeight">Tare Weight (lbs) *</Label>
+                      <Label htmlFor="tareWeight">Tare Weight (lbs)</Label>
                       <Input
                         id="tareWeight"
                         type="number"
                         value={formData.tareWeight}
                         onChange={(e) => handleChange('tareWeight', e.target.value)}
                         placeholder="e.g., 24820"
-                        required
                       />
                     </div>
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="font-medium">Net Weight:</span>
-                          <span className="font-bold text-lg">{netWeight.toLocaleString()} lbs</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Net Weight (Tons):</span>
-                          <span className="font-bold text-lg">{netWeightTons} tons</span>
+                    {(formData.grossWeight || formData.tareWeight) && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="font-medium">Net Weight:</span>
+                            <span className="font-bold text-lg">{netWeight.toLocaleString()} lbs</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-medium">Net Weight (Tons):</span>
+                            <span className="font-bold text-lg">{netWeightTons} tons</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -450,18 +549,21 @@ export default function CreateBOL() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 md:mt-6">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate('/admin/operations')}
+                className="w-full sm:w-auto"
+                size="sm"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="bg-[#264027] hover:bg-[#3c5233]"
+                className="bg-[#264027] hover:bg-[#3c5233] w-full sm:w-auto"
                 disabled={createBOLMutation.isPending}
+                size="sm"
               >
                 {createBOLMutation.isPending ? (
                   <>Creating BOL...</>
@@ -475,7 +577,7 @@ export default function CreateBOL() {
             </div>
           </form>
         </div>
-      </AdminLayout>
+      </OperationsLayout>
     </ProtectedAdminRoute>
   );
 }

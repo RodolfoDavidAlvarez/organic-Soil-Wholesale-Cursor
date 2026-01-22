@@ -933,6 +933,310 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       });
     }
 
+    // ============ ADMIN AUTH ENDPOINTS ============
+
+    // Admin login
+    if (path === '/api/admin/auth/login' && req.method === 'POST') {
+      const { email, password } = req.body || {};
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      // Check for hardcoded operations credentials
+      if (email === 'operations@soilseedandwater.com' && password === 'ops2026') {
+        const jwt = (await import('jsonwebtoken')).default;
+        const token = jwt.sign(
+          { id: 'ops-user', email, role: 'operations' },
+          process.env.JWT_SECRET || 'your-secret-key',
+          { expiresIn: '8h' }
+        );
+        return res.json({
+          token,
+          admin: { id: 'ops-user', email, full_name: 'Operations Team', role: 'operations' }
+        });
+      }
+
+      // Check for super admin credentials
+      if (email === 'ralvarez@soilseedandwater.com' && password === 'admin123') {
+        const jwt = (await import('jsonwebtoken')).default;
+        const token = jwt.sign(
+          { id: 'super-admin', email, role: 'super_admin' },
+          process.env.JWT_SECRET || 'your-secret-key',
+          { expiresIn: '8h' }
+        );
+        return res.json({
+          token,
+          admin: { id: 'super-admin', email, full_name: 'Rodolfo Alvarez', role: 'super_admin' }
+        });
+      }
+
+      // Check database for other users
+      const { data: admin, error: adminError } = await db
+        .from('admin_users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (adminError || !admin || !admin.password_hash) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const bcrypt = (await import('bcrypt')).default;
+      const validPassword = await bcrypt.compare(password, admin.password_hash);
+
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const jwt = (await import('jsonwebtoken')).default;
+      const token = jwt.sign(
+        { id: admin.id, email: admin.email, role: admin.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '8h' }
+      );
+
+      return res.json({
+        token,
+        admin: { id: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role }
+      });
+    }
+
+    // Admin validate token
+    if (path === '/api/admin/auth/validate' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      // Handle hardcoded users
+      if (admin.id === 'ops-user' || admin.id === 'super-admin') {
+        return res.json({
+          admin: {
+            id: admin.id,
+            email: admin.email,
+            full_name: admin.id === 'ops-user' ? 'Operations Team' : 'Rodolfo Alvarez',
+            role: admin.role,
+            permissions: {}
+          }
+        });
+      }
+
+      // Get from database
+      const { data: dbAdmin, error } = await db
+        .from('admin_users')
+        .select('id, email, full_name, role, permissions')
+        .eq('id', admin.id)
+        .single();
+
+      if (error || !dbAdmin) {
+        return res.status(401).json({ error: 'Admin not found' });
+      }
+
+      return res.json({ admin: dbAdmin });
+    }
+
+    // ============ OPERATIONS BOL ENDPOINTS ============
+
+    // Get all BOLs
+    if (path === '/api/admin/operations/bols' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data, error } = await db
+        .from('ops_bols')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    // Get single BOL
+    const bolDetailMatch = path.match(/^\/api\/admin\/operations\/bols\/(\d+)$/);
+    if (bolDetailMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const bolId = bolDetailMatch[1];
+      const { data, error } = await db
+        .from('ops_bols')
+        .select('*')
+        .eq('id', bolId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return res.status(404).json({ error: 'BOL not found' });
+        throw error;
+      }
+      return res.json(data);
+    }
+
+    // Create BOL
+    if (path === '/api/admin/operations/bols' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const bolData = req.body;
+
+      // Generate BOL number
+      const today = new Date();
+      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+      const { count } = await db.from('ops_bols').select('*', { count: 'exact', head: true })
+        .gte('created_at', today.toISOString().slice(0, 10));
+      const bolNumber = `BOL-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
+
+      const insertData = {
+        bol_number: bolNumber,
+        date: bolData.date || today.toISOString().slice(0, 10),
+        origin_location: bolData.originLocation,
+        origin_address: bolData.originAddress,
+        origin_city: bolData.originCity,
+        origin_state: bolData.originState,
+        origin_zip: bolData.originZip,
+        customer_name: bolData.customerName,
+        destination_address: bolData.destinationAddress,
+        destination_city: bolData.destinationCity,
+        destination_state: bolData.destinationState,
+        destination_zip: bolData.destinationZip,
+        onsite_contact_name: bolData.onsiteContactName || null,
+        onsite_contact_phone: bolData.onsiteContactPhone || null,
+        material_type: bolData.materialType,
+        material_description: bolData.materialDescription || null,
+        gross_weight: bolData.grossWeight || 0,
+        tare_weight: bolData.tareWeight || 0,
+        net_weight: bolData.netWeight || 0,
+        net_weight_tons: bolData.netWeightTons || '0.00',
+        carrier_name: bolData.carrierName,
+        driver_name: bolData.driverName || null,
+        truck_number: bolData.truckNumber || null,
+        license_plate: bolData.licensePlate || null,
+        trailer_number: bolData.trailerNumber || null,
+        notes: bolData.notes || null,
+        reference_number: bolData.referenceNumber || null,
+        status: 'completed',
+        created_by: admin.id
+      };
+
+      const { data, error } = await db.from('ops_bols').insert(insertData).select().single();
+      if (error) throw error;
+
+      return res.status(201).json(data);
+    }
+
+    // Delete BOLs
+    if (path === '/api/admin/operations/bols/delete' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { ids } = req.body || {};
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'No IDs provided' });
+      }
+
+      const { error } = await db.from('ops_bols').delete().in('id', ids);
+      if (error) throw error;
+
+      return res.json({ success: true, deleted: ids.length });
+    }
+
+    // Generate BOL PDF
+    const bolPdfMatch = path.match(/^\/api\/admin\/operations\/bols\/(\d+)\/pdf$/);
+    if (bolPdfMatch && req.method === 'GET') {
+      // Check token from query param or header
+      const tokenFromQuery = url.searchParams.get('token');
+      const tokenFromHeader = req.headers.authorization?.replace('Bearer ', '');
+      const token = tokenFromQuery || tokenFromHeader;
+
+      if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const jwt = (await import('jsonwebtoken')).default;
+        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      const bolId = bolPdfMatch[1];
+      const { data: bol, error } = await db.from('ops_bols').select('*').eq('id', bolId).single();
+
+      if (error || !bol) return res.status(404).json({ error: 'BOL not found' });
+
+      const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #264027;padding-bottom:15px;margin-bottom:15px}
+.logo-section h1{font-size:20px;color:#264027;margin-bottom:3px}
+.logo-section p{font-size:9px;color:#666}
+.bol-info{text-align:right}
+.bol-number{font-size:16px;font-weight:bold;font-family:monospace;color:#264027}
+.date{font-size:11px;color:#666;margin-top:3px}
+.section{margin-bottom:12px;border:1px solid #ddd;border-radius:4px;overflow:hidden}
+.section-header{background:#f5f5f5;padding:6px 10px;font-weight:bold;font-size:10px;text-transform:uppercase;color:#333;border-bottom:1px solid #ddd}
+.section-content{padding:10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.field{margin-bottom:6px}
+.field-label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:1px}
+.field-value{font-size:11px;font-weight:500}
+.weight-summary{background:#1a1a1a;color:white;padding:12px;border-radius:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;margin-top:8px}
+.weight-box{padding:8px;border-radius:4px}
+.weight-box.gross,.weight-box.tare{background:rgba(255,255,255,0.1)}
+.weight-box.net{background:#264027}
+.weight-label{font-size:8px;text-transform:uppercase;opacity:0.8;margin-bottom:2px}
+.weight-value{font-size:16px;font-weight:bold;font-family:monospace}
+.weight-unit{font-size:8px;opacity:0.7}
+.signature-section{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;padding-top:15px;border-top:1px solid #ddd}
+.signature-box{border-bottom:1px solid #333;padding-bottom:30px;margin-bottom:5px}
+.signature-label{font-size:9px;color:#666}
+.footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:8px;color:#666;text-align:center}
+</style></head><body>
+<div class="header">
+<div class="logo-section"><h1>Soil Seed and Water</h1><p>1634 North 19th Avenue, Phoenix, AZ 85007 | info@soilseedandwater.com</p></div>
+<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div style="font-size:9px;color:#666;margin-top:3px">Ref: ${bol.reference_number}</div>`:''}</div>
+</div>
+<div class="two-col">
+<div class="section"><div class="section-header">Origin</div><div class="section-content">
+<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address}<br>${bol.origin_city}, ${bol.origin_state} ${bol.origin_zip}</div></div>
+</div></div>
+<div class="section"><div class="section-header">Destination</div><div class="section-content">
+<div class="field"><div class="field-label">Customer</div><div class="field-value">${bol.customer_name}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}</div></div>
+${bol.onsite_contact_name?`<div class="field"><div class="field-label">Contact</div><div class="field-value">${bol.onsite_contact_name}${bol.onsite_contact_phone?' - '+bol.onsite_contact_phone:''}</div></div>`:''}
+</div></div>
+</div>
+<div class="section"><div class="section-header">Material</div><div class="section-content">
+<div class="field"><div class="field-label">Type</div><div class="field-value">${bol.material_type}</div></div>
+${bol.material_description?`<div class="field"><div class="field-label">Description</div><div class="field-value">${bol.material_description}</div></div>`:''}
+${hasWeight?`<div class="weight-summary">
+<div class="weight-box gross"><div class="weight-label">Gross</div><div class="weight-value">${bol.gross_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
+<div class="weight-box tare"><div class="weight-label">Tare</div><div class="weight-value">${bol.tare_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
+<div class="weight-box net"><div class="weight-label">Net</div><div class="weight-value">${bol.net_weight.toLocaleString()}</div><div class="weight-unit">${bol.net_weight_tons} tons</div></div>
+</div>`:''}
+</div></div>
+<div class="section"><div class="section-header">Carrier & Transport</div><div class="section-content">
+<div class="two-col">
+<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name}</div></div>
+${bol.driver_name?`<div class="field"><div class="field-label">Driver</div><div class="field-value">${bol.driver_name}</div></div>`:''}</div>
+<div>${bol.truck_number?`<div class="field"><div class="field-label">Truck #</div><div class="field-value">${bol.truck_number}</div></div>`:''}
+${bol.license_plate?`<div class="field"><div class="field-label">License Plate</div><div class="field-value">${bol.license_plate}</div></div>`:''}
+${bol.trailer_number?`<div class="field"><div class="field-label">Trailer #</div><div class="field-value">${bol.trailer_number}</div></div>`:''}</div>
+</div></div></div>
+${bol.notes?`<div class="section"><div class="section-header">Notes</div><div class="section-content"><div class="field-value">${bol.notes}</div></div></div>`:''}
+<div class="signature-section">
+<div><div class="signature-box"></div><div class="signature-label">Shipper Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Driver Signature / Date</div></div>
+</div>
+<div class="footer">This document serves as a Bill of Lading${hasWeight?' and Weight Ticket':''} for the delivery of materials from Soil Seed and Water.</div>
+</body></html>`;
+
+      // Return HTML as PDF-ready content
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(html);
+    }
+
     // 404
     return res.status(404).json({ error: 'API endpoint not found', path });
   } catch (error) {

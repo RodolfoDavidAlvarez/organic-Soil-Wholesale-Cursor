@@ -428,9 +428,9 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Premium Bulk Organic Soil Products"
-        description="Arizona's leading wholesale supplier of organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads."
-        keywords="bulk organic soil, wholesale compost, dairy compost bulk, worm castings wholesale, commercial soil supplier, soil amendments wholesale, potting soil bulk, landscaper soil supplier, golf course soil, supersack soil, pallet soil, wholesale plant nutrients"
+        title="Arizona-Made Organic Compost & Soil | Wholesale Bulk Supplier"
+        description="Arizona's leading wholesale supplier of locally-produced organic soil amendments, compost, and potting soil in bulk. Serving landscapers, commercial growers, and farms with pallets, supersacks, and truckloads. Made in Arizona."
+        keywords="Arizona compost, Arizona made soil, local compost Arizona, bulk organic soil, wholesale compost, dairy compost bulk, worm castings wholesale, commercial soil supplier, soil amendments wholesale, potting soil bulk, landscaper soil supplier, golf course soil, supersack soil, pallet soil, wholesale plant nutrients, HB 2819"
         canonical="https://organicsoilwholesale.com"
         structuredData={{
           "@context": "https://schema.org",
@@ -439,7 +439,7 @@ const Home = () => {
             "@type": "SpeakableSpecification",
             cssSelector: ["h1", ".speakable"],
           },
-          name: "Organic Soil Wholesale - Premium Bulk Soil Products",
+          name: "Organic Soil Wholesale - Arizona-Made Premium Bulk Soil Products",
           url: "https://organicsoilwholesale.com",
           potentialAction: {
             "@type": "SearchAction",
@@ -450,8 +450,9 @@ const Home = () => {
       >
         <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
       </SEO>
+
       {/* Hero Section with Title */}
-      <section className="relative pt-10 md:pt-16 pb-16 bg-white overflow-hidden min-h-[60vh]">
+      <section className="relative pt-10 md:pt-16 pb-16 bg-gradient-to-b from-arizona-desert/20 to-white overflow-hidden min-h-[60vh]">
         <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
@@ -463,9 +464,15 @@ const Home = () => {
                 transition={{ duration: 0.6 }}
                 className="text-center lg:text-left"
               >
-                <h1 className="text-3xl md:text-5xl font-bold text-primary mb-4">Buy Organic Soil Products</h1>
-                <p className="text-2xl md:text-3xl text-muted-foreground flex items-center gap-4">
-                  in wholesale <Truck className="h-10 w-10 md:h-14 md:w-14 text-primary/90" />
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 leading-tight">
+                  Premium{" "}
+                  <span className="text-primary">Organic Compost</span>
+                </h1>
+                <p className="text-xl md:text-2xl text-muted-foreground mb-4">
+                  Wholesale Bulk Delivery
+                </p>
+                <p className="text-base text-muted-foreground/80 max-w-md">
+                  Locally produced soil amendments for landscapers, farms, nurseries, and commercial growers.
                 </p>
               </motion.div>
 

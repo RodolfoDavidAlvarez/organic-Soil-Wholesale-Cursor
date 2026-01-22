@@ -76,3 +76,5 @@ next-env.d.ts
 server/public
 vite.config.ts.*
 *.tar.gz
+.env.backup
+HUBSPOT_INTEGRATION_PLAN.md

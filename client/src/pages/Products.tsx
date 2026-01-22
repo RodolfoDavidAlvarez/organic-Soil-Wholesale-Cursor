@@ -167,23 +167,32 @@ const Products = () => {
         canonical="https://organicsoilwholesale.com/products"
       />
 
-      <section className="bg-gradient-to-br from-primary/5 via-white to-white py-6 sm:py-8">
-        <div className="container mx-auto px-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-primary">Premium Catalog</p>
-            <h1 className="mt-2 text-2xl font-heading font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-              All Soil Seed &amp; Water products, kept perfectly in sync
+      <section className="relative bg-gradient-to-br from-arizona-desert/30 via-white to-arizona-sand/20 py-12 sm:py-16 overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(181,84,26,0.05),_transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(77,124,94,0.05),_transparent_50%)]" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-arizona-sage/10 border border-arizona-sage/20 mb-4">
+              <div className="w-2 h-2 rounded-full bg-arizona-sage animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-arizona-sage">Wholesale Catalog</span>
+            </div>
+
+            <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              Premium <span className="text-primary">Organic Soil</span> Products
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              These listings pull directly from the live database used by the admin console and Pay &amp;
-              Pickup system. Edit once in the dashboard and the entire site updates instantly.
+
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
+              Arizona-produced compost, amendments, and specialty blends for landscapers, farms, nurseries, and commercial growers.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
-                <a href="#catalog">Explore Catalog</a>
+
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Button size="lg" className="bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20" asChild>
+                <a href="#catalog">Browse Products</a>
               </Button>
-              <Button size="lg" variant="ghost" asChild>
-                <a href="/order">Place an Order</a>
+              <Button size="lg" variant="outline" className="border-arizona-copper/30 hover:bg-arizona-copper/5 hover:border-arizona-copper/50" asChild>
+                <a href="/order">Request Quote</a>
               </Button>
             </div>
           </div>

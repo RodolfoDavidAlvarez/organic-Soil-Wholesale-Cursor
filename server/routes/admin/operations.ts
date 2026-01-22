@@ -9,12 +9,20 @@ import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 import puppeteer from "puppeteer";
 import path from "path";
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
-router.use(adminAuthMiddleware);
+// Apply auth middleware to all routes except PDF endpoint (which handles auth separately)
+router.use((req, res, next) => {
+  if (req.path.includes('/pdf')) {
+    return next(); // Skip middleware for PDF endpoint
+  }
+  return adminAuthMiddleware(req, res, next);
+});
 
 /**
  * Generate BOL number (BOL-YYYYMMDD-NNN)
@@ -96,6 +104,11 @@ router.post("/bols", async (req: AdminRequest, res) => {
   try {
     const {
       date,
+      originLocation,
+      originAddress,
+      originCity,
+      originState,
+      originZip,
       customerName,
       destinationAddress,
       destinationCity,
@@ -139,6 +152,11 @@ router.post("/bols", async (req: AdminRequest, res) => {
       .insert({
         bol_number: bolNumber,
         date: date || new Date().toISOString(),
+        origin_location: originLocation,
+        origin_address: originAddress,
+        origin_city: originCity,
+        origin_state: originState,
+        origin_zip: originZip,
         customer_name: customerName,
         destination_address: destinationAddress,
         destination_city: destinationCity,
@@ -159,7 +177,7 @@ router.post("/bols", async (req: AdminRequest, res) => {
         trailer_number: trailerNumber,
         notes,
         reference_number: referenceNumber,
-        status: 'draft',
+        status: 'completed',
         created_by: createdBy
       })
       .select()
@@ -202,11 +220,50 @@ router.get("/bols/:id", async (req: AdminRequest, res) => {
 });
 
 /**
+ * POST /api/admin/operations/bols/delete
+ * Delete one or more BOLs
+ */
+router.post("/bols/delete", async (req: AdminRequest, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No IDs provided' });
+    }
+
+    const { error } = await supabase
+      .from('ops_bols')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+
+    res.json({ success: true, deleted: ids.length });
+  } catch (error: any) {
+    console.error('Error deleting BOLs:', error);
+    res.status(500).json({ message: error.message || 'Failed to delete BOLs' });
+  }
+});
+
+/**
  * GET /api/admin/operations/bols/:id/pdf
  * Generate and download BOL PDF
+ * Auth: Token can be provided via query param for direct browser access
  */
 router.get("/bols/:id/pdf", async (req: AdminRequest, res) => {
   try {
+    // Verify token from query param (for direct browser PDF access)
+    const token = req.query.token as string;
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
     const { id } = req.params;
 
     // Fetch BOL data
@@ -250,7 +307,7 @@ router.get("/bols/:id/pdf", async (req: AdminRequest, res) => {
     // Send PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${bol.bol_number}.pdf"`);
-    res.send(pdfBuffer);
+    res.end(pdfBuffer);
 
   } catch (error: any) {
     console.error('Error generating PDF:', error);
@@ -266,12 +323,15 @@ function generateBOLHTML(bol: any): string {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
+  // Check if weight information is provided (non-zero values)
+  const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
+
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${bol.bol_number} - SSW BioSoils</title>
+  <title>${bol.bol_number} - Soil Seed and Water</title>
   <style>
     @page {
       size: letter;
@@ -413,12 +473,12 @@ function generateBOLHTML(bol: any): string {
 <body>
   <div class="header">
     <div class="logo-section">
-      <div class="company-name">SSW BioSoils</div>
+      <div class="company-name">Soil Seed and Water</div>
       <div class="tagline">Regenerative Soil Solutions</div>
       <div class="contact-info">
         18980 Stanton Rd, Congress, AZ 85332<br>
         Phone: (928) 632-7125<br>
-        Email: ralvarez@soilseedandwater.com
+        Email: info@soilseedandwater.com
       </div>
     </div>
     <div class="doc-title">
@@ -435,15 +495,21 @@ function generateBOLHTML(bol: any): string {
         <div class="section-title">Origin</div>
         <div class="info-row">
           <span class="label">From:</span>
-          <span class="value">${bol.origin_name}</span>
+          <span class="value">${bol.origin_location || 'SSW BioSoils'}</span>
         </div>
         <div class="info-row">
           <span class="label">Address:</span>
           <span class="value">${bol.origin_address}</span>
         </div>
+        ${bol.origin_city || bol.origin_state || bol.origin_zip ? `
+        <div class="info-row">
+          <span class="label">City, State ZIP:</span>
+          <span class="value">${[bol.origin_city, bol.origin_state, bol.origin_zip].filter(Boolean).join(', ')}</span>
+        </div>
+        ` : ''}
         <div class="info-row">
           <span class="label">Phone:</span>
-          <span class="value">${bol.origin_phone}</span>
+          <span class="value">(928) 632-7125</span>
         </div>
       </div>
     </div>
@@ -493,6 +559,7 @@ function generateBOLHTML(bol: any): string {
     </div>
   </div>
 
+  ${hasWeight ? `
   <div class="weight-summary">
     <div class="weight-row">
       <span>Gross Weight:</span>
@@ -507,6 +574,7 @@ function generateBOLHTML(bol: any): string {
       <span>${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)</span>
     </div>
   </div>
+  ` : ''}
 
   <div class="two-col">
     <div class="section">
@@ -572,7 +640,7 @@ function generateBOLHTML(bol: any): string {
   </div>
 
   <div class="footer">
-    This document serves as a Bill of Lading and Weight Ticket for the delivery of materials from SSW BioSoils.
+    This document serves as a Bill of Lading${hasWeight ? ' and Weight Ticket' : ''} for the delivery of materials from Soil Seed and Water.
   </div>
 </body>
 </html>

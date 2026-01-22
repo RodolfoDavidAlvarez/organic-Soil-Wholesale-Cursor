@@ -59,6 +59,7 @@ const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"))
 const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
 const AdminOperations = lazy(() => import("@/pages/admin/Operations"));
 const AdminCreateBOL = lazy(() => import("@/pages/admin/CreateBOL"));
+const AdminViewBOL = lazy(() => import("@/pages/admin/ViewBOL"));
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
@@ -134,7 +135,7 @@ function Router() {
         <Route path="/admin/representatives" component={AdminRepresentatives} />
         <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
         <Route path="/admin/operations/bols/new" component={AdminCreateBOL} />
-        <Route path="/admin/operations/bols/:id" component={AdminCreateBOL} />
+        <Route path="/admin/operations/bols/:id" component={AdminViewBOL} />
         <Route path="/admin/operations" component={AdminOperations} />
         <Route path="/admin/settings" component={AdminSettings} />
 

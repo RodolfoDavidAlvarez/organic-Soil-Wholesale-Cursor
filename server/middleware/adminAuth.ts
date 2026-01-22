@@ -23,6 +23,17 @@ export async function adminAuthMiddleware(req: AdminRequest, res: Response, next
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
 
+    // Handle hardcoded users (operations and super admin)
+    if (decoded.id === "ops-user" || decoded.id === "super-admin") {
+      req.admin = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+        permissions: {},
+      };
+      return next();
+    }
+
     // Verify admin exists in database and get full details including permissions
     const { data: admin, error } = await supabase
       .from("admin_users")

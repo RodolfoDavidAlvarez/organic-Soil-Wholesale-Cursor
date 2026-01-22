@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, Truck, ArrowRight } from "lucide-react";
+import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, ArrowRight, MapPin } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
@@ -125,11 +125,14 @@ const Header = () => {
             <div className="flex items-center gap-3 cursor-pointer">
               <div className="flex flex-col leading-tight">
                 <span className="text-xl font-heading font-bold sm:text-2xl">
-                  Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
+                  Organic <span className="text-primary">Soil</span> <span className="text-arizona-copper font-display italic">Wholesale</span>
                 </span>
-                <span className="text-[11px] uppercase tracking-[0.2em] text-foreground/50 sm:text-xs">
-                  Premium bulk amendments for pros
-                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-arizona-copper bg-arizona-copper/10 px-2 py-0.5 rounded">
+                    <MapPin className="h-2.5 w-2.5" />
+                    Made in Arizona
+                  </span>
+                </div>
               </div>
             </div>
           </Link>
@@ -257,15 +260,7 @@ const Header = () => {
                   </div>
                 ))}
               <div className="flex items-center gap-3">
-                <Link href="/pay-and-pickup">
-                  <Button className="group h-auto min-h-[3.25rem] flex flex-col items-start gap-1 rounded-xl bg-gradient-to-r from-primary via-primary to-emerald-500 px-5 py-3 text-left text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                    <span className="flex items-center gap-2 text-base font-semibold leading-tight">
-                      <Truck className="h-4 w-4" />
-                      Pay & Pickup Now
-                    </span>
-                    <span className="text-xs font-medium uppercase tracking-wide text-white/80">Phoenix Yard</span>
-                  </Button>
-                </Link>
+                {/* Pay & Pickup button hidden until feature is live */}
                 <Link href="/order">
                   <Button
                     variant="outline"
@@ -289,14 +284,18 @@ const Header = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col h-full">
-                  <div className="flex items-center mb-6">
+                  <div className="flex flex-col gap-2 mb-6">
                     <Link href="/">
                       <div className="flex items-center space-x-2 cursor-pointer">
                         <span className="text-lg font-heading font-bold">
-                          Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
+                          Organic <span className="text-primary">Soil</span> <span className="text-arizona-copper font-display italic">Wholesale</span>
                         </span>
                       </div>
                     </Link>
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-arizona-copper bg-arizona-copper/10 px-2 py-0.5 rounded w-fit">
+                      <MapPin className="h-2.5 w-2.5" />
+                      Made in Arizona
+                    </span>
                   </div>
 
                   <nav className="flex flex-col space-y-2">
@@ -339,16 +338,7 @@ const Header = () => {
                       </Link>
                     ))}
 
-                    <div className="bg-primary/10 border border-primary/20 rounded-xl p-5 flex flex-col gap-3">
-                      <div className="text-sm font-semibold text-primary uppercase tracking-wide">Now Available</div>
-                      <p className="text-sm text-foreground/80">
-                        Schedule your <span className="font-semibold text-primary">Pay & Pickup</span> order and check out securely with Stripe for a
-                        faster, contactless experience.
-                      </p>
-                      <Link href="/pay-and-pickup">
-                        <Button className="w-full bg-primary hover:bg-primary/90 text-white">Start Pay & Pickup</Button>
-                      </Link>
-                    </div>
+                    {/* Pay & Pickup mobile promo hidden until feature is live */}
 
                     <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
 

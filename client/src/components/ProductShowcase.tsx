@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, ArrowRight, Leaf, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateProductSlug } from "@/utils/generateSlug";
@@ -161,25 +161,28 @@ export default function ProductShowcase({ products, loading = false, onProductSe
   }
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <div className="container mx-auto px-4 py-6">
       {/* Search and Filter Section */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search products by name, type, or use..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-12 h-12 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
             />
           </div>
         </div>
-        <div className="w-full md:w-64">
+        <div className="w-full md:w-72">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
+            <SelectTrigger className="h-12 bg-white border-gray-200 rounded-xl shadow-sm">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filter by category" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               {categoryOptions.map((category) => (
@@ -192,89 +195,117 @@ export default function ProductShowcase({ products, loading = false, onProductSe
         </div>
       </div>
 
+      {/* Results count */}
+      {filteredProducts.length > 0 && (
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span> product{filteredProducts.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+      )}
+
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-12 bg-neutral-50 rounded-xl">
-          <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Filter className="h-10 w-10 text-neutral-400" />
+        <div className="text-center py-16 bg-gradient-to-br from-arizona-sand/30 to-white rounded-3xl border border-gray-100">
+          <div className="w-20 h-20 bg-arizona-sage/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Package className="h-10 w-10 text-arizona-sage" />
           </div>
-          <h3 className="text-2xl font-semibold mb-3">No products found</h3>
-          <p className="text-neutral-600 mb-6 max-w-md mx-auto">
-            Try adjusting your search criteria or browse our full catalog of premium soil products.
+          <h3 className="text-2xl font-heading font-semibold mb-3 text-foreground">No products found</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Try adjusting your search criteria or browse our full catalog of premium organic soil products.
           </p>
           <Button
             onClick={() => {
               setSearchTerm("");
               setSelectedCategory("all");
             }}
-            variant="outline"
-            className="bg-white border-primary text-primary hover:bg-primary hover:text-white transition-colors duration-300"
+            className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
           >
             View All Products
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
-              className="overflow-hidden transition-all duration-300 border-0 hover:border-0 bg-white dark:bg-neutral-900 hover:shadow-[0_15px_35px_-5px_rgba(0,0,0,0.1)] rounded-2xl group relative"
+              className="overflow-hidden transition-all duration-300 bg-white border border-gray-100 hover:border-arizona-sage/30 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] rounded-3xl group relative cursor-pointer"
+              onClick={() => handleProductClick(product)}
             >
-              <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl cursor-pointer" onClick={() => handleProductClick(product)}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                  <div className="bg-white text-primary font-semibold px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                    View Details
-                  </div>
+              {/* Image Container */}
+              <div className="relative aspect-[4/3] overflow-hidden">
+                {/* Gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Category badge positioned over image */}
+                <div className="absolute top-4 left-4 z-20">
+                  <Badge className="bg-white/95 backdrop-blur-sm text-foreground shadow-lg border-0 rounded-full px-3 py-1.5 text-xs font-semibold">
+                    <Leaf className="h-3 w-3 mr-1.5 text-arizona-sage" />
+                    {product.category || "Specialty"}
+                  </Badge>
                 </div>
+
+                {/* View button on hover */}
+                <div className="absolute bottom-4 left-4 right-4 z-20 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                  <Button
+                    className="w-full bg-white/95 backdrop-blur-sm text-foreground hover:bg-white shadow-xl border-0 font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProductClick(product);
+                    }}
+                  >
+                    View Product
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+
                 <OptimizedImage
                   src={product.imageUrl || product.additionalImages?.[0] || product.texturePhotoUrl || DEFAULT_IMAGE}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
               </div>
 
-              <div className="p-5 flex flex-col gap-3 h-full">
-                <div className="flex items-center justify-between text-xs text-muted-foreground uppercase tracking-wide">
-                  <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                    {product.category || "Uncategorized"}
-                  </Badge>
-                  {product.previewCopy && <span className="text-primary/80 font-semibold">Catalog Preview</span>}
-                </div>
-
+              {/* Content */}
+              <div className="p-6 flex flex-col gap-3">
                 <div>
-                  <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors duration-200">
+                  <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors duration-200 line-clamp-1">
                     {getProductDisplayName(product)}
                   </h3>
+                  {product.productType && product.productType !== getProductDisplayName(product) && (
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">{product.productType}</p>
+                  )}
                 </div>
 
-                {product.description && <p className="text-foreground/70 line-clamp-3 text-sm">{product.description}</p>}
+                {product.description && (
+                  <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">{product.description}</p>
+                )}
 
+                {/* Tags/certifications */}
                 {product.certifications && (
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {(typeof product.certifications === "string"
                       ? product.certifications.split(",").map((cert: string) => cert.trim())
                       : product.certifications
-                    ).map((cert: string | { name: string; icon: JSX.Element }) => (
-                      <Badge
+                    ).slice(0, 3).map((cert: string | { name: string; icon: JSX.Element }) => (
+                      <span
                         key={typeof cert === "string" ? cert : cert.name}
-                        variant="outline"
-                        className="bg-primary/5 text-primary text-[10px] font-normal px-2"
+                        className="bg-arizona-sage/10 text-arizona-sage text-[10px] font-medium px-2.5 py-1 rounded-full"
                       >
                         {typeof cert === "string" ? cert : cert.name}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 )}
 
-                <div className="mt-auto pt-2">
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                    onClick={() => handleProductClick(product)}
-                  >
-                    View Details
-                  </Button>
+                {/* Bottom action area */}
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
+                  <span className="text-xs text-muted-foreground">Wholesale available</span>
+                  <span className="text-primary font-semibold text-sm flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
+                    Details
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
                 </div>
               </div>
             </Card>

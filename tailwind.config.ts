@@ -7,8 +7,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        heading: ["Montserrat", "Georgia", "serif"],
-        display: ["Playfair Display", "serif"],
+        heading: ["Montserrat", "system-ui", "sans-serif"],
+        display: ["Playfair Display", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -49,6 +49,15 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        // Arizona-specific colors
+        arizona: {
+          copper: "#b5541a",
+          terracotta: "#c25a30",
+          sunset: "#d4783d",
+          sand: "#dbc9a8",
+          sage: "#4d7c5e",
+          desert: "#e8dcc8",
+        },
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",

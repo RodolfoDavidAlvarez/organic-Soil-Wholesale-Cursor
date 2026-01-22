@@ -1,9 +1,23 @@
 import { Link } from "wouter";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Leaf } from "lucide-react";
 
 const Footer = () => {
   return (
     <footer className="bg-primary-foreground text-primary relative z-10 mt-auto">
+      {/* Arizona Made Strip */}
+      <div className="bg-gradient-to-r from-arizona-copper via-arizona-sunset to-arizona-terracotta py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-3 text-white text-center">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              <span className="font-bold uppercase tracking-wide">Proudly Made in Arizona</span>
+            </div>
+            <span className="hidden md:inline text-white/50">|</span>
+            <span className="text-white/90 text-sm">Supporting local jobs, sustainable agriculture & Arizona communities</span>
+          </div>
+        </div>
+      </div>
+
       <div className="leaf-pattern py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -20,20 +34,23 @@ const Footer = () => {
                 />
                 <div>
                   <span className="text-xl font-heading font-bold">
-                    Organic <span className="text-primary">Soil</span> <span className="text-accent font-display italic">Wholesale</span>
+                    Organic <span className="text-primary">Soil</span> <span className="text-arizona-copper font-display italic">Wholesale</span>
                   </span>
-                  <div className="text-sm text-foreground/60 mt-1 flex items-center gap-1.5 flex-wrap">
-                    <span className="uppercase tracking-wide text-xs text-foreground/50">Supported by</span>
-                    <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors font-medium">
-                      Soil Seed &amp; Water
-                    </a>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-arizona-copper bg-arizona-copper/10 px-2 py-0.5 rounded">
+                      <MapPin className="h-2.5 w-2.5" />
+                      Arizona Made
+                    </span>
                   </div>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6 max-w-md">
-                Providing premium organic soil products for commercial growers, landscapers, and agricultural professionals. Sustainable solutions for
-                healthier plants and a healthier planet.
+              <p className="text-foreground/80 mb-4 max-w-md">
+                Arizona&apos;s premier producer of organic compost and soil amendments. Locally produced for landscapers, commercial growers, farms, and government projects.
               </p>
+              <div className="flex items-start gap-2 text-sm text-foreground/70 bg-arizona-sand/30 rounded-lg p-3 mb-4">
+                <Leaf className="h-4 w-4 text-arizona-sage mt-0.5 flex-shrink-0" />
+                <span>Supporting sustainable agriculture and Arizona&apos;s circular economy through organic waste diversion.</span>
+              </div>
             </div>
 
             {/* Quick Links */}

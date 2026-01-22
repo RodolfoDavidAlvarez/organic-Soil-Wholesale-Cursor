@@ -17,6 +17,7 @@ import { useLocation } from 'wouter';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface DashboardStats {
   todayRevenue: number;
@@ -43,7 +44,15 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
+  const { admin, loading } = useAdminAuth();
   const [lastUpdated, setLastUpdated] = useState(() => new Date().toLocaleTimeString());
+
+  // Redirect operations users to their dedicated interface
+  useEffect(() => {
+    if (!loading && admin?.role === 'operations') {
+      navigate('/admin/operations');
+    }
+  }, [admin, loading, navigate]);
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['adminDashboardStats'],
@@ -69,6 +78,29 @@ export default function AdminDashboard() {
       setLastUpdated(new Date().toLocaleTimeString());
     }
   }, [stats]);
+
+  // Show loading while checking auth or redirecting operations users
+  if (loading || (admin?.role === 'operations')) {
+    return (
+      <ProtectedAdminRoute>
+        <AdminLayout>
+          <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-8 w-24" />
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </AdminLayout>
+      </ProtectedAdminRoute>
+    );
+  }
 
   if (isLoading) {
     return (

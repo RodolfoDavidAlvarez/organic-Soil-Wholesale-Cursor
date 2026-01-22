@@ -3,70 +3,76 @@
 @tailwind utilities;
 
 :root {
-  --background: 35 30% 98%;
-  --foreground: 20 16% 16%;
-  --muted: 60 7% 94%;
-  --muted-foreground: 25 5.3% 44.7%;
-  --popover: 35 30% 98%;
-  --popover-foreground: 20 16% 16%;
+  --background: 40 25% 97%;
+  --foreground: 25 30% 12%;
+  --muted: 35 15% 92%;
+  --muted-foreground: 25 10% 45%;
+  --popover: 40 25% 97%;
+  --popover-foreground: 25 30% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 20 16% 16%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
+  --card-foreground: 25 30% 12%;
+  --border: 30 15% 88%;
+  --input: 30 15% 88%;
 
-  /* Primary: Muted Professional Green */
-  --primary: 142 35% 45%;
-  --primary-light: 142 35% 55%;
+  /* Primary: Rich Desert Sage Green */
+  --primary: 150 32% 38%;
+  --primary-light: 150 32% 48%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Deep Earthy Brown */
-  --secondary: 30 38% 35%;
-  --secondary-light: 30 38% 45%;
+  /* Secondary: Arizona Terracotta */
+  --secondary: 18 55% 42%;
+  --secondary-light: 18 55% 52%;
   --secondary-foreground: 0 0% 100%;
 
-  /* Accent: Golden Amber */
-  --accent: 43 85% 55%;
-  --accent-light: 43 85% 65%;
-  --accent-foreground: 20 16% 16%;
+  /* Accent: Copper/Golden Arizona Sun */
+  --accent: 32 80% 52%;
+  --accent-light: 32 80% 62%;
+  --accent-foreground: 25 30% 12%;
+
+  /* Arizona specific colors */
+  --arizona-copper: 18 70% 45%;
+  --arizona-sunset: 25 85% 55%;
+  --arizona-sand: 38 35% 85%;
+  --arizona-sage: 150 25% 45%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 142 35% 40%;
-  --radius: 0.75rem;
+  --ring: 150 32% 38%;
+  --radius: 0.625rem;
   --app-header-height: 6.5rem;
 }
 
 .dark {
-  --background: 142 15% 15%;
-  --foreground: 35 15% 94%;
-  --muted: 142 10% 22%;
-  --muted-foreground: 35 10% 75%;
-  --popover: 142 15% 15%;
-  --popover-foreground: 35 15% 94%;
-  --card: 142 12% 18%;
-  --card-foreground: 35 15% 94%;
-  --border: 142 15% 25%;
-  --input: 142 15% 25%;
+  --background: 25 20% 12%;
+  --foreground: 40 20% 94%;
+  --muted: 25 15% 18%;
+  --muted-foreground: 40 10% 70%;
+  --popover: 25 20% 12%;
+  --popover-foreground: 40 20% 94%;
+  --card: 25 18% 15%;
+  --card-foreground: 40 20% 94%;
+  --border: 25 15% 22%;
+  --input: 25 15% 22%;
 
-  /* Primary: Muted Professional Green */
-  --primary: 142 35% 55%;
-  --primary-light: 142 35% 65%;
+  /* Primary: Desert Sage */
+  --primary: 150 32% 48%;
+  --primary-light: 150 32% 58%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Earthy Brown */
-  --secondary: 30 38% 42%;
-  --secondary-light: 30 38% 50%;
-  --secondary-foreground: 35 15% 94%;
+  /* Secondary: Arizona Terracotta */
+  --secondary: 18 55% 50%;
+  --secondary-light: 18 55% 60%;
+  --secondary-foreground: 40 20% 94%;
 
-  /* Accent: Golden Amber */
-  --accent: 43 85% 60%;
-  --accent-light: 43 85% 70%;
-  --accent-foreground: 142 15% 15%;
+  /* Accent: Copper Gold */
+  --accent: 32 80% 58%;
+  --accent-light: 32 80% 68%;
+  --accent-foreground: 25 20% 12%;
 
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 35 15% 94%;
-  --ring: 142 35% 50%;
-  --radius: 0.75rem;
+  --destructive-foreground: 40 20% 94%;
+  --ring: 150 32% 45%;
+  --radius: 0.625rem;
 }
 
 @layer base {
@@ -120,10 +126,54 @@
   }
 }
 
-/* Custom Backgrounds */
+/* Arizona-Inspired Custom Backgrounds */
 .hero-pattern {
   background-color: hsl(var(--background));
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23365c45' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(32 80% 52% / 0.08), transparent),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23996633' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Arizona Badge Styles */
+.arizona-badge {
+  background: linear-gradient(135deg, hsl(18 70% 45%) 0%, hsl(32 80% 52%) 100%);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px hsl(18 70% 45% / 0.3);
+}
+
+.arizona-badge-outline {
+  background: transparent;
+  border: 2px solid hsl(18 70% 45%);
+  color: hsl(18 70% 45%);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.375rem 0.875rem;
+  border-radius: 0.25rem;
+}
+
+/* Arizona Gradient Text */
+.arizona-gradient-text {
+  background: linear-gradient(135deg, hsl(18 70% 45%) 0%, hsl(32 80% 52%) 50%, hsl(150 32% 38%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Arizona Section Divider */
+.arizona-divider {
+  height: 4px;
+  background: linear-gradient(90deg,
+    hsl(150 32% 38%) 0%,
+    hsl(32 80% 52%) 50%,
+    hsl(18 70% 45%) 100%
+  );
+  border-radius: 2px;
 }
 
 /* Organic Patterns */

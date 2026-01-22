@@ -24,7 +24,45 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Get admin user
+    // Check for hardcoded operations credentials first
+    if (email === "operations@soilseedandwater.com" && password === "ops2026") {
+      const token = createAdminToken({
+        id: "ops-user",
+        email: email,
+        role: "operations",
+      });
+
+      return res.json({
+        token,
+        admin: {
+          id: "ops-user",
+          email: email,
+          full_name: "Operations Team",
+          role: "operations",
+        },
+      });
+    }
+
+    // Check for super admin credentials
+    if (email === "ralvarez@soilseedandwater.com" && password === "admin123") {
+      const token = createAdminToken({
+        id: "super-admin",
+        email: email,
+        role: "super_admin",
+      });
+
+      return res.json({
+        token,
+        admin: {
+          id: "super-admin",
+          email: email,
+          full_name: "Rodolfo Alvarez",
+          role: "super_admin",
+        },
+      });
+    }
+
+    // Get admin user from database
     const { data: admin, error } = await supabase.from("admin_users").select("*").eq("email", email).single();
 
     if (error || !admin) {
@@ -220,7 +258,20 @@ router.post("/create-admin", async (req, res) => {
 // Validate token
 router.get("/validate", adminAuthMiddleware, async (req: AdminRequest, res) => {
   if (req.admin) {
-    // Get full admin details from database
+    // Handle hardcoded users (ops-user, super-admin) - no DB lookup needed
+    if (req.admin.id === "ops-user" || req.admin.id === "super-admin") {
+      return res.json({
+        admin: {
+          id: req.admin.id,
+          email: req.admin.email,
+          full_name: req.admin.id === "ops-user" ? "Operations User" : "Super Admin",
+          role: req.admin.role,
+          permissions: req.admin.permissions || {},
+        },
+      });
+    }
+
+    // Get full admin details from database for regular users
     const { data: admin, error } = await supabase
       .from("admin_users")
       .select("id, email, full_name, role, permissions")
