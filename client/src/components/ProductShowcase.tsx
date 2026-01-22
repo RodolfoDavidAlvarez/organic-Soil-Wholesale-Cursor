@@ -238,8 +238,8 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
                 {/* Category badge positioned over image */}
                 <div className="absolute top-4 left-4 z-20">
-                  <Badge className="bg-white/95 backdrop-blur-sm text-foreground shadow-lg border-0 rounded-full px-3 py-1.5 text-xs font-semibold">
-                    <Leaf className="h-3 w-3 mr-1.5 text-arizona-sage" />
+                  <Badge className="bg-arizona-sage text-white shadow-lg border-0 rounded-full px-3 py-1.5 text-xs font-semibold">
+                    <Leaf className="h-3 w-3 mr-1.5" />
                     {product.category || "Specialty"}
                   </Badge>
                 </div>
