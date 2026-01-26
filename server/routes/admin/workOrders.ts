@@ -500,7 +500,7 @@ router.get("/:id/pdf", async (req: AdminRequest, res) => {
           try {
             const baseUrl = process.env.VERCEL_URL
               ? `https://${process.env.VERCEL_URL}`
-              : "https://organicsoilwholesale.com";
+              : "https://www.organicsoilwholesale.com";
             const imageUrl = `${baseUrl}${product.illustration_url}`;
             console.log("Fetching illustration from:", imageUrl);
 
