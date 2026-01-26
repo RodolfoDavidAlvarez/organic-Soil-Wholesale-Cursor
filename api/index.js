@@ -1740,9 +1740,8 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
 
         if (product?.illustration_url) {
           try {
-            const baseUrl = process.env.VERCEL_URL
-              ? `https://${process.env.VERCEL_URL}`
-              : 'https://www.organicsoilwholesale.com';
+            // Always use production domain for images (avoid self-referencing issues with VERCEL_URL)
+            const baseUrl = 'https://www.organicsoilwholesale.com';
             const imageUrl = `${baseUrl}${product.illustration_url}`;
             console.log('Fetching product illustration from:', imageUrl);
 
