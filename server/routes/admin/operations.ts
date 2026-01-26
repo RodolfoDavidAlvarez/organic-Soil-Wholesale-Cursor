@@ -4,14 +4,18 @@
  */
 
 import { Router } from "express";
-import { supabase } from "../../supabaseClient";
-import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
+import { supabase } from "../../supabaseClient.js";
+import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth.js";
 import puppeteer from "puppeteer";
 import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
+import workOrderRoutes from "./workOrders.js";
 
 const router = Router();
+
+// Mount work orders routes
+router.use("/work-orders", workOrderRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -128,7 +132,11 @@ router.post("/bols", async (req: AdminRequest, res) => {
       licensePlate,
       trailerNumber,
       notes,
-      referenceNumber
+      referenceNumber,
+      timeIn,
+      timeOut,
+      scaleOperatorInitials,
+      loadType
     } = req.body;
 
     // Validation
@@ -136,15 +144,14 @@ router.post("/bols", async (req: AdminRequest, res) => {
       return res.status(400).json({ message: 'Missing required fields: customerName, destinationAddress, materialType' });
     }
 
-    if (!grossWeight || !tareWeight) {
-      return res.status(400).json({ message: 'Missing required weight information' });
-    }
+    // Weight is optional - check hasWeight flag from frontend
+    const hasWeight = req.body.hasWeight !== false && (grossWeight > 0 || tareWeight > 0);
 
     // Generate BOL number
     const bolNumber = await generateBOLNumber();
 
     // Get admin email from token
-    const createdBy = req.adminEmail || 'admin@ssw.com';
+    const createdBy = req.admin?.email || 'admin@ssw.com';
 
     // Insert BOL
     const { data, error } = await supabase
@@ -166,10 +173,10 @@ router.post("/bols", async (req: AdminRequest, res) => {
         onsite_contact_phone: onsiteContactPhone,
         material_type: materialType,
         material_description: materialDescription,
-        gross_weight: parseInt(grossWeight),
-        tare_weight: parseInt(tareWeight),
-        net_weight: parseInt(netWeight),
-        net_weight_tons: netWeightTons,
+        gross_weight: hasWeight ? parseInt(grossWeight) : 0,
+        tare_weight: hasWeight ? parseInt(tareWeight) : 0,
+        net_weight: hasWeight ? parseInt(netWeight) : 0,
+        net_weight_tons: hasWeight ? netWeightTons : '0.00',
         carrier_name: carrierName || 'James Bond Trucking',
         driver_name: driverName,
         truck_number: truckNumber,
@@ -177,6 +184,10 @@ router.post("/bols", async (req: AdminRequest, res) => {
         trailer_number: trailerNumber,
         notes,
         reference_number: referenceNumber,
+        time_in: timeIn,
+        time_out: timeOut,
+        scale_operator_initials: scaleOperatorInitials,
+        load_type: loadType || 'Outbound',
         status: 'completed',
         created_by: createdBy
       })
@@ -242,6 +253,195 @@ router.post("/bols/delete", async (req: AdminRequest, res) => {
   } catch (error: any) {
     console.error('Error deleting BOLs:', error);
     res.status(500).json({ message: error.message || 'Failed to delete BOLs' });
+  }
+});
+
+/**
+ * PATCH /api/admin/operations/bols/:id
+ * Update an existing BOL
+ */
+router.patch("/bols/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Convert camelCase to snake_case
+    const snakeCaseUpdates: Record<string, any> = {};
+    const fieldMap: Record<string, string> = {
+      date: "date",
+      originLocation: "origin_location",
+      originAddress: "origin_address",
+      originCity: "origin_city",
+      originState: "origin_state",
+      originZip: "origin_zip",
+      customerName: "customer_name",
+      destinationAddress: "destination_address",
+      destinationCity: "destination_city",
+      destinationState: "destination_state",
+      destinationZip: "destination_zip",
+      onsiteContactName: "onsite_contact_name",
+      onsiteContactPhone: "onsite_contact_phone",
+      materialType: "material_type",
+      materialDescription: "material_description",
+      grossWeight: "gross_weight",
+      tareWeight: "tare_weight",
+      netWeight: "net_weight",
+      netWeightTons: "net_weight_tons",
+      carrierName: "carrier_name",
+      driverName: "driver_name",
+      truckNumber: "truck_number",
+      licensePlate: "license_plate",
+      trailerNumber: "trailer_number",
+      notes: "notes",
+      referenceNumber: "reference_number",
+      timeIn: "time_in",
+      timeOut: "time_out",
+      scaleOperatorInitials: "scale_operator_initials",
+      loadType: "load_type",
+      status: "status",
+      orderId: "order_id"
+    };
+
+    for (const [key, value] of Object.entries(updates)) {
+      const snakeKey = fieldMap[key] || key;
+      // Don't include the key if it's not in the field map (avoid unknown columns)
+      if (fieldMap[key] || key === 'status') {
+        snakeCaseUpdates[snakeKey] = value;
+      }
+    }
+
+    snakeCaseUpdates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('ops_bols')
+      .update(snakeCaseUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'BOL not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating BOL:', error);
+    res.status(500).json({ message: error.message || 'Failed to update BOL' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/bols/:id/email
+ * Send BOL via email with PDF attachment
+ */
+router.post("/bols/:id/email", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { recipientEmail, recipientName, customMessage } = req.body;
+
+    if (!recipientEmail) {
+      return res.status(400).json({ message: 'Recipient email is required' });
+    }
+
+    // Fetch BOL data
+    const { data: bol, error: fetchError } = await supabase
+      .from('ops_bols')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!bol) {
+      return res.status(404).json({ message: 'BOL not found' });
+    }
+
+    // Generate PDF using Puppeteer
+    const html = generateBOLHTML(bol);
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: {
+        top: '0.3in',
+        right: '0.3in',
+        bottom: '0.3in',
+        left: '0.3in'
+      }
+    });
+
+    await browser.close();
+
+    // Send email via Resend API
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      throw new Error('Resend API key not configured');
+    }
+
+    const emailBody = customMessage || `Please find attached the Bill of Lading (${bol.bol_number}) for your delivery.
+
+Material: ${bol.material_type}
+Delivery Date: ${new Date(bol.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+Destination: ${bol.destination_address}, ${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Soil Seed and Water
+(928) 632-7125`;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Soil Seed and Water <info@soilseedandwater.com>',
+        to: [recipientEmail],
+        subject: `Bill of Lading - ${bol.bol_number}`,
+        text: emailBody,
+        attachments: [
+          {
+            filename: `${bol.bol_number}.pdf`,
+            content: Buffer.from(pdfBuffer).toString('base64')
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send email');
+    }
+
+    // Update BOL with sent info
+    await supabase
+      .from('ops_bols')
+      .update({
+        sent_to_email: recipientEmail,
+        sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    res.json({
+      success: true,
+      message: `BOL sent successfully to ${recipientEmail}`,
+      sentTo: recipientEmail
+    });
+  } catch (error: any) {
+    console.error('Error sending BOL email:', error);
+    res.status(500).json({ message: error.message || 'Failed to send BOL email' });
   }
 });
 

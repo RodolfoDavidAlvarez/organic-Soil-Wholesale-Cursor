@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useLocation } from 'wouter';
-import { FileText, LogOut } from 'lucide-react';
+import { FileText, ClipboardList, LogOut, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
@@ -68,7 +68,32 @@ export default function OperationsLayout({ children }: OperationsLayoutProps) {
                 <FileText className="w-4 h-4" />
                 BOL Management
               </button>
-              {/* Future tabs will go here */}
+              <button
+                onClick={() => navigate('/admin/operations/work-orders')}
+                className={`
+                  flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                  ${location.startsWith('/admin/operations/work-orders')
+                    ? 'border-[#264027] text-[#264027]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <ClipboardList className="w-4 h-4" />
+                Work Orders
+              </button>
+              <button
+                onClick={() => navigate('/admin/operations/orders')}
+                className={`
+                  flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                  ${location === '/admin/operations/orders'
+                    ? 'border-[#264027] text-[#264027]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Orders
+              </button>
             </div>
           </div>
         </div>

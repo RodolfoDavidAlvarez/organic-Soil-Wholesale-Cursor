@@ -1162,11 +1162,15 @@ Use "" for fields you cannot clearly read. NEVER guess.`
 
       const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
 
+      // Check if auto-print is requested (default: true)
+      const autoPrint = url.searchParams.get('print') !== 'false';
+      const printScript = autoPrint ? `<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>` : '';
+
       const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto}
+body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;background:white}
 .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #264027;padding-bottom:15px;margin-bottom:15px}
 .logo-section h1{font-size:20px;color:#264027;margin-bottom:3px}
 .logo-section p{font-size:9px;color:#666}
@@ -1191,7 +1195,10 @@ body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;ma
 .signature-box{border-bottom:1px solid #333;padding-bottom:30px;margin-bottom:5px}
 .signature-label{font-size:9px;color:#666}
 .footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:8px;color:#666;text-align:center}
-</style></head><body>
+@media screen { body { background: #f0f0f0; padding: 20px; } }
+</style>
+${printScript}
+</head><body>
 <div class="header">
 <div class="logo-section"><h1>Soil Seed and Water</h1><p>1634 North 19th Avenue, Phoenix, AZ 85007 | info@soilseedandwater.com</p></div>
 <div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div style="font-size:9px;color:#666;margin-top:3px">Ref: ${bol.reference_number}</div>`:''}</div>
@@ -1235,6 +1242,821 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
       // Return HTML as PDF-ready content
       res.setHeader('Content-Type', 'text/html');
       return res.send(html);
+    }
+
+    // ============ WORK ORDERS ENDPOINTS ============
+
+    // Airtable configuration for SSW1 base (products)
+    const SSW1_BASE_ID = "appDCKrxtJ7oG9O19";
+    const PRODUCTS_TABLE_ID = "tbltXMzV96FnmrjFw";
+    const SIZE_CATEGORIES_TABLE_ID = "tblkNN71Iiyh2GjEi";
+    const INGREDIENTS_TABLE_ID = "tblujGuwLKvJzgOR4";
+    const PALLET_CONFIG_TABLE_ID = "tblNqNFuOXsI6ZKeV";
+
+    // Pallet configuration data (from Airtable Pallet Configuration table)
+    const PALLET_CONFIGS = {
+      '9lb': { unitsPerPallet: 144, weightPerPallet: 1296, config: 'Boxed pallet, 4 units per box, 36 boxes per pallet. Total of 144 units', weightPerUnit: 9 },
+      '7.5qt': { unitsPerPallet: 144, weightPerPallet: 1000, config: 'Boxed pallet, 4 units per box, 36 boxes per pallet. Total of 144 units', weightPerUnit: 7 },
+      '1cf': { unitsPerPallet: 50, weightPerPallet: 2000, config: 'Without boxes, bags stacked on pallet. 50 (1CF bags) per pallet', weightPerUnit: 40 },
+      '1.5cf': { unitsPerPallet: 50, weightPerPallet: 2000, config: '50 per pallet', weightPerUnit: 40 },
+      '2cf': { unitsPerPallet: 25, weightPerPallet: 2000, config: '25 per pallet', weightPerUnit: 80 },
+      'tote': { unitsPerPallet: 1, weightPerPallet: 2000, config: '1 unit per pallet (2.2 cubic yards)', weightPerUnit: 2000 },
+      'bulk': { unitsPerPallet: null, weightPerPallet: 2000, config: 'Bulk calculated by tonnage (2000 lbs each). Usually 22-24 tons per truck.', weightPerUnit: null },
+    };
+
+    // Helper: Fetch all ingredients for name lookup
+    async function fetchIngredientsLookup() {
+      const lookup = {};
+      let offset;
+      do {
+        const urlStr = `https://api.airtable.com/v0/${SSW1_BASE_ID}/${INGREDIENTS_TABLE_ID}?fields%5B%5D=Name&pageSize=100${offset ? `&offset=${offset}` : ''}`;
+        const response = await fetch(urlStr, {
+          headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+        });
+        if (!response.ok) break;
+        const data = await response.json();
+        for (const record of data.records || []) {
+          if (record.fields && record.fields.Name) {
+            lookup[record.id] = record.fields.Name;
+          }
+        }
+        offset = data.offset;
+      } while (offset);
+      return lookup;
+    }
+
+    // Helper: Generate WO number
+    async function generateWONumber() {
+      const today = new Date();
+      const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
+      const { count } = await db
+        .from("ops_work_orders")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", `${today.toISOString().split("T")[0]}T00:00:00`)
+        .lte("created_at", `${today.toISOString().split("T")[0]}T23:59:59`);
+      const sequence = ((count || 0) + 1).toString().padStart(3, "0");
+      return `WO-${dateStr}-${sequence}`;
+    }
+
+    // Helper: Generate size category code from name
+    function generateSizeCategoryCode(name) {
+      const lower = name.toLowerCase();
+      if (lower.includes("9 lb") || lower.includes("9lb")) return "9lb";
+      if (lower.includes("7.5 qt") || lower.includes("7.5qt")) return "7.5qt";
+      if (lower.includes("1.5 cf") || lower.includes("1.5cf")) return "1.5cf";
+      if (lower.includes("2 cf") || lower.includes("2cf")) return "2cf";
+      if (lower.includes("1 cf") || lower.includes("1cf")) return "1cf";
+      if (lower.includes("tote") || lower.includes("super sack")) return "tote";
+      if (lower.includes("bulk") || lower.includes("cubic yard")) return "bulk";
+      return lower.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20);
+    }
+
+    // Helper: Fetch products from Airtable with ingredient name resolution
+    async function fetchProductsFromAirtable() {
+      // First, get ingredients lookup
+      const ingredientsLookup = await fetchIngredientsLookup();
+
+      const products = [];
+      let offset;
+      do {
+        const urlStr = `https://api.airtable.com/v0/${SSW1_BASE_ID}/${PRODUCTS_TABLE_ID}?pageSize=100${offset ? `&offset=${offset}` : ''}`;
+        const response = await fetch(urlStr, {
+          headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+        });
+        if (!response.ok) throw new Error(`Airtable error: ${response.status}`);
+        const data = await response.json();
+        for (const record of data.records || []) {
+          const fields = record.fields || {};
+
+          // Resolve ingredient record IDs to actual names
+          let ingredientsList = null;
+          if (Array.isArray(fields["Ingredients"])) {
+            const resolvedNames = fields["Ingredients"]
+              .map(id => ingredientsLookup[id] || id)
+              .filter(name => name && !name.startsWith('rec')); // Filter out unresolved IDs
+            ingredientsList = resolvedNames.length > 0 ? resolvedNames.join(", ") : null;
+          } else if (typeof fields["Ingredients"] === 'string') {
+            ingredientsList = fields["Ingredients"];
+          }
+
+          products.push({
+            airtableId: record.id,
+            productName: fields["Product Name "] || fields["Product Name"] || fields["Name"] || "Unknown",
+            productId: fields["Product ID"] || null,
+            ingredientRatios: fields["Ingredient Ratios"] || null,
+            ingredientsList: ingredientsList,
+            sizeCategories: Array.isArray(fields["Size Categories"]) ? fields["Size Categories"] : [],
+            certifications: Array.isArray(fields["Certifications"]) ? fields["Certifications"] : [],
+          });
+        }
+        offset = data.offset;
+      } while (offset);
+      return products;
+    }
+
+    // Helper: Fetch size categories from Airtable
+    async function fetchSizeCategoriesFromAirtable() {
+      const categories = [];
+      let offset;
+      do {
+        const urlStr = `https://api.airtable.com/v0/${SSW1_BASE_ID}/${SIZE_CATEGORIES_TABLE_ID}?pageSize=100${offset ? `&offset=${offset}` : ''}`;
+        const response = await fetch(urlStr, {
+          headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+        });
+        if (!response.ok) throw new Error(`Airtable error: ${response.status}`);
+        const data = await response.json();
+        for (const record of data.records || []) {
+          const fields = record.fields || {};
+          const name = fields["Name"] || "Unknown";
+          categories.push({
+            airtableId: record.id,
+            name: name,
+            code: generateSizeCategoryCode(name),
+            unitsPerPallet: fields["Units per pallet"] || null,
+            estimatedPalletWeight: fields["Estimated pallet weight"] || null,
+            illustrationUrl: Array.isArray(fields["Size category illustration"]) && fields["Size category illustration"][0]
+              ? fields["Size category illustration"][0].url : null,
+            palletConfiguration: fields["Pallet Configuration"] || null,
+          });
+        }
+        offset = data.offset;
+      } while (offset);
+      return categories;
+    }
+
+    // GET /api/admin/operations/work-orders/products
+    if (path === '/api/admin/operations/work-orders/products' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      // Try cache first
+      const { data: cached } = await db.from('ops_products_cache').select('*').order('product_name', { ascending: true });
+      if (cached && cached.length > 0) {
+        return res.json(cached);
+      }
+
+      // Fallback: fetch from Airtable and cache
+      try {
+        const products = await fetchProductsFromAirtable();
+        for (const product of products) {
+          await db.from('ops_products_cache').upsert({
+            airtable_id: product.airtableId,
+            product_name: product.productName,
+            product_id: product.productId,
+            ingredient_ratios: product.ingredientRatios,
+            ingredients_list: product.ingredientsList,
+            size_categories: product.sizeCategories,
+            certifications: product.certifications,
+            last_synced_at: new Date().toISOString(),
+          }, { onConflict: 'airtable_id' });
+        }
+        const { data: freshData } = await db.from('ops_products_cache').select('*').order('product_name', { ascending: true });
+        return res.json(freshData || []);
+      } catch (err) {
+        console.error('Airtable fetch error:', err);
+        return res.json([]);
+      }
+    }
+
+    // GET /api/admin/operations/work-orders/size-categories
+    if (path === '/api/admin/operations/work-orders/size-categories' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      // Try cache first
+      const { data: cached } = await db.from('ops_size_categories_cache').select('*').order('name', { ascending: true });
+      if (cached && cached.length > 0) {
+        return res.json(cached);
+      }
+
+      // Fallback: fetch from Airtable and cache
+      try {
+        const categories = await fetchSizeCategoriesFromAirtable();
+        for (const cat of categories) {
+          await db.from('ops_size_categories_cache').upsert({
+            airtable_id: cat.airtableId,
+            name: cat.name,
+            code: cat.code,
+            units_per_pallet: cat.unitsPerPallet,
+            estimated_pallet_weight: cat.estimatedPalletWeight,
+            illustration_url: cat.illustrationUrl,
+            pallet_configuration: cat.palletConfiguration,
+            last_synced_at: new Date().toISOString(),
+          }, { onConflict: 'airtable_id' });
+        }
+        const { data: freshData } = await db.from('ops_size_categories_cache').select('*').order('name', { ascending: true });
+        return res.json(freshData || []);
+      } catch (err) {
+        console.error('Airtable fetch error:', err);
+        return res.json([]);
+      }
+    }
+
+    // POST /api/admin/operations/work-orders/sync-products
+    if (path === '/api/admin/operations/work-orders/sync-products' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const products = await fetchProductsFromAirtable();
+        let productsSynced = 0;
+        for (const product of products) {
+          const { error } = await db.from('ops_products_cache').upsert({
+            airtable_id: product.airtableId,
+            product_name: product.productName,
+            product_id: product.productId,
+            ingredient_ratios: product.ingredientRatios,
+            ingredients_list: product.ingredientsList,
+            size_categories: product.sizeCategories,
+            certifications: product.certifications,
+            last_synced_at: new Date().toISOString(),
+          }, { onConflict: 'airtable_id' });
+          if (!error) productsSynced++;
+        }
+
+        const categories = await fetchSizeCategoriesFromAirtable();
+        let categoriesSynced = 0;
+        for (const cat of categories) {
+          const { error } = await db.from('ops_size_categories_cache').upsert({
+            airtable_id: cat.airtableId,
+            name: cat.name,
+            code: cat.code,
+            units_per_pallet: cat.unitsPerPallet,
+            estimated_pallet_weight: cat.estimatedPalletWeight,
+            illustration_url: cat.illustrationUrl,
+            pallet_configuration: cat.palletConfiguration,
+            last_synced_at: new Date().toISOString(),
+          }, { onConflict: 'airtable_id' });
+          if (!error) categoriesSynced++;
+        }
+
+        return res.json({
+          success: true,
+          products: { synced: productsSynced, errors: [] },
+          sizeCategories: { synced: categoriesSynced, errors: [] },
+        });
+      } catch (err) {
+        console.error('Sync error:', err);
+        return res.status(500).json({ error: err.message });
+      }
+    }
+
+    // POST /api/admin/operations/work-orders/calculate-mix
+    if (path === '/api/admin/operations/work-orders/calculate-mix' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { productName, ingredientRatios, sizeCategory, sizeCategoryName, unitsPerPallet, estimatedPalletWeight, quantity, quantityType } = req.body || {};
+
+      // Get pallet config from our lookup table
+      const palletConfig = PALLET_CONFIGS[sizeCategory] || {};
+      const configUnitsPerPallet = unitsPerPallet || palletConfig.unitsPerPallet || 0;
+      const configWeightPerPallet = palletConfig.weightPerPallet || 0;
+      const configWeightPerUnit = palletConfig.weightPerUnit || 0;
+      const configDescription = palletConfig.config || '';
+
+      // Parse estimated weight if provided
+      let palletWeightLbs = configWeightPerPallet;
+      if (estimatedPalletWeight) {
+        const parsed = parseFloat(estimatedPalletWeight.replace(/,/g, "").replace(/\s*lbs?/i, ""));
+        if (parsed > 0) palletWeightLbs = parsed;
+      }
+
+      let totalWeight = 0;
+      let calculationDetails = "";
+
+      if (quantityType === "pallet" && palletWeightLbs > 0) {
+        totalWeight = quantity * palletWeightLbs;
+        calculationDetails = `${quantity} pallet${quantity > 1 ? "s" : ""} x ${palletWeightLbs.toLocaleString()} lbs = ${totalWeight.toLocaleString()} lbs`;
+      } else if (quantityType === "unit" && configWeightPerUnit > 0) {
+        totalWeight = quantity * configWeightPerUnit;
+        calculationDetails = `${quantity} unit${quantity > 1 ? "s" : ""} @ ${configWeightPerUnit} lbs each = ${totalWeight.toLocaleString()} lbs`;
+      } else if (quantity > 0 && palletWeightLbs > 0) {
+        // Default to pallet calculation
+        totalWeight = quantity * palletWeightLbs;
+        calculationDetails = `${quantity} x ${palletWeightLbs.toLocaleString()} lbs = ${totalWeight.toLocaleString()} lbs`;
+      }
+
+      // Round up to minimum batch size (2 tons = 4000 lbs) if needed
+      let roundUpNote = "";
+      if (totalWeight > 0 && totalWeight < 4000) {
+        roundUpNote = `\n\nNote: Minimum recommended batch size is 2 tons (4,000 lbs). Consider rounding up for efficiency.`;
+      }
+
+      // Parse and calculate ingredient breakdown
+      let ingredientBreakdown = "";
+      if (ingredientRatios && totalWeight > 0) {
+        const ratioLines = [];
+        // Match patterns like "50% dairy compost" or "100% Worm Castings"
+        const ratioMatch = ingredientRatios.match(/(\d+)%\s*([^,]+)/g);
+        if (ratioMatch) {
+          let totalPercentage = 0;
+          for (const match of ratioMatch) {
+            const [, percent, ingredient] = match.match(/(\d+)%\s*(.+)/) || [];
+            if (percent && ingredient) {
+              const percentage = parseInt(percent);
+              totalPercentage += percentage;
+              const weight = Math.round((percentage / 100) * totalWeight);
+              ratioLines.push(`${ingredient.trim()} = ${percentage}% → ${weight.toLocaleString()} lbs`);
+            }
+          }
+          // Validate percentages add up
+          const actualNote = totalPercentage !== 100 ? ` (Actual ${totalPercentage}%)` : '';
+          ingredientBreakdown = ratioLines.join("\n");
+        } else if (ingredientRatios.toLowerCase().includes('100%')) {
+          // Single ingredient at 100%
+          const ingredientName = ingredientRatios.replace(/100%\s*/i, '').trim();
+          ingredientBreakdown = `${ingredientName || 'Primary ingredient'} = 100% → ${totalWeight.toLocaleString()} lbs`;
+        } else {
+          ingredientBreakdown = `${ingredientRatios}: 100% → ${totalWeight.toLocaleString()} lbs`;
+        }
+      }
+
+      const guidelines = `Pallet configuration: ${sizeCategoryName || sizeCategory}
+${configDescription ? `${configDescription}` : ''}
+${configUnitsPerPallet ? `Units per pallet: ${configUnitsPerPallet}` : ''}
+
+Total estimated final weight: ${calculationDetails}
+
+Total ingredient for mix:
+${ingredientBreakdown || 'No ingredient ratios specified'}
+
+Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNote}`.trim();
+
+      return res.json({ mixingGuidelines: guidelines, totalWeightLbs: Math.round(totalWeight) });
+    }
+
+    // POST /api/admin/operations/work-orders/delete
+    if (path === '/api/admin/operations/work-orders/delete' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { ids } = req.body || {};
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'No IDs provided' });
+      }
+
+      const { error } = await db.from('ops_work_orders').delete().in('id', ids);
+      if (error) throw error;
+
+      return res.json({ success: true, deleted: ids.length });
+    }
+
+    // GET /api/admin/operations/work-orders - List all work orders
+    if (path === '/api/admin/operations/work-orders' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const status = url.searchParams.get('status');
+      const dateFilter = url.searchParams.get('dateFilter');
+      const search = url.searchParams.get('search');
+
+      let query = db.from('ops_work_orders').select('*').order('created_at', { ascending: false });
+
+      if (status && status !== 'all') {
+        query = query.eq('status', status);
+      }
+
+      if (dateFilter && dateFilter !== 'all') {
+        const now = new Date();
+        let startDate = new Date();
+        switch (dateFilter) {
+          case 'today': startDate.setHours(0, 0, 0, 0); break;
+          case 'week': startDate.setDate(now.getDate() - 7); break;
+          case 'month': startDate.setMonth(now.getMonth() - 1); break;
+          case '3months': startDate.setMonth(now.getMonth() - 3); break;
+        }
+        query = query.gte('created_at', startDate.toISOString());
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      let filteredData = data || [];
+      if (search && search.trim()) {
+        const searchLower = search.toLowerCase().trim();
+        filteredData = filteredData.filter(wo =>
+          wo.wo_number?.toLowerCase().includes(searchLower) ||
+          wo.product_name?.toLowerCase().includes(searchLower) ||
+          wo.product_id?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return res.json(filteredData);
+    }
+
+    // POST /api/admin/operations/work-orders - Create new work order
+    if (path === '/api/admin/operations/work-orders' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const body = req.body || {};
+
+      if (!body.sizeCategory) {
+        return res.status(400).json({ message: 'Size category is required' });
+      }
+      if (!body.quantity || body.quantity < 1) {
+        return res.status(400).json({ message: 'Quantity must be at least 1' });
+      }
+
+      const woNumber = await generateWONumber();
+
+      const { data, error } = await db.from('ops_work_orders').insert({
+        wo_number: woNumber,
+        product_type: body.productType || 'standard',
+        product_name: body.productName,
+        product_id: body.productId,
+        airtable_product_id: body.airtableProductId,
+        size_category: body.sizeCategory,
+        size_category_name: body.sizeCategoryName,
+        units_per_pallet: body.unitsPerPallet,
+        estimated_pallet_weight: body.estimatedPalletWeight,
+        quantity: parseInt(body.quantity),
+        quantity_type: body.quantityType || 'pallet',
+        ingredient_ratios: body.ingredientRatios,
+        ingredients_list: body.ingredientsList,
+        mixing_guidelines: body.mixingGuidelines,
+        total_weight_lbs: body.totalWeightLbs ? parseFloat(body.totalWeightLbs) : null,
+        custom_notes: body.customNotes,
+        needs_transportation: body.needsTransportation || false,
+        destination_address: body.destinationAddress,
+        destination_city: body.destinationCity,
+        destination_state: body.destinationState,
+        destination_zip: body.destinationZip,
+        preferred_delivery_date: body.preferredDeliveryDate || null,
+        preferred_delivery_time: body.preferredDeliveryTime,
+        linked_bol_id: body.linkedBolId || null,
+        status: 'pending',
+        priority: body.priority || 'normal',
+        created_by: admin.email || 'admin@ssw.com',
+      }).select().single();
+
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    // GET /api/admin/operations/work-orders/:id/pdf - Generate PDF (HTML for browser print)
+    // Query params: type=guide|label|both (default: both), print=true|false (default: true)
+    const woPdfMatch = path.match(/^\/api\/admin\/operations\/work-orders\/(\d+)\/pdf$/);
+    if (woPdfMatch && req.method === 'GET') {
+      const tokenFromQuery = url.searchParams.get('token');
+      const tokenFromHeader = req.headers.authorization?.replace('Bearer ', '');
+      const token = tokenFromQuery || tokenFromHeader;
+      const pdfType = url.searchParams.get('type') || 'both'; // 'guide', 'label', or 'both'
+      const printParam = url.searchParams.get('print');
+      const autoPrint = printParam === 'true'; // Only auto-print if explicitly set to 'true'
+
+      if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const jwt = (await import('jsonwebtoken')).default;
+        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      const woId = woPdfMatch[1];
+      const { data: wo, error } = await db.from('ops_work_orders').select('*').eq('id', woId).single();
+
+      if (error || !wo) return res.status(404).json({ error: 'Work order not found' });
+
+      // Fetch size category image from cache
+      let sizeCategoryImageUrl = null;
+      if (wo.size_category) {
+        const { data: sizeCategory } = await db.from('ops_size_categories_cache')
+          .select('illustration_url')
+          .eq('code', wo.size_category)
+          .single();
+        sizeCategoryImageUrl = sizeCategory?.illustration_url || null;
+      }
+
+      const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const today = formatDate(new Date().toISOString());
+      const createdDate = wo.created_at ? formatDate(wo.created_at) : today;
+
+      // Auto-print script
+      const printScript = autoPrint ? `<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>` : '';
+
+      // Production Guide Page
+      const guidePage = `
+<div class="page">
+  <div class="header">
+    <div><div class="company-name">Soil Seed & Water</div><div class="tagline">Regenerative Soil Solutions</div></div>
+    <div style="text-align:right"><div class="wo-number">${wo.wo_number}</div><div class="doc-date">${createdDate}</div><div style="margin-top:8px"><span class="status-badge status-${wo.status}">${wo.status.replace("_", " ")}</span></div></div>
+  </div>
+  <div class="section"><div class="section-title">Product Information</div>
+    <div class="product-name">${wo.product_name || "Custom Product"}</div>
+    <div class="info-grid">
+      ${wo.product_id ? `<span class="info-label">Product ID:</span><span class="info-value">${wo.product_id}</span>` : ""}
+      <span class="info-label">Work Order:</span><span class="info-value">${wo.wo_number}</span>
+      <span class="info-label">Created:</span><span class="info-value">${createdDate}</span>
+      <span class="info-label">Priority:</span><span class="info-value" style="text-transform:capitalize">${wo.priority || "Normal"}</span>
+    </div>
+  </div>
+  <div class="section"><div class="section-title">Size & Quantity</div>
+    <div class="size-quantity-container">
+      ${sizeCategoryImageUrl ? `<div class="size-image-container"><img src="${sizeCategoryImageUrl}" alt="${wo.size_category_name || wo.size_category}" class="size-category-image" loading="lazy" /></div>` : ""}
+      <div class="highlight-box" style="${sizeCategoryImageUrl ? 'flex:1' : ''}">
+        <div class="highlight-row"><span class="highlight-label">Size Category</span><span class="highlight-value">${wo.size_category_name || wo.size_category}</span></div>
+        <div class="highlight-row"><span class="highlight-label">Quantity</span><span class="highlight-value">${wo.quantity} ${wo.quantity_type === "pallet" ? "Pallet" : "Unit"}${wo.quantity > 1 ? "s" : ""}</span></div>
+        ${wo.units_per_pallet ? `<div class="highlight-row"><span class="highlight-label">Units per Pallet</span><span class="highlight-value">${wo.units_per_pallet}</span></div>` : ""}
+        ${wo.total_weight_lbs ? `<div class="highlight-row"><span class="highlight-label">Total Estimated Weight</span><span class="highlight-value">${wo.total_weight_lbs.toLocaleString()} lbs</span></div>` : ""}
+      </div>
+    </div>
+  </div>
+  ${wo.ingredient_ratios || wo.ingredients_list ? `<div class="section"><div class="section-title">Ingredients</div>
+    <div class="info-grid" style="padding:0 8px">
+      ${wo.ingredient_ratios ? `<span class="info-label">Ingredient Ratios:</span><span class="info-value">${wo.ingredient_ratios}</span>` : ""}
+      ${wo.ingredients_list ? `<span class="info-label">Ingredients:</span><span class="info-value">${wo.ingredients_list}</span>` : ""}
+    </div></div>` : ""}
+  ${wo.mixing_guidelines ? `<div class="section"><div class="section-title">Mixing Guidelines</div><div class="mixing-box">${wo.mixing_guidelines}</div></div>` : ""}
+  ${wo.custom_notes ? `<div class="section"><div class="section-title">Notes</div><div style="background:#fff9e6;border:1px solid #f0e0a0;border-radius:8px;padding:12px 16px">${wo.custom_notes}</div></div>` : ""}
+  ${wo.needs_transportation ? `<div class="section"><div class="section-title">Delivery Information</div>
+    <div class="info-grid" style="padding:0 8px">
+      <span class="info-label">Destination:</span><span class="info-value">${wo.destination_address || ""}${wo.destination_city ? `, ${wo.destination_city}` : ""}${wo.destination_state ? `, ${wo.destination_state}` : ""} ${wo.destination_zip || ""}</span>
+      ${wo.preferred_delivery_date ? `<span class="info-label">Preferred Date:</span><span class="info-value">${formatDate(wo.preferred_delivery_date)}</span>` : ""}
+    </div></div>` : ""}
+  <div class="footer">Soil Seed & Water | 18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com</div>
+</div>`;
+
+      // Pallet Label Page
+      const labelPage = `
+<div class="page label-page">
+  <div class="pallet-label">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:20pt;color:#264027">Soil Seed & Water</div>
+    <div class="label-wo">${wo.wo_number}</div>
+    <div class="label-product">${wo.product_name || "Custom Product"}</div>
+    ${sizeCategoryImageUrl ? `<div class="label-image-container"><img src="${sizeCategoryImageUrl}" alt="${wo.size_category_name || wo.size_category}" class="label-size-image" loading="lazy" /></div>` : ""}
+    <div class="label-info"><strong>${wo.size_category_name || wo.size_category}</strong></div>
+    ${wo.units_per_pallet ? `<div class="label-info">${wo.units_per_pallet} units per pallet</div>` : ""}
+    <div style="font-size:14pt;color:#666;margin-top:24px">Date Produced: _______________</div>
+    <div class="label-pallet-number">Pallet ___ of ${wo.quantity}</div>
+    <div style="margin-top:32px;padding-top:16px;border-top:2px solid #264027;font-size:10pt;color:#666">SSW BioSoils | Regenerative Soil Solutions | OMRI Listed</div>
+  </div>
+</div>`;
+
+      // Determine which pages to include
+      let pages = '';
+      let title = wo.wo_number;
+      if (pdfType === 'guide') {
+        pages = guidePage;
+        title = `${wo.wo_number} - Production Guide`;
+      } else if (pdfType === 'label') {
+        pages = labelPage;
+        title = `${wo.wo_number} - Pallet Label`;
+      } else {
+        pages = guidePage + labelPage;
+        title = `${wo.wo_number} - Production Guide & Label`;
+      }
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: letter; margin: 0.5in; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; background: white; }
+.page { width: 7.5in; min-height: 10in; padding: 0.5in; margin: 0 auto; background: white; page-break-after: always; position: relative; }
+.page:last-child { page-break-after: auto; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #264027; }
+.company-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26pt; font-weight: 600; color: #264027; }
+.tagline { font-family: 'Montserrat', Arial, sans-serif; font-size: 10pt; font-weight: 500; color: #6f732f; letter-spacing: 1px; text-transform: uppercase; }
+.wo-number { font-family: 'Montserrat', Arial, sans-serif; font-size: 28pt; font-weight: 700; color: #264027; }
+.doc-date { font-size: 11pt; color: #666; margin-top: 4px; }
+.section { margin-bottom: 20px; }
+.section-title { font-family: 'Montserrat', Arial, sans-serif; font-size: 12pt; font-weight: 600; color: #264027; background: #f5f7f5; padding: 8px 12px; border-left: 4px solid #264027; margin-bottom: 12px; text-transform: uppercase; }
+.product-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22pt; font-weight: 600; margin-bottom: 12px; color: #1a1a1a; }
+.info-grid { display: grid; grid-template-columns: 140px 1fr; gap: 6px 16px; }
+.info-label { font-weight: 600; color: #555; font-size: 10pt; }
+.info-value { color: #1a1a1a; font-size: 10pt; }
+.size-quantity-container { display: flex; gap: 20px; align-items: flex-start; margin: 16px 0; }
+.size-image-container { width: 160px; flex-shrink: 0; }
+.size-category-image { width: 100%; height: auto; max-height: 160px; object-fit: contain; border-radius: 8px; border: 1px solid #ddd; background: #f9f9f9; }
+.highlight-box { background: #e8f5e9; border: 2px solid #264027; border-radius: 8px; padding: 16px 20px; }
+.highlight-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(38,64,39,0.2); }
+.highlight-row:last-child { border-bottom: none; }
+.highlight-label { font-family: 'Montserrat', Arial, sans-serif; font-weight: 600; color: #264027; }
+.highlight-value { font-family: 'Montserrat', Arial, sans-serif; font-weight: 700; font-size: 14pt; color: #264027; }
+.mixing-box { background: #fafafa; border: 1px solid #ddd; border-radius: 8px; padding: 16px; white-space: pre-wrap; font-size: 11pt; line-height: 1.6; }
+.status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10pt; font-weight: 600; text-transform: uppercase; }
+.status-pending { background: #fff3cd; color: #856404; }
+.status-scheduled { background: #cce5ff; color: #004085; }
+.status-in_progress { background: #d4edda; color: #155724; }
+.status-completed { background: #264027; color: white; }
+.footer { position: absolute; bottom: 0.25in; left: 0.5in; right: 0.5in; padding-top: 12px; border-top: 1px solid #ddd; font-size: 8pt; color: #999; text-align: center; }
+.label-page { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0.5in; }
+.pallet-label { width: 100%; border: 4px solid #264027; border-radius: 12px; padding: 40px; text-align: center; background: white; }
+.label-wo { font-family: 'Montserrat', Arial, sans-serif; font-size: 48pt; font-weight: 700; color: #264027; margin: 16px 0; }
+.label-product { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28pt; font-weight: 600; margin: 24px 0; color: #1a1a1a; }
+.label-info { font-size: 16pt; margin: 12px 0; color: #1a1a1a; }
+.label-pallet-number { font-family: 'Montserrat', Arial, sans-serif; font-size: 24pt; font-weight: 600; color: #264027; margin-top: 20px; }
+.label-image-container { margin: 16px 0; }
+.label-size-image { max-width: 200px; max-height: 150px; object-fit: contain; border-radius: 8px; }
+@media print { body { background: white; } .page { margin: 0; width: 100%; } }
+@media screen {
+  body { background: #f5f5f5; padding: 10px; margin: 0; }
+  .page {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    padding: 24px;
+    margin: 0 auto 16px auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+  }
+}
+</style>
+${printScript}
+</head><body>
+${pages}
+</body></html>`;
+
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(html);
+    }
+
+    // GET /api/admin/operations/work-orders/:id - Get single work order
+    const woDetailMatch = path.match(/^\/api\/admin\/operations\/work-orders\/(\d+)$/);
+    if (woDetailMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const woId = woDetailMatch[1];
+      const { data, error } = await db.from('ops_work_orders').select('*').eq('id', woId).single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return res.status(404).json({ error: 'Work order not found' });
+        throw error;
+      }
+      return res.json(data);
+    }
+
+    // PATCH /api/admin/operations/work-orders/:id - Update work order
+    if (woDetailMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const woId = woDetailMatch[1];
+      const updates = req.body || {};
+
+      const fieldMap = {
+        productType: 'product_type', productName: 'product_name', productId: 'product_id',
+        airtableProductId: 'airtable_product_id', sizeCategory: 'size_category', sizeCategoryName: 'size_category_name',
+        unitsPerPallet: 'units_per_pallet', estimatedPalletWeight: 'estimated_pallet_weight', quantityType: 'quantity_type',
+        ingredientRatios: 'ingredient_ratios', ingredientsList: 'ingredients_list', mixingGuidelines: 'mixing_guidelines',
+        totalWeightLbs: 'total_weight_lbs', customNotes: 'custom_notes', needsTransportation: 'needs_transportation',
+        destinationAddress: 'destination_address', destinationCity: 'destination_city', destinationState: 'destination_state',
+        destinationZip: 'destination_zip', preferredDeliveryDate: 'preferred_delivery_date', preferredDeliveryTime: 'preferred_delivery_time',
+        linkedBolId: 'linked_bol_id',
+      };
+
+      const snakeCaseUpdates = {};
+      for (const [key, value] of Object.entries(updates)) {
+        const snakeKey = fieldMap[key] || key;
+        snakeCaseUpdates[snakeKey] = value;
+      }
+      snakeCaseUpdates.updated_at = new Date().toISOString();
+
+      const { data, error } = await db.from('ops_work_orders').update(snakeCaseUpdates).eq('id', woId).select().single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return res.status(404).json({ error: 'Work order not found' });
+        throw error;
+      }
+      return res.json(data);
+    }
+
+    // ============ UNSUBSCRIBE ENDPOINTS ============
+
+    // Airtable configuration for Email Marketing 2026
+    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
+    const AIRTABLE_EMAIL_BASE_ID = "appBLlRW7MOx0qdlu";
+    const AIRTABLE_EMAIL_TABLE_ID = "tblmofFGmkN2dZ4GB";
+
+    // POST /api/unsubscribe - Unsubscribe an email
+    if (path === '/api/unsubscribe' && req.method === 'POST') {
+      const { email, reason } = req.body || {};
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log('[Unsubscribe] Processing request for:', normalizedEmail);
+
+      // Find the contact in Airtable
+      const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}?filterByFormula=LOWER({Email})="${normalizedEmail}"&maxRecords=1`;
+
+      const searchResponse = await fetch(searchUrl, {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+      });
+
+      if (!searchResponse.ok) {
+        console.error('[Unsubscribe] Airtable search failed:', await searchResponse.text());
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const searchData = await searchResponse.json();
+      const records = searchData.records || [];
+
+      if (records.length === 0) {
+        // Email not found - still return success (don't reveal if email exists)
+        console.log('[Unsubscribe] Email not found in database:', normalizedEmail);
+        return res.json({ success: true, message: 'Unsubscribed successfully' });
+      }
+
+      const recordId = records[0].id;
+
+      // Update the contact - mark as unsubscribed
+      const updateUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}/${recordId}`;
+
+      const updateFields = {
+        Subscribed: false,
+        "Unsubscribed Date": new Date().toISOString().split("T")[0],
+      };
+
+      // Add unsubscribe reason to Notes if provided
+      if (reason && reason.trim()) {
+        const existingNotes = records[0].fields?.Notes || "";
+        const timestamp = new Date().toISOString();
+        updateFields.Notes = `${existingNotes}\n\n[Unsubscribed ${timestamp}]\nReason: ${reason.trim()}`.trim();
+      }
+
+      const updateResponse = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fields: updateFields }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        console.error('[Unsubscribe] Airtable update failed:', errorText);
+
+        // If Subscribed field doesn't exist, try without it
+        if (errorText.includes("UNKNOWN_FIELD_NAME")) {
+          console.log('[Unsubscribe] Retrying without Subscribed field...');
+          const retryFields = {
+            "Unsubscribed Date": new Date().toISOString().split("T")[0],
+          };
+          if (reason && reason.trim()) {
+            const existingNotes = records[0].fields?.Notes || "";
+            const timestamp = new Date().toISOString();
+            retryFields.Notes = `${existingNotes}\n\n[Unsubscribed ${timestamp}]\nReason: ${reason.trim()}`.trim();
+          }
+
+          const retryResponse = await fetch(updateUrl, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ fields: retryFields }),
+          });
+
+          if (!retryResponse.ok) {
+            console.error('[Unsubscribe] Retry also failed:', await retryResponse.text());
+            return res.status(500).json({ error: 'Failed to update subscription status' });
+          }
+        } else {
+          return res.status(500).json({ error: 'Failed to update subscription status' });
+        }
+      }
+
+      console.log('[Unsubscribe] Successfully unsubscribed:', normalizedEmail);
+      return res.json({ success: true, message: 'Unsubscribed successfully' });
+    }
+
+    // GET /api/unsubscribe/status/:email - Check subscription status
+    const unsubStatusMatch = path.match(/^\/api\/unsubscribe\/status\/(.+)$/);
+    if (unsubStatusMatch && req.method === 'GET') {
+      const email = decodeURIComponent(unsubStatusMatch[1]).toLowerCase().trim();
+
+      const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}?filterByFormula=LOWER({Email})="${email}"&maxRecords=1`;
+
+      const response = await fetch(searchUrl, {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+      });
+
+      if (!response.ok) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const data = await response.json();
+      const records = data.records || [];
+
+      if (records.length === 0) {
+        return res.json({ found: false });
+      }
+
+      const record = records[0];
+      return res.json({
+        found: true,
+        subscribed: record.fields?.Subscribed !== false,
+        unsubscribedDate: record.fields?.["Unsubscribed Date"] || null,
+      });
     }
 
     // 404
