@@ -1730,6 +1730,37 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
         sizeCategoryImageUrl = sizeCategory?.illustration_url || null;
       }
 
+      // Fetch product illustration and convert to base64 for PDF embedding
+      let productIllustrationBase64 = null;
+      if (wo.product_id) {
+        const { data: product } = await db.from('ops_products_cache')
+          .select('illustration_url')
+          .eq('product_id', wo.product_id)
+          .single();
+
+        if (product?.illustration_url) {
+          try {
+            const baseUrl = process.env.VERCEL_URL
+              ? `https://${process.env.VERCEL_URL}`
+              : 'https://www.organicsoilwholesale.com';
+            const imageUrl = `${baseUrl}${product.illustration_url}`;
+            console.log('Fetching product illustration from:', imageUrl);
+
+            const imageResponse = await fetch(imageUrl);
+            if (imageResponse.ok) {
+              const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+              const ext = product.illustration_url.split('.').pop() || 'webp';
+              const mimeType = ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg';
+              productIllustrationBase64 = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+            } else {
+              console.warn('Failed to fetch product illustration:', imageResponse.status);
+            }
+          } catch (imgError) {
+            console.warn('Could not fetch product illustration:', imgError);
+          }
+        }
+      }
+
       const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
       const today = formatDate(new Date().toISOString());
       const createdDate = wo.created_at ? formatDate(wo.created_at) : today;
@@ -1745,12 +1776,19 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
     <div style="text-align:right"><div class="wo-number">${wo.wo_number}</div><div class="doc-date">${createdDate}</div><div style="margin-top:8px"><span class="status-badge status-${wo.status}">${wo.status.replace("_", " ")}</span></div></div>
   </div>
   <div class="section"><div class="section-title">Product Information</div>
-    <div class="product-name">${wo.product_name || "Custom Product"}</div>
-    <div class="info-grid">
-      ${wo.product_id ? `<span class="info-label">Product ID:</span><span class="info-value">${wo.product_id}</span>` : ""}
-      <span class="info-label">Work Order:</span><span class="info-value">${wo.wo_number}</span>
-      <span class="info-label">Created:</span><span class="info-value">${createdDate}</span>
-      <span class="info-label">Priority:</span><span class="info-value" style="text-transform:capitalize">${wo.priority || "Normal"}</span>
+    <div class="product-header" style="display: flex; gap: 16px; align-items: flex-start;">
+      ${productIllustrationBase64 ? `<div class="product-image" style="width: 100px; height: 100px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #f9f9f9;"><img src="${productIllustrationBase64}" alt="${wo.product_name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" /></div>` : ""}
+      <div style="flex: 1;">
+        <div class="product-name">${wo.product_name || "Custom Product"}</div>
+        <div class="info-grid">
+          ${wo.product_id ? `<span class="info-label">Product ID:</span><span class="info-value">${wo.product_id}</span>` : ""}
+          <span class="info-label">Work Order:</span><span class="info-value">${wo.wo_number}</span>
+          ${wo.order_type ? `<span class="info-label">Order Type:</span><span class="info-value" style="text-transform:capitalize">${wo.order_type}</span>` : ""}
+          <span class="info-label">Created:</span><span class="info-value">${createdDate}</span>
+          <span class="info-label">Priority:</span><span class="info-value" style="text-transform:capitalize">${wo.priority || "Normal"}</span>
+          ${wo.created_by ? `<span class="info-label">Created By:</span><span class="info-value">${wo.created_by}</span>` : ""}
+        </div>
+      </div>
     </div>
   </div>
   <div class="section"><div class="section-title">Size & Quantity</div>
