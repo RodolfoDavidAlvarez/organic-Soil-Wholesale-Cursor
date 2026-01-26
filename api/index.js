@@ -1702,7 +1702,7 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
       const tokenFromQuery = url.searchParams.get('token');
       const tokenFromHeader = req.headers.authorization?.replace('Bearer ', '');
       const token = tokenFromQuery || tokenFromHeader;
-      const pdfType = url.searchParams.get('type') || 'both'; // 'guide', 'label', or 'both'
+      const pdfType = url.searchParams.get('type') || 'guide'; // 'guide', 'label', or 'both' - default to guide only
       const printParam = url.searchParams.get('print');
       const autoPrint = printParam === 'true'; // Only auto-print if explicitly set to 'true'
 
@@ -1855,10 +1855,10 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
 body { font-family: 'Inter', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; background: white; }
 .page { width: 7.5in; min-height: 10in; padding: 0.5in; margin: 0 auto; background: white; page-break-after: always; position: relative; }
 .page:last-child { page-break-after: auto; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #264027; }
-.company-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26pt; font-weight: 600; color: #264027; }
-.tagline { font-family: 'Montserrat', Arial, sans-serif; font-size: 10pt; font-weight: 500; color: #6f732f; letter-spacing: 1px; text-transform: uppercase; }
-.wo-number { font-family: 'Montserrat', Arial, sans-serif; font-size: 28pt; font-weight: 700; color: #264027; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #264027; flex-wrap: nowrap; }
+.company-name { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22pt; font-weight: 600; color: #264027; white-space: nowrap; }
+.tagline { font-family: 'Montserrat', Arial, sans-serif; font-size: 9pt; font-weight: 500; color: #6f732f; letter-spacing: 1px; text-transform: uppercase; }
+.wo-number { font-family: 'Montserrat', Arial, sans-serif; font-size: 22pt; font-weight: 700; color: #264027; white-space: nowrap; }
 .doc-date { font-size: 11pt; color: #666; margin-top: 4px; }
 .section { margin-bottom: 20px; }
 .section-title { font-family: 'Montserrat', Arial, sans-serif; font-size: 12pt; font-weight: 600; color: #264027; background: #f5f7f5; padding: 8px 12px; border-left: 4px solid #264027; margin-bottom: 12px; text-transform: uppercase; }
@@ -1893,13 +1893,15 @@ body { font-family: 'Inter', Arial, sans-serif; font-size: 11pt; line-height: 1.
 @media screen {
   body { background: #f5f5f5; padding: 10px; margin: 0; }
   .page {
-    width: 100%;
-    max-width: 100%;
+    width: 7.5in;
+    max-width: 7.5in;
     min-height: auto;
-    padding: 24px;
+    padding: 0.4in;
     margin: 0 auto 16px auto;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     box-sizing: border-box;
+    transform-origin: top left;
+    transform: scale(0.85);
   }
 }
 </style>
