@@ -1833,17 +1833,22 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
 </div>`;
 
       // Determine which pages to include
+      // Accept both 'guide' and 'workorder' for the production guide
       let pages = '';
       let title = wo.wo_number;
-      if (pdfType === 'guide') {
+      if (pdfType === 'guide' || pdfType === 'workorder') {
         pages = guidePage;
         title = `${wo.wo_number} - Production Guide`;
       } else if (pdfType === 'label') {
         pages = labelPage;
         title = `${wo.wo_number} - Pallet Label`;
-      } else {
+      } else if (pdfType === 'both') {
         pages = guidePage + labelPage;
         title = `${wo.wo_number} - Production Guide & Label`;
+      } else {
+        // Default to guide only
+        pages = guidePage;
+        title = `${wo.wo_number} - Production Guide`;
       }
 
       const html = `<!DOCTYPE html>
