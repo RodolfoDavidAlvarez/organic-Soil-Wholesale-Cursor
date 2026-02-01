@@ -214,6 +214,7 @@ export default function CRMCapture() {
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSavingContact, setIsSavingContact] = useState(false);
 
   // UI state
   const [showContactDetails, setShowContactDetails] = useState(false);
@@ -667,6 +668,88 @@ export default function CRMCapture() {
       setStep('email_preview');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // Save contact & schedule email for tomorrow (no immediate send)
+  const handleSaveAndContinue = async () => {
+    if (!contactData.email) {
+      toast({ title: 'Email Required', description: 'Please enter an email address', variant: 'destructive' });
+      return;
+    }
+
+    setIsSavingContact(true);
+
+    try {
+      // Save contact to CRM
+      const formData = new FormData();
+      if (imageFile) formData.append('image', imageFile);
+      formData.append('firstName', contactData.firstName);
+      formData.append('lastName', contactData.lastName);
+      formData.append('email', contactData.email);
+      formData.append('phone', contactData.phone);
+      formData.append('companyName', contactData.companyName);
+      formData.append('title', contactData.title);
+      formData.append('website', contactData.website);
+      formData.append('segment', segment);
+      formData.append('leadSource', leadSource);
+      formData.append('partnerOwner', partnerOwner);
+      formData.append('contextNotes', contextNotes);
+      formData.append('scheduleEmail', 'true'); // Flag to schedule for tomorrow
+
+      await fetch('/api/representatives/rodolfo/submit-business-card-enhanced', {
+        method: 'POST',
+        body: formData,
+      });
+
+      // Generate and schedule email for tomorrow 9 AM
+      const emailResponse = await fetch('/api/representatives/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: contactData.firstName,
+          lastName: contactData.lastName,
+          email: contactData.email,
+          company: contactData.companyName,
+          title: contactData.title,
+          website: contactData.website,
+          segment,
+          event: LEAD_SOURCES.find(s => s.value === leadSource)?.label || leadSource,
+          contextNotes,
+          companyContext,
+        }),
+      });
+
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json();
+        // Schedule email for tomorrow 9 AM MST
+        const tomorrow9am = new Date();
+        tomorrow9am.setDate(tomorrow9am.getDate() + 1);
+        tomorrow9am.setHours(9, 0, 0, 0);
+
+        await fetch('/api/representatives/schedule-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: contactData.email,
+            subject: emailData.email.subject,
+            body: emailData.email.body,
+            scheduledAt: tomorrow9am.toISOString(),
+          }),
+        });
+      }
+
+      toast({ 
+        title: '✓ Contact Saved', 
+        description: `Email scheduled for tomorrow 9 AM`,
+      });
+
+      // Reset and go back to capture for next card
+      handleReset();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Could not save contact', variant: 'destructive' });
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -1147,24 +1230,47 @@ export default function CRMCapture() {
               )}
             </div>
 
-            {/* Main Action Button */}
-            <button
-              onClick={handleStartSequence}
-              disabled={isGeneratingEmail || isAnalyzing}
-              className="w-full h-16 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold text-lg shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGeneratingEmail ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Generating...</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="h-5 w-5" />
-                  <span>Start Sequence</span>
-                </>
-              )}
-            </button>
+            {/* Action Buttons - Two options */}
+            <div className="space-y-3">
+              {/* Primary: Preview Email First */}
+              <button
+                onClick={handleStartSequence}
+                disabled={isGeneratingEmail || isAnalyzing}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold text-base shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingEmail ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-5 w-5" />
+                    <span>Preview Email</span>
+                  </>
+                )}
+              </button>
+
+              {/* Secondary: Save & Continue (schedules email for tomorrow) */}
+              <button
+                onClick={handleSaveAndContinue}
+                disabled={isSavingContact || isAnalyzing || !contactData.email}
+                className="w-full h-14 rounded-2xl border-2 border-slate-600 hover:border-emerald-500 bg-slate-800/50 text-slate-200 font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingContact ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-5 w-5" />
+                    <span>Save & Continue</span>
+                    <span className="text-xs text-slate-400 ml-1">(email tomorrow 9 AM)</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 

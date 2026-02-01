@@ -620,6 +620,71 @@ router.post("/send-email", async (req, res) => {
 });
 
 /**
+ * Schedule email for later via Resend's scheduled_at parameter
+ */
+router.post("/schedule-email", async (req, res) => {
+  try {
+    const { contactId, to, subject, body, from, scheduledAt } = req.body;
+
+    if (!to || !subject || !body) {
+      return res.status(400).json({ error: "To, subject, and body required" });
+    }
+
+    // Parse scheduled time - must be in the future
+    let scheduleTime: Date;
+    if (scheduledAt) {
+      scheduleTime = new Date(scheduledAt);
+      // Ensure it's at least 1 minute in the future
+      const minTime = new Date(Date.now() + 60000);
+      if (scheduleTime < minTime) {
+        scheduleTime = minTime;
+      }
+    } else {
+      // Default: tomorrow at 9 AM MST (UTC-7)
+      scheduleTime = new Date();
+      scheduleTime.setDate(scheduleTime.getDate() + 1);
+      scheduleTime.setHours(16, 0, 0, 0); // 9 AM MST = 4 PM UTC
+    }
+
+    // Schedule email via Resend with scheduled_at
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+      to: [to],
+      subject,
+      text: body,
+      scheduledAt: scheduleTime.toISOString(),
+    });
+
+    if (emailError) {
+      throw new Error(emailError.message);
+    }
+
+    // Update contact record if contactId provided
+    if (contactId) {
+      await supabase
+        .from("representative_contacts")
+        .update({
+          scheduled_email_at: scheduleTime.toISOString(),
+          first_email_subject: subject,
+          first_email_body: body,
+          status: "scheduled",
+          pipeline_stage: "awareness",
+        })
+        .eq("id", contactId);
+    }
+
+    res.json({
+      success: true,
+      messageId: emailData?.id,
+      scheduledAt: scheduleTime.toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Error scheduling email:", error);
+    res.status(500).json({ error: error.message || "Failed to schedule email" });
+  }
+});
+
+/**
  * Enhanced submit business card with CRM fields
  * Captures segment, lead source, context notes, and optionally generates/sends email
  */
