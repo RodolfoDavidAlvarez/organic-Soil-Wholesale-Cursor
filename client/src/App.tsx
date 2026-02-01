@@ -43,6 +43,7 @@ const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const GrokAssistant = lazy(() => import("@/pages/GrokAssistant"));
 const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -59,7 +60,14 @@ const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"))
 const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
 const AdminOperations = lazy(() => import("@/pages/admin/Operations"));
 const AdminCreateBOL = lazy(() => import("@/pages/admin/CreateBOL"));
+const AdminEditBOL = lazy(() => import("@/pages/admin/EditBOL"));
 const AdminViewBOL = lazy(() => import("@/pages/admin/ViewBOL"));
+const AdminOperationsOrders = lazy(() => import("@/pages/admin/OperationsOrders"));
+const AdminWorkOrders = lazy(() => import("@/pages/admin/WorkOrders"));
+const AdminCreateWorkOrder = lazy(() => import("@/pages/admin/CreateWorkOrder"));
+const AdminViewWorkOrder = lazy(() => import("@/pages/admin/ViewWorkOrder"));
+const AdminOperationsCalendar = lazy(() => import("@/pages/admin/OperationsCalendar"));
+const AdminOperationsResources = lazy(() => import("@/pages/admin/OperationsResources"));
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
@@ -108,9 +116,12 @@ function Router() {
         {GROK_ASSISTANT_ENABLED && <Route path="/grok" component={GrokAssistant} />}
         <Route path="/video-demo" component={VideoDemo} />
         <Route path="/rep/:slug" component={RepresentativeLanding} />
-        <Route path="/crm" component={CRMCapture} />
+        {/* CRM routes: /crm/:org/:user or /crm/:org */}
+        <Route path="/crm/ssw/:user" component={CRMCapture} />
+        <Route path="/crm/ufe/:user" component={CRMCapture} />
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
+        <Route path="/unsubscribe" component={Unsubscribe} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />
@@ -135,7 +146,14 @@ function Router() {
         <Route path="/admin/representatives" component={AdminRepresentatives} />
         <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
         <Route path="/admin/operations/bols/new" component={AdminCreateBOL} />
+        <Route path="/admin/operations/bols/:id/edit" component={AdminEditBOL} />
         <Route path="/admin/operations/bols/:id" component={AdminViewBOL} />
+        <Route path="/admin/operations/orders" component={AdminOperationsOrders} />
+        <Route path="/admin/operations/work-orders/new" component={AdminCreateWorkOrder} />
+        <Route path="/admin/operations/work-orders/:id" component={AdminViewWorkOrder} />
+        <Route path="/admin/operations/work-orders" component={AdminWorkOrders} />
+        <Route path="/admin/operations/calendar" component={AdminOperationsCalendar} />
+        <Route path="/admin/operations/resources" component={AdminOperationsResources} />
         <Route path="/admin/operations" component={AdminOperations} />
         <Route path="/admin/settings" component={AdminSettings} />
 
@@ -154,7 +172,8 @@ function App() {
   const isAdminPanel = location.startsWith("/admin");
   const isRepresentativeLanding = location.startsWith("/rep/");
   const isCRMCapture = location.startsWith("/crm");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture;
+  const isUnsubscribe = location.startsWith("/unsubscribe");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe;
 
   return (
     <QueryClientProvider client={queryClient}>

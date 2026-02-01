@@ -164,14 +164,52 @@ export default function CRMCapture() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Determine organization from URL
+  // Determine organization and user from URL
+  // URL patterns: /crm/ssw/rodolfo, /crm/ufe/joe, /crm/ssw, /crm/ufe
   const getOrgFromUrl = (): 'ssw' | 'ufe' | 'both' => {
     if (location.includes('/crm/ssw')) return 'ssw';
     if (location.includes('/crm/ufe')) return 'ufe';
-    return 'both'; // Default /crm shows both
+    return 'ssw'; // Default to SSW instead of both
   };
+  
+  const getUserSlugFromUrl = (): string | null => {
+    // Match /crm/ssw/username or /crm/ufe/username
+    const match = location.match(/\/crm\/(ssw|ufe)\/([^\/]+)/);
+    return match ? match[2] : null;
+  };
+  
   const currentOrg = getOrgFromUrl();
+  const userSlug = getUserSlugFromUrl();
   const orgConfig = ORG_CONFIG[currentOrg];
+
+  // User profile state
+  const [userProfile, setUserProfile] = useState<{
+    name: string;
+    email: string;
+    title?: string;
+    company?: string;
+    photo_url?: string;
+  } | null>(null);
+
+  // Fetch user profile on mount if userSlug exists
+  useEffect(() => {
+    if (userSlug) {
+      fetch(`/api/representatives/${userSlug}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            setUserProfile({
+              name: data.name || data.full_name,
+              email: data.email,
+              title: data.title,
+              company: data.company_name,
+              photo_url: data.photo_url,
+            });
+          }
+        })
+        .catch(err => console.error('Failed to fetch user profile:', err));
+    }
+  }, [userSlug]);
 
   // Get segments and sources based on org
   const SEGMENTS = orgConfig.segments;
@@ -646,7 +684,7 @@ export default function CRMCapture() {
       formData.append('partnerOwner', partnerOwner);
       formData.append('contextNotes', contextNotes);
 
-      await fetch('/api/representatives/rodolfo/submit-business-card-enhanced', {
+      await fetch(`/api/representatives/${userSlug || 'rodolfo'}/submit-business-card-enhanced`, {
         method: 'POST',
         body: formData,
       });
@@ -658,6 +696,7 @@ export default function CRMCapture() {
           to: contactData.email,
           subject: generatedEmail.subject,
           body: generatedEmail.body,
+          from: userProfile?.email ? `${userProfile.name} <${userProfile.email}>` : undefined,
         }),
       });
 
@@ -697,7 +736,7 @@ export default function CRMCapture() {
       formData.append('contextNotes', contextNotes);
       formData.append('scheduleEmail', 'true'); // Flag to schedule for tomorrow
 
-      await fetch('/api/representatives/rodolfo/submit-business-card-enhanced', {
+      await fetch(`/api/representatives/${userSlug || 'rodolfo'}/submit-business-card-enhanced`, {
         method: 'POST',
         body: formData,
       });
@@ -717,6 +756,8 @@ export default function CRMCapture() {
           event: LEAD_SOURCES.find(s => s.value === leadSource)?.label || leadSource,
           contextNotes,
           companyContext,
+          senderName: userProfile?.name,
+          senderEmail: userProfile?.email,
         }),
       });
 
@@ -735,6 +776,7 @@ export default function CRMCapture() {
             subject: emailData.email.subject,
             body: emailData.email.body,
             scheduledAt: tomorrow9am.toISOString(),
+            from: userProfile?.email ? `${userProfile.name} <${userProfile.email}>` : undefined,
           }),
         });
       }
@@ -784,12 +826,22 @@ export default function CRMCapture() {
       <header className="relative z-10 px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl bg-gradient-to-br ${orgConfig.headerColor}`}>
-              <orgConfig.icon className="h-5 w-5 text-white" />
-            </div>
+            {userProfile?.photo_url ? (
+              <img 
+                src={userProfile.photo_url} 
+                alt={userProfile.name}
+                className="w-10 h-10 rounded-xl object-cover"
+              />
+            ) : (
+              <div className={`p-2 rounded-xl bg-gradient-to-br ${orgConfig.headerColor}`}>
+                <orgConfig.icon className="h-5 w-5 text-white" />
+              </div>
+            )}
             <div>
-              <h1 className="text-xl font-bold tracking-tight">{orgConfig.name}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{orgConfig.subtitle}</p>
+              <h1 className="text-xl font-bold tracking-tight">
+                {userProfile?.name ? `${userProfile.name.split(' ')[0]}'s CRM` : orgConfig.name}
+              </h1>
+              <p className="text-xs text-slate-400 mt-0.5">{orgConfig.shortName} • {orgConfig.subtitle}</p>
             </div>
           </div>
           {step !== 'capture' && (
@@ -1336,15 +1388,23 @@ export default function CRMCapture() {
               {/* Email header */}
               <div className="bg-slate-900/50 px-4 py-3 border-b border-slate-700 space-y-2">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
-                    <Mail className="h-5 w-5 text-white" />
-                  </div>
+                  {userProfile?.photo_url ? (
+                    <img 
+                      src={userProfile.photo_url} 
+                      alt={userProfile.name}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-5 w-5 text-white" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-white">Rodo Alvarez</p>
+                      <p className="font-semibold text-white">{userProfile?.name || 'Rodo Alvarez'}</p>
                       <span className="text-xs text-slate-500">Now</span>
                     </div>
-                    <p className="text-xs text-emerald-400">ralvarez@soilseedandwater.com</p>
+                    <p className="text-xs text-emerald-400">{userProfile?.email || 'ralvarez@soilseedandwater.com'}</p>
                   </div>
                 </div>
                 <div className="text-sm text-slate-400">
