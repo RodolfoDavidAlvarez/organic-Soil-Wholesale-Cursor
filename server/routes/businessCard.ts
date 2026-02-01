@@ -13,6 +13,7 @@ import {
   type EmailGenerationInput,
 } from "../services/aiEmailService";
 import { syncCRMContactToHubSpot } from "../services/hubspot";
+import { sendEmailViaGmail, isGmailConfigured } from "../services/gmailService";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -572,26 +573,53 @@ router.post("/generate-email", async (req, res) => {
 });
 
 /**
- * Send the follow-up email via Resend
+ * Send the follow-up email via Gmail API (preferred - appears in Sent folder)
+ * Falls back to Resend if Gmail is not configured
  */
 router.post("/send-email", async (req, res) => {
   try {
-    const { contactId, to, subject, body, from } = req.body;
+    const { contactId, to, subject, body, from, useGmail } = req.body;
 
     if (!to || !subject || !body) {
       return res.status(400).json({ error: "To, subject, and body required" });
     }
 
-    // Send email via Resend
-    const { data: emailData, error: emailError } = await resend.emails.send({
-      from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
-      to: [to],
-      subject,
-      text: body,
-    });
+    let messageId: string | undefined;
+    let method: "gmail" | "resend" = "resend";
 
-    if (emailError) {
-      throw new Error(emailError.message);
+    // Try Gmail first if configured (preferred - emails appear in Sent folder)
+    if (isGmailConfigured() && useGmail !== false) {
+      try {
+        const gmailResult = await sendEmailViaGmail({
+          to,
+          subject,
+          body,
+          from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+        });
+        messageId = gmailResult.id;
+        method = "gmail";
+        console.log("[CRM Email] Sent via Gmail:", messageId);
+      } catch (gmailError) {
+        console.error("[CRM Email] Gmail failed, falling back to Resend:", gmailError);
+        // Fall through to Resend
+      }
+    }
+
+    // Fallback to Resend if Gmail didn't work
+    if (!messageId) {
+      const { data: emailData, error: emailError } = await resend.emails.send({
+        from: from || "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+        to: [to],
+        subject,
+        text: body,
+      });
+
+      if (emailError) {
+        throw new Error(emailError.message);
+      }
+      messageId = emailData?.id;
+      method = "resend";
+      console.log("[CRM Email] Sent via Resend:", messageId);
     }
 
     // Update contact record if contactId provided
@@ -610,7 +638,8 @@ router.post("/send-email", async (req, res) => {
 
     res.json({
       success: true,
-      messageId: emailData?.id,
+      messageId,
+      method,
       sentAt: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -849,19 +878,49 @@ router.post("/:slug/submit-business-card-enhanced", upload.single("image"), asyn
         sent: false,
       };
 
-      // Send email if requested and valid
+      // Send email if requested and valid (prefer Gmail for Sent folder visibility)
       if ((sendEmail === "true" || sendEmail === true) && email && validation.valid) {
         try {
-          const { data: sendData, error: sendError } = await resend.emails.send({
-            from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
-            to: [email],
-            subject: generatedEmail.subject,
-            text: generatedEmail.body,
-          });
+          let messageSent = false;
+          let messageId: string | undefined;
+          let sendMethod: "gmail" | "resend" = "resend";
 
-          if (!sendError) {
+          // Try Gmail first (appears in Sent folder)
+          if (isGmailConfigured()) {
+            try {
+              const gmailResult = await sendEmailViaGmail({
+                to: email,
+                subject: generatedEmail.subject,
+                body: generatedEmail.body,
+                from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+              });
+              messageId = gmailResult.id;
+              messageSent = true;
+              sendMethod = "gmail";
+            } catch (gmailErr) {
+              console.error("[CRM] Gmail send failed:", gmailErr);
+            }
+          }
+
+          // Fallback to Resend
+          if (!messageSent) {
+            const { data: sendData, error: sendError } = await resend.emails.send({
+              from: "Rodo Alvarez <ralvarez@soilseedandwater.com>",
+              to: [email],
+              subject: generatedEmail.subject,
+              text: generatedEmail.body,
+            });
+            if (!sendError) {
+              messageId = sendData?.id;
+              messageSent = true;
+              sendMethod = "resend";
+            }
+          }
+
+          if (messageSent) {
             emailResult.sent = true;
-            emailResult.messageId = sendData?.id;
+            emailResult.messageId = messageId;
+            emailResult.method = sendMethod;
 
             // Update contact with email info
             await supabase
