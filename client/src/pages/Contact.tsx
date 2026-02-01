@@ -155,14 +155,14 @@ const Contact = () => {
   };
 
   return (
-    <section id="contact" className="py-16 bg-neutral-50">
-      <div className="container mx-auto px-4">
+    <section id="contact" className="py-8 sm:py-12 lg:py-16 bg-neutral-50">
+      <div className="container mx-auto px-3 sm:px-4">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl font-heading font-bold text-primary mb-4">Contact Us</h1>
-            <p className="text-lg text-neutral-800 max-w-3xl mx-auto">
+          <div className="text-center mb-6 sm:mb-8 lg:mb-12">
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-primary mb-3 sm:mb-4">Contact Us</h1>
+            <p className="text-base sm:text-lg text-neutral-800 max-w-3xl mx-auto">
               Have questions about our products or wholesale program? We're here to help.
-              <span className="block text-sm text-neutral-600 mt-2">
+              <span className="block text-xs sm:text-sm text-neutral-600 mt-2">
                 A division of{" "}
                 <a href="https://soilseedandwater.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                   Soil Seed and Water
@@ -171,55 +171,53 @@ const Contact = () => {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row">
-            <div className="md:w-1/3 mb-8 md:mb-0">
+          <div className="flex flex-col gap-4 sm:gap-6 md:flex-row md:gap-8">
+            <div className="w-full md:w-1/3">
               <Card className="h-full">
-                <CardContent className="p-6">
-                  <h3 className="font-heading font-semibold text-lg mb-4">Contact Information</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-heading font-semibold text-base sm:text-lg mb-3 sm:mb-4">Contact Information</h3>
 
-                  <div className="space-y-6">
-                    <div className="flex items-start">
-                      <Map className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-1 sm:space-y-4 sm:gap-0">
+                    <div className="flex items-start min-h-[44px]">
+                      <Map className="text-primary mt-0.5 mr-2.5 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium">Address</h4>
-                        <p className="text-neutral-700">
-                          16.34 N 19th Ave
+                        <h4 className="font-medium text-sm sm:text-base">Address</h4>
+                        <p className="text-xs sm:text-sm text-neutral-700">
+                          1634 N 19th Ave
                           <br />
                           Phoenix, AZ 85009
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start">
-                      <Phone className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
+                    <div className="flex items-start min-h-[44px]">
+                      <Phone className="text-primary mt-0.5 mr-2.5 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium">Phone</h4>
-                        <p className="text-neutral-700">
-                          <a href="tel:9285501649" className="text-primary hover:underline">
+                        <h4 className="font-medium text-sm sm:text-base">Phone</h4>
+                        <p className="text-xs sm:text-sm text-neutral-700">
+                          <a href="tel:9285501649" className="text-primary hover:underline touch-manipulation">
                             (928) 550-1649
                           </a>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start">
-                      <Mail className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
+                    <div className="flex items-start min-h-[44px]">
+                      <Mail className="text-primary mt-0.5 mr-2.5 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium">Email</h4>
-                        <p className="text-neutral-700">info@soilseedandwater.com</p>
+                        <h4 className="font-medium text-sm sm:text-base">Email</h4>
+                        <p className="text-xs sm:text-sm text-neutral-700 break-all">info@soilseedandwater.com</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start">
-                      <Clock className="text-primary mt-1 mr-3 h-5 w-5 flex-shrink-0" />
+                    <div className="flex items-start min-h-[44px]">
+                      <Clock className="text-primary mt-0.5 mr-2.5 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium">Business Hours</h4>
-                        <p className="text-neutral-700">
-                          Monday - Friday: 8am - 5pm
+                        <h4 className="font-medium text-sm sm:text-base">Hours</h4>
+                        <p className="text-xs sm:text-sm text-neutral-700">
+                          Mon-Fri: 8am-5pm
                           <br />
-                          Saturday: 9am - 2pm
-                          <br />
-                          Sunday: Closed
+                          Sat: 9am-2pm
                         </p>
                       </div>
                     </div>
@@ -228,22 +226,22 @@ const Contact = () => {
               </Card>
             </div>
 
-            <div className="md:w-2/3 md:pl-8">
+            <div className="w-full md:w-2/3">
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-heading font-semibold text-lg mb-4">Send Us a Message</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-heading font-semibold text-base sm:text-lg mb-3 sm:mb-4">Send Us a Message</h3>
 
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                         <FormField
                           control={form.control}
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Your Name *</FormLabel>
+                              <FormLabel className="text-sm">Your Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="John Doe" {...field} />
+                                <Input placeholder="John Doe" className="min-h-[48px] text-base" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -255,9 +253,9 @@ const Contact = () => {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email Address *</FormLabel>
+                              <FormLabel className="text-sm">Email Address *</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="you@example.com" {...field} />
+                                <Input type="email" placeholder="you@example.com" className="min-h-[48px] text-base" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -270,9 +268,9 @@ const Contact = () => {
                         name="subject"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Subject *</FormLabel>
+                            <FormLabel className="text-sm">Subject *</FormLabel>
                             <FormControl>
-                              <Input placeholder="How can we help you?" {...field} />
+                              <Input placeholder="How can we help you?" className="min-h-[48px] text-base" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -284,16 +282,16 @@ const Contact = () => {
                         name="message"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Message *</FormLabel>
+                            <FormLabel className="text-sm">Message *</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Please provide details about your inquiry..." className="resize-none min-h-[150px]" {...field} />
+                              <Textarea placeholder="Please provide details about your inquiry..." className="resize-none min-h-[120px] sm:min-h-[150px] text-base" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      <Button type="submit" className="bg-primary hover:bg-primary-light text-white" disabled={isSubmitting}>
+                      <Button type="submit" className="w-full sm:w-auto min-h-[48px] h-12 px-8 bg-primary hover:bg-primary-light text-white text-base font-semibold touch-manipulation" disabled={isSubmitting}>
                         {isSubmitting ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

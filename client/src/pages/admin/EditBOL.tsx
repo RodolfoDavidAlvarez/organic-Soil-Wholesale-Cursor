@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams, useLocation } from 'wouter';
 import { ArrowLeft, Save, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,6 @@ interface BOLFormData {
   timeOut: string;
   scaleOperatorInitials: string;
   loadType: string;
-  orderId: string;
 }
 
 const MATERIAL_TYPES = [
@@ -84,16 +83,19 @@ const ORIGIN_LOCATIONS = [
   }
 ];
 
-export default function CreateBOL() {
-  const [location, navigate] = useLocation();
+export default function EditBOL() {
+  const { id } = useParams();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState<BOLFormData>({
     date: new Date().toISOString().split('T')[0],
-    originLocation: 'Phoenix, AZ Facility',
-    originAddress: '1634 North 19th Avenue',
-    originCity: 'Phoenix',
+    originLocation: '',
+    originAddress: '',
+    originCity: '',
     originState: 'AZ',
-    originZip: '85007',
+    originZip: '',
     customerName: '',
     destinationAddress: '',
     destinationCity: '',
@@ -115,37 +117,60 @@ export default function CreateBOL() {
     timeIn: '',
     timeOut: '',
     scaleOperatorInitials: '',
-    loadType: 'Outbound',
-    orderId: ''
+    loadType: 'Outbound'
   });
 
   const [netWeight, setNetWeight] = useState<number>(0);
   const [netWeightTons, setNetWeightTons] = useState<string>('0.00');
 
-  // Pre-fill from URL params (when coming from Orders page)
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const orderId = searchParams.get('orderId');
-    const customerName = searchParams.get('customerName');
-    const destinationAddress = searchParams.get('destinationAddress');
-    const destinationCity = searchParams.get('destinationCity');
-    const destinationState = searchParams.get('destinationState');
-    const destinationZip = searchParams.get('destinationZip');
-    const referenceNumber = searchParams.get('referenceNumber');
-
-    if (orderId || customerName) {
-      setFormData(prev => ({
-        ...prev,
-        orderId: orderId || '',
-        customerName: customerName || prev.customerName,
-        destinationAddress: destinationAddress || prev.destinationAddress,
-        destinationCity: destinationCity || prev.destinationCity,
-        destinationState: destinationState || prev.destinationState,
-        destinationZip: destinationZip || prev.destinationZip,
-        referenceNumber: referenceNumber || prev.referenceNumber
-      }));
+  // Fetch existing BOL data
+  const { data: bol, isLoading } = useQuery({
+    queryKey: ['bol', id],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/operations/bols/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch BOL');
+      return response.json();
     }
-  }, []);
+  });
+
+  // Populate form when BOL data loads
+  useEffect(() => {
+    if (bol) {
+      setFormData({
+        date: bol.date ? bol.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        originLocation: bol.origin_location || '',
+        originAddress: bol.origin_address || '',
+        originCity: bol.origin_city || '',
+        originState: bol.origin_state || 'AZ',
+        originZip: bol.origin_zip || '',
+        customerName: bol.customer_name || '',
+        destinationAddress: bol.destination_address || '',
+        destinationCity: bol.destination_city || '',
+        destinationState: bol.destination_state || 'AZ',
+        destinationZip: bol.destination_zip || '',
+        onsiteContactName: bol.onsite_contact_name || '',
+        onsiteContactPhone: bol.onsite_contact_phone || '',
+        materialType: bol.material_type || '',
+        materialDescription: bol.material_description || '',
+        grossWeight: bol.gross_weight > 0 ? String(bol.gross_weight) : '',
+        tareWeight: bol.tare_weight > 0 ? String(bol.tare_weight) : '',
+        carrierName: bol.carrier_name || '',
+        driverName: bol.driver_name || '',
+        truckNumber: bol.truck_number || '',
+        licensePlate: bol.license_plate || '',
+        trailerNumber: bol.trailer_number || '',
+        notes: bol.notes || '',
+        referenceNumber: bol.reference_number || '',
+        timeIn: bol.time_in || '',
+        timeOut: bol.time_out || '',
+        scaleOperatorInitials: bol.scale_operator_initials || '',
+        loadType: bol.load_type || 'Outbound'
+      });
+    }
+  }, [bol]);
 
   // Auto-calculate net weight
   useEffect(() => {
@@ -158,11 +183,11 @@ export default function CreateBOL() {
     setNetWeightTons(tons);
   }, [formData.grossWeight, formData.tareWeight]);
 
-  const createBOLMutation = useMutation({
+  const updateBOLMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/operations/bols', {
-        method: 'POST',
+      const response = await fetch(`/api/admin/operations/bols/${id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -172,17 +197,19 @@ export default function CreateBOL() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to create BOL');
+        throw new Error(error.message || 'Failed to update BOL');
       }
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: 'BOL Created',
-        description: `BOL #${data.bolNumber} created successfully!`
+        title: 'BOL Updated',
+        description: 'BOL has been updated successfully!'
       });
-      navigate('/admin/operations');
+      queryClient.invalidateQueries({ queryKey: ['bol', id] });
+      queryClient.invalidateQueries({ queryKey: ['bols'] });
+      navigate(`/admin/operations/bols/${id}`);
     },
     onError: (error: Error) => {
       toast({
@@ -215,10 +242,10 @@ export default function CreateBOL() {
       tareWeight: hasWeight ? parseInt(formData.tareWeight) : 0,
       netWeight: hasWeight ? netWeight : 0,
       netWeightTons: hasWeight ? netWeightTons : '0.00',
-      hasWeight // Pass this flag to indicate if weight info is included
+      hasWeight
     };
 
-    createBOLMutation.mutate(bolData);
+    updateBOLMutation.mutate(bolData);
   };
 
   const handleChange = (field: keyof BOLFormData, value: string) => {
@@ -239,6 +266,18 @@ export default function CreateBOL() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <ProtectedAdminRoute>
+        <OperationsLayout>
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-gray-500">Loading BOL details...</div>
+          </div>
+        </OperationsLayout>
+      </ProtectedAdminRoute>
+    );
+  }
+
   return (
     <ProtectedAdminRoute>
       <OperationsLayout>
@@ -247,7 +286,7 @@ export default function CreateBOL() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate('/admin/operations')}
+              onClick={() => navigate(`/admin/operations/bols/${id}`)}
               size="sm"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -256,8 +295,10 @@ export default function CreateBOL() {
           </div>
 
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">Create New BOL / Weight Ticket</h1>
-            <p className="text-xs md:text-sm text-gray-500 mt-1">Fill in the delivery details to generate a professional BOL</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
+              Edit BOL {bol?.bol_number}
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">Modify the delivery details</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -648,7 +689,7 @@ export default function CreateBOL() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/admin/operations')}
+                onClick={() => navigate(`/admin/operations/bols/${id}`)}
                 className="w-full sm:w-auto"
                 size="sm"
               >
@@ -657,15 +698,15 @@ export default function CreateBOL() {
               <Button
                 type="submit"
                 className="bg-[#264027] hover:bg-[#3c5233] w-full sm:w-auto"
-                disabled={createBOLMutation.isPending}
+                disabled={updateBOLMutation.isPending}
                 size="sm"
               >
-                {createBOLMutation.isPending ? (
-                  <>Creating BOL...</>
+                {updateBOLMutation.isPending ? (
+                  <>Saving...</>
                 ) : (
                   <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Create BOL
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
                   </>
                 )}
               </Button>

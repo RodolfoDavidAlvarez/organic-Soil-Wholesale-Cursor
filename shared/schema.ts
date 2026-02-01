@@ -467,3 +467,55 @@ export const insertOpsBolSchema = createInsertSchema(opsBols).omit({
 // Type definitions
 export type InsertOpsBol = z.infer<typeof insertOpsBolSchema>;
 export type OpsBol = typeof opsBols.$inferSelect;
+
+// Operations System - Scheduled Loads (Logistics Calendar)
+export const scheduledLoads = pgTable("scheduled_loads", {
+  id: serial("id").primaryKey(),
+
+  // Scheduling Information
+  date: timestamp("date").notNull(),
+  timeSlot: text("time_slot"), // e.g., "6:00 AM", "Morning", etc.
+
+  // Route/Load Type
+  routeType: text("route_type").notNull(), // 'outbound' or 'inbound'
+
+  // Load Details
+  customer: text("customer").notNull(), // Customer or supplier name
+  destination: text("destination").notNull(), // Address or location description
+  material: text("material").notNull(), // What's being transported
+  quantity: text("quantity"), // e.g., "~25 tons", "Full load"
+
+  // Driver/Carrier
+  driver: text("driver"),
+  carrierName: text("carrier_name"),
+  truckNumber: text("truck_number"),
+
+  // Status Tracking
+  status: text("status").default("scheduled").notNull(), // scheduled, in_progress, completed, cancelled
+
+  // Deal/Project Reference
+  deal: text("deal"), // Reference to deal/project (e.g., "Willcox Pistachio", "Tyson/Vanguard")
+
+  // Contact Information
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
+
+  // Notes
+  notes: text("notes"),
+
+  // Metadata
+  createdBy: text("created_by"), // email of admin who created it
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Schema for inserting scheduled load data
+export const insertScheduledLoadSchema = createInsertSchema(scheduledLoads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type definitions
+export type InsertScheduledLoad = z.infer<typeof insertScheduledLoadSchema>;
+export type ScheduledLoad = typeof scheduledLoads.$inferSelect;

@@ -288,12 +288,25 @@ const ProductDetail = () => {
       return [];
     }
     const items: GalleryItem[] = [];
+    const seenUrls = new Set<string>();
 
-    // Add images
-    const images = [product.imageUrl, ...product.additionalImages].filter(Boolean) as string[];
+    // Normalize URL for comparison (trim, lowercase for comparison only)
+    const normalizeUrl = (url: string) => url.trim().toLowerCase();
+
+    // Add images - TEXTURE PHOTO FIRST per CLAUDE.md guidelines
+    // Priority: texturePhotoUrl > imageUrl > additionalImages
+    const images = [
+      product.texturePhotoUrl,
+      product.imageUrl,
+      ...product.additionalImages
+    ].filter((url): url is string => Boolean(url && typeof url === "string" && url.trim()));
+
     images.forEach((url) => {
-      if (url && !items.some((item) => item.type === "image" && item.url === url)) {
-        items.push({ type: "image", url });
+      const trimmedUrl = url.trim();
+      const normalizedUrl = normalizeUrl(trimmedUrl);
+      if (!seenUrls.has(normalizedUrl)) {
+        seenUrls.add(normalizedUrl);
+        items.push({ type: "image", url: trimmedUrl });
       }
     });
 
@@ -535,14 +548,14 @@ const ProductDetail = () => {
         keywords={keywordList}
       />
 
-      <section className="relative bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-8 sm:py-12 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-4 sm:py-8 lg:py-12 overflow-hidden">
         {/* Subtle background accents */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.05),_transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(181,84,26,0.03),_transparent_50%)]" />
 
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="mb-8">
-            <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-white/80" asChild>
+        <div className="container mx-auto px-3 sm:px-4 relative z-10">
+          <div className="mb-4 sm:mb-8">
+            <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-white/80 h-11 min-h-[44px] touch-manipulation" asChild>
               <Link href="/products">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Products
@@ -573,15 +586,15 @@ const ProductDetail = () => {
 
 
           {!isLoading && product && (
-            <div className="space-y-10">
-              <div className="grid gap-10 items-start xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-                <section className="space-y-8">
-                  <div className="relative overflow-hidden rounded-[32px] border border-arizona-sage/10 bg-gradient-to-br from-white via-arizona-sand/20 to-arizona-desert/30 shadow-2xl">
+            <div className="space-y-6 sm:space-y-10 overflow-hidden">
+              <div className="flex flex-col gap-6 sm:gap-10 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(300px,2fr)] xl:items-start">
+                <section className="w-full space-y-6 sm:space-y-8 overflow-hidden">
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border border-arizona-sage/10 bg-gradient-to-br from-white via-arizona-sand/20 to-arizona-desert/30 shadow-xl sm:shadow-2xl">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.8),_transparent_55%)]" />
-                    <div className="relative z-10 grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-                      <div className="space-y-6 p-6 sm:p-10">
+                    <div className="relative z-10 flex flex-col lg:grid lg:items-center lg:gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+                      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-10">
                         <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide">
-                          <Badge className="bg-arizona-sage/10 text-arizona-sage border-0 shadow-sm">
+                          <Badge className="bg-arizona-sage text-white border-0 shadow-sm">
                             <Leaf className="h-3 w-3 mr-1" />
                             {product.category}
                           </Badge>
@@ -590,20 +603,19 @@ const ProductDetail = () => {
                               {product.productType}
                             </Badge>
                           )}
-                          {/* Pay & Pickup badge hidden until feature is live */}
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.3em] text-arizona-sage font-semibold">Organic Soil Wholesale</p>
-                            <h1 className="mt-3 text-3xl font-heading font-bold leading-tight text-foreground sm:text-4xl lg:text-5xl">{product.displayTitle}</h1>
+                            <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-arizona-sage font-semibold">Organic Soil Wholesale</p>
+                            <h1 className="mt-2 sm:mt-3 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-heading font-bold leading-tight text-foreground">{product.displayTitle}</h1>
                           </div>
-                          <p className="text-base leading-relaxed text-muted-foreground max-w-lg">
+                          <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
                             {product.previewCopy ?? primaryDescription ?? "Premium Arizona-produced soil solutions for thriving landscapes."}
                           </p>
                           {featureSpotlights.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {featureSpotlights.map((item) => (
-                                <span key={item} className="rounded-full bg-white/90 border border-arizona-sage/20 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+                                <span key={item} className="rounded-full bg-white/90 border border-arizona-sage/20 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-foreground shadow-sm backdrop-blur">
                                   {item}
                                 </span>
                               ))}
@@ -611,12 +623,12 @@ const ProductDetail = () => {
                           )}
                           {recommendedUses.length > 0 && (
                             <div>
-                              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Top uses</p>
-                              <div className="mt-2 flex flex-wrap gap-2">
+                              <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Top uses</p>
+                              <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1.5 sm:gap-2">
                                 {recommendedUses.map((item) => (
                                   <span
                                     key={item}
-                                    className="rounded-full border border-white/60 bg-white/40 px-3 py-1 text-xs text-foreground backdrop-blur"
+                                    className="rounded-full border border-white/60 bg-white/40 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs text-foreground backdrop-blur"
                                   >
                                     {item}
                                   </span>
@@ -625,27 +637,27 @@ const ProductDetail = () => {
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
-                            <Leaf className="h-4 w-4 text-arizona-sage" />
+                        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+                            <Leaf className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-sage" />
                             <span className="font-medium">{product.category}</span>
                           </div>
                           {product.productType && (
-                            <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
-                              <Sparkles className="h-4 w-4 text-arizona-copper" />
+                            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+                              <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-copper" />
                               <span className="font-medium">{product.productType}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 rounded-full bg-white/90 border border-gray-100 px-4 py-2 shadow-sm">
-                            <Truck className="h-4 w-4 text-primary" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+                            <Truck className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
                             <span className="font-medium">Delivery available</span>
                           </div>
                         </div>
                       </div>
-                      <div className="px-6 pb-6 sm:pb-10">
+                      <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:pb-10">
                         {heroImage ? (
                           <div
-                            className="group relative overflow-hidden rounded-[28px] border bg-white shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            className="group relative overflow-hidden rounded-2xl sm:rounded-[28px] border bg-white shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
                             role={totalGalleryItems > 0 ? "button" : undefined}
                             tabIndex={totalGalleryItems > 0 ? 0 : -1}
                             onClick={() => totalGalleryItems > 0 && openGalleryAt(0)}
@@ -660,17 +672,17 @@ const ProductDetail = () => {
                             <OptimizedImage
                               src={heroImage}
                               alt={product.displayTitle}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                              className="w-full h-auto object-contain sm:object-cover transition duration-500 group-hover:scale-[1.03]"
                             />
                             {totalGalleryItems > 0 && (
-                              <div className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/80 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-                                <Maximize2 className="h-3.5 w-3.5" />
+                              <div className="pointer-events-none absolute bottom-3 right-3 sm:bottom-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 rounded-full bg-black/80 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium text-white shadow-lg">
+                                <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                 <span>Open gallery</span>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="flex min-h-[280px] items-center justify-center rounded-[28px] border border-dashed border-muted bg-white/40 text-sm text-muted-foreground">
+                          <div className="flex min-h-[200px] sm:min-h-[280px] items-center justify-center rounded-2xl sm:rounded-[28px] border border-dashed border-muted bg-white/40 text-sm text-muted-foreground p-4 text-center">
                             Upload a feature image or video in the admin editor to showcase this blend.
                           </div>
                         )}
@@ -679,17 +691,17 @@ const ProductDetail = () => {
                   </div>
 
                   {heroStats.length > 0 && (
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                       {heroStats.map((stat, index) => {
                         const Icon = stat.icon;
                         const iconColors = ["text-arizona-sage", "text-arizona-copper", "text-primary", "text-arizona-sage"];
                         return (
-                          <div key={stat.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
-                            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">
-                              <Icon className={`h-4 w-4 ${iconColors[index % iconColors.length]}`} />
+                          <div key={stat.label} className="rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground font-medium">
+                              <Icon className={`h-3.5 sm:h-4 w-3.5 sm:w-4 ${iconColors[index % iconColors.length]}`} />
                               {stat.label}
                             </div>
-                            <p className="mt-2 text-lg font-semibold text-foreground">{stat.value}</p>
+                            <p className="mt-1.5 sm:mt-2 text-base sm:text-lg font-semibold text-foreground">{stat.value}</p>
                           </div>
                         );
                       })}
@@ -809,22 +821,22 @@ const ProductDetail = () => {
                     </Card>
                   )}
 
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
-                      <div className="flex items-center gap-3">
-                        <Sparkles className="h-5 w-5 text-primary" />
+                  <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+                    <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                         <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Application</p>
-                          <h2 className="text-xl font-semibold">Usage guidance</h2>
+                          <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Application</p>
+                          <h2 className="text-lg sm:text-xl font-semibold">Usage guidance</h2>
                         </div>
                       </div>
-                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                      <p className="mt-3 sm:mt-4 text-sm leading-relaxed text-muted-foreground">
                         {product.usage ?? "Add usage instructions in the admin editor to provide application guidance here."}
                       </p>
                       {recommendedUses.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
                           {recommendedUses.map((item) => (
-                            <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                            <span key={item} className="rounded-full bg-muted px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs text-muted-foreground">
                               {item}
                             </span>
                           ))}
@@ -832,25 +844,25 @@ const ProductDetail = () => {
                       )}
                     </Card>
 
-                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Story</p>
-                      <h2 className="mt-1 text-xl font-semibold">Product narrative</h2>
-                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
+                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Story</p>
+                      <h2 className="mt-1 text-lg sm:text-xl font-semibold">Product narrative</h2>
+                      <p className="mt-2 sm:mt-3 text-sm leading-relaxed text-muted-foreground">
                         {product.story ?? "Share the origin story or agronomic insight within the admin editor to highlight it here."}
                       </p>
                     </Card>
                   </div>
 
-                  <Card className="rounded-3xl border bg-white p-6 shadow-lg">
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Ingredients &amp; audiences</p>
-                    <h2 className="mt-1 text-xl font-semibold">What’s inside &amp; who it’s for</h2>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
+                    <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Ingredients &amp; audiences</p>
+                    <h2 className="mt-1 text-lg sm:text-xl font-semibold">What's inside &amp; who it's for</h2>
+                    <div className="mt-3 sm:mt-4 grid gap-4 md:grid-cols-2">
                       <div>
                         <p className="text-sm font-semibold">Ingredients</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2">
                           {ingredients.length > 0 ? (
                             ingredients.map((item) => (
-                              <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                              <span key={item} className="rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs">
                                 {item}
                               </span>
                             ))
@@ -861,15 +873,15 @@ const ProductDetail = () => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold">Best for</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2">
                           {targetAudiences.length > 0 ? (
                             targetAudiences.map((item) => (
-                              <span key={item} className="rounded-full border px-3 py-1 text-xs">
+                              <span key={item} className="rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs">
                                 {item}
                               </span>
                             ))
                           ) : (
-                            <p className="text-xs text-muted-foreground">Fill in the “target audience” field in admin to populate this list.</p>
+                            <p className="text-xs text-muted-foreground">Fill in the "target audience" field in admin to populate this list.</p>
                           )}
                         </div>
                       </div>
@@ -877,28 +889,27 @@ const ProductDetail = () => {
                   </Card>
                 </section>
 
-                <aside className="space-y-6">
-                  <Card className="rounded-3xl border-0 bg-gradient-to-br from-gray-900 via-gray-900 to-arizona-sage/30 p-6 text-white shadow-2xl overflow-hidden relative">
+                <aside className="w-full space-y-4 sm:space-y-6 overflow-hidden">
+                  <Card className="rounded-2xl sm:rounded-3xl border-0 bg-gradient-to-br from-gray-900 via-gray-900 to-arizona-sage/30 p-4 sm:p-6 text-white shadow-2xl overflow-hidden relative">
                     {/* Subtle pattern overlay */}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.15),_transparent_50%)]" />
                     <div className="relative z-10">
-                      <p className="text-xs uppercase tracking-[0.3em] text-arizona-sage font-semibold">Order Direct</p>
-                      <h3 className="mt-3 text-2xl font-heading font-bold leading-tight">Get a wholesale quote today</h3>
-                      <p className="mt-3 text-sm text-white/80 leading-relaxed">
+                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-arizona-sage font-semibold">Order Direct</p>
+                      <h3 className="mt-2 sm:mt-3 text-xl sm:text-2xl font-heading font-bold leading-tight">Get a wholesale quote today</h3>
+                      <p className="mt-2 sm:mt-3 text-sm text-white/80 leading-relaxed">
                         Our team coordinates blending, packaging, and logistics across Arizona so you can focus on your projects.
                       </p>
-                      <div className="mt-6 space-y-3">
-                        <Button size="lg" className="w-full text-base bg-arizona-sage hover:bg-arizona-sage/90 shadow-lg" asChild>
+                      <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
+                        <Button size="lg" className="w-full min-h-[48px] h-12 text-base bg-arizona-sage hover:bg-arizona-sage/90 shadow-lg touch-manipulation" asChild>
                           <Link href="/order">
                             <ShoppingBag className="mr-2 h-4 w-4" />
                             Request a Quote
                           </Link>
                         </Button>
-                        {/* Pay & Pickup button hidden until feature is live */}
                         <Button
                           size="lg"
                           variant="outline"
-                          className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30"
+                          className="w-full min-h-[48px] h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 touch-manipulation"
                           asChild
                         >
                           <Link href="/contact">
@@ -907,24 +918,24 @@ const ProductDetail = () => {
                           </Link>
                         </Button>
                       </div>
-                      <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-3 text-xs text-white/60">
-                        <MapPin className="h-4 w-4 text-arizona-copper" />
+                      <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/10 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-white/60">
+                        <MapPin className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-copper flex-shrink-0" />
                         <span>Arizona-produced • Local delivery available</span>
                       </div>
                     </div>
                   </Card>
 
-                  <Card id="size-options" className="rounded-3xl border bg-white p-6 shadow-lg">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Card id="size-options" className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
+                    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Available sizes</p>
-                        <h3 className="text-lg font-semibold text-foreground">
+                        <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Available sizes</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground">
                           {sizesToDisplay.length > 0 ? `${sizesToDisplay.length} size option${sizesToDisplay.length > 1 ? "s" : ""}` : "Size catalog"}
                         </h3>
                       </div>
-                      {sizesToDisplay.length > 0 && <span className="text-xs text-muted-foreground">Tap to inspect imagery</span>}
+                      {sizesToDisplay.length > 0 && <span className="text-[10px] sm:text-xs text-muted-foreground">Tap to inspect</span>}
                     </div>
-                    <div className="mt-4 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
+                    <div className="mt-3 sm:mt-4 flex gap-2 sm:gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
                       {sizesToDisplay.length === 0 && (
                         <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
                           Activate a size or add pricing in the admin editor to show options here.
@@ -934,14 +945,13 @@ const ProductDetail = () => {
                         const cardContent = (
                           <>
                             {option.image && (
-                              <img src={option.image} alt={option.label} className="h-28 w-full rounded-xl object-cover" loading="lazy" />
+                              <img src={option.image} alt={option.label} className="h-20 sm:h-28 w-full rounded-lg sm:rounded-xl object-cover" loading="lazy" />
                             )}
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="font-semibold">{option.label}</span>
-                                {/* Pricing hidden until ready to show */}
+                            <div className="space-y-1 sm:space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-sm sm:text-base">{option.label}</span>
                               </div>
-                              {option.description && <p className="text-xs text-muted-foreground">{option.description}</p>}
+                              {option.description && <p className="text-[11px] sm:text-xs text-muted-foreground">{option.description}</p>}
                             </div>
                           </>
                         );
@@ -951,7 +961,7 @@ const ProductDetail = () => {
                             <button
                               key={option.key}
                               type="button"
-                              className="min-w-[220px] rounded-2xl border bg-muted/10 p-4 text-left shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                              className="min-w-[160px] sm:min-w-[200px] rounded-xl sm:rounded-2xl border bg-muted/10 p-3 sm:p-4 text-left shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
                               onClick={() => setExpandedSizeImage({ url: option.image!, label: option.label })}
                               aria-label={`View larger image of ${option.label}`}
                             >
@@ -961,7 +971,7 @@ const ProductDetail = () => {
                         }
 
                         return (
-                          <div key={option.key} className="min-w-[220px] rounded-2xl border bg-muted/10 p-4 shadow-sm">
+                          <div key={option.key} className="min-w-[160px] sm:min-w-[200px] rounded-xl sm:rounded-2xl border bg-muted/10 p-3 sm:p-4 shadow-sm">
                             {cardContent}
                           </div>
                         );

@@ -167,31 +167,43 @@ const Products = () => {
         canonical="https://organicsoilwholesale.com/products"
       />
 
-      <section className="relative bg-gradient-to-br from-arizona-desert/30 via-white to-arizona-sand/20 py-12 sm:py-16 overflow-hidden">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(181,84,26,0.05),_transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(77,124,94,0.05),_transparent_50%)]" />
+      <section className="relative bg-gradient-to-b from-arizona-desert/40 to-white py-8 sm:py-12 lg:py-16 overflow-hidden">
+        {/* Subtle organic texture */}
+        <div className="absolute inset-0 opacity-30" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234d7c5e' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-arizona-sage/10 border border-arizona-sage/20 mb-4">
-              <div className="w-2 h-2 rounded-full bg-arizona-sage animate-pulse" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-arizona-sage">Wholesale Catalog</span>
+          <div className="max-w-2xl">
+            {/* Mobile-friendly badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-arizona-sage/10 border border-arizona-sage/20 mb-3 sm:mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-arizona-sage animate-pulse" />
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-arizona-sage">Wholesale Catalog</span>
             </div>
 
-            <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              Premium <span className="text-primary">Organic Soil</span> Products
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold tracking-tight text-foreground leading-tight">
+              Premium <span className="text-arizona-sage">Organic Soil</span> Products
             </h1>
 
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
-              Arizona-produced compost, amendments, and specialty blends for landscapers, farms, nurseries, and commercial growers.
+            <p className="mt-2 sm:mt-3 text-base sm:text-lg text-muted-foreground">
+              Arizona-produced compost, amendments & blends for landscapers and growers.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20" asChild>
+            {/* Quick action buttons - 48px min-height for reliable mobile touch */}
+            <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                className="bg-arizona-sage text-white hover:bg-arizona-sage/90 min-h-[48px] h-12 rounded-xl font-semibold text-base shadow-lg shadow-arizona-sage/20 touch-manipulation active:scale-[0.98]"
+                asChild
+              >
                 <a href="#catalog">Browse Products</a>
               </Button>
-              <Button size="lg" variant="outline" className="border-arizona-copper/30 hover:bg-arizona-copper/5 hover:border-arizona-copper/50" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-arizona-copper/40 text-arizona-copper hover:bg-arizona-copper/5 hover:border-arizona-copper min-h-[48px] h-12 rounded-xl font-semibold text-base touch-manipulation active:scale-[0.98]"
+                asChild
+              >
                 <a href="/order">Request Quote</a>
               </Button>
             </div>
@@ -199,20 +211,19 @@ const Products = () => {
         </div>
       </section>
 
-      <section id="catalog" className="bg-white py-6 sm:py-8">
+      <section id="catalog" className="bg-white py-4 sm:py-6 lg:py-8">
         <div className="container mx-auto px-4">
           {error ? (
-            <div className="rounded-3xl border border-destructive/20 bg-destructive/5 p-10 text-center">
-              <h2 className="text-2xl font-semibold text-destructive">Unable to load products</h2>
-              <p className="mt-2 text-muted-foreground">
-                Please refresh the page or try again in a moment. The catalog will automatically reconnect to
-                the database when it’s available.
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 sm:p-10 text-center">
+              <h2 className="text-xl sm:text-2xl font-semibold text-destructive">Unable to load products</h2>
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground">
+                Please refresh the page or try again in a moment.
               </p>
               <Button
-                className="mt-6"
+                className="mt-6 min-h-[48px] h-12 px-6 rounded-xl font-semibold touch-manipulation"
                 onClick={() => window.location.reload()}
               >
-                Refresh
+                Refresh Page
               </Button>
             </div>
           ) : (

@@ -122,73 +122,73 @@ const MulchDetail = () => {
   }
 
   return (
-    <section className="py-16 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
+    <section className="py-6 sm:py-12 lg:py-16 bg-white">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="mb-4 sm:mb-8">
           <Link href="/products">
-            <div className="text-primary hover:text-primary-light flex items-center cursor-pointer">
+            <div className="min-h-[44px] inline-flex items-center text-primary hover:text-primary-light cursor-pointer touch-manipulation">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Products
             </div>
           </Link>
         </div>
         {isLoading ? (
-          <div className="flex flex-col lg:flex-row">
+          <div className="flex flex-col gap-6 lg:flex-row lg:gap-12">
             {/* Product Images Skeleton */}
-            <div className="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
-              <div className="bg-neutral-50 p-4 rounded-xl">
-                <Skeleton className="w-full h-[400px] rounded-lg mb-4" />
+            <div className="w-full lg:w-1/2">
+              <div className="bg-neutral-50 p-3 sm:p-4 rounded-xl">
+                <Skeleton className="w-full aspect-square sm:h-[400px] rounded-lg mb-3 sm:mb-4" />
                 <div className="grid grid-cols-4 gap-2">
                   {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 rounded-md" />
+                    <Skeleton key={i} className="h-16 sm:h-20 rounded-md" />
                   ))}
                 </div>
               </div>
             </div>
             {/* Product Information Skeleton */}
-            <div className="lg:w-1/2">
-              <Skeleton className="h-6 w-32 mb-4" />
-              <Skeleton className="h-10 w-3/4 mb-2" />
-              <Skeleton className="h-6 w-1/2 mb-6" />
-              <Skeleton className="h-6 w-40 mb-3" />
-              <div className="flex flex-wrap gap-3 mb-8">
+            <div className="w-full lg:w-1/2">
+              <Skeleton className="h-6 w-24 sm:w-32 mb-3 sm:mb-4" />
+              <Skeleton className="h-8 sm:h-10 w-3/4 mb-2" />
+              <Skeleton className="h-5 sm:h-6 w-1/2 mb-4 sm:mb-6" />
+              <Skeleton className="h-5 sm:h-6 w-32 sm:w-40 mb-3" />
+              <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
                 {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-24" />
+                  <Skeleton key={i} className="h-9 sm:h-10 w-20 sm:w-24" />
                 ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-12">
-            {/* Product Images - Enhanced Gallery */}
-            <div className="lg:w-1/2">
-              <div className="sticky top-24">
+          <div className="flex flex-col gap-6 lg:flex-row lg:gap-12">
+            {/* Product Images - Mobile-optimized Gallery */}
+            <div className="w-full lg:w-1/2">
+              <div className="lg:sticky lg:top-24">
                 {/* Main Image Display */}
-                <div className="relative group bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
-                  <div 
-                    className="relative aspect-square cursor-zoom-in overflow-hidden"
+                <div className="relative group bg-white rounded-xl sm:rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+                  <div
+                    className="relative aspect-square cursor-zoom-in overflow-hidden touch-manipulation"
                     onClick={() => setIsGalleryOpen(true)}
                   >
                     <OptimizedImage
                       src={allImages[currentImageIndex]}
                       alt={selectedVariant?.name || "Mulch photo"}
-                      className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105"
+                      className="w-full h-full object-contain p-4 sm:p-8 transition-transform duration-500 sm:group-hover:scale-105"
                       priority
                       sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                     {/* Zoom Indicator */}
-                    <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
-                      <ZoomIn className="h-4 w-4" />
-                      <span className="text-sm">Click to zoom</span>
+                    <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-black/70 text-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                      <ZoomIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span>Tap to zoom</span>
                     </div>
                   </div>
-                  
-                  {/* Navigation Arrows for Main Image */}
+
+                  {/* Navigation Arrows for Main Image - always visible on mobile */}
                   {allImages.length > 1 && (
                     <>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md h-10 w-10 sm:h-9 sm:w-9 touch-manipulation"
                         onClick={handlePreviousImage}
                       >
                         <ChevronLeft className="h-5 w-5" />
@@ -196,7 +196,7 @@ const MulchDetail = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md h-10 w-10 sm:h-9 sm:w-9 touch-manipulation"
                         onClick={handleNextImage}
                       >
                         <ChevronRight className="h-5 w-5" />
@@ -204,16 +204,16 @@ const MulchDetail = () => {
                     </>
                   )}
                 </div>
-                
+
                 {/* Thumbnail Gallery */}
                 {allImages.length > 1 && (
-                  <div className="mt-4 grid grid-cols-4 gap-3">
+                  <div className="mt-3 sm:mt-4 grid grid-cols-4 gap-2 sm:gap-3">
                     {allImages.map((image, index) => (
                       <button
                         key={index}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                          currentImageIndex === index 
-                            ? "border-primary shadow-md" 
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-200 touch-manipulation ${
+                          currentImageIndex === index
+                            ? "border-primary shadow-md"
                             : "border-neutral-200 hover:border-neutral-300"
                         }`}
                         onClick={() => handleThumbnailClick(index)}
@@ -221,7 +221,7 @@ const MulchDetail = () => {
                         <OptimizedImage
                           src={image}
                           alt={`${selectedVariant?.name || "Mulch"} - View ${index + 1}`}
-                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-200"
+                          className="w-full h-full object-cover sm:hover:scale-110 transition-transform duration-200"
                         />
                         {currentImageIndex === index && (
                           <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
@@ -232,12 +232,12 @@ const MulchDetail = () => {
                 )}
               </div>
             </div>
-            {/* Product Information - Enhanced Layout */}
-            <div className="lg:w-1/2">
+            {/* Product Information - Mobile-optimized Layout */}
+            <div className="w-full lg:w-1/2">
               {/* Header Section */}
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Badge variant="outline" className="text-primary border-primary px-3 py-1">
+              <div className="mb-4 sm:mb-6">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <Badge className="bg-arizona-sage text-white border-0 px-3 py-1.5 text-xs font-semibold">
                     Mulch
                   </Badge>
                   {selectedVariant?.certifications && selectedVariant.certifications.includes("OMRI") && (
@@ -246,47 +246,47 @@ const MulchDetail = () => {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-4xl font-bold mb-3 text-neutral-900">Nature's Blanket Premium Mulch</h1>
-                <p className="text-xl text-neutral-600 leading-relaxed">Premium mulch enhanced with dairy compost for optimal soil health and plant growth.</p>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">Nature's Blanket Premium Mulch</h1>
+                <p className="text-base sm:text-lg lg:text-xl text-neutral-600 leading-relaxed">Premium mulch enhanced with dairy compost for optimal soil health and plant growth.</p>
               </div>
 
               {/* Key Benefits */}
-              <div className="bg-primary/5 rounded-xl p-6 mb-8">
-                <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-primary/5 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                   <div>
-                    <Package className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Bulk Available</p>
+                    <Package className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1.5 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Bulk Available</p>
                   </div>
                   <div>
-                    <Truck className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Fast Delivery</p>
+                    <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1.5 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Fast Delivery</p>
                   </div>
                   <div>
-                    <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">Quality Assured</p>
+                    <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary mx-auto mb-1.5 sm:mb-2" />
+                    <p className="text-xs sm:text-sm font-medium">Quality Assured</p>
                   </div>
                 </div>
               </div>
 
               {/* Mulch Variants */}
-              <div className="mb-8">
-                <h3 className="text-sm font-medium mb-3">Available Variants</h3>
-                <div className="grid grid-cols-1 gap-4">
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-sm font-medium mb-2 sm:mb-3">Available Variants</h3>
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   {mulchProducts.map((variant) => (
                     <Card
                       key={variant.id}
-                      className={`p-4 cursor-pointer transition-all duration-200 ${
-                        selectedVariant?.id === variant.id ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-primary/50"
+                      className={`p-3 sm:p-4 cursor-pointer transition-all duration-200 touch-manipulation ${
+                        selectedVariant?.id === variant.id ? "ring-2 ring-primary" : "sm:hover:ring-2 sm:hover:ring-primary/50"
                       }`}
                       onClick={() => setSelectedVariant(variant)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between min-h-[44px]">
                         <div>
-                          <h4 className="font-semibold">{variant.name}</h4>
-                          <p className="text-sm text-neutral-600">{variant.productType}</p>
+                          <h4 className="font-semibold text-sm sm:text-base">{variant.name}</h4>
+                          <p className="text-xs sm:text-sm text-neutral-600">{variant.productType}</p>
                         </div>
                         <div className="flex items-center">
-                          {selectedVariant?.id === variant.id && <CheckCircle className="h-5 w-5 text-primary mr-2" />}
+                          {selectedVariant?.id === variant.id && <CheckCircle className="h-5 w-5 text-primary" />}
                         </div>
                       </div>
                     </Card>
@@ -295,33 +295,33 @@ const MulchDetail = () => {
               </div>
 
               {/* Available Sizes - Carousel Display */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-neutral-900">Available Sizes</h3>
+              <div className="mb-6 sm:mb-8">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold text-neutral-900">Available Sizes</h3>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-9 w-9 sm:h-7 sm:w-7 touch-manipulation"
                       onClick={() => {
                         setIsAutoPlaying(false);
                         setCurrentSizeIndex(Math.max(0, currentSizeIndex - 1));
                       }}
                       disabled={currentSizeIndex === 0}
                     >
-                      <ChevronLeft className="h-3 w-3" />
+                      <ChevronLeft className="h-4 w-4 sm:h-3 sm:w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-9 w-9 sm:h-7 sm:w-7 touch-manipulation"
                       onClick={() => {
                         setIsAutoPlaying(false);
                         setCurrentSizeIndex(Math.min(sizeCategories.length - 2, currentSizeIndex + 1));
                       }}
                       disabled={currentSizeIndex >= sizeCategories.length - 2}
                     >
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-4 w-4 sm:h-3 sm:w-3" />
                     </Button>
                   </div>
                 </div>
@@ -389,38 +389,38 @@ const MulchDetail = () => {
                 </div>
               </div>
 
-              {/* Product Details Tabs - Enhanced */}
-              <div className="mt-8">
+              {/* Product Details Tabs - Mobile-optimized */}
+              <div className="mt-6 sm:mt-8">
                 <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid grid-cols-4 w-full p-1 h-auto">
-                    <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                  <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full p-1 h-auto gap-1">
+                    <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Details
                     </TabsTrigger>
-                    <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                    <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Usage
                     </TabsTrigger>
-                    <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
+                    <TabsTrigger value="ingredients" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
                       Ingredients
                     </TabsTrigger>
-                    <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-white py-3">
-                      Certifications
+                    <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-white py-2.5 sm:py-3 text-xs sm:text-sm">
+                      Certs
                     </TabsTrigger>
                   </TabsList>
                   
-                  <div className="mt-6 bg-neutral-50 rounded-xl p-6">
-                    <TabsContent value="details" className="mt-0 space-y-6">
+                  <div className="mt-4 sm:mt-6 bg-neutral-50 rounded-xl p-4 sm:p-6">
+                    <TabsContent value="details" className="mt-0 space-y-4 sm:space-y-6">
                       {selectedVariant?.story && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Our Story</h4>
-                          <p className="text-neutral-700 leading-relaxed whitespace-pre-wrap">{selectedVariant.story}</p>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Our Story</h4>
+                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{selectedVariant.story}</p>
                         </div>
                       )}
                       {selectedVariant?.targetAudience && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Target Audience</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedVariant.targetAudience.split(',').map((audience, index) => (
-                              <Badge key={index} variant="secondary" className="bg-white">
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Target Audience</h4>
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                            {selectedVariant.targetAudience.split(',').map((audience: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="bg-white text-xs sm:text-sm">
                                 {audience.trim()}
                               </Badge>
                             ))}
@@ -429,33 +429,33 @@ const MulchDetail = () => {
                       )}
                       {selectedVariant?.recommendedUses && (
                         <div>
-                          <h4 className="text-lg font-semibold mb-3 text-neutral-900">Recommended Uses</h4>
-                          <p className="text-neutral-700 leading-relaxed">{selectedVariant.recommendedUses}</p>
+                          <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Recommended Uses</h4>
+                          <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{selectedVariant.recommendedUses}</p>
                         </div>
                       )}
                     </TabsContent>
-                    
+
                     <TabsContent value="usage" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Usage Instructions</h4>
-                      <div className="bg-white rounded-lg p-5 border border-neutral-200">
-                        <p className="text-neutral-700 leading-relaxed whitespace-pre-wrap">{selectedVariant?.usage || "Usage instructions will be provided with your order."}</p>
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Usage Instructions</h4>
+                      <div className="bg-white rounded-lg p-3 sm:p-5 border border-neutral-200">
+                        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed whitespace-pre-wrap">{selectedVariant?.usage || "Usage instructions will be provided with your order."}</p>
                       </div>
                     </TabsContent>
-                    
+
                     <TabsContent value="ingredients" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Ingredients</h4>
-                      <div className="bg-white rounded-lg p-5 border border-neutral-200">
-                        <p className="text-neutral-700 font-medium">{selectedVariant?.ingredients || "Ingredient information available upon request."}</p>
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Ingredients</h4>
+                      <div className="bg-white rounded-lg p-3 sm:p-5 border border-neutral-200">
+                        <p className="text-sm sm:text-base text-neutral-700 font-medium">{selectedVariant?.ingredients || "Ingredient information available upon request."}</p>
                       </div>
                     </TabsContent>
-                    
+
                     <TabsContent value="certifications" className="mt-0">
-                      <h4 className="text-lg font-semibold mb-3 text-neutral-900">Certifications</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        {selectedVariant?.certifications?.split(',').map((cert, index) => (
-                          <div key={index} className="bg-white rounded-lg p-4 border border-neutral-200 text-center">
-                            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                            <p className="font-medium text-neutral-900">{cert.trim()}</p>
+                      <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Certifications</h4>
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        {selectedVariant?.certifications?.split(',').map((cert: string, index: number) => (
+                          <div key={index} className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200 text-center">
+                            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-1.5 sm:mb-2" />
+                            <p className="text-xs sm:text-sm font-medium text-neutral-900">{cert.trim()}</p>
                           </div>
                         ))}
                       </div>
@@ -463,18 +463,18 @@ const MulchDetail = () => {
                   </div>
                 </Tabs>
               </div>
-              
-              {/* CTA Section */}
-              <div className="mt-10 space-y-4">
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
-                  size="lg" 
+
+              {/* CTA Section - Mobile-optimized */}
+              <div className="mt-6 sm:mt-10 space-y-3 sm:space-y-4">
+                <Button
+                  className="w-full min-h-[48px] h-12 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-base touch-manipulation"
+                  size="lg"
                   onClick={() => navigate("/order")}
                 >
-                  <Truck className="mr-2 h-5 w-5" />
+                  <Truck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Order Now - Arizona Delivery Available
                 </Button>
-                <p className="text-center text-sm text-neutral-600">
+                <p className="text-center text-xs sm:text-sm text-neutral-600">
                   Need a custom quote? <Link href="/contact" className="text-primary hover:underline font-medium">Contact us</Link>
                 </p>
               </div>

@@ -847,4 +847,240 @@ function generateBOLHTML(bol: any): string {
   `;
 }
 
+// ============================================
+// SCHEDULED LOADS (Logistics Calendar) Routes
+// ============================================
+
+/**
+ * GET /api/admin/operations/scheduled-loads
+ * List scheduled loads with optional week filter
+ */
+router.get("/scheduled-loads", async (req: AdminRequest, res) => {
+  try {
+    const { weekStart, weekEnd } = req.query;
+
+    let query = supabase
+      .from('scheduled_loads')
+      .select('*')
+      .order('date', { ascending: true });
+
+    // Apply date range filter if provided
+    if (weekStart) {
+      query = query.gte('date', weekStart as string);
+    }
+    if (weekEnd) {
+      query = query.lte('date', weekEnd as string);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching scheduled loads:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch scheduled loads' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/scheduled-loads
+ * Create a new scheduled load
+ */
+router.post("/scheduled-loads", async (req: AdminRequest, res) => {
+  try {
+    const {
+      date,
+      timeSlot,
+      routeType,
+      customer,
+      destination,
+      material,
+      quantity,
+      driver,
+      carrierName,
+      truckNumber,
+      status,
+      deal,
+      contactName,
+      contactPhone,
+      notes
+    } = req.body;
+
+    // Validation
+    if (!date || !routeType || !customer || !destination || !material) {
+      return res.status(400).json({
+        message: 'Missing required fields: date, routeType, customer, destination, material'
+      });
+    }
+
+    // Get admin email from token
+    const createdBy = req.admin?.email || 'admin@ssw.com';
+
+    // Insert scheduled load
+    const { data, error } = await supabase
+      .from('scheduled_loads')
+      .insert({
+        date,
+        time_slot: timeSlot,
+        route_type: routeType,
+        customer,
+        destination,
+        material,
+        quantity,
+        driver,
+        carrier_name: carrierName,
+        truck_number: truckNumber,
+        status: status || 'scheduled',
+        deal,
+        contact_name: contactName,
+        contact_phone: contactPhone,
+        notes,
+        created_by: createdBy
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error('Error creating scheduled load:', error);
+    res.status(500).json({ message: error.message || 'Failed to create scheduled load' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/scheduled-loads/:id
+ * Get a single scheduled load by ID
+ */
+router.get("/scheduled-loads/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('scheduled_loads')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'Scheduled load not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching scheduled load:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch scheduled load' });
+  }
+});
+
+/**
+ * PATCH /api/admin/operations/scheduled-loads/:id
+ * Update an existing scheduled load
+ */
+router.patch("/scheduled-loads/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Convert camelCase to snake_case
+    const snakeCaseUpdates: Record<string, any> = {};
+    const fieldMap: Record<string, string> = {
+      date: "date",
+      timeSlot: "time_slot",
+      routeType: "route_type",
+      customer: "customer",
+      destination: "destination",
+      material: "material",
+      quantity: "quantity",
+      driver: "driver",
+      carrierName: "carrier_name",
+      truckNumber: "truck_number",
+      status: "status",
+      deal: "deal",
+      contactName: "contact_name",
+      contactPhone: "contact_phone",
+      notes: "notes"
+    };
+
+    for (const [key, value] of Object.entries(updates)) {
+      const snakeKey = fieldMap[key] || key;
+      if (fieldMap[key]) {
+        snakeCaseUpdates[snakeKey] = value;
+      }
+    }
+
+    snakeCaseUpdates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('scheduled_loads')
+      .update(snakeCaseUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'Scheduled load not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating scheduled load:', error);
+    res.status(500).json({ message: error.message || 'Failed to update scheduled load' });
+  }
+});
+
+/**
+ * DELETE /api/admin/operations/scheduled-loads/:id
+ * Delete a scheduled load
+ */
+router.delete("/scheduled-loads/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('scheduled_loads')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    res.json({ success: true, deleted: id });
+  } catch (error: any) {
+    console.error('Error deleting scheduled load:', error);
+    res.status(500).json({ message: error.message || 'Failed to delete scheduled load' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/scheduled-loads/bulk-delete
+ * Delete multiple scheduled loads
+ */
+router.post("/scheduled-loads/bulk-delete", async (req: AdminRequest, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No IDs provided' });
+    }
+
+    const { error } = await supabase
+      .from('scheduled_loads')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+
+    res.json({ success: true, deleted: ids.length });
+  } catch (error: any) {
+    console.error('Error deleting scheduled loads:', error);
+    res.status(500).json({ message: error.message || 'Failed to delete scheduled loads' });
+  }
+});
+
 export default router;
