@@ -547,7 +547,100 @@ export default function AdminRepresentativeContacts() {
                     : 'No contact submissions yet.'}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {contacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        className={`p-4 rounded-xl border bg-card shadow-sm active:scale-[0.99] transition-transform ${selectedIds.has(contact.id) ? 'ring-2 ring-primary' : ''}`}
+                        onClick={() => handleOpenSidePanel(contact)}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Checkbox */}
+                          <div onClick={(e) => e.stopPropagation()} className="pt-1">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(contact.id)}
+                              onChange={() => handleSelectOne(contact.id)}
+                              className="h-5 w-5 rounded border-gray-300"
+                            />
+                          </div>
+                          
+                          {/* Card Image Thumbnail */}
+                          {contact.metadata?.business_card_image_url && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedImageUrl(contact.metadata!.business_card_image_url!);
+                              }}
+                              className="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border bg-muted"
+                            >
+                              <img
+                                src={contact.metadata.business_card_image_url}
+                                alt="Card"
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          )}
+                          
+                          {/* Contact Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-base truncate">
+                                  {contact.first_name} {contact.last_name}
+                                </p>
+                                {contact.company_name && (
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    {contact.company_name}
+                                  </p>
+                                )}
+                              </div>
+                              {renderStatusBadge(contact.status)}
+                            </div>
+                            
+                            {/* Tags */}
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {renderOwnerBadge(contact.partner_owner)}
+                              {renderSegmentBadge(contact.segment)}
+                            </div>
+                            
+                            {/* Contact Actions */}
+                            <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                              {contact.email && (
+                                <a
+                                  href={`mailto:${contact.email}`}
+                                  className="flex-1 flex items-center justify-center gap-2 h-11 px-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                  Email
+                                </a>
+                              )}
+                              {contact.phone && (
+                                <a
+                                  href={`tel:${contact.phone}`}
+                                  className="flex-1 flex items-center justify-center gap-2 h-11 px-3 rounded-lg border text-sm font-medium"
+                                >
+                                  <Phone className="h-4 w-4" />
+                                  Call
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Footer */}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t text-xs text-muted-foreground">
+                          <span>{new Date(contact.created_at).toLocaleDateString()}</span>
+                          {renderSourceBadge(contact.lead_source)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -719,7 +812,8 @@ export default function AdminRepresentativeContacts() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
