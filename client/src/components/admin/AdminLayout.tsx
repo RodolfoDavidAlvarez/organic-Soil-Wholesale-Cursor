@@ -120,42 +120,54 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          "fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          sidebarCollapsed ? "lg:w-16" : "lg:w-64",
+          "w-64",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>
+            {!sidebarCollapsed && <h1 className="text-xl font-bold text-green-800">Admin Panel</h1>}
             <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="w-6 h-6" />
+            </button>
+            <button
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={toggleCollapse}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? <ChevronRight className="w-4 h-4 text-gray-500" /> : <ChevronLeft className="w-4 h-4 text-gray-500" />}
             </button>
           </div>
 
           {/* Admin info */}
-          <div className="p-4 border-b space-y-1">
-            <p className="text-sm text-gray-600">Welcome back,</p>
-            <div className="min-w-0">
-              <p className="font-medium text-gray-900 truncate" title={admin?.full_name || admin?.email || undefined}>
-                {admin?.full_name || admin?.email || "Admin"}
-              </p>
-              {admin?.full_name && admin?.email && (
-                <p className="text-xs text-gray-500 truncate" title={admin.email}>
-                  {admin.email}
+          {!sidebarCollapsed && (
+            <div className="p-4 border-b space-y-1">
+              <p className="text-sm text-gray-600">Welcome back,</p>
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 truncate" title={admin?.full_name || admin?.email || undefined}>
+                  {admin?.full_name || admin?.email || "Admin"}
                 </p>
-              )}
+                {admin?.full_name && admin?.email && (
+                  <p className="text-xs text-gray-500 truncate" title={admin.email}>
+                    {admin.email}
+                  </p>
+                )}
+              </div>
+              {admin?.role && <p className="text-xs text-gray-500 capitalize">{admin.role.replace("_", " ")}</p>}
             </div>
-            {admin?.role && <p className="text-xs text-gray-500 capitalize">{admin.role.replace("_", " ")}</p>}
-          </div>
+          )}
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className={cn("flex-1 space-y-1", sidebarCollapsed ? "p-2" : "p-4 space-y-2")}>
             {navItems.map((item) => {
               // Hide "Rep. Contact Cards" for regular admins (only show for super admins)
               if (item.href === "/admin/representatives" && admin?.role !== "super_admin") {
                 return null;
               }
+              const isActive = item.href === "/admin" ? normalizedLocation === item.href : normalizedLocation.startsWith(item.href);
               return (
                 <a
                   key={item.href}
@@ -165,25 +177,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     navigate(item.href);
                     setSidebarOpen(false);
                   }}
+                  title={sidebarCollapsed ? item.label : undefined}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg transition-colors",
-                    (item.href === "/admin" ? normalizedLocation === item.href : normalizedLocation.startsWith(item.href))
+                    "flex items-center rounded-lg transition-colors",
+                    sidebarCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3",
+                    isActive
                       ? "bg-green-50 text-green-800 font-medium"
-                      : "hover:bg-gray-100"
+                      : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  {!sidebarCollapsed && <span>{item.label}</span>}
                 </a>
               );
             })}
           </nav>
 
           {/* Sign out */}
-          <div className="p-4 border-t">
-            <Button variant="outline" className="w-full justify-start gap-3" onClick={handleSignOut}>
+          <div className={cn("border-t", sidebarCollapsed ? "p-2" : "p-4")}>
+            <Button
+              variant="outline"
+              className={cn(sidebarCollapsed ? "w-full justify-center p-3" : "w-full justify-start gap-3")}
+              onClick={handleSignOut}
+              title={sidebarCollapsed ? "Sign Out" : undefined}
+            >
               <LogOut className="w-5 h-5" />
-              Sign Out
+              {!sidebarCollapsed && "Sign Out"}
             </Button>
           </div>
         </div>
