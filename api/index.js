@@ -1034,6 +1034,80 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       return res.json({ admin: dbAdmin });
     }
 
+    // ============ DASHBOARD STATS ENDPOINT ============
+
+    if (path === '/api/admin/dashboard/stats' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Get today's revenue from orders (if table exists)
+        let todayRevenue = 0;
+        let orderStats = [];
+        let recentOrders = [];
+        let lowStockProducts = [];
+        let popularProducts = [];
+
+        try {
+          const { data: todayOrders } = await db
+            .from('orders')
+            .select('total')
+            .gte('created_at', today.toISOString())
+            .lt('created_at', tomorrow.toISOString());
+          todayRevenue = todayOrders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+        } catch (e) { /* orders table may not exist */ }
+
+        try {
+          const { data } = await db
+            .from('orders')
+            .select('status')
+            .order('status');
+          if (data) {
+            const counts = {};
+            data.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
+            orderStats = Object.entries(counts).map(([status, count]) => ({ status, count }));
+          }
+        } catch (e) { /* orders table may not exist */ }
+
+        try {
+          const { data } = await db
+            .from('orders')
+            .select('id, created_at, total, status')
+            .order('created_at', { ascending: false })
+            .limit(10);
+          recentOrders = data || [];
+        } catch (e) { /* orders table may not exist */ }
+
+        try {
+          const { data } = await db
+            .from('products')
+            .select('id, name, stock_quantity, min_stock_level')
+            .eq('active', true)
+            .order('stock_quantity', { ascending: true })
+            .limit(10);
+          lowStockProducts = (data || [])
+            .filter(p => p.min_stock_level && p.stock_quantity < p.min_stock_level)
+            .map(p => ({ id: p.id, name: p.name, stock: p.stock_quantity, min_stock_level: p.min_stock_level }));
+        } catch (e) { /* products table may not have these columns */ }
+
+        return res.json({
+          todayRevenue,
+          orderStats,
+          lowStockProducts,
+          popularProducts,
+          recentOrders,
+        });
+      } catch (error) {
+        console.error('Dashboard stats error:', error);
+        return res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+      }
+    }
+
     // ============ OPERATIONS BOL ENDPOINTS ============
 
     // Get all BOLs
@@ -1242,6 +1316,410 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
       // Return HTML as PDF-ready content
       res.setHeader('Content-Type', 'text/html');
       return res.send(html);
+    }
+
+    // GET /api/admin/operations/recent-addresses
+    if (path === '/api/admin/operations/recent-addresses' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const { data, error } = await db
+          .from('ops_bols')
+          .select('customer_name, destination_address, destination_city, destination_state, destination_zip, onsite_contact_name, onsite_contact_phone, carrier_name, driver_name, truck_number, license_plate, trailer_number, created_at')
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        if (error) throw error;
+
+        const destinationMap = new Map();
+        const carrierMap = new Map();
+
+        for (const bol of data || []) {
+          const destKey = `${bol.customer_name}|${bol.destination_address}`.toLowerCase();
+          if (bol.customer_name && bol.destination_address && !destinationMap.has(destKey)) {
+            destinationMap.set(destKey, {
+              customerName: bol.customer_name,
+              destinationAddress: bol.destination_address,
+              destinationCity: bol.destination_city,
+              destinationState: bol.destination_state,
+              destinationZip: bol.destination_zip,
+              onsiteContactName: bol.onsite_contact_name,
+              onsiteContactPhone: bol.onsite_contact_phone,
+              lastUsed: bol.created_at
+            });
+          }
+
+          if (bol.carrier_name) {
+            const carrierKey = bol.carrier_name.toLowerCase();
+            if (!carrierMap.has(carrierKey)) {
+              carrierMap.set(carrierKey, {
+                carrierName: bol.carrier_name,
+                driverName: bol.driver_name,
+                truckNumber: bol.truck_number,
+                licensePlate: bol.license_plate,
+                trailerNumber: bol.trailer_number,
+                lastUsed: bol.created_at
+              });
+            }
+          }
+        }
+
+        return res.json({
+          destinations: Array.from(destinationMap.values()),
+          carriers: Array.from(carrierMap.values())
+        });
+      } catch (error) {
+        console.error('Recent addresses error:', error);
+        return res.status(500).json({ error: 'Failed to fetch recent addresses' });
+      }
+    }
+
+    // POST /api/admin/operations/bols/:id/email
+    const bolEmailMatch = path.match(/^\/api\/admin\/operations\/bols\/(\d+)\/email$/);
+    if (bolEmailMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const bolId = bolEmailMatch[1];
+      const { recipientEmail, recipientName, customMessage } = req.body || {};
+
+      if (!recipientEmail) {
+        return res.status(400).json({ error: 'Recipient email is required' });
+      }
+
+      try {
+        const { data: bol, error: fetchError } = await db.from('ops_bols').select('*').eq('id', bolId).single();
+        if (fetchError || !bol) return res.status(404).json({ error: 'BOL not found' });
+
+        // Generate PDF HTML
+        const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
+        const pdfHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;background:white}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #264027;padding-bottom:15px;margin-bottom:15px}
+.logo-section h1{font-size:20px;color:#264027;margin-bottom:3px}
+.logo-section p{font-size:9px;color:#666}
+.bol-info{text-align:right}
+.bol-number{font-size:16px;font-weight:bold;font-family:monospace;color:#264027}
+.date{font-size:11px;color:#666;margin-top:3px}
+.section{margin-bottom:12px;border:1px solid #ddd;border-radius:4px;overflow:hidden}
+.section-header{background:#f5f5f5;padding:6px 10px;font-weight:bold;font-size:10px;text-transform:uppercase;color:#333;border-bottom:1px solid #ddd}
+.section-content{padding:10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.field{margin-bottom:6px}
+.field-label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:1px}
+.field-value{font-size:11px;font-weight:500}
+.weight-summary{background:#1a1a1a;color:white;padding:12px;border-radius:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;margin-top:8px}
+.weight-box{padding:8px;border-radius:4px}
+.weight-box.gross,.weight-box.tare{background:rgba(255,255,255,0.1)}
+.weight-box.net{background:#264027}
+.weight-label{font-size:8px;text-transform:uppercase;opacity:0.8;margin-bottom:2px}
+.weight-value{font-size:16px;font-weight:bold;font-family:monospace}
+.weight-unit{font-size:8px;opacity:0.7}
+.signature-section{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;padding-top:15px;border-top:1px solid #ddd}
+.signature-box{border-bottom:1px solid #333;padding-bottom:30px;margin-bottom:5px}
+.signature-label{font-size:9px;color:#666}
+.footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:8px;color:#666;text-align:center}
+</style>
+</head><body>
+<div class="header">
+<div class="logo-section"><h1>Soil Seed and Water</h1><p>1634 North 19th Avenue, Phoenix, AZ 85007 | info@soilseedandwater.com</p></div>
+<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div style="font-size:9px;color:#666;margin-top:3px">Ref: ${bol.reference_number}</div>`:''}</div>
+</div>
+<div class="two-col">
+<div class="section"><div class="section-header">Origin</div><div class="section-content">
+<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address}<br>${bol.origin_city}, ${bol.origin_state} ${bol.origin_zip}</div></div>
+</div></div>
+<div class="section"><div class="section-header">Destination</div><div class="section-content">
+<div class="field"><div class="field-label">Customer</div><div class="field-value">${bol.customer_name}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}</div></div>
+${bol.onsite_contact_name?`<div class="field"><div class="field-label">Contact</div><div class="field-value">${bol.onsite_contact_name}${bol.onsite_contact_phone?' - '+bol.onsite_contact_phone:''}</div></div>`:''}
+</div></div>
+</div>
+<div class="section"><div class="section-header">Material</div><div class="section-content">
+<div class="field"><div class="field-label">Type</div><div class="field-value">${bol.material_type}</div></div>
+${bol.material_description?`<div class="field"><div class="field-label">Description</div><div class="field-value">${bol.material_description}</div></div>`:''}
+${hasWeight?`<div class="weight-summary">
+<div class="weight-box gross"><div class="weight-label">Gross</div><div class="weight-value">${bol.gross_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
+<div class="weight-box tare"><div class="weight-label">Tare</div><div class="weight-value">${bol.tare_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
+<div class="weight-box net"><div class="weight-label">Net</div><div class="weight-value">${bol.net_weight.toLocaleString()}</div><div class="weight-unit">${bol.net_weight_tons} tons</div></div>
+</div>`:''}
+</div></div>
+<div class="section"><div class="section-header">Carrier & Transport</div><div class="section-content">
+<div class="two-col">
+<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name}</div></div>
+${bol.driver_name?`<div class="field"><div class="field-label">Driver</div><div class="field-value">${bol.driver_name}</div></div>`:''}</div>
+<div>${bol.truck_number?`<div class="field"><div class="field-label">Truck #</div><div class="field-value">${bol.truck_number}</div></div>`:''}
+${bol.license_plate?`<div class="field"><div class="field-label">License Plate</div><div class="field-value">${bol.license_plate}</div></div>`:''}
+${bol.trailer_number?`<div class="field"><div class="field-label">Trailer #</div><div class="field-value">${bol.trailer_number}</div></div>`:''}</div>
+</div></div></div>
+${bol.notes?`<div class="section"><div class="section-header">Notes</div><div class="section-content"><div class="field-value">${bol.notes}</div></div></div>`:''}
+<div class="signature-section">
+<div><div class="signature-box"></div><div class="signature-label">Shipper Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Driver Signature / Date</div></div>
+</div>
+<div class="footer">This document serves as a Bill of Lading${hasWeight?' and Weight Ticket':''} for the delivery of materials from Soil Seed and Water.</div>
+</body></html>`;
+
+        // Use Puppeteer to generate PDF
+        const puppeteer = (await import('puppeteer')).default;
+        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'Letter', printBackground: true, margin: { top: '0.3in', right: '0.3in', bottom: '0.3in', left: '0.3in' } });
+        await browser.close();
+
+        // Build email
+        const deliveryDate = new Date(bol.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const destination = [bol.destination_address, bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ');
+        const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
+        const customSection = customMessage ? `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #333;">${customMessage.replace(/\n/g, '<br>')}</p>` : '';
+
+        const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 30px 0;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <tr><td style="background-color: #264027; padding: 28px 40px;">
+              <h1 style="margin: 0; font-size: 22px; color: #ffffff; font-weight: 700;">Soil Seed &amp; Water</h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #a8c5a0;">Regenerative Soil Solutions</p>
+          </td></tr>
+          <tr><td style="padding: 36px 40px 24px 40px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #333;">${greeting}</p>
+              ${customSection || `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #333;">Please find attached the Bill of Lading for your delivery. The PDF document is attached to this email for your records.</p>`}
+          </td></tr>
+          <tr><td style="padding: 0 40px 30px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; overflow: hidden;">
+                <tr><td style="background-color: #264027; padding: 14px 20px;">
+                    <span style="font-size: 16px; font-weight: 700; color: #ffffff;">${bol.bol_number}</span>
+                    <span style="font-size: 12px; color: #a8c5a0; margin-left: 12px;">Bill of Lading</span>
+                </td></tr>
+                <tr><td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="padding: 6px 0; font-size: 13px; color: #666; width: 130px;">Delivery Date</td><td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${deliveryDate}</td></tr>
+                      <tr><td style="padding: 6px 0; font-size: 13px; color: #666;">Customer</td><td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${bol.customer_name}</td></tr>
+                      <tr><td style="padding: 6px 0; font-size: 13px; color: #666;">Destination</td><td style="padding: 6px 0; font-size: 14px; color: #111;">${destination}</td></tr>
+                      <tr><td style="padding: 6px 0; font-size: 13px; color: #666;">Material</td><td style="padding: 6px 0; font-size: 14px; color: #111;">${bol.material_type}</td></tr>
+                      ${hasWeight ? `<tr><td style="padding: 6px 0; font-size: 13px; color: #666;">Net Weight</td><td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)</td></tr>` : ''}
+                      ${bol.carrier_name ? `<tr><td style="padding: 6px 0; font-size: 13px; color: #666;">Carrier</td><td style="padding: 6px 0; font-size: 14px; color: #111;">${bol.carrier_name}</td></tr>` : ''}
+                    </table>
+                </td></tr>
+              </table>
+          </td></tr>
+          <tr><td style="padding: 0 40px 30px 40px;">
+              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #555;">If you have any questions about this delivery, don't hesitate to reach out.</p>
+          </td></tr>
+          <tr><td style="padding: 0 40px 36px 40px; border-top: 1px solid #eee; padding-top: 24px;">
+              <p style="margin: 0 0 2px 0; font-size: 14px; color: #333; font-weight: 600;">Rodolfo Alvarez</p>
+              <p style="margin: 0 0 2px 0; font-size: 13px; color: #666;">Soil Seed &amp; Water</p>
+              <p style="margin: 0 0 2px 0; font-size: 13px; color: #666;">(928) 632-7125</p>
+              <p style="margin: 0; font-size: 13px; color: #264027;">operations@soilseedandwater.com</p>
+          </td></tr>
+          <tr><td style="background-color: #f8f8f8; padding: 16px 40px; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #999;">Soil Seed &amp; Water &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; soilseedandwater.com</p>
+          </td></tr>
+        </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+        const plainText = customMessage || `${greeting}\n\nPlease find attached the Bill of Lading (${bol.bol_number}) for your delivery.\n\nMaterial: ${bol.material_type}\nDelivery Date: ${deliveryDate}\nDestination: ${destination}${hasWeight ? `\nNet Weight: ${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)` : ''}\n\nIf you have any questions, please don't hesitate to contact us.\n\nRodolfo Alvarez\nSoil Seed & Water\n(928) 632-7125\noperations@soilseedandwater.com`;
+
+        // Send via Resend
+        const RESEND_API_KEY = process.env.RESEND_API_KEY;
+        if (!RESEND_API_KEY) throw new Error('Resend API key not configured');
+
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'SSW Operations <operations@soilseedandwater.com>',
+            to: [recipientEmail],
+            subject: `Bill of Lading - ${bol.bol_number} | ${bol.customer_name}`,
+            html: emailHtml,
+            text: plainText,
+            attachments: [{ filename: `${bol.bol_number}.pdf`, content: Buffer.from(pdfBuffer).toString('base64') }]
+          })
+        });
+
+        if (!emailResponse.ok) {
+          const errorData = await emailResponse.json();
+          throw new Error(errorData.message || 'Failed to send email');
+        }
+
+        // Update BOL with sent info
+        await db.from('ops_bols').update({ sent_to_email: recipientEmail, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', bolId);
+
+        return res.json({ success: true, message: `BOL sent successfully to ${recipientEmail}`, sentTo: recipientEmail });
+      } catch (error) {
+        console.error('Email BOL error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to send email' });
+      }
+    }
+
+    // ============ COD ENDPOINTS ============
+
+    // GET /api/admin/operations/cods
+    if (path === '/api/admin/operations/cods' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        let query = db.from('ops_cods').select('*').order('created_at', { ascending: false });
+        const { data, error } = await query;
+        if (error) throw error;
+        return res.json(data);
+      } catch (error) {
+        console.error('CODs fetch error:', error);
+        return res.status(500).json({ error: 'Failed to fetch CODs' });
+      }
+    }
+
+    // POST /api/admin/operations/cods
+    if (path === '/api/admin/operations/cods' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const { dateReceived, receivedFrom, salesOrder, freightOrder, vanguardWorkOrder, destructionLocation, materials, authorizedByName, authorizedByTitle, authorizedDate, notes } = req.body || {};
+
+        if (!receivedFrom || !destructionLocation || !materials || materials.length === 0) {
+          return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Generate COD number
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+        const { count } = await db.from('ops_cods').select('id', { count: 'exact', head: true })
+          .gte('created_at', `${today.toISOString().split('T')[0]}T00:00:00`)
+          .lte('created_at', `${today.toISOString().split('T')[0]}T23:59:59`);
+        const codNumber = `COD-${dateStr}-${((count || 0) + 1).toString().padStart(3, '0')}`;
+
+        const { data, error } = await db.from('ops_cods').insert({
+          cod_number: codNumber,
+          date_received: dateReceived || new Date().toISOString(),
+          received_from: receivedFrom,
+          sales_order: salesOrder,
+          freight_order: freightOrder,
+          vanguard_work_order: vanguardWorkOrder,
+          destruction_location: destructionLocation,
+          materials,
+          authorized_by_name: authorizedByName,
+          authorized_by_title: authorizedByTitle,
+          authorized_date: authorizedDate,
+          notes,
+          status: 'completed',
+          created_by: admin.email || 'admin'
+        }).select().single();
+
+        if (error) throw error;
+        return res.status(201).json(data);
+      } catch (error) {
+        console.error('COD create error:', error);
+        return res.status(500).json({ error: 'Failed to create COD' });
+      }
+    }
+
+    // POST /api/admin/operations/cods/delete
+    if (path === '/api/admin/operations/cods/delete' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { ids } = req.body || {};
+      if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'No IDs provided' });
+
+      const { error } = await db.from('ops_cods').delete().in('id', ids);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true, deleted: ids.length });
+    }
+
+    // GET/PATCH /api/admin/operations/cods/:id
+    const codDetailMatch = path.match(/^\/api\/admin\/operations\/cods\/(\d+)$/);
+    if (codDetailMatch) {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const codId = codDetailMatch[1];
+
+      if (req.method === 'GET') {
+        const { data, error } = await db.from('ops_cods').select('*').eq('id', codId).single();
+        if (error || !data) return res.status(404).json({ error: 'COD not found' });
+        return res.json(data);
+      }
+
+      if (req.method === 'PATCH') {
+        const updates = req.body || {};
+        const fieldMap = {
+          dateReceived: 'date_received', receivedFrom: 'received_from', salesOrder: 'sales_order',
+          freightOrder: 'freight_order', vanguardWorkOrder: 'vanguard_work_order',
+          destructionLocation: 'destruction_location', materials: 'materials',
+          authorizedByName: 'authorized_by_name', authorizedByTitle: 'authorized_by_title',
+          authorizedDate: 'authorized_date', notes: 'notes', status: 'status'
+        };
+        const dbUpdates = { updated_at: new Date().toISOString() };
+        for (const [key, value] of Object.entries(updates)) {
+          const snakeKey = fieldMap[key] || key;
+          if (fieldMap[key] || key === 'status') dbUpdates[snakeKey] = value;
+        }
+        const { data, error } = await db.from('ops_cods').update(dbUpdates).eq('id', codId).select().single();
+        if (error || !data) return res.status(404).json({ error: 'COD not found' });
+        return res.json(data);
+      }
+    }
+
+    // GET /api/admin/operations/cods/:id/pdf
+    const codPdfMatch = path.match(/^\/api\/admin\/operations\/cods\/(\d+)\/pdf$/);
+    if (codPdfMatch && req.method === 'GET') {
+      const tokenFromQuery = url.searchParams.get('token');
+      const tokenFromHeader = req.headers.authorization?.replace('Bearer ', '');
+      const token = tokenFromQuery || tokenFromHeader;
+      if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+      try {
+        const jwt = (await import('jsonwebtoken')).default;
+        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      const codId = codPdfMatch[1];
+      const { data: cod, error } = await db.from('ops_cods').select('*').eq('id', codId).single();
+      if (error || !cod) return res.status(404).json({ error: 'COD not found' });
+
+      const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+      const materials = cod.materials || [];
+      const materialRows = materials.map(m => `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5;font-size:10pt">${m.material||''}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5;font-size:10pt;text-align:center">${m.quantity||''}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5;font-size:10pt;text-align:center">${m.uom||''}</td></tr>`).join('');
+      const emptyRows = Array(Math.max(0, 5 - materials.length)).fill('<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5">&nbsp;</td><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5">&nbsp;</td><td style="padding:10px 12px;border-bottom:1px solid #e5e5e5">&nbsp;</td></tr>').join('');
+
+      const autoPrint = url.searchParams.get('print') !== 'false';
+      const printScript = autoPrint ? `<script>window.onload=function(){setTimeout(function(){window.print()},500)}</script>` : '';
+
+      const codHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${cod.cod_number} - Certificate of Destruction</title>
+<style>
+@page{size:letter;margin:0.4in}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:10pt;line-height:1.5;color:#000;padding:20px;max-width:800px;margin:0 auto;background:white}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px;padding-bottom:15px;border-bottom:3px solid #264027}.logo-section{flex:1}.company-name{font-size:20pt;font-weight:bold;color:#264027;margin-bottom:4px}.tagline{font-size:9pt;color:#6f732f;margin-bottom:6px}.contact-info{font-size:8pt;color:#333}.doc-title{text-align:right;flex:1}.doc-title h1{font-size:18pt;color:#264027;margin-bottom:8px}.cod-number{font-size:11pt;font-weight:bold;color:#000}
+.section{margin-bottom:20px}.section-title{font-size:10pt;font-weight:bold;color:#264027;background:#f5f5f5;padding:6px 10px;border-left:4px solid #264027;margin-bottom:10px}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.info-row{display:flex;margin-bottom:8px;font-size:10pt}.label{font-weight:bold;min-width:150px;color:#333}.value{flex:1;color:#000}
+.materials-table{width:100%;border-collapse:collapse;margin-top:10px}.materials-table th{background:#264027;color:white;padding:10px 12px;text-align:left;font-size:10pt;font-weight:600}.materials-table th:nth-child(2),.materials-table th:nth-child(3){text-align:center;width:100px}
+.signature-section{margin-top:30px;padding-top:20px;border-top:1px solid #ccc}.signature-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:20px}.signature-box{border-bottom:1px solid #000;padding-top:30px;padding-bottom:5px;min-height:50px}.signature-label{font-size:8pt;color:#666;margin-top:4px}
+.disclaimer{margin-top:30px;padding:15px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;font-size:9pt;color:#444;line-height:1.6}.footer{margin-top:25px;padding-top:15px;border-top:1px solid #ccc;font-size:8pt;color:#666;text-align:center}
+@media screen{body{background:#f0f0f0;padding:20px}}
+</style>${printScript}</head><body>
+<div class="header"><div class="logo-section"><div class="company-name">Soil Seed and Water</div><div class="tagline">Regenerative Soil Solutions</div><div class="contact-info">18980 Stanton Rd, Congress, AZ 85332<br>Phone: (928) 632-7125<br>Email: info@soilseedandwater.com</div></div><div class="doc-title"><h1>Certificate of Destruction</h1><div class="cod-number">COD #: ${cod.cod_number}</div></div></div>
+<div class="section"><div class="section-title">Receipt Information</div><div class="info-grid"><div><div class="info-row"><span class="label">Received From:</span><span class="value">${cod.received_from||''}</span></div><div class="info-row"><span class="label">Date Received:</span><span class="value">${formatDate(cod.date_received)}</span></div></div><div><div class="info-row"><span class="label">Destruction Location:</span><span class="value">${cod.destruction_location||''}</span></div></div></div></div>
+<div class="section"><div class="section-title">Customer Reference Numbers</div><div class="info-grid"><div><div class="info-row"><span class="label">Sales Order:</span><span class="value">${cod.sales_order||'—'}</span></div><div class="info-row"><span class="label">Freight Order:</span><span class="value">${cod.freight_order||'—'}</span></div></div><div><div class="info-row"><span class="label">Vanguard Work Order #:</span><span class="value">${cod.vanguard_work_order||'—'}</span></div></div></div></div>
+<div class="section"><div class="section-title">Materials Destroyed</div><table class="materials-table"><thead><tr><th>Material</th><th>Quantity</th><th>UOM</th></tr></thead><tbody>${materialRows}${emptyRows}</tbody></table></div>
+<div class="signature-section"><div class="section-title">Authorization</div><div class="signature-row"><div><div class="info-row"><span class="label">Authorized By:</span><span class="value">${cod.authorized_by_name||''}</span></div><div class="info-row"><span class="label">Title:</span><span class="value">${cod.authorized_by_title||''}</span></div></div><div><div class="info-row"><span class="label">Date:</span><span class="value">${formatDate(cod.authorized_date)}</span></div></div></div><div class="signature-row"><div><div class="signature-box"></div><div class="signature-label">Authorized Signature</div></div><div><div class="signature-box"></div><div class="signature-label">SSW Representative Signature</div></div></div></div>
+<div class="disclaimer"><strong>Certification:</strong> Vanguard warrants that all organic materials listed above were presented and have been destroyed for the purpose of the recycling of organic materials into soil amendments and compost products.</div>
+${cod.notes?`<div class="section" style="margin-top:15px"><div class="section-title">Notes</div><div style="padding:8px 10px;background:#fafafa;border-radius:4px;font-size:9pt">${cod.notes}</div></div>`:''}
+<div class="footer">Certificate of Destruction - ${cod.cod_number} | Generated by Soil Seed and Water Operations System</div>
+</body></html>`;
+
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(codHtml);
     }
 
     // ============ WORK ORDERS ENDPOINTS ============
