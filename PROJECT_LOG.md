@@ -1,5 +1,45 @@
 # Organic Soil Wholesale - Project Log
 
+## 2026-02-06 | Operations Dashboard - BOL Duplicate, Email & Smart Autocomplete
+
+**Session Focus:** Enhance BOL workflow with duplicate functionality, professional email sending, and smart address autocomplete
+
+### Completed
+
+1. **Duplicate & Modify BOL**
+   - Added Duplicate button on ViewBOL page (header actions) and Operations list (row actions)
+   - Navigates to CreateBOL with `?duplicate=<id>` param
+   - Pre-fills all fields from source BOL (customer, destination, origin, material, carrier, notes)
+   - Date auto-set to today, time fields cleared
+   - Clear header indicating duplication source: "Duplicate BOL from BOL-XXXXXXXX-XXX"
+
+2. **Professional HTML Email for BOLs**
+   - Changed sender from `info@` to `SSW Operations <operations@soilseedandwater.com>`
+   - Built branded HTML email template with SSW green (#264027), BOL details card, signature block
+   - Subject line includes customer name: "Bill of Lading - BOL-XXX | Customer Name"
+   - Email dialog shows live preview (from, to, subject, attachment)
+   - Pre-fills recipient name from customer, plain text fallback included
+
+3. **Smart Address Autocomplete**
+   - New API endpoint: `GET /api/admin/operations/recent-addresses` (returns unique destinations + carriers from last 200 BOLs)
+   - Customer Name field shows dropdown of recent destinations with address preview and "last used X days ago"
+   - Click to auto-fill all destination + contact fields
+   - Carrier Name field shows recent carriers with driver/truck info and timestamps
+   - Click to auto-fill all carrier/transport fields
+
+### Files Modified
+- `client/src/pages/admin/CreateBOL.tsx` - Duplicate mode + autocomplete
+- `client/src/pages/admin/ViewBOL.tsx` - Duplicate button + email dialog upgrade
+- `client/src/pages/admin/Operations.tsx` - Duplicate button in row actions
+- `server/routes/admin/operations.ts` - Recent addresses endpoint + HTML email template
+- `_reference/operations-dashboard.md` - Updated feature docs
+
+### Next Steps
+- Deploy to Vercel
+- Verify `operations@soilseedandwater.com` works in Resend (domain already verified)
+
+---
+
 ## 2026-01-21 | Product Pages Professional Redesign
 
 **Session Focus:** Enhance Products listing, ProductShowcase cards, and ProductDetail page with professional design and subtle Arizona branding

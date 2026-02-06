@@ -68,6 +68,9 @@ const AdminCreateWorkOrder = lazy(() => import("@/pages/admin/CreateWorkOrder"))
 const AdminViewWorkOrder = lazy(() => import("@/pages/admin/ViewWorkOrder"));
 const AdminOperationsCalendar = lazy(() => import("@/pages/admin/OperationsCalendar"));
 const AdminOperationsResources = lazy(() => import("@/pages/admin/OperationsResources"));
+const AdminCODs = lazy(() => import("@/pages/admin/CODs"));
+const AdminCreateCOD = lazy(() => import("@/pages/admin/CreateCOD"));
+const AdminViewCOD = lazy(() => import("@/pages/admin/ViewCOD"));
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
@@ -154,6 +157,9 @@ function Router() {
         <Route path="/admin/operations/work-orders" component={AdminWorkOrders} />
         <Route path="/admin/operations/calendar" component={AdminOperationsCalendar} />
         <Route path="/admin/operations/resources" component={AdminOperationsResources} />
+        <Route path="/admin/operations/cods/new" component={AdminCreateCOD} />
+        <Route path="/admin/operations/cods/:id" component={AdminViewCOD} />
+        <Route path="/admin/operations/cods" component={AdminCODs} />
         <Route path="/admin/operations" component={AdminOperations} />
         <Route path="/admin/settings" component={AdminSettings} />
 

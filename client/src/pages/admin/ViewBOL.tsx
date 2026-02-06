@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -153,7 +153,12 @@ export default function ViewBOL() {
   };
 
   const handleEmail = () => {
-    // Pre-fill with customer email if available from onsite contact
+    // Pre-fill with customer name from BOL data
+    setEmailForm(prev => ({
+      ...prev,
+      recipientName: bol?.customer_name || '',
+      customMessage: ''
+    }));
     setEmailDialogOpen(true);
   };
 
@@ -247,6 +252,15 @@ export default function ViewBOL() {
                 >
                   <Pencil className="w-3.5 h-3.5 mr-1" />
                   Edit
+                </Button>
+                <Button
+                  onClick={() => navigate(`/admin/operations/bols/new?duplicate=${id}`)}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1" />
+                  Duplicate
                 </Button>
                 <Button
                   onClick={handlePrint}
@@ -510,11 +524,14 @@ export default function ViewBOL() {
 
           {/* Email Dialog */}
           <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Send BOL via Email</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-[#264027]" />
+                  Send BOL via Email
+                </DialogTitle>
                 <DialogDescription>
-                  Send {bol.bol_number} as a PDF attachment
+                  Send <span className="font-mono font-semibold">{bol.bol_number}</span> as a PDF attachment from <span className="font-medium">operations@soilseedandwater.com</span>
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSendEmail}>
@@ -534,20 +551,31 @@ export default function ViewBOL() {
                     <Label htmlFor="recipientName">Recipient Name</Label>
                     <Input
                       id="recipientName"
-                      placeholder="John Smith (optional)"
+                      placeholder="Used in the greeting (e.g., Hi John)"
                       value={emailForm.recipientName}
                       onChange={(e) => setEmailForm(prev => ({ ...prev, recipientName: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="customMessage">Custom Message</Label>
+                    <Label htmlFor="customMessage">Custom Message <span className="text-gray-400 font-normal">(optional)</span></Label>
                     <Textarea
                       id="customMessage"
-                      placeholder="Optional custom message (leave blank for default)"
+                      placeholder="Leave blank for the default professional message, or type a custom note here"
                       value={emailForm.customMessage}
                       onChange={(e) => setEmailForm(prev => ({ ...prev, customMessage: e.target.value }))}
-                      rows={4}
+                      rows={3}
                     />
+                  </div>
+
+                  {/* Email Preview */}
+                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
+                    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Email Preview</div>
+                    <div className="space-y-1 text-xs text-gray-600">
+                      <div><span className="text-gray-400">From:</span> SSW Operations &lt;operations@soilseedandwater.com&gt;</div>
+                      <div><span className="text-gray-400">To:</span> {emailForm.recipientEmail || '...'}</div>
+                      <div><span className="text-gray-400">Subject:</span> Bill of Lading - {bol.bol_number} | {bol.customer_name}</div>
+                      <div><span className="text-gray-400">Attachment:</span> {bol.bol_number}.pdf</div>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>

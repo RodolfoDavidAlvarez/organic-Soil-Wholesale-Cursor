@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Printer, Eye, Search, Trash2, X, Copy } from 'lucide-react';
+import { FileText, Plus, Printer, Eye, Search, Trash2, X, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,26 +10,31 @@ import { format } from 'date-fns';
 import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 
-// Match the actual API response (snake_case from Supabase)
-interface BOL {
-  id: number;
-  bol_number: string;
-  date: string;
-  customer_name: string;
-  destination_address: string;
-  destination_city: string;
-  destination_state: string;
-  material_type: string;
-  net_weight: number;
-  net_weight_tons: string;
-  gross_weight: number;
-  tare_weight: number;
-  status: string;
-  created_at: string;
-  carrier_name: string;
+interface Material {
+  material: string;
+  quantity: number;
+  uom: string;
 }
 
-export default function Operations() {
+interface COD {
+  id: number;
+  cod_number: string;
+  date_received: string;
+  received_from: string;
+  sales_order: string;
+  freight_order: string;
+  vanguard_work_order: string;
+  destruction_location: string;
+  materials: Material[];
+  authorized_by_name: string;
+  authorized_by_title: string;
+  authorized_date: string;
+  notes: string;
+  status: string;
+  created_at: string;
+}
+
+export default function CODs() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -38,31 +43,31 @@ export default function Operations() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; ids: number[] }>({ show: false, ids: [] });
   const queryClient = useQueryClient();
 
-  const { data: bols, isLoading } = useQuery<BOL[]>({
-    queryKey: ['bols', statusFilter, dateFilter],
+  const { data: cods, isLoading } = useQuery<COD[]>({
+    queryKey: ['cods', statusFilter, dateFilter],
     queryFn: async () => {
       const token = localStorage.getItem('adminToken');
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (dateFilter !== 'all') params.append('dateFilter', dateFilter);
 
-      const response = await fetch(`/api/admin/operations/bols?${params}`, {
+      const response = await fetch(`/api/admin/operations/cods?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error('Failed to fetch BOLs');
+      if (!response.ok) throw new Error('Failed to fetch CODs');
       return response.json();
     }
   });
 
-  const filteredBOLs = bols?.filter(bol => {
+  const filteredCODs = cods?.filter(cod => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      (bol.bol_number || '').toLowerCase().includes(query) ||
-      (bol.customer_name || '').toLowerCase().includes(query) ||
-      (bol.material_type || '').toLowerCase().includes(query) ||
-      (bol.destination_address || '').toLowerCase().includes(query)
+      (cod.cod_number || '').toLowerCase().includes(query) ||
+      (cod.received_from || '').toLowerCase().includes(query) ||
+      (cod.destruction_location || '').toLowerCase().includes(query) ||
+      (cod.vanguard_work_order || '').toLowerCase().includes(query)
     );
   }) || [];
 
@@ -70,7 +75,7 @@ export default function Operations() {
   const deleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/operations/bols/delete', {
+      const response = await fetch('/api/admin/operations/cods/delete', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -82,20 +87,20 @@ export default function Operations() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bols'] });
+      queryClient.invalidateQueries({ queryKey: ['cods'] });
       setSelectedIds([]);
       setDeleteConfirm({ show: false, ids: [] });
     }
   });
 
-  const handlePrint = (e: React.MouseEvent, bolId: number) => {
+  const handlePrint = (e: React.MouseEvent, codId: number) => {
     e.stopPropagation();
     const token = localStorage.getItem('adminToken');
-    window.open(`/api/admin/operations/bols/${bolId}/pdf?token=${token}`, '_blank');
+    window.open(`/api/admin/operations/cods/${codId}/pdf?token=${token}`, '_blank');
   };
 
-  const handleRowClick = (bolId: number) => {
-    navigate(`/admin/operations/bols/${bolId}`);
+  const handleRowClick = (codId: number) => {
+    navigate(`/admin/operations/cods/${codId}`);
   };
 
   const handleSelect = (id: number, checked: boolean) => {
@@ -103,7 +108,7 @@ export default function Operations() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? filteredBOLs.map(b => b.id) : []);
+    setSelectedIds(checked ? filteredCODs.map(c => c.id) : []);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, ids: number[]) => {
@@ -118,22 +123,20 @@ export default function Operations() {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string, className: string }> = {
       draft: { label: "Draft", className: "bg-gray-100 text-gray-600" },
-      sent: { label: "Ready", className: "bg-green-50 text-green-700" },
-      completed: { label: "Ready", className: "bg-green-50 text-green-700" },
-      delivered: { label: "Delivered", className: "bg-blue-50 text-blue-700" }
+      completed: { label: "Completed", className: "bg-green-50 text-green-700" },
+      pending: { label: "Pending", className: "bg-yellow-50 text-yellow-700" }
     };
     const { label, className } = config[status] || { label: status, className: "bg-gray-100 text-gray-600" };
     return <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${className}`}>{label}</span>;
   };
 
   // Calculate totals
-  const totalWeight = filteredBOLs.reduce((sum, bol) => sum + (bol.net_weight || 0), 0);
-  const totalTons = (totalWeight / 2000).toFixed(2);
-  const thisWeekCount = filteredBOLs.filter(b => {
-    const bolDate = new Date(b.created_at);
+  const totalMaterials = filteredCODs.reduce((sum, cod) => sum + (cod.materials?.length || 0), 0);
+  const thisWeekCount = filteredCODs.filter(c => {
+    const codDate = new Date(c.created_at);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return bolDate >= weekAgo;
+    return codDate >= weekAgo;
   }).length;
 
   return (
@@ -145,7 +148,7 @@ export default function Operations() {
             {/* Compact Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <h1 className="text-lg font-semibold text-gray-900">Weight Tickets</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Certificates of Destruction</h1>
                 {selectedIds.length > 0 ? (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-600">{selectedIds.length} selected</span>
@@ -167,19 +170,19 @@ export default function Operations() {
                   </div>
                 ) : (
                   <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500">
-                    <span><strong className="text-gray-700">{filteredBOLs.length}</strong> total</span>
+                    <span><strong className="text-gray-700">{filteredCODs.length}</strong> total</span>
                     <span><strong className="text-gray-700">{thisWeekCount}</strong> this week</span>
-                    <span><strong className="text-gray-700">{totalTons}</strong> tons</span>
+                    <span><strong className="text-gray-700">{totalMaterials}</strong> materials</span>
                   </div>
                 )}
               </div>
               <Button
-                onClick={() => navigate('/admin/operations/bols/new')}
+                onClick={() => navigate('/admin/operations/cods/new')}
                 size="sm"
                 className="bg-[#264027] hover:bg-[#3c5233] h-8 text-xs"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
-                New Ticket
+                New COD
               </Button>
             </div>
 
@@ -201,8 +204,8 @@ export default function Operations() {
                 <SelectContent>
                   <SelectItem value="all" className="text-xs">All Status</SelectItem>
                   <SelectItem value="draft" className="text-xs">Draft</SelectItem>
-                  <SelectItem value="completed" className="text-xs">Ready</SelectItem>
-                  <SelectItem value="delivered" className="text-xs">Delivered</SelectItem>
+                  <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                  <SelectItem value="pending" className="text-xs">Pending</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -224,16 +227,16 @@ export default function Operations() {
                 <div className="p-8 text-center text-sm text-gray-500">
                   Loading...
                 </div>
-              ) : filteredBOLs.length === 0 ? (
+              ) : filteredCODs.length === 0 ? (
                 <div className="p-8 text-center">
-                  <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No weight tickets found</p>
+                  <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No certificates found</p>
                   <Button
-                    onClick={() => navigate('/admin/operations/bols/new')}
+                    onClick={() => navigate('/admin/operations/cods/new')}
                     size="sm"
                     className="mt-3 bg-[#264027] hover:bg-[#3c5233] h-7 text-xs"
                   >
-                    Create First Ticket
+                    Create First COD
                   </Button>
                 </div>
               ) : (
@@ -242,65 +245,62 @@ export default function Operations() {
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="py-2 px-2 w-8">
                         <Checkbox
-                          checked={selectedIds.length === filteredBOLs.length && filteredBOLs.length > 0}
+                          checked={selectedIds.length === filteredCODs.length && filteredCODs.length > 0}
                           onCheckedChange={(checked) => handleSelectAll(!!checked)}
                           className="h-3.5 w-3.5"
                         />
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">BOL #</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600">COD #</th>
                       <th className="text-left py-2 px-3 font-medium text-gray-600 hidden sm:table-cell">Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">Customer</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden md:table-cell">Destination</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden lg:table-cell">Material</th>
-                      <th className="text-right py-2 px-3 font-medium text-gray-600">Weight</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600">Received From</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden md:table-cell">Work Order</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden lg:table-cell">Location</th>
+                      <th className="text-center py-2 px-3 font-medium text-gray-600">Materials</th>
                       <th className="text-center py-2 px-3 font-medium text-gray-600">Status</th>
                       <th className="text-right py-2 px-3 font-medium text-gray-600 w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredBOLs.map((bol) => (
+                    {filteredCODs.map((cod) => (
                       <tr
-                        key={bol.id}
-                        onClick={() => handleRowClick(bol.id)}
-                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedIds.includes(bol.id) ? 'bg-blue-50' : ''}`}
+                        key={cod.id}
+                        onClick={() => handleRowClick(cod.id)}
+                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedIds.includes(cod.id) ? 'bg-blue-50' : ''}`}
                       >
                         <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={selectedIds.includes(bol.id)}
-                            onCheckedChange={(checked) => handleSelect(bol.id, !!checked)}
+                            checked={selectedIds.includes(cod.id)}
+                            onCheckedChange={(checked) => handleSelect(cod.id, !!checked)}
                             className="h-3.5 w-3.5"
                           />
                         </td>
                         <td className="py-2 px-3">
                           <span className="font-mono font-medium text-[#264027]">
-                            {bol.bol_number || '—'}
+                            {cod.cod_number || '—'}
                           </span>
                         </td>
                         <td className="py-2 px-3 text-gray-600 hidden sm:table-cell">
-                          {format(new Date(bol.date), 'MM/dd/yy')}
+                          {format(new Date(cod.date_received), 'MM/dd/yy')}
                         </td>
                         <td className="py-2 px-3 text-gray-900 max-w-[150px] truncate">
-                          {bol.customer_name || '—'}
+                          {cod.received_from || '—'}
                         </td>
                         <td className="py-2 px-3 text-gray-600 hidden md:table-cell max-w-[120px] truncate">
-                          {bol.destination_city && bol.destination_state
-                            ? `${bol.destination_city}, ${bol.destination_state}`
-                            : '—'}
+                          {cod.vanguard_work_order || '—'}
                         </td>
                         <td className="py-2 px-3 text-gray-600 hidden lg:table-cell max-w-[100px] truncate">
-                          {bol.material_type || '—'}
+                          {cod.destruction_location || '—'}
                         </td>
-                        <td className="py-2 px-3 text-right font-mono text-gray-900">
-                          {(bol.net_weight || 0).toLocaleString()}
-                          <span className="text-gray-400 ml-0.5">lb</span>
+                        <td className="py-2 px-3 text-center font-mono text-gray-900">
+                          {cod.materials?.length || 0}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          {getStatusBadge(bol.status)}
+                          {getStatusBadge(cod.status)}
                         </td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={(e) => handlePrint(e, bol.id)}
+                              onClick={(e) => handlePrint(e, cod.id)}
                               className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-[#264027] transition-colors"
                               title="Print PDF"
                             >
@@ -309,7 +309,7 @@ export default function Operations() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/admin/operations/bols/${bol.id}`);
+                                navigate(`/admin/operations/cods/${cod.id}`);
                               }}
                               className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-[#264027] transition-colors"
                               title="View Details"
@@ -317,17 +317,7 @@ export default function Operations() {
                               <Eye className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/admin/operations/bols/new?duplicate=${bol.id}`);
-                              }}
-                              className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-[#264027] transition-colors"
-                              title="Duplicate"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteClick(e, [bol.id])}
+                              onClick={(e) => handleDeleteClick(e, [cod.id])}
                               className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
                               title="Delete"
                             >
@@ -343,10 +333,10 @@ export default function Operations() {
             </div>
 
             {/* Compact Footer */}
-            {filteredBOLs.length > 0 && (
+            {filteredCODs.length > 0 && (
               <div className="flex items-center justify-between mt-2 text-[11px] text-gray-500 px-1">
-                <span>Showing {filteredBOLs.length} ticket{filteredBOLs.length !== 1 ? 's' : ''}</span>
-                <span>{totalWeight.toLocaleString()} lbs ({totalTons} tons) total</span>
+                <span>Showing {filteredCODs.length} certificate{filteredCODs.length !== 1 ? 's' : ''}</span>
+                <span>{totalMaterials} material{totalMaterials !== 1 ? 's' : ''} total</span>
               </div>
             )}
 
@@ -355,10 +345,10 @@ export default function Operations() {
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-xl p-5 max-w-sm w-full mx-4">
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                    Delete {deleteConfirm.ids.length === 1 ? 'Weight Ticket' : `${deleteConfirm.ids.length} Weight Tickets`}?
+                    Delete {deleteConfirm.ids.length === 1 ? 'Certificate' : `${deleteConfirm.ids.length} Certificates`}?
                   </h3>
                   <p className="text-xs text-gray-600 mb-4">
-                    This action cannot be undone. The selected ticket{deleteConfirm.ids.length !== 1 ? 's' : ''} will be permanently removed.
+                    This action cannot be undone. The selected certificate{deleteConfirm.ids.length !== 1 ? 's' : ''} will be permanently removed.
                   </p>
                   <div className="flex justify-end gap-2">
                     <Button

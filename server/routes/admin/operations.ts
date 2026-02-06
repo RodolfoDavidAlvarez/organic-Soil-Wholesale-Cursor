@@ -1,6 +1,6 @@
 /**
- * Operations System - BOL Management API
- * Create, manage, and generate PDF BOLs/Weight Tickets
+ * Operations System - BOL Management API & COD (Certificate of Destruction)
+ * Create, manage, and generate PDF BOLs/Weight Tickets and CODs
  */
 
 import { Router } from "express";
@@ -47,6 +47,67 @@ async function generateBOLNumber(): Promise<string> {
   const sequence = ((count || 0) + 1).toString().padStart(3, '0');
   return `BOL-${dateStr}-${sequence}`;
 }
+
+/**
+ * GET /api/admin/operations/recent-addresses
+ * Returns unique recent destinations and carriers from past BOLs for autocomplete
+ */
+router.get("/recent-addresses", async (req: AdminRequest, res) => {
+  try {
+    // Fetch recent BOLs (last 200) for address suggestions
+    const { data, error } = await supabase
+      .from('ops_bols')
+      .select('customer_name, destination_address, destination_city, destination_state, destination_zip, onsite_contact_name, onsite_contact_phone, carrier_name, driver_name, truck_number, license_plate, trailer_number, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    // Build unique destinations map (keyed by customer_name + destination_address)
+    const destinationMap = new Map<string, any>();
+    const carrierMap = new Map<string, any>();
+
+    for (const bol of data || []) {
+      // Destinations
+      const destKey = `${bol.customer_name}|${bol.destination_address}`.toLowerCase();
+      if (bol.customer_name && bol.destination_address && !destinationMap.has(destKey)) {
+        destinationMap.set(destKey, {
+          customerName: bol.customer_name,
+          destinationAddress: bol.destination_address,
+          destinationCity: bol.destination_city,
+          destinationState: bol.destination_state,
+          destinationZip: bol.destination_zip,
+          onsiteContactName: bol.onsite_contact_name,
+          onsiteContactPhone: bol.onsite_contact_phone,
+          lastUsed: bol.created_at
+        });
+      }
+
+      // Carriers
+      if (bol.carrier_name) {
+        const carrierKey = bol.carrier_name.toLowerCase();
+        if (!carrierMap.has(carrierKey)) {
+          carrierMap.set(carrierKey, {
+            carrierName: bol.carrier_name,
+            driverName: bol.driver_name,
+            truckNumber: bol.truck_number,
+            licensePlate: bol.license_plate,
+            trailerNumber: bol.trailer_number,
+            lastUsed: bol.created_at
+          });
+        }
+      }
+    }
+
+    res.json({
+      destinations: Array.from(destinationMap.values()),
+      carriers: Array.from(carrierMap.values())
+    });
+  } catch (error: any) {
+    console.error('Error fetching recent addresses:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch recent addresses' });
+  }
+});
 
 /**
  * GET /api/admin/operations/bols
@@ -387,17 +448,119 @@ router.post("/bols/:id/email", async (req: AdminRequest, res) => {
       throw new Error('Resend API key not configured');
     }
 
-    const emailBody = customMessage || `Please find attached the Bill of Lading (${bol.bol_number}) for your delivery.
+    const deliveryDate = new Date(bol.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const destination = [bol.destination_address, bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ');
+    const greeting = recipientName ? `Hi ${recipientName},` : 'Hello,';
+    const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
 
-Material: ${bol.material_type}
-Delivery Date: ${new Date(bol.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-Destination: ${bol.destination_address}, ${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}
+    const customSection = customMessage
+      ? `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #333;">${customMessage.replace(/\n/g, '<br>')}</p>`
+      : '';
 
-If you have any questions, please don't hesitate to contact us.
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 30px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #264027; padding: 28px 40px;">
+              <h1 style="margin: 0; font-size: 22px; color: #ffffff; font-weight: 700;">Soil Seed &amp; Water</h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #a8c5a0;">Regenerative Soil Solutions</p>
+            </td>
+          </tr>
 
-Best regards,
-Soil Seed and Water
-(928) 632-7125`;
+          <!-- Body -->
+          <tr>
+            <td style="padding: 36px 40px 24px 40px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #333;">${greeting}</p>
+              ${customSection || `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #333;">Please find attached the Bill of Lading for your delivery. The PDF document is attached to this email for your records.</p>`}
+            </td>
+          </tr>
+
+          <!-- BOL Details Card -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  <td style="background-color: #264027; padding: 14px 20px;">
+                    <span style="font-size: 16px; font-weight: 700; color: #ffffff;">${bol.bol_number}</span>
+                    <span style="font-size: 12px; color: #a8c5a0; margin-left: 12px;">Bill of Lading</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666; width: 130px;">Delivery Date</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${deliveryDate}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666;">Customer</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${bol.customer_name}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666;">Destination</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111;">${destination}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666;">Material</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111;">${bol.material_type}</td>
+                      </tr>
+                      ${hasWeight ? `
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666;">Net Weight</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111; font-weight: 600;">${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)</td>
+                      </tr>
+                      ` : ''}
+                      ${bol.carrier_name ? `
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #666;">Carrier</td>
+                        <td style="padding: 6px 0; font-size: 14px; color: #111;">${bol.carrier_name}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #555;">If you have any questions about this delivery, don't hesitate to reach out.</p>
+            </td>
+          </tr>
+
+          <!-- Signature -->
+          <tr>
+            <td style="padding: 0 40px 36px 40px; border-top: 1px solid #eee; padding-top: 24px;">
+              <p style="margin: 0 0 2px 0; font-size: 14px; color: #333; font-weight: 600;">Rodolfo Alvarez</p>
+              <p style="margin: 0 0 2px 0; font-size: 13px; color: #666;">Soil Seed &amp; Water</p>
+              <p style="margin: 0 0 2px 0; font-size: 13px; color: #666;">(928) 632-7125</p>
+              <p style="margin: 0; font-size: 13px; color: #264027;">operations@soilseedandwater.com</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8f8f8; padding: 16px 40px; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #999;">Soil Seed &amp; Water &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; soilseedandwater.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    const plainText = customMessage || `${greeting}\n\nPlease find attached the Bill of Lading (${bol.bol_number}) for your delivery.\n\nMaterial: ${bol.material_type}\nDelivery Date: ${deliveryDate}\nDestination: ${destination}${hasWeight ? `\nNet Weight: ${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)` : ''}\n\nIf you have any questions, please don't hesitate to contact us.\n\nRodolfo Alvarez\nSoil Seed & Water\n(928) 632-7125\noperations@soilseedandwater.com`;
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -406,10 +569,11 @@ Soil Seed and Water
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Soil Seed and Water <info@soilseedandwater.com>',
+        from: 'SSW Operations <operations@soilseedandwater.com>',
         to: [recipientEmail],
-        subject: `Bill of Lading - ${bol.bol_number}`,
-        text: emailBody,
+        subject: `Bill of Lading - ${bol.bol_number} | ${bol.customer_name}`,
+        html: emailHtml,
+        text: plainText,
         attachments: [
           {
             filename: `${bol.bol_number}.pdf`,
@@ -841,6 +1005,639 @@ function generateBOLHTML(bol: any): string {
 
   <div class="footer">
     This document serves as a Bill of Lading${hasWeight ? ' and Weight Ticket' : ''} for the delivery of materials from Soil Seed and Water.
+  </div>
+</body>
+</html>
+  `;
+}
+
+// ============================================
+// CERTIFICATE OF DESTRUCTION (COD) Routes
+// ============================================
+
+/**
+ * Generate COD number (COD-YYYYMMDD-NNN)
+ */
+async function generateCODNumber(): Promise<string> {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+
+  // Count existing CODs today
+  const { count, error } = await supabase
+    .from('ops_cods')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', `${today.toISOString().split('T')[0]}T00:00:00`)
+    .lte('created_at', `${today.toISOString().split('T')[0]}T23:59:59`);
+
+  if (error) throw error;
+
+  const sequence = ((count || 0) + 1).toString().padStart(3, '0');
+  return `COD-${dateStr}-${sequence}`;
+}
+
+/**
+ * GET /api/admin/operations/cods
+ * List all CODs with filters
+ */
+router.get("/cods", async (req: AdminRequest, res) => {
+  try {
+    const { status, dateFilter } = req.query;
+
+    let query = supabase
+      .from('ops_cods')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply status filter
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    // Apply date filter
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (dateFilter) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case '3months':
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+      }
+
+      query = query.gte('created_at', startDate.toISOString());
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching CODs:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch CODs' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/cods
+ * Create a new COD (Certificate of Destruction)
+ */
+router.post("/cods", async (req: AdminRequest, res) => {
+  try {
+    const {
+      dateReceived,
+      receivedFrom,
+      salesOrder,
+      freightOrder,
+      vanguardWorkOrder,
+      destructionLocation,
+      materials, // Array of { material: string, quantity: number, uom: string }
+      authorizedByName,
+      authorizedByTitle,
+      authorizedDate,
+      notes
+    } = req.body;
+
+    // Validation
+    if (!receivedFrom || !destructionLocation || !materials || materials.length === 0) {
+      return res.status(400).json({
+        message: 'Missing required fields: receivedFrom, destructionLocation, and at least one material'
+      });
+    }
+
+    // Generate COD number
+    const codNumber = await generateCODNumber();
+
+    // Get admin email from token
+    const createdBy = req.admin?.email || 'admin@ssw.com';
+
+    // Insert COD
+    const { data, error } = await supabase
+      .from('ops_cods')
+      .insert({
+        cod_number: codNumber,
+        date_received: dateReceived || new Date().toISOString(),
+        received_from: receivedFrom,
+        sales_order: salesOrder,
+        freight_order: freightOrder,
+        vanguard_work_order: vanguardWorkOrder,
+        destruction_location: destructionLocation,
+        materials: materials, // JSONB field
+        authorized_by_name: authorizedByName,
+        authorized_by_title: authorizedByTitle,
+        authorized_date: authorizedDate,
+        notes,
+        status: 'completed',
+        created_by: createdBy
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error('Error creating COD:', error);
+    res.status(500).json({ message: error.message || 'Failed to create COD' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/cods/:id
+ * Get a single COD by ID
+ */
+router.get("/cods/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('ops_cods')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'COD not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching COD:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch COD' });
+  }
+});
+
+/**
+ * POST /api/admin/operations/cods/delete
+ * Delete one or more CODs
+ */
+router.post("/cods/delete", async (req: AdminRequest, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No IDs provided' });
+    }
+
+    const { error } = await supabase
+      .from('ops_cods')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+
+    res.json({ success: true, deleted: ids.length });
+  } catch (error: any) {
+    console.error('Error deleting CODs:', error);
+    res.status(500).json({ message: error.message || 'Failed to delete CODs' });
+  }
+});
+
+/**
+ * PATCH /api/admin/operations/cods/:id
+ * Update an existing COD
+ */
+router.patch("/cods/:id", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Convert camelCase to snake_case
+    const snakeCaseUpdates: Record<string, any> = {};
+    const fieldMap: Record<string, string> = {
+      dateReceived: "date_received",
+      receivedFrom: "received_from",
+      salesOrder: "sales_order",
+      freightOrder: "freight_order",
+      vanguardWorkOrder: "vanguard_work_order",
+      destructionLocation: "destruction_location",
+      materials: "materials",
+      authorizedByName: "authorized_by_name",
+      authorizedByTitle: "authorized_by_title",
+      authorizedDate: "authorized_date",
+      notes: "notes",
+      status: "status"
+    };
+
+    for (const [key, value] of Object.entries(updates)) {
+      const snakeKey = fieldMap[key] || key;
+      if (fieldMap[key] || key === 'status') {
+        snakeCaseUpdates[snakeKey] = value;
+      }
+    }
+
+    snakeCaseUpdates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('ops_cods')
+      .update(snakeCaseUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ message: 'COD not found' });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating COD:', error);
+    res.status(500).json({ message: error.message || 'Failed to update COD' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/cods/:id/pdf
+ * Generate and download COD PDF
+ * Auth: Token can be provided via query param for direct browser access
+ */
+router.get("/cods/:id/pdf", async (req: AdminRequest, res) => {
+  try {
+    // Verify token from query param (for direct browser PDF access)
+    const token = req.query.token as string;
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    const { id } = req.params;
+
+    // Fetch COD data
+    const { data: cod, error } = await supabase
+      .from('ops_cods')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    if (!cod) {
+      return res.status(404).json({ message: 'COD not found' });
+    }
+
+    // Generate HTML for PDF
+    const html = generateCODHTML(cod);
+
+    // Generate PDF using Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: {
+        top: '0.4in',
+        right: '0.4in',
+        bottom: '0.4in',
+        left: '0.4in'
+      }
+    });
+
+    await browser.close();
+
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${cod.cod_number}.pdf"`);
+    res.end(pdfBuffer);
+
+  } catch (error: any) {
+    console.error('Error generating COD PDF:', error);
+    res.status(500).json({ message: error.message || 'Failed to generate PDF' });
+  }
+});
+
+/**
+ * Generate HTML for COD PDF
+ * Based on the SSW/Vanguard COD template
+ */
+function generateCODHTML(cod: any): string {
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const materials = cod.materials || [];
+
+  // Build materials table rows
+  const materialRows = materials.map((m: any, idx: number) => `
+    <tr>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 10pt;">${m.material || ''}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 10pt; text-align: center;">${m.quantity || ''}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 10pt; text-align: center;">${m.uom || ''}</td>
+    </tr>
+  `).join('');
+
+  // Add empty rows if fewer than 5 materials for consistent PDF layout
+  const emptyRows = Math.max(0, 5 - materials.length);
+  const emptyRowsHtml = Array(emptyRows).fill(`
+    <tr>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5;">&nbsp;</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5;">&nbsp;</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e5e5;">&nbsp;</td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${cod.cod_number} - Certificate of Destruction</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.4in;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #000;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #264027;
+    }
+    .logo-section {
+      flex: 1;
+    }
+    .company-name {
+      font-size: 20pt;
+      font-weight: bold;
+      color: #264027;
+      margin-bottom: 4px;
+    }
+    .tagline {
+      font-size: 9pt;
+      color: #6f732f;
+      margin-bottom: 6px;
+    }
+    .contact-info {
+      font-size: 8pt;
+      color: #333;
+    }
+    .doc-title {
+      text-align: right;
+      flex: 1;
+    }
+    .doc-title h1 {
+      font-size: 18pt;
+      color: #264027;
+      margin-bottom: 8px;
+    }
+    .cod-number {
+      font-size: 11pt;
+      font-weight: bold;
+      color: #000;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 10pt;
+      font-weight: bold;
+      color: #264027;
+      background: #f5f5f5;
+      padding: 6px 10px;
+      border-left: 4px solid #264027;
+      margin-bottom: 10px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 8px;
+      font-size: 10pt;
+    }
+    .label {
+      font-weight: bold;
+      min-width: 150px;
+      color: #333;
+    }
+    .value {
+      flex: 1;
+      color: #000;
+    }
+    .materials-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .materials-table th {
+      background: #264027;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 10pt;
+      font-weight: 600;
+    }
+    .materials-table th:nth-child(2),
+    .materials-table th:nth-child(3) {
+      text-align: center;
+      width: 100px;
+    }
+    .signature-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ccc;
+    }
+    .signature-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 20px;
+    }
+    .signature-box {
+      border-bottom: 1px solid #000;
+      padding-top: 30px;
+      padding-bottom: 5px;
+      min-height: 50px;
+    }
+    .signature-label {
+      font-size: 8pt;
+      color: #666;
+      margin-top: 4px;
+    }
+    .disclaimer {
+      margin-top: 30px;
+      padding: 15px;
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 9pt;
+      color: #444;
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #ccc;
+      font-size: 8pt;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-section">
+      <div class="company-name">Soil Seed and Water</div>
+      <div class="tagline">Regenerative Soil Solutions</div>
+      <div class="contact-info">
+        18980 Stanton Rd, Congress, AZ 85332<br>
+        Phone: (928) 632-7125<br>
+        Email: info@soilseedandwater.com
+      </div>
+    </div>
+    <div class="doc-title">
+      <h1>Certificate of Destruction</h1>
+      <div class="cod-number">COD #: ${cod.cod_number}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Receipt Information</div>
+    <div class="info-grid">
+      <div>
+        <div class="info-row">
+          <span class="label">Received From:</span>
+          <span class="value">${cod.received_from || ''}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Date Received:</span>
+          <span class="value">${formatDate(cod.date_received)}</span>
+        </div>
+      </div>
+      <div>
+        <div class="info-row">
+          <span class="label">Destruction Location:</span>
+          <span class="value">${cod.destruction_location || ''}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Customer Reference Numbers</div>
+    <div class="info-grid">
+      <div>
+        <div class="info-row">
+          <span class="label">Sales Order:</span>
+          <span class="value">${cod.sales_order || '—'}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Freight Order:</span>
+          <span class="value">${cod.freight_order || '—'}</span>
+        </div>
+      </div>
+      <div>
+        <div class="info-row">
+          <span class="label">Vanguard Work Order #:</span>
+          <span class="value">${cod.vanguard_work_order || '—'}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Materials Destroyed</div>
+    <table class="materials-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Quantity</th>
+          <th>UOM</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${materialRows}
+        ${emptyRowsHtml}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="signature-section">
+    <div class="section-title">Authorization</div>
+    <div class="signature-row">
+      <div>
+        <div class="info-row">
+          <span class="label">Authorized By:</span>
+          <span class="value">${cod.authorized_by_name || ''}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Title:</span>
+          <span class="value">${cod.authorized_by_title || ''}</span>
+        </div>
+      </div>
+      <div>
+        <div class="info-row">
+          <span class="label">Date:</span>
+          <span class="value">${formatDate(cod.authorized_date)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="signature-row">
+      <div>
+        <div class="signature-box"></div>
+        <div class="signature-label">Authorized Signature</div>
+      </div>
+      <div>
+        <div class="signature-box"></div>
+        <div class="signature-label">SSW Representative Signature</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Certification:</strong> Vanguard warrants that all organic materials listed above were presented and have been destroyed for the purpose of the recycling of organic materials into soil amendments and compost products. The destruction was performed in accordance with applicable regulations and industry standards.
+  </div>
+
+  ${cod.notes ? `
+  <div class="section" style="margin-top: 15px;">
+    <div class="section-title">Notes</div>
+    <div style="padding: 8px 10px; background: #fafafa; border-radius: 4px; font-size: 9pt;">
+      ${cod.notes}
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    Certificate of Destruction - ${cod.cod_number} | Generated by Soil Seed and Water Operations System
   </div>
 </body>
 </html>

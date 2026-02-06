@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useLocation } from 'wouter';
-import { FileText, ClipboardList, LogOut, Calendar, Users } from 'lucide-react';
+import { FileText, ClipboardList, LogOut, Calendar, Users, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
@@ -80,6 +80,19 @@ export default function OperationsLayout({ children }: OperationsLayoutProps) {
               >
                 <ClipboardList className="w-4 h-4" />
                 Work Orders
+              </button>
+              <button
+                onClick={() => navigate('/admin/operations/cods')}
+                className={`
+                  flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                  ${location.startsWith('/admin/operations/cods')
+                    ? 'border-[#264027] text-[#264027]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                CODs
               </button>
               <button
                 onClick={() => navigate('/admin/operations/resources')}

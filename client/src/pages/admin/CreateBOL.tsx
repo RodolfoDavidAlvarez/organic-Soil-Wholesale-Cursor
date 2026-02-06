@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useEffect, useRef } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Save, FileText } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Copy, Clock, MapPin, Truck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
+
+interface RecentDestination {
+  customerName: string;
+  destinationAddress: string;
+  destinationCity: string;
+  destinationState: string;
+  destinationZip: string;
+  onsiteContactName: string;
+  onsiteContactPhone: string;
+  lastUsed: string;
+}
+
+interface RecentCarrier {
+  carrierName: string;
+  driverName: string;
+  truckNumber: string;
+  licensePlate: string;
+  trailerNumber: string;
+  lastUsed: string;
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
 
 interface BOLFormData {
   date: string;
@@ -121,17 +153,147 @@ export default function CreateBOL() {
 
   const [netWeight, setNetWeight] = useState<number>(0);
   const [netWeightTons, setNetWeightTons] = useState<string>('0.00');
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+  const [showCarrierSuggestions, setShowCarrierSuggestions] = useState(false);
+  const destRef = useRef<HTMLDivElement>(null);
+  const carrierRef = useRef<HTMLDivElement>(null);
+
+  // Fetch recent addresses for autocomplete
+  const { data: recentAddresses } = useQuery<{ destinations: RecentDestination[], carriers: RecentCarrier[] }>({
+    queryKey: ['recent-addresses'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/operations/recent-addresses', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch');
+      return response.json();
+    }
+  });
+
+  // Filter destinations based on customer name input
+  const filteredDestinations = (recentAddresses?.destinations || []).filter(d => {
+    if (!formData.customerName) return true; // Show all when empty
+    const query = formData.customerName.toLowerCase();
+    return d.customerName.toLowerCase().includes(query) ||
+           d.destinationCity?.toLowerCase().includes(query) ||
+           d.destinationAddress?.toLowerCase().includes(query);
+  }).slice(0, 6);
+
+  // Filter carriers based on carrier name input
+  const filteredCarriers = (recentAddresses?.carriers || []).filter(c => {
+    if (!formData.carrierName) return true;
+    const query = formData.carrierName.toLowerCase();
+    return c.carrierName.toLowerCase().includes(query) ||
+           c.driverName?.toLowerCase().includes(query);
+  }).slice(0, 5);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (destRef.current && !destRef.current.contains(e.target as Node)) {
+        setShowDestSuggestions(false);
+      }
+      if (carrierRef.current && !carrierRef.current.contains(e.target as Node)) {
+        setShowCarrierSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const applyDestination = (dest: RecentDestination) => {
+    setFormData(prev => ({
+      ...prev,
+      customerName: dest.customerName,
+      destinationAddress: dest.destinationAddress,
+      destinationCity: dest.destinationCity || '',
+      destinationState: dest.destinationState || 'AZ',
+      destinationZip: dest.destinationZip || '',
+      onsiteContactName: dest.onsiteContactName || '',
+      onsiteContactPhone: dest.onsiteContactPhone || ''
+    }));
+    setShowDestSuggestions(false);
+  };
+
+  const applyCarrier = (carrier: RecentCarrier) => {
+    setFormData(prev => ({
+      ...prev,
+      carrierName: carrier.carrierName,
+      driverName: carrier.driverName || '',
+      truckNumber: carrier.truckNumber || '',
+      licensePlate: carrier.licensePlate || '',
+      trailerNumber: carrier.trailerNumber || ''
+    }));
+    setShowCarrierSuggestions(false);
+  };
+
+  // Check if duplicating an existing BOL
+  const searchParams = new URLSearchParams(window.location.search);
+  const duplicateId = searchParams.get('duplicate');
+
+  // Fetch source BOL when duplicating
+  const { data: sourceBol } = useQuery({
+    queryKey: ['bol', duplicateId],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/operations/bols/${duplicateId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch BOL');
+      return response.json();
+    },
+    enabled: !!duplicateId
+  });
+
+  // Pre-fill form when source BOL data is loaded (duplicate mode)
+  useEffect(() => {
+    if (sourceBol) {
+      setFormData({
+        date: new Date().toISOString().split('T')[0], // Always use today's date
+        originLocation: sourceBol.origin_location || 'Phoenix, AZ Facility',
+        originAddress: sourceBol.origin_address || '',
+        originCity: sourceBol.origin_city || '',
+        originState: sourceBol.origin_state || 'AZ',
+        originZip: sourceBol.origin_zip || '',
+        customerName: sourceBol.customer_name || '',
+        destinationAddress: sourceBol.destination_address || '',
+        destinationCity: sourceBol.destination_city || '',
+        destinationState: sourceBol.destination_state || 'AZ',
+        destinationZip: sourceBol.destination_zip || '',
+        onsiteContactName: sourceBol.onsite_contact_name || '',
+        onsiteContactPhone: sourceBol.onsite_contact_phone || '',
+        materialType: sourceBol.material_type || '',
+        materialDescription: sourceBol.material_description || '',
+        grossWeight: sourceBol.gross_weight > 0 ? String(sourceBol.gross_weight) : '',
+        tareWeight: sourceBol.tare_weight > 0 ? String(sourceBol.tare_weight) : '',
+        carrierName: sourceBol.carrier_name || '',
+        driverName: sourceBol.driver_name || '',
+        truckNumber: sourceBol.truck_number || '',
+        licensePlate: sourceBol.license_plate || '',
+        trailerNumber: sourceBol.trailer_number || '',
+        notes: sourceBol.notes || '',
+        referenceNumber: sourceBol.reference_number || '',
+        timeIn: '',
+        timeOut: '',
+        scaleOperatorInitials: sourceBol.scale_operator_initials || '',
+        loadType: sourceBol.load_type || 'Outbound',
+        orderId: sourceBol.order_id || ''
+      });
+    }
+  }, [sourceBol]);
 
   // Pre-fill from URL params (when coming from Orders page)
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const orderId = searchParams.get('orderId');
-    const customerName = searchParams.get('customerName');
-    const destinationAddress = searchParams.get('destinationAddress');
-    const destinationCity = searchParams.get('destinationCity');
-    const destinationState = searchParams.get('destinationState');
-    const destinationZip = searchParams.get('destinationZip');
-    const referenceNumber = searchParams.get('referenceNumber');
+    if (duplicateId) return; // Skip if in duplicate mode
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId');
+    const customerName = params.get('customerName');
+    const destinationAddress = params.get('destinationAddress');
+    const destinationCity = params.get('destinationCity');
+    const destinationState = params.get('destinationState');
+    const destinationZip = params.get('destinationZip');
+    const referenceNumber = params.get('referenceNumber');
 
     if (orderId || customerName) {
       setFormData(prev => ({
@@ -145,7 +307,7 @@ export default function CreateBOL() {
         referenceNumber: referenceNumber || prev.referenceNumber
       }));
     }
-  }, []);
+  }, [duplicateId]);
 
   // Auto-calculate net weight
   useEffect(() => {
@@ -256,8 +418,19 @@ export default function CreateBOL() {
           </div>
 
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">Create New BOL / Weight Ticket</h1>
-            <p className="text-xs md:text-sm text-gray-500 mt-1">Fill in the delivery details to generate a professional BOL</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
+              {duplicateId ? (
+                <span className="flex items-center gap-2">
+                  <Copy className="w-5 h-5 md:w-6 md:h-6 text-[#264027]" />
+                  Duplicate BOL {sourceBol?.bol_number ? `from ${sourceBol.bol_number}` : ''}
+                </span>
+              ) : 'Create New BOL / Weight Ticket'}
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">
+              {duplicateId
+                ? 'All details have been copied. Update what you need and save as a new ticket.'
+                : 'Fill in the delivery details to generate a professional BOL'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -282,16 +455,56 @@ export default function CreateBOL() {
                         required
                       />
                     </div>
-                    <div>
+                    <div ref={destRef} className="relative">
                       <Label htmlFor="customerName" className="text-xs md:text-sm">Customer Name *</Label>
                       <Input
                         id="customerName"
                         value={formData.customerName}
-                        onChange={(e) => handleChange('customerName', e.target.value)}
-                        placeholder="e.g., Shawn (Pistachio Project)"
+                        onChange={(e) => {
+                          handleChange('customerName', e.target.value);
+                          setShowDestSuggestions(true);
+                        }}
+                        onFocus={() => setShowDestSuggestions(true)}
+                        placeholder="Start typing to see recent customers..."
                         className="text-sm"
                         required
+                        autoComplete="off"
                       />
+                      {/* Recent Destinations Dropdown */}
+                      {showDestSuggestions && filteredDestinations.length > 0 && (
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[280px] overflow-y-auto">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            Recent Destinations
+                          </div>
+                          {filteredDestinations.map((dest, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => applyDestination(dest)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900">{dest.customerName}</span>
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {timeAgo(dest.lastUsed)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                                <span className="text-xs text-gray-500 truncate">
+                                  {dest.destinationAddress}{dest.destinationCity ? `, ${dest.destinationCity}` : ''}{dest.destinationState ? `, ${dest.destinationState}` : ''}
+                                </span>
+                              </div>
+                              {dest.onsiteContactName && (
+                                <div className="text-[10px] text-gray-400 mt-0.5 ml-4">
+                                  Contact: {dest.onsiteContactName}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="referenceNumber" className="text-xs md:text-sm">Project Reference / PO Number</Label>
@@ -574,14 +787,53 @@ export default function CreateBOL() {
                     <CardDescription>Trucking company and vehicle details</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
+                    <div ref={carrierRef} className="relative">
                       <Label htmlFor="carrierName">Carrier Name</Label>
                       <Input
                         id="carrierName"
                         value={formData.carrierName}
-                        onChange={(e) => handleChange('carrierName', e.target.value)}
-                        placeholder="Default: James Bond Trucking"
+                        onChange={(e) => {
+                          handleChange('carrierName', e.target.value);
+                          setShowCarrierSuggestions(true);
+                        }}
+                        onFocus={() => setShowCarrierSuggestions(true)}
+                        placeholder="Start typing or select recent carrier..."
+                        autoComplete="off"
                       />
+                      {/* Recent Carriers Dropdown */}
+                      {showCarrierSuggestions && filteredCarriers.length > 0 && (
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[220px] overflow-y-auto">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            Recent Carriers
+                          </div>
+                          {filteredCarriers.map((carrier, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => applyCarrier(carrier)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <Truck className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-900">{carrier.carrierName}</span>
+                                </span>
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {timeAgo(carrier.lastUsed)}
+                                </span>
+                              </div>
+                              {(carrier.driverName || carrier.truckNumber) && (
+                                <div className="text-xs text-gray-500 mt-0.5 ml-5">
+                                  {carrier.driverName && `Driver: ${carrier.driverName}`}
+                                  {carrier.driverName && carrier.truckNumber && ' · '}
+                                  {carrier.truckNumber && `Truck #${carrier.truckNumber}`}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="driverName">Driver Name</Label>
