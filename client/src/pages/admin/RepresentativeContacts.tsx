@@ -365,6 +365,7 @@ export default function AdminRepresentativeContacts() {
         },
       });
       setIsDialogOpen(false);
+      setIsSidePanelOpen(false);
     } catch {
       // handled in mutation onError
     }

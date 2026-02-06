@@ -15,6 +15,8 @@ import {
   Bell,
   UserCircle,
   BookUser,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
@@ -85,8 +87,20 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('admin-sidebar-collapsed') === 'true';
+    }
+    return false;
+  });
   const [location, navigate] = useLocation();
   const { admin, signOut } = useAdminAuth();
+
+  const toggleCollapse = () => {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    localStorage.setItem('admin-sidebar-collapsed', String(next));
+  };
 
   const normalizedLocation = location.split("?")[0];
 
