@@ -237,7 +237,7 @@ const MulchDetail = () => {
               {/* Header Section */}
               <div className="mb-4 sm:mb-6">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                  <Badge className="bg-arizona-sage text-white border-0 px-3 py-1.5 text-xs font-semibold">
+                  <Badge className="bg-primary text-white border-0 px-3 py-1.5 text-xs font-semibold">
                     Mulch
                   </Badge>
                   {selectedVariant?.certifications && selectedVariant.certifications.includes("OMRI") && (

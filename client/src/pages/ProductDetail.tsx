@@ -548,10 +548,7 @@ const ProductDetail = () => {
         keywords={keywordList}
       />
 
-      <section className="relative bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-4 sm:py-8 lg:py-12 overflow-hidden">
-        {/* Subtle background accents */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.05),_transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(181,84,26,0.03),_transparent_50%)]" />
+      <section className="relative bg-white py-4 sm:py-8 lg:py-12 overflow-hidden">
 
         <div className="container mx-auto px-3 sm:px-4 relative z-10">
           <div className="mb-4 sm:mb-8">
@@ -589,24 +586,24 @@ const ProductDetail = () => {
             <div className="space-y-6 sm:space-y-10 overflow-hidden">
               <div className="flex flex-col gap-6 sm:gap-10 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(300px,2fr)] xl:items-start">
                 <section className="w-full space-y-6 sm:space-y-8 overflow-hidden">
-                  <div className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border border-arizona-sage/10 bg-gradient-to-br from-white via-arizona-sand/20 to-arizona-desert/30 shadow-xl sm:shadow-2xl">
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border-2 border-border bg-white shadow-sm">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.8),_transparent_55%)]" />
                     <div className="relative z-10 flex flex-col lg:grid lg:items-center lg:gap-8 lg:grid-cols-[1.05fr_0.95fr]">
                       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-10">
                         <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide">
-                          <Badge className="bg-arizona-sage text-white border-0 shadow-sm">
+                          <Badge className="bg-primary text-white border-0">
                             <Leaf className="h-3 w-3 mr-1" />
                             {product.category}
                           </Badge>
                           {product.productType && (
-                            <Badge variant="outline" className="border-arizona-copper/20 bg-arizona-copper/5 text-arizona-copper">
+                            <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
                               {product.productType}
                             </Badge>
                           )}
                         </div>
                         <div className="space-y-3 sm:space-y-4">
                           <div>
-                            <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-arizona-sage font-semibold">Organic Soil Wholesale</p>
+                            <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary font-semibold">Organic Soil Wholesale</p>
                             <h1 className="mt-2 sm:mt-3 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-heading font-bold leading-tight text-foreground">{product.displayTitle}</h1>
                           </div>
                           <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
@@ -615,7 +612,7 @@ const ProductDetail = () => {
                           {featureSpotlights.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {featureSpotlights.map((item) => (
-                                <span key={item} className="rounded-full bg-white/90 border border-arizona-sage/20 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-foreground shadow-sm backdrop-blur">
+                                <span key={item} className="rounded-full bg-white/90 border border-primary/20 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-foreground shadow-sm backdrop-blur">
                                   {item}
                                 </span>
                               ))}
@@ -639,12 +636,12 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                           <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                            <Leaf className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-sage" />
+                            <Leaf className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
                             <span className="font-medium">{product.category}</span>
                           </div>
                           {product.productType && (
                             <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                              <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-copper" />
+                              <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
                               <span className="font-medium">{product.productType}</span>
                             </div>
                           )}
@@ -694,7 +691,7 @@ const ProductDetail = () => {
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                       {heroStats.map((stat, index) => {
                         const Icon = stat.icon;
-                        const iconColors = ["text-arizona-sage", "text-arizona-copper", "text-primary", "text-arizona-sage"];
+                        const iconColors = ["text-primary", "text-primary", "text-primary", "text-primary"];
                         return (
                           <div key={stat.label} className="rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
                             <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground font-medium">
@@ -890,17 +887,17 @@ const ProductDetail = () => {
                 </section>
 
                 <aside className="w-full space-y-4 sm:space-y-6 overflow-hidden">
-                  <Card className="rounded-2xl sm:rounded-3xl border-0 bg-gradient-to-br from-gray-900 via-gray-900 to-arizona-sage/30 p-4 sm:p-6 text-white shadow-2xl overflow-hidden relative">
+                  <Card className="rounded-2xl sm:rounded-3xl border-0 bg-gray-900 p-4 sm:p-6 text-white shadow-sm overflow-hidden relative">
                     {/* Subtle pattern overlay */}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.15),_transparent_50%)]" />
                     <div className="relative z-10">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-arizona-sage font-semibold">Order Direct</p>
+                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary-light font-semibold">Order Direct</p>
                       <h3 className="mt-2 sm:mt-3 text-xl sm:text-2xl font-heading font-bold leading-tight">Get a wholesale quote today</h3>
                       <p className="mt-2 sm:mt-3 text-sm text-white/80 leading-relaxed">
                         Our team coordinates blending, packaging, and logistics across Arizona so you can focus on your projects.
                       </p>
                       <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-                        <Button size="lg" className="w-full min-h-[48px] h-12 text-base bg-arizona-sage hover:bg-arizona-sage/90 shadow-lg touch-manipulation" asChild>
+                        <Button size="lg" className="w-full min-h-[48px] h-12 text-base bg-primary hover:bg-primary/90 shadow-sm touch-manipulation" asChild>
                           <Link href="/order">
                             <ShoppingBag className="mr-2 h-4 w-4" />
                             Request a Quote
@@ -919,7 +916,7 @@ const ProductDetail = () => {
                         </Button>
                       </div>
                       <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/10 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-white/60">
-                        <MapPin className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-arizona-copper flex-shrink-0" />
+                        <MapPin className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary-light flex-shrink-0" />
                         <span>Arizona-produced • Local delivery available</span>
                       </div>
                     </div>
@@ -981,8 +978,8 @@ const ProductDetail = () => {
 
                   <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
                     <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-arizona-sage/10 p-2">
-                        <ShieldCheck className="h-5 w-5 text-arizona-sage" />
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">Confidence</p>
@@ -992,8 +989,8 @@ const ProductDetail = () => {
                     <ul className="mt-6 space-y-4">
                       {confidencePoints.map((point, index) => {
                         const Icon = point.icon;
-                        const bgColors = ["bg-arizona-sage/10", "bg-arizona-copper/10", "bg-primary/10"];
-                        const iconColors = ["text-arizona-sage", "text-arizona-copper", "text-primary"];
+                        const bgColors = ["bg-primary/10", "bg-primary/10", "bg-primary/10"];
+                        const iconColors = ["text-primary", "text-primary", "text-primary"];
                         return (
                           <li key={point.title} className="flex gap-3">
                             <div className={`rounded-full ${bgColors[index % bgColors.length]} p-2.5 flex-shrink-0`}>
@@ -1017,7 +1014,7 @@ const ProductDetail = () => {
 
       {/* Bottom CTA Section */}
       {!isLoading && product && (
-        <section className="bg-gradient-to-br from-arizona-desert/20 via-white to-arizona-sand/10 py-16">
+        <section className="bg-background py-16 border-t border-border">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-2xl font-heading font-bold text-foreground sm:text-3xl">
               Ready to order <span className="text-primary">{product.displayTitle}</span>?
@@ -1032,7 +1029,7 @@ const ProductDetail = () => {
                   Request a Quote
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-arizona-copper/30 hover:bg-arizona-copper/5" asChild>
+              <Button size="lg" variant="outline" className="border-primary/30 hover:bg-primary/5" asChild>
                 <Link href="/products">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Catalog

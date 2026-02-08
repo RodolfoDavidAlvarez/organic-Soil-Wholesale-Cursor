@@ -427,8 +427,6 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Arizona Accent Strip */}
-      <div className="h-1.5 bg-gradient-to-r from-arizona-copper via-arizona-sunset to-arizona-terracotta" />
 
       <SEO
         title="Arizona-Made Organic Compost & Soil | Wholesale Bulk Supplier"
@@ -455,7 +453,7 @@ const Home = () => {
       </SEO>
 
       {/* Hero Section with Title */}
-      <section className="relative pt-10 md:pt-16 pb-16 bg-gradient-to-b from-arizona-desert/20 to-white overflow-hidden min-h-[60vh]">
+      <section className="relative pt-10 md:pt-16 pb-16 bg-white overflow-hidden min-h-[60vh]">
         <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
@@ -484,7 +482,7 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <MapPin className="h-6 w-6 text-primary" />
@@ -525,7 +523,7 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
-                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
               >
                 <h2 className="text-lg font-bold mb-4">Size Categories</h2>
                 <Carousel
@@ -572,7 +570,7 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
               >
                 <h2 className="hidden text-xl font-bold mb-4 lg:block">Featured Products</h2>
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
@@ -609,15 +607,13 @@ const Home = () => {
                   ))}
                 </div>
                 <div className="mt-8 text-center">
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-block">
-                    <Button
-                      onClick={() => navigate("/products")}
-                      className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full max-w-md"
-                    >
-                      View All Products
-                      <ChevronRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </motion.div>
+                  <Button
+                    onClick={() => navigate("/products")}
+                    className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg rounded-xl shadow-sm hover:shadow transition-all duration-300 w-full max-w-md"
+                  >
+                    View All Products
+                    <ChevronRight className="ml-2 h-5 w-5" />
+                  </Button>
                 </div>
               </motion.div>
             </div>
@@ -626,12 +622,7 @@ const Home = () => {
       </section>
 
       {/* Amazon Reviews - Mikey's Worm Poop */}
-      <section className="py-20 md:py-28 px-4 md:px-8 bg-gradient-to-br from-emerald-50/30 via-amber-50/20 to-white relative overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-400 rounded-full blur-3xl"></div>
-        </div>
+      <section className="py-20 md:py-28 px-4 md:px-8 bg-background relative overflow-hidden">
         
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
@@ -671,38 +662,30 @@ const Home = () => {
               </motion.div>
 
               {/* Product Visuals */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="grid grid-cols-2 gap-4"
-              >
-                <div className="group relative rounded-3xl overflow-hidden shadow-lg border-2 border-white/50 bg-gradient-to-br from-white to-gray-50 aspect-square hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
                   <OptimizedImage
                     src="/images/optimized/mikeys-worm-poop9lbs.jpg"
                     alt="Mikey's Worm Poop 9lb bag"
-                    className="w-full h-full object-contain p-3 transition-transform duration-700 group-hover:scale-110"
+                    className="w-full h-full object-contain p-3"
                     sizes="(max-width: 768px) 50vw, 200px"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent text-white text-xs font-semibold py-3 px-3 text-center backdrop-blur-md">
+                  <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
                     The Product
                   </div>
                 </div>
-                <div className="group relative rounded-3xl overflow-hidden shadow-lg border-2 border-white/50 bg-gradient-to-br from-white to-gray-50 aspect-square hover:shadow-2xl transition-all duration-500 hover:scale-[1.02]">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
+                <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
                   <OptimizedImage
                     src="/images/optimized/worm-castting-product-texture.jpg"
                     alt="Worm castings texture"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="w-full h-full object-cover"
                     sizes="(max-width: 768px) 50vw, 200px"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent text-white text-xs font-semibold py-3 px-3 text-center backdrop-blur-md">
+                  <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
                     Rich Texture
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* CTA Button */}
               <motion.div
@@ -712,9 +695,9 @@ const Home = () => {
                 transition={{ duration: 0.6, delay: 0.3 }}
                 className="pt-2"
               >
-                <Button 
-                  className="w-full gap-2 h-14 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary" 
-                  size="lg" 
+                <Button
+                  className="w-full gap-2 h-14 text-lg font-semibold shadow-sm hover:shadow transition-all duration-300 bg-primary hover:bg-primary/90"
+                  size="lg"
                   onClick={() => handleProductSelect(products.find(p => p.name === "Mikey's Worm Poop") || products[0])}
                 >
                   Shop Worm Castings <ArrowRight className="w-5 h-5" />
@@ -728,7 +711,7 @@ const Home = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="lg:col-span-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-10 border border-gray-200/50"
+              className="lg:col-span-8 bg-white rounded-xl p-8 md:p-10 border-2 border-border shadow-sm"
             >
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -757,7 +740,7 @@ const Home = () => {
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: index * 0.1 }}
                       >
-                        <Card className="h-full border-2 border-gray-100 bg-gradient-to-br from-white to-gray-50/50 hover:from-white hover:to-white hover:border-primary/20 hover:shadow-xl transition-all duration-500 flex flex-col group">
+                        <Card className="h-full border-2 border-border bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-300 flex flex-col group">
                           <CardHeader className="pb-4">
                             <div className="flex justify-between items-start gap-3 mb-3">
                               <div className="flex gap-0.5">
@@ -778,10 +761,10 @@ const Home = () => {
                               {review.body}
                             </p>
                           </CardContent>
-                          <CardFooter className="pt-4 border-t-2 border-gray-100 mt-auto bg-gradient-to-r from-gray-50/50 to-transparent">
+                          <CardFooter className="pt-4 border-t border-border mt-auto">
                             <div className="flex justify-between items-center w-full">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm border-2 border-primary/10">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                                   {review.name.charAt(0)}
                                 </div>
                                 <div className="flex flex-col">
@@ -804,7 +787,7 @@ const Home = () => {
       </section>
 
       {/* Showcase Photos Section */}
-      <section className="py-16 px-4 md:px-8 bg-muted/50">
+      <section className="py-16 px-4 md:px-8 bg-white border-t border-border">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -813,12 +796,9 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <div className="relative inline-block">
-              <h2 className="text-4xl md:text-6xl font-extrabold bg-gradient-to-r from-primary via-primary-dark to-primary bg-clip-text text-transparent mb-4 tracking-tight">
-                Our Work in Action
-              </h2>
-              <div className="absolute -bottom-2 left-0 right-0 h-2 bg-gradient-to-r from-primary via-primary-dark to-primary rounded-full transform scale-x-75"></div>
-            </div>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-foreground mb-4 tracking-tight">
+              Our Work in Action
+            </h2>
             <p className="text-lg md:text-xl text-muted-foreground mt-4 max-w-2xl mx-auto">
               Discover our premium organic soil products in action across various applications
             </p>
@@ -830,7 +810,7 @@ const Home = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
           >
-            <Card className="group relative overflow-hidden border border-muted-foreground/10 bg-white shadow-2xl flex flex-col">
+            <Card className="group relative overflow-hidden border-2 border-border bg-white shadow-sm flex flex-col">
               <CardContent className="relative flex-1 p-0 bg-black">
                 <div className="relative aspect-video w-full lg:h-full">
                   <iframe
@@ -841,7 +821,7 @@ const Home = () => {
                     allowFullScreen
                   ></iframe>
                 </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/0 transition-opacity duration-300 group-hover:from-black/95"></div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white">
                   <span className="text-xs uppercase tracking-[0.3em] text-white/60">Flagship Compost</span>
                   <h3 className="mt-2 text-2xl font-heading font-semibold sm:text-3xl">Dan&apos;s Gold Dairy Compost</h3>
@@ -856,7 +836,7 @@ const Home = () => {
             </Card>
 
             <div className="flex flex-col gap-8">
-              <Card className="border border-muted-foreground/10 bg-white shadow-lg overflow-hidden flex flex-col h-full">
+              <Card className="border-2 border-border bg-white shadow-sm overflow-hidden flex flex-col h-full">
                 <CardContent className="p-0 bg-black">
                   <div className="relative aspect-video w-full">
                     <iframe
@@ -881,7 +861,7 @@ const Home = () => {
                 </CardFooter>
               </Card>
 
-              <Card className="border border-muted-foreground/10 bg-white shadow-lg overflow-hidden flex flex-col h-full">
+              <Card className="border-2 border-border bg-white shadow-sm overflow-hidden flex flex-col h-full">
                 <CardContent className="p-0 bg-black">
                   <div className="relative aspect-video w-full">
                     <iframe

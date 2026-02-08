@@ -3,74 +3,78 @@
 @tailwind utilities;
 
 :root {
-  --background: 40 25% 97%;
-  --foreground: 25 30% 12%;
-  --muted: 35 15% 92%;
-  --muted-foreground: 25 10% 45%;
-  --popover: 40 25% 97%;
-  --popover-foreground: 25 30% 12%;
+  --background: 220 15% 97%;
+  --foreground: 220 20% 14%;
+  --muted: 220 12% 92%;
+  --muted-foreground: 220 10% 45%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 25 30% 12%;
-  --border: 30 15% 88%;
-  --input: 30 15% 88%;
+  --card-foreground: 220 20% 14%;
+  --border: 220 15% 85%;
+  --input: 220 15% 85%;
 
-  /* Primary: Rich Desert Sage Green */
+  /* Primary: Sage Green */
   --primary: 150 32% 38%;
   --primary-light: 150 32% 48%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Arizona Terracotta */
-  --secondary: 18 55% 42%;
-  --secondary-light: 18 55% 52%;
+  /* Secondary: Muted Green */
+  --secondary: 150 18% 52%;
+  --secondary-light: 150 18% 62%;
   --secondary-foreground: 0 0% 100%;
 
-  /* Accent: Copper/Golden Arizona Sun */
-  --accent: 32 80% 52%;
-  --accent-light: 32 80% 62%;
-  --accent-foreground: 25 30% 12%;
+  /* Accent: Warm neutral */
+  --accent: 220 12% 92%;
+  --accent-light: 220 12% 95%;
+  --accent-foreground: 220 20% 14%;
 
-  /* Arizona specific colors */
-  --arizona-copper: 18 70% 45%;
-  --arizona-sunset: 25 85% 55%;
-  --arizona-sand: 38 35% 85%;
-  --arizona-sage: 150 25% 45%;
+  /* Keep arizona vars mapped to primary/muted for backward compat */
+  --arizona-copper: 150 32% 38%;
+  --arizona-sunset: 150 32% 42%;
+  --arizona-sand: 220 12% 92%;
+  --arizona-sage: 150 32% 38%;
+  --arizona-desert: 220 12% 92%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 150 32% 38%;
   --radius: 0.625rem;
-  --app-header-height: 6.5rem;
+  --app-header-height: 5rem;
 }
 
 .dark {
-  --background: 25 20% 12%;
-  --foreground: 40 20% 94%;
-  --muted: 25 15% 18%;
-  --muted-foreground: 40 10% 70%;
-  --popover: 25 20% 12%;
-  --popover-foreground: 40 20% 94%;
-  --card: 25 18% 15%;
-  --card-foreground: 40 20% 94%;
-  --border: 25 15% 22%;
-  --input: 25 15% 22%;
+  --background: 220 18% 12%;
+  --foreground: 220 15% 94%;
+  --muted: 220 12% 18%;
+  --muted-foreground: 220 10% 70%;
+  --popover: 220 18% 12%;
+  --popover-foreground: 220 15% 94%;
+  --card: 220 15% 15%;
+  --card-foreground: 220 15% 94%;
+  --border: 220 12% 22%;
+  --input: 220 12% 22%;
 
-  /* Primary: Desert Sage */
   --primary: 150 32% 48%;
   --primary-light: 150 32% 58%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Arizona Terracotta */
-  --secondary: 18 55% 50%;
-  --secondary-light: 18 55% 60%;
-  --secondary-foreground: 40 20% 94%;
+  --secondary: 150 18% 58%;
+  --secondary-light: 150 18% 68%;
+  --secondary-foreground: 220 15% 94%;
 
-  /* Accent: Copper Gold */
-  --accent: 32 80% 58%;
-  --accent-light: 32 80% 68%;
-  --accent-foreground: 25 20% 12%;
+  --accent: 220 12% 18%;
+  --accent-light: 220 12% 22%;
+  --accent-foreground: 220 15% 94%;
+
+  --arizona-copper: 150 32% 48%;
+  --arizona-sunset: 150 32% 52%;
+  --arizona-sand: 220 12% 18%;
+  --arizona-sage: 150 32% 48%;
+  --arizona-desert: 220 12% 18%;
 
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 40 20% 94%;
+  --destructive-foreground: 220 15% 94%;
   --ring: 150 32% 45%;
   --radius: 0.625rem;
 }
@@ -86,7 +90,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-white text-black;
+    @apply font-sans antialiased bg-background text-foreground;
     scroll-padding-top: var(--app-header-height);
     min-height: 100%;
     overflow-x: hidden;
@@ -98,11 +102,11 @@
   h4,
   h5,
   h6 {
-    @apply font-bold font-semibold tracking-tight;
+    @apply font-bold tracking-tight;
   }
 
   h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+    @apply text-4xl md:text-5xl lg:text-6xl font-extrabold;
   }
 
   h2 {
@@ -110,11 +114,11 @@
   }
 
   h3 {
-    @apply text-2xl md:text-3xl;
+    @apply text-2xl md:text-3xl font-bold;
   }
 
   h4 {
-    @apply text-xl md:text-2xl;
+    @apply text-xl md:text-2xl font-semibold;
   }
 
   p {
@@ -126,30 +130,28 @@
   }
 }
 
-/* Arizona-Inspired Custom Backgrounds */
+/* Subtle dot background - clean like BSA */
 .hero-pattern {
   background-color: hsl(var(--background));
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(32 80% 52% / 0.08), transparent),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23996633' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: radial-gradient(circle, hsl(var(--primary) / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-/* Arizona Badge Styles */
+/* Keep class names for backward compat but make them subtle */
 .arizona-badge {
-  background: linear-gradient(135deg, hsl(18 70% 45%) 0%, hsl(32 80% 52%) 100%);
+  background: hsl(var(--primary));
   color: white;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
-  box-shadow: 0 2px 8px hsl(18 70% 45% / 0.3);
 }
 
 .arizona-badge-outline {
   background: transparent;
-  border: 2px solid hsl(18 70% 45%);
-  color: hsl(18 70% 45%);
+  border: 2px solid hsl(var(--primary));
+  color: hsl(var(--primary));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -157,34 +159,27 @@
   border-radius: 0.25rem;
 }
 
-/* Arizona Gradient Text */
+/* Gradient text now just uses primary */
 .arizona-gradient-text {
-  background: linear-gradient(135deg, hsl(18 70% 45%) 0%, hsl(32 80% 52%) 50%, hsl(150 32% 38%) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: hsl(var(--primary));
 }
 
-/* Arizona Section Divider */
+/* Divider now just a simple primary line */
 .arizona-divider {
-  height: 4px;
-  background: linear-gradient(90deg,
-    hsl(150 32% 38%) 0%,
-    hsl(32 80% 52%) 50%,
-    hsl(18 70% 45%) 100%
-  );
+  height: 3px;
+  background: hsl(var(--primary));
   border-radius: 2px;
 }
 
-/* Organic Patterns */
+/* Simplified patterns - just subtle dots */
 .soil-pattern {
   background-color: hsl(var(--background));
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23365c45' fill-opacity='0.1'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: radial-gradient(circle, hsl(var(--primary) / 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .leaf-pattern {
   background-color: hsl(var(--background));
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 40' width='80' height='40'%3E%3Cpath fill='%23365c45' fill-opacity='0.08' d='M0 40a19.96 19.96 0 0 1 5.9-14.11 20.17 20.17 0 0 1 19.44-5.2A20 20 0 0 1 20.2 40H0zM65.32.75A20.02 20.02 0 0 1 40.8 25.26 20.02 20.02 0 0 1 65.32.76zM.07 0h20.1l-.08.07A20.02 20.02 0 0 1 .75 5.25 20.08 20.08 0 0 1 .07 0zm1.94 40h2.53l4.26-4.24v-9.78A17.96 17.96 0 0 0 2 40zm5.38 0h9.8a17.98 17.98 0 0 0 6.67-16.42L7.4 40zm3.43-15.42v9.17l11.62-11.59c-3.97-.5-8.08.3-11.62 2.42zm32.86-.78A18 18 0 0 0 63.85 3.63L43.68 23.8zm7.2-19.17v9.15L62.43 2.22c-3.96-.5-8.05.3-11.57 2.4zm-3.49 2.72c-4.1 4.1-5.81 9.69-5.13 15.03l6.61-6.6V6.02c-.51.41-1 .85-1.48 1.33zM17.18 0H7.42L3.64 3.78A18 18 0 0 0 17.18 0zM2.08 0c-.01.8.04 1.58.14 2.37L4.59 0H2.07z'%3E%3C/path%3E%3C/svg%3E");
 }
 
 /* Custom vertical writing mode for side button */

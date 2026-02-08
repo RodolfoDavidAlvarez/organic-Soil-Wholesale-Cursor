@@ -87,52 +87,19 @@ const Header = () => {
   return (
     <header
       ref={headerRef}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white ${
+        isScrolled ? "shadow-sm border-b border-border" : "border-b border-border/50"
       }`}
     >
-      <div
-        className={`transition-all duration-300 ${
-          isScrolled ? "bg-white/90 backdrop-blur-md border-b border-primary/10" : "bg-white/70 backdrop-blur-lg border-b border-white/40"
-        }`}
-      >
-        <div className="container mx-auto px-4 py-2 flex flex-col gap-2 text-[11px] text-foreground/70 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
-          <div className="flex items-center gap-2">
-            <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water logo" className="h-6 w-auto" loading="lazy" />
-            <div className="flex flex-col leading-tight sm:flex-row sm:items-baseline sm:gap-2">
-              <span className="font-semibold text-foreground">Soil Seed &amp; Water</span>
-              <span className="uppercase tracking-[0.2em] text-[10px] text-foreground/50 sm:text-[11px]">Parent Company</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span className="text-foreground/50">Visit our retail brand</span>
-            <a
-              href="https://soilseedandwater.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              Soil Seed &amp; Water
-              <ArrowRight className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        </div>
-      </div>
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer">
               <div className="flex flex-col leading-tight">
-                <span className="text-xl font-heading font-bold sm:text-2xl">
-                  Organic <span className="text-primary">Soil</span> <span className="text-arizona-copper font-display italic">Wholesale</span>
+                <span className="text-xl font-bold sm:text-2xl">
+                  Organic <span className="text-primary">Soil</span> Wholesale
                 </span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-arizona-copper bg-arizona-copper/10 px-2 py-0.5 rounded">
-                    <MapPin className="h-2.5 w-2.5" />
-                    Made in Arizona
-                  </span>
-                </div>
               </div>
             </div>
           </Link>
@@ -168,7 +135,7 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-56 p-2 bg-white/95 backdrop-blur-sm border border-neutral-200/50 shadow-lg rounded-xl"
+                  className="w-56 p-2 bg-white border border-border shadow-lg rounded-xl"
                 >
                   <DropdownMenuItem
                     onClick={() => {
@@ -179,7 +146,7 @@ const Header = () => {
                   >
                     <span>All Products</span>
                   </DropdownMenuItem>
-                  <div className="h-px w-full bg-neutral-200/50 my-1"></div>
+                  <div className="h-px w-full bg-border my-1"></div>
                   {PRODUCT_CATEGORIES.map((category) => {
                     const Icon = category.icon;
                     return (
@@ -260,7 +227,6 @@ const Header = () => {
                   </div>
                 ))}
               <div className="flex items-center gap-3">
-                {/* Pay & Pickup button hidden until feature is live */}
                 <Link href="/order">
                   <Button
                     variant="outline"
@@ -287,15 +253,11 @@ const Header = () => {
                   <div className="flex flex-col gap-2 mb-6">
                     <Link href="/">
                       <div className="flex items-center space-x-2 cursor-pointer">
-                        <span className="text-lg font-heading font-bold">
-                          Organic <span className="text-primary">Soil</span> <span className="text-arizona-copper font-display italic">Wholesale</span>
+                        <span className="text-lg font-bold">
+                          Organic <span className="text-primary">Soil</span> Wholesale
                         </span>
                       </div>
                     </Link>
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-semibold text-arizona-copper bg-arizona-copper/10 px-2 py-0.5 rounded w-fit">
-                      <MapPin className="h-2.5 w-2.5" />
-                      Made in Arizona
-                    </span>
                   </div>
 
                   <nav className="flex flex-col space-y-2">
@@ -338,9 +300,7 @@ const Header = () => {
                       </Link>
                     ))}
 
-                    {/* Pay & Pickup mobile promo hidden until feature is live */}
-
-                    <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
+                    <div className="h-px w-full bg-border my-4"></div>
 
                     {/* Auth section in mobile menu - temporarily hidden */}
                     {false &&
@@ -383,7 +343,7 @@ const Header = () => {
                         </div>
                       ))}
 
-                    <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-4"></div>
+                    <div className="h-px w-full bg-border my-4"></div>
 
                     <a href="tel:9285501649" className="flex items-center gap-2 py-3 px-4 text-primary">
                       <Phone className="h-4 w-4" />

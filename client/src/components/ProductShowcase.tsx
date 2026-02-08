@@ -155,7 +155,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="rounded-2xl overflow-hidden bg-white border border-gray-100 animate-pulse">
-              <div className="aspect-[4/3] bg-gradient-to-br from-arizona-sand/40 to-arizona-desert/30" />
+              <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-50" />
               <div className="p-4 space-y-3">
                 <div className="h-5 bg-gray-200 rounded-full w-20" />
                 <div className="h-6 bg-gray-200 rounded w-3/4" />
@@ -163,7 +163,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                   <div className="h-4 bg-gray-100 rounded w-full" />
                   <div className="h-4 bg-gray-100 rounded w-2/3" />
                 </div>
-                <div className="h-11 bg-arizona-sage/10 rounded-xl mt-4" />
+                <div className="h-11 bg-primary/10 rounded-xl mt-4" />
               </div>
             </div>
           ))}
@@ -185,7 +185,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 sm:pl-12 min-h-[48px] h-12 text-base bg-gray-50 sm:bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-arizona-sage/20 focus:border-arizona-sage touch-manipulation"
+              className="pl-10 sm:pl-12 min-h-[48px] h-12 text-base bg-gray-50 sm:bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary touch-manipulation"
             />
           </div>
           {/* Category filter - 48px square on mobile for easy tapping */}
@@ -216,7 +216,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
           {selectedCategory !== "all" && (
             <button
               onClick={() => setSelectedCategory("all")}
-              className="min-h-[44px] px-3 text-sm text-arizona-sage font-medium hover:underline active:opacity-70 touch-manipulation"
+              className="min-h-[44px] px-3 text-sm text-primary font-medium hover:underline active:opacity-70 touch-manipulation"
             >
               Clear filter
             </button>
@@ -226,8 +226,8 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
       {filteredProducts.length === 0 ? (
         <div className="text-center py-12 sm:py-16 px-4">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-arizona-sand/50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-            <Package className="h-8 w-8 sm:h-10 sm:w-10 text-arizona-sage" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <Package className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
           </div>
           <h3 className="text-xl sm:text-2xl font-heading font-semibold mb-2 sm:mb-3 text-foreground">No products found</h3>
           <p className="text-muted-foreground mb-5 sm:mb-6 text-sm sm:text-base max-w-sm mx-auto">
@@ -238,7 +238,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               setSearchTerm("");
               setSelectedCategory("all");
             }}
-            className="bg-arizona-sage hover:bg-arizona-sage/90 text-white min-h-[48px] h-12 px-6 rounded-xl font-medium"
+            className="bg-primary hover:bg-primary/90 text-white min-h-[48px] h-12 px-6 rounded-xl font-medium"
           >
             View All Products
           </Button>
@@ -249,14 +249,14 @@ export default function ProductShowcase({ products, loading = false, onProductSe
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
-              className="overflow-hidden bg-white border border-gray-100 active:scale-[0.99] sm:hover:border-arizona-sage/30 sm:hover:shadow-xl transition-all duration-200 rounded-2xl group cursor-pointer touch-manipulation"
+              className="overflow-hidden bg-white border border-gray-100 active:scale-[0.99] sm:hover:border-primary/30 sm:hover:shadow-xl transition-all duration-200 rounded-2xl group cursor-pointer touch-manipulation"
               onClick={() => handleProductClick(product)}
             >
               {/* Image Container - square on mobile for consistency */}
-              <div className="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-arizona-sand/20">
+              <div className="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-gray-50">
                 {/* Category badge - solid green for visibility on any background */}
                 <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10">
-                  <Badge className="bg-arizona-sage text-white shadow-md border-0 rounded-full px-3 py-1.5 text-xs font-semibold">
+                  <Badge className="bg-primary text-white shadow-md border-0 rounded-full px-3 py-1.5 text-xs font-semibold">
                     <Leaf className="h-3.5 w-3.5 mr-1.5" />
                     {product.category || "Specialty"}
                   </Badge>
@@ -278,7 +278,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               {/* Content - optimized for mobile touch and readability */}
               <div className="p-4 sm:p-5">
                 {/* Product name - larger on mobile for readability */}
-                <h3 className="text-lg sm:text-lg font-heading font-bold text-foreground leading-snug line-clamp-2 sm:group-hover:text-arizona-sage transition-colors mb-1.5">
+                <h3 className="text-lg sm:text-lg font-heading font-bold text-foreground leading-snug line-clamp-2 sm:group-hover:text-primary transition-colors mb-1.5">
                   {getProductDisplayName(product)}
                 </h3>
 
@@ -291,7 +291,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
 
                 {/* CTA Button - 48px height for reliable touch targets */}
                 <button
-                  className="w-full min-h-[48px] h-12 sm:h-11 flex items-center justify-center gap-2 bg-arizona-sage text-white hover:bg-arizona-sage/90 rounded-xl font-semibold text-base sm:text-sm transition-all duration-200 shadow-sm active:scale-[0.98]"
+                  className="w-full min-h-[48px] h-12 sm:h-11 flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary/90 rounded-xl font-semibold text-base sm:text-sm transition-all duration-200 shadow-sm active:scale-[0.98]"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleProductClick(product);
