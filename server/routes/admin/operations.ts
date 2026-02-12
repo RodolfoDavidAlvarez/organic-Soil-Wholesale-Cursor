@@ -22,10 +22,115 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // Apply auth middleware to all routes except PDF endpoint (which handles auth separately)
 router.use((req, res, next) => {
-  if (req.path.includes('/pdf')) {
+  if (req.path.includes("/pdf")) {
     return next(); // Skip middleware for PDF endpoint
   }
   return adminAuthMiddleware(req, res, next);
+});
+
+// ========== Operations Settings: Work Order Notification Recipients ==========
+/**
+ * GET /api/admin/operations/settings/work-order-notifications
+ * List people to notify when a work order is added
+ */
+router.get("/settings/work-order-notifications", async (req: AdminRequest, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("ops_work_order_notification_recipients")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error("Error fetching work order notification recipients:", error);
+    res.status(500).json({ message: error.message || "Failed to fetch recipients" });
+  }
+});
+
+/**
+ * POST /api/admin/operations/settings/work-order-notifications
+ * Add a recipient (name, email, phone, notify_by_email, notify_by_phone)
+ */
+router.post("/settings/work-order-notifications", async (req: AdminRequest, res) => {
+  try {
+    const { name, email, phone, notify_by_email, notify_by_phone } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+    if (!email || typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const hasPhone = phone != null && String(phone).trim() !== "";
+    const { data, error } = await supabase
+      .from("ops_work_order_notification_recipients")
+      .insert({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: hasPhone ? String(phone).trim() : null,
+        notify_by_email: notify_by_email !== false,
+        notify_by_phone: hasPhone && notify_by_phone === true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error("Error adding work order notification recipient:", error);
+    res.status(500).json({ message: error.message || "Failed to add recipient" });
+  }
+});
+
+/**
+ * PATCH /api/admin/operations/settings/work-order-notifications/:id
+ * Update a recipient (name, email, phone, notify_by_email, notify_by_phone)
+ */
+router.patch("/settings/work-order-notifications/:id", async (req: AdminRequest, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+    const { name, email, phone, notify_by_email, notify_by_phone } = req.body;
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined && typeof name === "string") updates.name = name.trim();
+    if (email !== undefined && typeof email === "string") updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone != null && String(phone).trim() !== "" ? String(phone).trim() : null;
+    if (typeof notify_by_email === "boolean") updates.notify_by_email = notify_by_email;
+    if (typeof notify_by_phone === "boolean") updates.notify_by_phone = notify_by_phone;
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No valid fields to update" });
+    }
+    const { data, error } = await supabase
+      .from("ops_work_order_notification_recipients")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ message: "Recipient not found" });
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error updating work order notification recipient:", error);
+    res.status(500).json({ message: error.message || "Failed to update recipient" });
+  }
+});
+
+/**
+ * DELETE /api/admin/operations/settings/work-order-notifications/:id
+ * Remove a recipient
+ */
+router.delete("/settings/work-order-notifications/:id", async (req: AdminRequest, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+    const { error } = await supabase
+      .from("ops_work_order_notification_recipients")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting work order notification recipient:", error);
+    res.status(500).json({ message: error.message || "Failed to delete recipient" });
+  }
 });
 
 /**
@@ -115,7 +220,7 @@ router.get("/recent-addresses", async (req: AdminRequest, res) => {
  */
 router.get("/bols", async (req: AdminRequest, res) => {
   try {
-    const { status, dateFilter } = req.query;
+    const { status, dateFilter, client_tag } = req.query;
 
     let query = supabase
       .from('ops_bols')
@@ -125,6 +230,11 @@ router.get("/bols", async (req: AdminRequest, res) => {
     // Apply status filter
     if (status && status !== 'all') {
       query = query.eq('status', status);
+    }
+
+    // Apply client_tag filter
+    if (client_tag) {
+      query = query.eq('client_tag', client_tag);
     }
 
     // Apply date filter
@@ -197,7 +307,8 @@ router.post("/bols", async (req: AdminRequest, res) => {
       timeIn,
       timeOut,
       scaleOperatorInitials,
-      loadType
+      loadType,
+      clientTag
     } = req.body;
 
     // Validation
@@ -249,6 +360,7 @@ router.post("/bols", async (req: AdminRequest, res) => {
         time_out: timeOut,
         scale_operator_initials: scaleOperatorInitials,
         load_type: loadType || 'Outbound',
+        client_tag: clientTag || null,
         status: 'completed',
         created_by: createdBy
       })
@@ -359,6 +471,7 @@ router.patch("/bols/:id", async (req: AdminRequest, res) => {
       timeOut: "time_out",
       scaleOperatorInitials: "scale_operator_initials",
       loadType: "load_type",
+      clientTag: "client_tag",
       status: "status",
       orderId: "order_id"
     };
@@ -390,6 +503,58 @@ router.patch("/bols/:id", async (req: AdminRequest, res) => {
   } catch (error: any) {
     console.error('Error updating BOL:', error);
     res.status(500).json({ message: error.message || 'Failed to update BOL' });
+  }
+});
+
+/**
+ * GET /api/admin/operations/bols/:id/cods
+ * Get CODs linked to a specific BOL
+ */
+router.get("/bols/:id/cods", async (req: AdminRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get CODs linked by bol_id
+    const { data: directLinked, error: e1 } = await supabase
+      .from('ops_cods')
+      .select('id, cod_number, date_received, status, received_from, client_tag')
+      .eq('bol_id', id)
+      .order('created_at', { ascending: false });
+
+    if (e1) throw e1;
+
+    // Also get CODs that share the same client_tag and are from the same date
+    const { data: bol } = await supabase
+      .from('ops_bols')
+      .select('client_tag, date')
+      .eq('id', id)
+      .single();
+
+    let tagLinked: any[] = [];
+    if (bol?.client_tag) {
+      const { data } = await supabase
+        .from('ops_cods')
+        .select('id, cod_number, date_received, status, received_from, client_tag')
+        .eq('client_tag', bol.client_tag)
+        .is('bol_id', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      tagLinked = data || [];
+    }
+
+    // Merge and deduplicate
+    const allCods = [...(directLinked || []), ...tagLinked];
+    const seen = new Set<number>();
+    const unique = allCods.filter(c => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+
+    res.json(unique);
+  } catch (error: any) {
+    console.error('Error fetching linked CODs:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch linked CODs' });
   }
 });
 
@@ -690,325 +855,84 @@ function generateBOLHTML(bol: any): string {
   // Check if weight information is provided (non-zero values)
   const hasWeight = bol.gross_weight > 0 && bol.tare_weight > 0;
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${bol.bol_number} - Soil Seed and Water</title>
-  <style>
-    @page {
-      size: letter;
-      margin: 0.3in;
-    }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.4;
-      color: #000;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 3px solid #264027;
-    }
-    .logo-section {
-      flex: 1;
-    }
-    .company-name {
-      font-size: 22pt;
-      font-weight: bold;
-      color: #264027;
-      margin-bottom: 4px;
-    }
-    .tagline {
-      font-size: 10pt;
-      color: #6f732f;
-      margin-bottom: 8px;
-    }
-    .contact-info {
-      font-size: 9pt;
-      color: #333;
-    }
-    .doc-title {
-      text-align: right;
-      flex: 1;
-    }
-    .doc-title h1 {
-      font-size: 20pt;
-      color: #264027;
-      margin-bottom: 8px;
-    }
-    .bol-number {
-      font-size: 12pt;
-      font-weight: bold;
-      color: #000;
-      margin-bottom: 4px;
-    }
-    .doc-date {
-      font-size: 10pt;
-      color: #666;
-    }
-    .section {
-      margin-bottom: 18px;
-    }
-    .section-title {
-      font-size: 11pt;
-      font-weight: bold;
-      color: #264027;
-      background: #f8f9f8;
-      padding: 6px 10px;
-      border-left: 4px solid #264027;
-      margin-bottom: 8px;
-    }
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .info-row {
-      display: flex;
-      margin-bottom: 6px;
-      font-size: 10pt;
-    }
-    .label {
-      font-weight: bold;
-      width: 140px;
-      color: #333;
-    }
-    .value {
-      flex: 1;
-      color: #000;
-    }
-    .weight-summary {
-      background: #e8f5e9;
-      border: 2px solid #264027;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .weight-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      font-size: 11pt;
-    }
-    .weight-row.total {
-      border-top: 2px solid #264027;
-      margin-top: 8px;
-      padding-top: 10px;
-      font-weight: bold;
-      font-size: 13pt;
-    }
-    .signature-section {
-      margin-top: 30px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
-    }
-    .signature-box {
-      border-top: 1px solid #000;
-      padding-top: 6px;
-      min-height: 50px;
-    }
-    .signature-label {
-      font-size: 9pt;
-      color: #666;
-      margin-top: 4px;
-    }
-    .footer {
-      margin-top: 30px;
-      padding-top: 15px;
-      border-top: 1px solid #ccc;
-      font-size: 8pt;
-      color: #666;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo-section">
-      <div class="company-name">Soil Seed and Water</div>
-      <div class="tagline">Regenerative Soil Solutions</div>
-      <div class="contact-info">
-        18980 Stanton Rd, Congress, AZ 85332<br>
-        Phone: (928) 632-7125<br>
-        Email: info@soilseedandwater.com
-      </div>
-    </div>
-    <div class="doc-title">
-      <h1>Bill of Lading / Weight Ticket</h1>
-      <div class="bol-number">BOL #: ${bol.bol_number}</div>
-      <div class="doc-date">Date: ${formatDate(bol.date)}</div>
-      ${bol.reference_number ? `<div class="doc-date">Reference: ${bol.reference_number}</div>` : ''}
-    </div>
-  </div>
-
-  <div class="two-col">
-    <div>
-      <div class="section">
-        <div class="section-title">Origin</div>
-        <div class="info-row">
-          <span class="label">From:</span>
-          <span class="value">${bol.origin_location || 'SSW BioSoils'}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Address:</span>
-          <span class="value">${bol.origin_address}</span>
-        </div>
-        ${bol.origin_city || bol.origin_state || bol.origin_zip ? `
-        <div class="info-row">
-          <span class="label">City, State ZIP:</span>
-          <span class="value">${[bol.origin_city, bol.origin_state, bol.origin_zip].filter(Boolean).join(', ')}</span>
-        </div>
-        ` : ''}
-        <div class="info-row">
-          <span class="label">Phone:</span>
-          <span class="value">(928) 632-7125</span>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="section">
-        <div class="section-title">Destination</div>
-        <div class="info-row">
-          <span class="label">Customer:</span>
-          <span class="value">${bol.customer_name}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Address:</span>
-          <span class="value">${bol.destination_address}</span>
-        </div>
-        ${bol.destination_city || bol.destination_state || bol.destination_zip ? `
-        <div class="info-row">
-          <span class="label">City, State ZIP:</span>
-          <span class="value">${[bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ')}</span>
-        </div>
-        ` : ''}
-        ${bol.onsite_contact_name ? `
-        <div class="info-row">
-          <span class="label">On-Site Contact:</span>
-          <span class="value">${bol.onsite_contact_name}${bol.onsite_contact_phone ? ` - ${bol.onsite_contact_phone}` : ''}</span>
-        </div>
-        ` : ''}
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Material / Load Information</div>
-    <div class="info-row">
-      <span class="label">Material Type:</span>
-      <span class="value">${bol.material_type}</span>
-    </div>
-    ${bol.material_description ? `
-    <div class="info-row">
-      <span class="label">Description:</span>
-      <span class="value">${bol.material_description}</span>
-    </div>
-    ` : ''}
-    <div class="info-row">
-      <span class="label">Load Type:</span>
-      <span class="value">${bol.load_type}</span>
-    </div>
-  </div>
-
-  ${hasWeight ? `
-  <div class="weight-summary">
-    <div class="weight-row">
-      <span>Gross Weight:</span>
-      <span>${parseInt(bol.gross_weight).toLocaleString()} lbs</span>
-    </div>
-    <div class="weight-row">
-      <span>Tare Weight:</span>
-      <span>${parseInt(bol.tare_weight).toLocaleString()} lbs</span>
-    </div>
-    <div class="weight-row total">
-      <span>Net Weight:</span>
-      <span>${parseInt(bol.net_weight).toLocaleString()} lbs (${bol.net_weight_tons} tons)</span>
-    </div>
-  </div>
-  ` : ''}
-
-  <div class="two-col">
-    <div class="section">
-      <div class="section-title">Carrier Information</div>
-      <div class="info-row">
-        <span class="label">Carrier/Company:</span>
-        <span class="value">${bol.carrier_name || '_______________________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Driver Name:</span>
-        <span class="value">${bol.driver_name || '_______________________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Truck #:</span>
-        <span class="value">${bol.truck_number || '___________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">License Plate:</span>
-        <span class="value">${bol.license_plate || '___________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Trailer #:</span>
-        <span class="value">${bol.trailer_number || '___________'}</span>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Timing</div>
-      <div class="info-row">
-        <span class="label">Time In:</span>
-        <span class="value">${bol.time_in || '_______________________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Time Out:</span>
-        <span class="value">${bol.time_out || '_______________________'}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Scale Operator:</span>
-        <span class="value">${bol.scale_operator_initials || '_______________________'}</span>
-      </div>
-    </div>
-  </div>
-
-  ${bol.notes ? `
-  <div class="section">
-    <div class="section-title">Notes</div>
-    <div style="padding: 8px 10px; background: #fafafa; border-radius: 4px; font-size: 10pt;">
-      ${bol.notes}
-    </div>
-  </div>
-  ` : ''}
-
-  <div class="signature-section">
-    <div class="signature-box">
-      <div class="signature-label">Driver Signature</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-label">SSW Representative</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-label">Receiver Signature</div>
-    </div>
-  </div>
-
-  <div class="footer">
-    This document serves as a Bill of Lading${hasWeight ? ' and Weight Ticket' : ''} for the delivery of materials from Soil Seed and Water.
-  </div>
-</body>
-</html>
-  `;
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:12px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;color:#000}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #000;padding-bottom:12px;margin-bottom:12px}
+.logo-section h1{font-size:20px;font-weight:bold;margin-bottom:2px}
+.logo-section p{font-size:9px;color:#333}
+.bol-info{text-align:right}
+.bol-number{font-size:18px;font-weight:bold;font-family:monospace}
+.ref-number{font-size:14px;font-weight:bold;margin-top:4px;border:2px solid #000;padding:3px 8px;display:inline-block}
+.date{font-size:11px;color:#333;margin-top:3px}
+.section{margin-bottom:10px;border:1px solid #999;overflow:hidden}
+.section-header{padding:5px 10px;font-weight:bold;font-size:11px;text-transform:uppercase;border-bottom:1px solid #999}
+.section-content{padding:8px 10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:5px}
+.field-label{font-size:9px;color:#333;text-transform:uppercase;margin-bottom:1px}
+.field-value{font-size:12px;font-weight:bold}
+.weight-table{width:100%;border-collapse:collapse;margin-top:8px}
+.weight-table td{border:2px solid #000;padding:8px 12px;text-align:center}
+.weight-table .wt-label{font-size:10px;font-weight:bold;text-transform:uppercase}
+.weight-table .wt-value{font-size:22px;font-weight:bold;font-family:monospace}
+.weight-table .wt-unit{font-size:11px;font-weight:bold}
+.weight-table .wt-tons{font-size:16px;font-weight:bold;margin-top:2px}
+.signature-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:20px;padding-top:12px;border-top:1px solid #999}
+.signature-box{border-bottom:1px solid #000;padding-bottom:30px;margin-bottom:4px}
+.signature-label{font-size:10px;font-weight:bold}
+.footer{margin-top:15px;padding-top:8px;border-top:1px solid #999;font-size:8px;color:#333;text-align:center}
+@media print{body{padding:0}}
+</style>
+</head><body>
+<div class="header">
+<div class="logo-section"><h1>Soil Seed and Water</h1><p>18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com</p></div>
+<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${formatDate(bol.date)}</div>${bol.reference_number ? `<div class="ref-number">REF: ${bol.reference_number}</div>` : ''}</div>
+</div>
+<div class="two-col">
+<div class="section"><div class="section-header">Origin</div><div class="section-content">
+<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location || 'SSW BioSoils'}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address || ''}<br>${[bol.origin_city, bol.origin_state, bol.origin_zip].filter(Boolean).join(', ')}</div></div>
+</div></div>
+<div class="section"><div class="section-header">Destination</div><div class="section-content">
+<div class="field"><div class="field-label">Customer</div><div class="field-value">${bol.customer_name}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${[bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ')}</div></div>
+${bol.onsite_contact_name ? `<div class="field"><div class="field-label">Contact</div><div class="field-value">${bol.onsite_contact_name}${bol.onsite_contact_phone ? ' - ' + bol.onsite_contact_phone : ''}</div></div>` : ''}
+</div></div>
+</div>
+<div class="section"><div class="section-header">Material</div><div class="section-content">
+<div class="field"><div class="field-label">Type</div><div class="field-value" style="font-size:14px">${bol.material_type}</div></div>
+${bol.material_description ? `<div class="field"><div class="field-label">Description</div><div class="field-value">${bol.material_description}</div></div>` : ''}
+${bol.load_type ? `<div class="field"><div class="field-label">Load Type</div><div class="field-value">${bol.load_type}</div></div>` : ''}
+${hasWeight ? `<table class="weight-table"><tr>
+<td><div class="wt-label">Gross</div><div class="wt-value">${parseInt(bol.gross_weight).toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Tare</div><div class="wt-value">${parseInt(bol.tare_weight).toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Net Weight</div><div class="wt-value">${parseInt(bol.net_weight).toLocaleString()}</div><div class="wt-unit">lbs</div><div class="wt-tons">${bol.net_weight_tons} TONS</div></td>
+</tr></table>` : ''}
+</div></div>
+<div class="section"><div class="section-header">Carrier & Transport</div><div class="section-content">
+<div class="two-col">
+<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name || '________________________'}</div></div>
+${bol.driver_name ? `<div class="field"><div class="field-label">Driver</div><div class="field-value">${bol.driver_name}</div></div>` : ''}</div>
+<div>${bol.truck_number ? `<div class="field"><div class="field-label">Truck #</div><div class="field-value">${bol.truck_number}</div></div>` : ''}
+${bol.license_plate ? `<div class="field"><div class="field-label">License Plate</div><div class="field-value">${bol.license_plate}</div></div>` : ''}
+${bol.trailer_number ? `<div class="field"><div class="field-label">Trailer #</div><div class="field-value">${bol.trailer_number}</div></div>` : ''}</div>
+</div>
+<div class="two-col" style="margin-top:6px">
+<div class="field"><div class="field-label">Time In</div><div class="field-value">${bol.time_in || '________________________'}</div></div>
+<div class="field"><div class="field-label">Time Out</div><div class="field-value">${bol.time_out || '________________________'}</div></div>
+</div>
+${bol.scale_operator_initials ? `<div class="field" style="margin-top:4px"><div class="field-label">Scale Operator</div><div class="field-value">${bol.scale_operator_initials}</div></div>` : ''}</div></div>
+${bol.notes ? `<div class="section"><div class="section-header">Notes</div><div class="section-content"><div class="field-value">${bol.notes}</div></div></div>` : ''}
+<div class="signature-section">
+<div><div class="signature-box"></div><div class="signature-label">Shipper Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Driver Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Receiver Signature / Date</div></div>
+</div>
+<div class="footer">Bill of Lading${hasWeight ? ' / Weight Ticket' : ''} — Soil Seed and Water — ${bol.bol_number}</div>
+</body></html>`;
 }
 
 // ============================================
@@ -1041,7 +965,7 @@ async function generateCODNumber(): Promise<string> {
  */
 router.get("/cods", async (req: AdminRequest, res) => {
   try {
-    const { status, dateFilter } = req.query;
+    const { status, dateFilter, client_tag } = req.query;
 
     let query = supabase
       .from('ops_cods')
@@ -1051,6 +975,11 @@ router.get("/cods", async (req: AdminRequest, res) => {
     // Apply status filter
     if (status && status !== 'all') {
       query = query.eq('status', status);
+    }
+
+    // Apply client_tag filter
+    if (client_tag) {
+      query = query.eq('client_tag', client_tag);
     }
 
     // Apply date filter
@@ -1104,7 +1033,9 @@ router.post("/cods", async (req: AdminRequest, res) => {
       authorizedByName,
       authorizedByTitle,
       authorizedDate,
-      notes
+      notes,
+      clientTag,
+      bolId
     } = req.body;
 
     // Validation
@@ -1136,6 +1067,8 @@ router.post("/cods", async (req: AdminRequest, res) => {
         authorized_by_title: authorizedByTitle,
         authorized_date: authorizedDate,
         notes,
+        client_tag: clientTag || null,
+        bol_id: bolId ? parseInt(bolId) : null,
         status: 'completed',
         created_by: createdBy
       })
@@ -1227,7 +1160,9 @@ router.patch("/cods/:id", async (req: AdminRequest, res) => {
       authorizedByTitle: "authorized_by_title",
       authorizedDate: "authorized_date",
       notes: "notes",
-      status: "status"
+      status: "status",
+      clientTag: "client_tag",
+      bolId: "bol_id"
     };
 
     for (const [key, value] of Object.entries(updates)) {

@@ -1,2 +1,0 @@
-import{j as e}from"./ui-CBywRtvD.js";import{i as s}from"./vendor-gCfKI4W3.js";import{u as i}from"./index-5n6z2WFD.js";import{L as n}from"./loader-2-DxOxRs_S.js";function r({children:r}){const{admin:t,loading:a}=i();return a?e.jsx("div",{className:"flex items-center justify-center min-h-screen",children:e.jsx(n,{className:"w-8 h-8 animate-spin text-green-600"})}):t?e.jsx(e.Fragment,{children:r}):e.jsx(s,{to:"/admin/login"})}export{r as default};
-//# sourceMappingURL=ProtectedAdminRoute-CM1lDqNR.js.map

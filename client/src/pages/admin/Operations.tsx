@@ -27,6 +27,8 @@ interface BOL {
   status: string;
   created_at: string;
   carrier_name: string;
+  load_type: string;
+  client_tag: string;
 }
 
 export default function Operations() {
@@ -34,6 +36,11 @@ export default function Operations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [directionFilter, setDirectionFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('client') || 'all';
+  });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; ids: number[] }>({ show: false, ids: [] });
   const queryClient = useQueryClient();
@@ -56,13 +63,20 @@ export default function Operations() {
   });
 
   const filteredBOLs = bols?.filter(bol => {
+    // Direction filter
+    if (directionFilter !== 'all' && (bol.load_type || '').toLowerCase() !== directionFilter.toLowerCase()) return false;
+    // Client filter
+    if (clientFilter !== 'all' && (bol.client_tag || '') !== clientFilter) return false;
+    // Search
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       (bol.bol_number || '').toLowerCase().includes(query) ||
       (bol.customer_name || '').toLowerCase().includes(query) ||
       (bol.material_type || '').toLowerCase().includes(query) ||
-      (bol.destination_address || '').toLowerCase().includes(query)
+      (bol.destination_address || '').toLowerCase().includes(query) ||
+      (bol.load_type || '').toLowerCase().includes(query) ||
+      (bol.client_tag || '').toLowerCase().includes(query)
     );
   }) || [];
 
@@ -124,6 +138,28 @@ export default function Operations() {
     };
     const { label, className } = config[status] || { label: status, className: "bg-gray-100 text-gray-600" };
     return <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${className}`}>{label}</span>;
+  };
+
+  const getDirectionBadge = (loadType: string) => {
+    const config: Record<string, { label: string, className: string }> = {
+      Inbound: { label: "IN", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
+      Outbound: { label: "OUT", className: "bg-blue-50 text-blue-700 border border-blue-200" },
+      Transfer: { label: "TFR", className: "bg-amber-50 text-amber-700 border border-amber-200" },
+      Return: { label: "RTN", className: "bg-gray-100 text-gray-600 border border-gray-200" },
+    };
+    const { label, className } = config[loadType] || { label: loadType || '—', className: "bg-gray-50 text-gray-500" };
+    return <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide ${className}`}>{label}</span>;
+  };
+
+  const getClientBadge = (clientTag: string) => {
+    if (!clientTag) return null;
+    const config: Record<string, { label: string, className: string }> = {
+      vanguard: { label: "Vanguard", className: "bg-purple-50 text-purple-700" },
+      willcox: { label: "Willcox", className: "bg-orange-50 text-orange-700" },
+      '3lag': { label: "3LAG", className: "bg-indigo-50 text-indigo-700" },
+    };
+    const { label, className } = config[clientTag] || { label: clientTag, className: "bg-gray-50 text-gray-600" };
+    return <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${className}`}>{label}</span>;
   };
 
   // Calculate totals
@@ -216,6 +252,29 @@ export default function Operations() {
                   <SelectItem value="month" className="text-xs">This Month</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={directionFilter} onValueChange={setDirectionFilter}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue placeholder="Direction" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All Types</SelectItem>
+                  <SelectItem value="Inbound" className="text-xs">Inbound</SelectItem>
+                  <SelectItem value="Outbound" className="text-xs">Outbound</SelectItem>
+                  <SelectItem value="Transfer" className="text-xs">Transfer</SelectItem>
+                  <SelectItem value="Return" className="text-xs">Return</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue placeholder="Client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All Clients</SelectItem>
+                  <SelectItem value="vanguard" className="text-xs">Vanguard</SelectItem>
+                  <SelectItem value="willcox" className="text-xs">Willcox</SelectItem>
+                  <SelectItem value="3lag" className="text-xs">3LAG</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Table */}
@@ -248,6 +307,7 @@ export default function Operations() {
                         />
                       </th>
                       <th className="text-left py-2 px-3 font-medium text-gray-600">BOL #</th>
+                      <th className="text-center py-2 px-2 font-medium text-gray-600">Type</th>
                       <th className="text-left py-2 px-3 font-medium text-gray-600 hidden sm:table-cell">Date</th>
                       <th className="text-left py-2 px-3 font-medium text-gray-600">Customer</th>
                       <th className="text-left py-2 px-3 font-medium text-gray-600 hidden md:table-cell">Destination</th>
@@ -272,12 +332,20 @@ export default function Operations() {
                           />
                         </td>
                         <td className="py-2 px-3">
-                          <span className="font-mono font-medium text-[#264027]">
-                            {bol.bol_number || '—'}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-medium text-[#264027]">
+                              {bol.bol_number || '—'}
+                            </span>
+                            {bol.client_tag && getClientBadge(bol.client_tag)}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {getDirectionBadge(bol.load_type)}
                         </td>
                         <td className="py-2 px-3 text-gray-600 hidden sm:table-cell">
-                          {format(new Date(bol.date), 'MM/dd/yy')}
+                          <span title={bol.created_at ? format(new Date(bol.created_at), 'MMM d, yyyy h:mm a') : ''}>
+                            {format(new Date(bol.date), 'MM/dd/yy')}
+                          </span>
                         </td>
                         <td className="py-2 px-3 text-gray-900 max-w-[150px] truncate">
                           {bol.customer_name || '—'}

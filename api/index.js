@@ -1115,11 +1115,12 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       const admin = await verifyAdminToken(req);
       if (!admin) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { data, error } = await db
-        .from('ops_bols')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = db.from('ops_bols').select('*');
+      const clientTag = url.searchParams.get('client_tag');
+      if (clientTag) query = query.eq('client_tag', clientTag);
+      query = query.order('created_at', { ascending: false });
 
+      const { data, error } = await query;
       if (error) throw error;
       return res.json(data || []);
     }
@@ -1142,6 +1143,76 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         throw error;
       }
       return res.json(data);
+    }
+
+    // PATCH BOL
+    if (bolDetailMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const bolId = bolDetailMatch[1];
+      const updates = req.body;
+      const fieldMap = {
+        date: "date", originLocation: "origin_location", originAddress: "origin_address",
+        originCity: "origin_city", originState: "origin_state", originZip: "origin_zip",
+        customerName: "customer_name", destinationAddress: "destination_address",
+        destinationCity: "destination_city", destinationState: "destination_state",
+        destinationZip: "destination_zip", onsiteContactName: "onsite_contact_name",
+        onsiteContactPhone: "onsite_contact_phone", materialType: "material_type",
+        materialDescription: "material_description", grossWeight: "gross_weight",
+        tareWeight: "tare_weight", netWeight: "net_weight", netWeightTons: "net_weight_tons",
+        carrierName: "carrier_name", driverName: "driver_name", truckNumber: "truck_number",
+        licensePlate: "license_plate", trailerNumber: "trailer_number", notes: "notes",
+        referenceNumber: "reference_number", timeIn: "time_in", timeOut: "time_out",
+        scaleOperatorInitials: "scale_operator_initials", loadType: "load_type",
+        clientTag: "client_tag", status: "status", orderId: "order_id"
+      };
+
+      const snakeCaseUpdates = {};
+      for (const [key, value] of Object.entries(updates)) {
+        const snakeKey = fieldMap[key] || key;
+        if (fieldMap[key] || key === 'status') {
+          snakeCaseUpdates[snakeKey] = value;
+        }
+      }
+      snakeCaseUpdates.updated_at = new Date().toISOString();
+
+      const { data, error } = await db.from('ops_bols').update(snakeCaseUpdates).eq('id', bolId).select().single();
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // Get linked CODs for a BOL
+    const bolCodsMatch = path.match(/^\/api\/admin\/operations\/bols\/(\d+)\/cods$/);
+    if (bolCodsMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const bolId = bolCodsMatch[1];
+
+      // Get CODs linked by bol_id
+      const { data: directLinked } = await db.from('ops_cods')
+        .select('id, cod_number, date_received, status, received_from, client_tag')
+        .eq('bol_id', bolId).order('created_at', { ascending: false });
+
+      // Get the BOL's client_tag for related CODs
+      const { data: bol } = await db.from('ops_bols').select('client_tag, date').eq('id', bolId).single();
+
+      let tagLinked = [];
+      if (bol && bol.client_tag) {
+        const { data } = await db.from('ops_cods')
+          .select('id, cod_number, date_received, status, received_from, client_tag')
+          .eq('client_tag', bol.client_tag).is('bol_id', null)
+          .order('created_at', { ascending: false }).limit(10);
+        tagLinked = data || [];
+      }
+
+      // Merge and deduplicate
+      const allCods = [...(directLinked || []), ...tagLinked];
+      const seen = new Set();
+      const unique = allCods.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true; });
+
+      return res.json(unique);
     }
 
     // Create BOL
@@ -1186,6 +1257,11 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         trailer_number: bolData.trailerNumber || null,
         notes: bolData.notes || null,
         reference_number: bolData.referenceNumber || null,
+        time_in: bolData.timeIn || null,
+        time_out: bolData.timeOut || null,
+        scale_operator_initials: bolData.scaleOperatorInitials || null,
+        load_type: bolData.loadType || 'Outbound',
+        client_tag: bolData.clientTag || null,
         status: 'completed',
         created_by: admin.id
       };
@@ -1244,73 +1320,80 @@ Use "" for fields you cannot clearly read. NEVER guess.`
 <html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;background:white}
-.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #264027;padding-bottom:15px;margin-bottom:15px}
-.logo-section h1{font-size:20px;color:#264027;margin-bottom:3px}
-.logo-section p{font-size:9px;color:#666}
+body{font-family:Arial,sans-serif;font-size:12px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;color:#000}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #000;padding-bottom:12px;margin-bottom:12px}
+.logo-section h1{font-size:20px;font-weight:bold;margin-bottom:2px}
+.logo-section p{font-size:9px;color:#333}
 .bol-info{text-align:right}
-.bol-number{font-size:16px;font-weight:bold;font-family:monospace;color:#264027}
-.date{font-size:11px;color:#666;margin-top:3px}
-.section{margin-bottom:12px;border:1px solid #ddd;border-radius:4px;overflow:hidden}
-.section-header{background:#f5f5f5;padding:6px 10px;font-weight:bold;font-size:10px;text-transform:uppercase;color:#333;border-bottom:1px solid #ddd}
-.section-content{padding:10px}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-.field{margin-bottom:6px}
-.field-label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:1px}
-.field-value{font-size:11px;font-weight:500}
-.weight-summary{background:#1a1a1a;color:white;padding:12px;border-radius:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;margin-top:8px}
-.weight-box{padding:8px;border-radius:4px}
-.weight-box.gross,.weight-box.tare{background:rgba(255,255,255,0.1)}
-.weight-box.net{background:#264027}
-.weight-label{font-size:8px;text-transform:uppercase;opacity:0.8;margin-bottom:2px}
-.weight-value{font-size:16px;font-weight:bold;font-family:monospace}
-.weight-unit{font-size:8px;opacity:0.7}
-.signature-section{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;padding-top:15px;border-top:1px solid #ddd}
-.signature-box{border-bottom:1px solid #333;padding-bottom:30px;margin-bottom:5px}
-.signature-label{font-size:9px;color:#666}
-.footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:8px;color:#666;text-align:center}
-@media screen { body { background: #f0f0f0; padding: 20px; } }
+.bol-number{font-size:18px;font-weight:bold;font-family:monospace}
+.ref-number{font-size:14px;font-weight:bold;margin-top:4px;border:2px solid #000;padding:3px 8px;display:inline-block}
+.date{font-size:11px;color:#333;margin-top:3px}
+.section{margin-bottom:10px;border:1px solid #999;overflow:hidden}
+.section-header{padding:5px 10px;font-weight:bold;font-size:11px;text-transform:uppercase;border-bottom:1px solid #999}
+.section-content{padding:8px 10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:5px}
+.field-label{font-size:9px;color:#333;text-transform:uppercase;margin-bottom:1px}
+.field-value{font-size:12px;font-weight:bold}
+.weight-table{width:100%;border-collapse:collapse;margin-top:8px}
+.weight-table td{border:2px solid #000;padding:8px 12px;text-align:center}
+.weight-table .wt-label{font-size:10px;font-weight:bold;text-transform:uppercase}
+.weight-table .wt-value{font-size:22px;font-weight:bold;font-family:monospace}
+.weight-table .wt-unit{font-size:11px;font-weight:bold}
+.weight-table .wt-tons{font-size:16px;font-weight:bold;margin-top:2px}
+.signature-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:20px;padding-top:12px;border-top:1px solid #999}
+.signature-box{border-bottom:1px solid #000;padding-bottom:30px;margin-bottom:4px}
+.signature-label{font-size:10px;font-weight:bold}
+.footer{margin-top:15px;padding-top:8px;border-top:1px solid #999;font-size:8px;color:#333;text-align:center}
+@media print{body{padding:0}}
 </style>
 ${printScript}
 </head><body>
 <div class="header">
-<div class="logo-section"><h1>Soil Seed and Water</h1><p>1634 North 19th Avenue, Phoenix, AZ 85007 | info@soilseedandwater.com</p></div>
-<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div style="font-size:9px;color:#666;margin-top:3px">Ref: ${bol.reference_number}</div>`:''}</div>
+<div class="logo-section"><h1>Soil Seed and Water</h1><p>18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com</p></div>
+<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div class="ref-number">REF: ${bol.reference_number}</div>`:''}</div>
 </div>
 <div class="two-col">
 <div class="section"><div class="section-header">Origin</div><div class="section-content">
-<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location}</div></div>
-<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address}<br>${bol.origin_city}, ${bol.origin_state} ${bol.origin_zip}</div></div>
+<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location || 'SSW BioSoils'}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address || ''}<br>${[bol.origin_city, bol.origin_state, bol.origin_zip].filter(Boolean).join(', ')}</div></div>
 </div></div>
 <div class="section"><div class="section-header">Destination</div><div class="section-content">
 <div class="field"><div class="field-label">Customer</div><div class="field-value">${bol.customer_name}</div></div>
-<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${[bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ')}</div></div>
 ${bol.onsite_contact_name?`<div class="field"><div class="field-label">Contact</div><div class="field-value">${bol.onsite_contact_name}${bol.onsite_contact_phone?' - '+bol.onsite_contact_phone:''}</div></div>`:''}
 </div></div>
 </div>
 <div class="section"><div class="section-header">Material</div><div class="section-content">
-<div class="field"><div class="field-label">Type</div><div class="field-value">${bol.material_type}</div></div>
+<div class="field"><div class="field-label">Type</div><div class="field-value" style="font-size:14px">${bol.material_type}</div></div>
 ${bol.material_description?`<div class="field"><div class="field-label">Description</div><div class="field-value">${bol.material_description}</div></div>`:''}
-${hasWeight?`<div class="weight-summary">
-<div class="weight-box gross"><div class="weight-label">Gross</div><div class="weight-value">${bol.gross_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
-<div class="weight-box tare"><div class="weight-label">Tare</div><div class="weight-value">${bol.tare_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
-<div class="weight-box net"><div class="weight-label">Net</div><div class="weight-value">${bol.net_weight.toLocaleString()}</div><div class="weight-unit">${bol.net_weight_tons} tons</div></div>
-</div>`:''}
+${bol.load_type?`<div class="field"><div class="field-label">Load Type</div><div class="field-value">${bol.load_type}</div></div>`:''}
+${hasWeight?`<table class="weight-table"><tr>
+<td><div class="wt-label">Gross</div><div class="wt-value">${bol.gross_weight.toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Tare</div><div class="wt-value">${bol.tare_weight.toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Net Weight</div><div class="wt-value">${bol.net_weight.toLocaleString()}</div><div class="wt-unit">lbs</div><div class="wt-tons">${bol.net_weight_tons} TONS</div></td>
+</tr></table>`:''}
 </div></div>
 <div class="section"><div class="section-header">Carrier & Transport</div><div class="section-content">
 <div class="two-col">
-<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name}</div></div>
+<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name || '________________________'}</div></div>
 ${bol.driver_name?`<div class="field"><div class="field-label">Driver</div><div class="field-value">${bol.driver_name}</div></div>`:''}</div>
 <div>${bol.truck_number?`<div class="field"><div class="field-label">Truck #</div><div class="field-value">${bol.truck_number}</div></div>`:''}
 ${bol.license_plate?`<div class="field"><div class="field-label">License Plate</div><div class="field-value">${bol.license_plate}</div></div>`:''}
 ${bol.trailer_number?`<div class="field"><div class="field-label">Trailer #</div><div class="field-value">${bol.trailer_number}</div></div>`:''}</div>
-</div></div></div>
+</div>
+<div class="two-col" style="margin-top:6px">
+<div class="field"><div class="field-label">Time In</div><div class="field-value">${bol.time_in || '________________________'}</div></div>
+<div class="field"><div class="field-label">Time Out</div><div class="field-value">${bol.time_out || '________________________'}</div></div>
+</div>
+${bol.scale_operator_initials?`<div class="field" style="margin-top:4px"><div class="field-label">Scale Operator</div><div class="field-value">${bol.scale_operator_initials}</div></div>`:''}</div></div>
 ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div class="section-content"><div class="field-value">${bol.notes}</div></div></div>`:''}
 <div class="signature-section">
 <div><div class="signature-box"></div><div class="signature-label">Shipper Signature / Date</div></div>
 <div><div class="signature-box"></div><div class="signature-label">Driver Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Receiver Signature / Date</div></div>
 </div>
-<div class="footer">This document serves as a Bill of Lading${hasWeight?' and Weight Ticket':''} for the delivery of materials from Soil Seed and Water.</div>
+<div class="footer">Bill of Lading${hasWeight?' / Weight Ticket':''} — Soil Seed and Water — ${bol.bol_number}</div>
 </body></html>`;
 
       // Return HTML as PDF-ready content
@@ -1398,71 +1481,78 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
 <html><head><meta charset="UTF-8"><title>BOL ${bol.bol_number}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;background:white}
-.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #264027;padding-bottom:15px;margin-bottom:15px}
-.logo-section h1{font-size:20px;color:#264027;margin-bottom:3px}
-.logo-section p{font-size:9px;color:#666}
+body{font-family:Arial,sans-serif;font-size:12px;line-height:1.4;padding:20px;max-width:800px;margin:0 auto;color:#000}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #000;padding-bottom:12px;margin-bottom:12px}
+.logo-section h1{font-size:20px;font-weight:bold;margin-bottom:2px}
+.logo-section p{font-size:9px;color:#333}
 .bol-info{text-align:right}
-.bol-number{font-size:16px;font-weight:bold;font-family:monospace;color:#264027}
-.date{font-size:11px;color:#666;margin-top:3px}
-.section{margin-bottom:12px;border:1px solid #ddd;border-radius:4px;overflow:hidden}
-.section-header{background:#f5f5f5;padding:6px 10px;font-weight:bold;font-size:10px;text-transform:uppercase;color:#333;border-bottom:1px solid #ddd}
-.section-content{padding:10px}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-.field{margin-bottom:6px}
-.field-label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:1px}
-.field-value{font-size:11px;font-weight:500}
-.weight-summary{background:#1a1a1a;color:white;padding:12px;border-radius:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;margin-top:8px}
-.weight-box{padding:8px;border-radius:4px}
-.weight-box.gross,.weight-box.tare{background:rgba(255,255,255,0.1)}
-.weight-box.net{background:#264027}
-.weight-label{font-size:8px;text-transform:uppercase;opacity:0.8;margin-bottom:2px}
-.weight-value{font-size:16px;font-weight:bold;font-family:monospace}
-.weight-unit{font-size:8px;opacity:0.7}
-.signature-section{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;padding-top:15px;border-top:1px solid #ddd}
-.signature-box{border-bottom:1px solid #333;padding-bottom:30px;margin-bottom:5px}
-.signature-label{font-size:9px;color:#666}
-.footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:8px;color:#666;text-align:center}
+.bol-number{font-size:18px;font-weight:bold;font-family:monospace}
+.ref-number{font-size:14px;font-weight:bold;margin-top:4px;border:2px solid #000;padding:3px 8px;display:inline-block}
+.date{font-size:11px;color:#333;margin-top:3px}
+.section{margin-bottom:10px;border:1px solid #999;overflow:hidden}
+.section-header{padding:5px 10px;font-weight:bold;font-size:11px;text-transform:uppercase;border-bottom:1px solid #999}
+.section-content{padding:8px 10px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:5px}
+.field-label{font-size:9px;color:#333;text-transform:uppercase;margin-bottom:1px}
+.field-value{font-size:12px;font-weight:bold}
+.weight-table{width:100%;border-collapse:collapse;margin-top:8px}
+.weight-table td{border:2px solid #000;padding:8px 12px;text-align:center}
+.weight-table .wt-label{font-size:10px;font-weight:bold;text-transform:uppercase}
+.weight-table .wt-value{font-size:22px;font-weight:bold;font-family:monospace}
+.weight-table .wt-unit{font-size:11px;font-weight:bold}
+.weight-table .wt-tons{font-size:16px;font-weight:bold;margin-top:2px}
+.signature-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:20px;padding-top:12px;border-top:1px solid #999}
+.signature-box{border-bottom:1px solid #000;padding-bottom:30px;margin-bottom:4px}
+.signature-label{font-size:10px;font-weight:bold}
+.footer{margin-top:15px;padding-top:8px;border-top:1px solid #999;font-size:8px;color:#333;text-align:center}
 </style>
 </head><body>
 <div class="header">
-<div class="logo-section"><h1>Soil Seed and Water</h1><p>1634 North 19th Avenue, Phoenix, AZ 85007 | info@soilseedandwater.com</p></div>
-<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div style="font-size:9px;color:#666;margin-top:3px">Ref: ${bol.reference_number}</div>`:''}</div>
+<div class="logo-section"><h1>Soil Seed and Water</h1><p>18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com</p></div>
+<div class="bol-info"><div class="bol-number">${bol.bol_number}</div><div class="date">${new Date(bol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>${bol.reference_number?`<div class="ref-number">REF: ${bol.reference_number}</div>`:''}</div>
 </div>
 <div class="two-col">
 <div class="section"><div class="section-header">Origin</div><div class="section-content">
-<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location}</div></div>
-<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address}<br>${bol.origin_city}, ${bol.origin_state} ${bol.origin_zip}</div></div>
+<div class="field"><div class="field-label">Location</div><div class="field-value">${bol.origin_location || 'SSW BioSoils'}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.origin_address || ''}<br>${[bol.origin_city, bol.origin_state, bol.origin_zip].filter(Boolean).join(', ')}</div></div>
 </div></div>
 <div class="section"><div class="section-header">Destination</div><div class="section-content">
 <div class="field"><div class="field-label">Customer</div><div class="field-value">${bol.customer_name}</div></div>
-<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${bol.destination_city}, ${bol.destination_state} ${bol.destination_zip}</div></div>
+<div class="field"><div class="field-label">Address</div><div class="field-value">${bol.destination_address}<br>${[bol.destination_city, bol.destination_state, bol.destination_zip].filter(Boolean).join(', ')}</div></div>
 ${bol.onsite_contact_name?`<div class="field"><div class="field-label">Contact</div><div class="field-value">${bol.onsite_contact_name}${bol.onsite_contact_phone?' - '+bol.onsite_contact_phone:''}</div></div>`:''}
 </div></div>
 </div>
 <div class="section"><div class="section-header">Material</div><div class="section-content">
-<div class="field"><div class="field-label">Type</div><div class="field-value">${bol.material_type}</div></div>
+<div class="field"><div class="field-label">Type</div><div class="field-value" style="font-size:14px">${bol.material_type}</div></div>
 ${bol.material_description?`<div class="field"><div class="field-label">Description</div><div class="field-value">${bol.material_description}</div></div>`:''}
-${hasWeight?`<div class="weight-summary">
-<div class="weight-box gross"><div class="weight-label">Gross</div><div class="weight-value">${bol.gross_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
-<div class="weight-box tare"><div class="weight-label">Tare</div><div class="weight-value">${bol.tare_weight.toLocaleString()}</div><div class="weight-unit">lbs</div></div>
-<div class="weight-box net"><div class="weight-label">Net</div><div class="weight-value">${bol.net_weight.toLocaleString()}</div><div class="weight-unit">${bol.net_weight_tons} tons</div></div>
-</div>`:''}
+${bol.load_type?`<div class="field"><div class="field-label">Load Type</div><div class="field-value">${bol.load_type}</div></div>`:''}
+${hasWeight?`<table class="weight-table"><tr>
+<td><div class="wt-label">Gross</div><div class="wt-value">${bol.gross_weight.toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Tare</div><div class="wt-value">${bol.tare_weight.toLocaleString()}</div><div class="wt-unit">lbs</div></td>
+<td><div class="wt-label">Net Weight</div><div class="wt-value">${bol.net_weight.toLocaleString()}</div><div class="wt-unit">lbs</div><div class="wt-tons">${bol.net_weight_tons} TONS</div></td>
+</tr></table>`:''}
 </div></div>
 <div class="section"><div class="section-header">Carrier & Transport</div><div class="section-content">
 <div class="two-col">
-<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name}</div></div>
+<div><div class="field"><div class="field-label">Carrier</div><div class="field-value">${bol.carrier_name || '________________________'}</div></div>
 ${bol.driver_name?`<div class="field"><div class="field-label">Driver</div><div class="field-value">${bol.driver_name}</div></div>`:''}</div>
 <div>${bol.truck_number?`<div class="field"><div class="field-label">Truck #</div><div class="field-value">${bol.truck_number}</div></div>`:''}
 ${bol.license_plate?`<div class="field"><div class="field-label">License Plate</div><div class="field-value">${bol.license_plate}</div></div>`:''}
 ${bol.trailer_number?`<div class="field"><div class="field-label">Trailer #</div><div class="field-value">${bol.trailer_number}</div></div>`:''}</div>
-</div></div></div>
+</div>
+<div class="two-col" style="margin-top:6px">
+<div class="field"><div class="field-label">Time In</div><div class="field-value">${bol.time_in || '________________________'}</div></div>
+<div class="field"><div class="field-label">Time Out</div><div class="field-value">${bol.time_out || '________________________'}</div></div>
+</div>
+${bol.scale_operator_initials?`<div class="field" style="margin-top:4px"><div class="field-label">Scale Operator</div><div class="field-value">${bol.scale_operator_initials}</div></div>`:''}</div></div>
 ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div class="section-content"><div class="field-value">${bol.notes}</div></div></div>`:''}
 <div class="signature-section">
 <div><div class="signature-box"></div><div class="signature-label">Shipper Signature / Date</div></div>
 <div><div class="signature-box"></div><div class="signature-label">Driver Signature / Date</div></div>
+<div><div class="signature-box"></div><div class="signature-label">Receiver Signature / Date</div></div>
 </div>
-<div class="footer">This document serves as a Bill of Lading${hasWeight?' and Weight Ticket':''} for the delivery of materials from Soil Seed and Water.</div>
+<div class="footer">Bill of Lading${hasWeight?' / Weight Ticket':''} — Soil Seed and Water — ${bol.bol_number}</div>
 </body></html>`;
 
         // Use Puppeteer to generate PDF
@@ -1569,7 +1659,10 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
       if (!admin) return res.status(401).json({ error: 'Unauthorized' });
 
       try {
-        let query = db.from('ops_cods').select('*').order('created_at', { ascending: false });
+        let query = db.from('ops_cods').select('*');
+        const clientTag = url.searchParams.get('client_tag');
+        if (clientTag) query = query.eq('client_tag', clientTag);
+        query = query.order('created_at', { ascending: false });
         const { data, error } = await query;
         if (error) throw error;
         return res.json(data);
@@ -1585,7 +1678,7 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
       if (!admin) return res.status(401).json({ error: 'Unauthorized' });
 
       try {
-        const { dateReceived, receivedFrom, salesOrder, freightOrder, vanguardWorkOrder, destructionLocation, materials, authorizedByName, authorizedByTitle, authorizedDate, notes } = req.body || {};
+        const { dateReceived, receivedFrom, salesOrder, freightOrder, vanguardWorkOrder, destructionLocation, materials, authorizedByName, authorizedByTitle, authorizedDate, notes, clientTag, bolId } = req.body || {};
 
         if (!receivedFrom || !destructionLocation || !materials || materials.length === 0) {
           return res.status(400).json({ error: 'Missing required fields' });
@@ -1612,6 +1705,8 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
           authorized_by_title: authorizedByTitle,
           authorized_date: authorizedDate,
           notes,
+          client_tag: clientTag || null,
+          bol_id: bolId ? parseInt(bolId) : null,
           status: 'completed',
           created_by: admin.email || 'admin'
         }).select().single();
@@ -1658,7 +1753,8 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
           freightOrder: 'freight_order', vanguardWorkOrder: 'vanguard_work_order',
           destructionLocation: 'destruction_location', materials: 'materials',
           authorizedByName: 'authorized_by_name', authorizedByTitle: 'authorized_by_title',
-          authorizedDate: 'authorized_date', notes: 'notes', status: 'status'
+          authorizedDate: 'authorized_date', notes: 'notes', status: 'status',
+          clientTag: 'client_tag', bolId: 'bol_id'
         };
         const dbUpdates = { updated_at: new Date().toISOString() };
         for (const [key, value] of Object.entries(updates)) {

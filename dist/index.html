@@ -13,20 +13,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <meta
       name="description"
-      content="Arizona's leading wholesale supplier of organic soil amendments, compost, and potting soil in bulk quantities. Serving landscapers, growers, farms, nurseries and golf courses with pallets, supersacks, and truckloads."
+      content="Arizona-made organic compost and soil amendments. Local wholesale supplier of premium bulk compost, worm castings, and potting soil. Serving Arizona landscapers, growers, farms, nurseries, and government projects. Made in Arizona."
     />
-    <title>Organic Soil Wholesale | Bulk Soil Amendments for Commercial Growers & Landscapers</title>
-    <meta name="keywords" content="bulk organic soil, wholesale compost, commercial soil supplier, landscaping soil, worm castings wholesale, dairy compost, soil amendments, potting soil bulk, truckload soil delivery, supersack soil, pallets of soil, commercial landscapers, golf course soil, nursery suppliers, Arizona soil wholesaler" />
+    <title>Arizona-Made Organic Compost | Wholesale Bulk Soil Supplier | Local AZ Compost</title>
+    <meta name="keywords" content="Arizona compost, Arizona made soil, local compost Arizona, bulk organic soil, wholesale compost Phoenix, commercial soil supplier Arizona, landscaping soil AZ, worm castings wholesale, dairy compost Arizona, soil amendments Arizona, potting soil bulk, truckload soil delivery, supersack soil, pallets of soil, commercial landscapers, golf course soil, nursery suppliers, Arizona soil wholesaler, HB 2819, state compost requirements" />
     <meta name="robots" content="index, follow" />
     <meta name="author" content="Organic Soil Wholesale" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./favicon.png" />
+    <link rel="shortcut icon" href="./favicon.ico" />
+    <link rel="manifest" href="./site.webmanifest" />
     <meta name="msapplication-TileColor" content="#7BA05B" />
     <meta name="theme-color" content="#7BA05B" />
 
@@ -48,22 +48,22 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://organicsoilwholesale.com" />
-    <meta property="og:title" content="Organic Soil Wholesale | Premium Bulk Soil Products for Commercial Use" />
+    <meta property="og:title" content="Arizona-Made Organic Compost | Wholesale Bulk Soil Supplier" />
     <meta
       property="og:description"
-      content="Arizona's premier supplier of organic soil products in bulk quantities. Serving commercial growers, landscapers, nurseries and farms with pallet, supersack and truckload delivery options."
+      content="Locally produced organic compost and soil amendments in Arizona. Serving commercial growers, landscapers, nurseries, farms, and government projects with bulk delivery options."
     />
     <meta property="og:image" content="https://organicsoilwholesale.com/images/og-image.jpg" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:site_name" content="Organic Soil Wholesale" />
+    <meta property="og:site_name" content="Organic Soil Wholesale - Made in Arizona" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://organicsoilwholesale.com" />
-    <meta property="twitter:title" content="Organic Soil Wholesale | Bulk Soil Products for Commercial Applications" />
+    <meta property="twitter:title" content="Arizona-Made Organic Compost | Local Wholesale Supplier" />
     <meta
       property="twitter:description"
-      content="Bulk organic soil amendments, compost and potting soil for landscapers, farms and commercial growers. Available in pallets, supersacks and truckloads."
+      content="Arizona-produced organic compost and soil amendments for landscapers, farms, and commercial growers. Available in pallets, supersacks, and truckloads."
     />
     <meta property="twitter:image" content="https://organicsoilwholesale.com/images/twitter-image.jpg" />
 
@@ -148,16 +148,37 @@
         }
       }
     </script>
-    <script type="module" crossorigin src="/assets/index-C7MrCqw3.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-gCfKI4W3.js">
-    <link rel="modulepreload" crossorigin href="/assets/ui-CBywRtvD.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-42ViemXf.css">
+    <script type="module" crossorigin src="./assets/index-Bn4LM8fE.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/vendor-DqMDzI7g.js">
+    <link rel="modulepreload" crossorigin href="./assets/ui-Bx0BV8ua.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-CwIKy0uy.css">
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MRVDQ73P"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
+
+    <!-- Exclude ONLY contact card landing pages from phone tracking -->
+    <script>
+      // Set exclusion attributes immediately before React loads
+      (function() {
+        const path = window.location.pathname;
+        // Exclude ONLY contact card landing pages (not admin pages)
+        if (path.startsWith('/rep/')) {
+          document.documentElement.setAttribute('data-callrail-ignore', 'true');
+          document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
+          document.documentElement.setAttribute('data-call-tracking-ignore', 'true');
+          document.documentElement.classList.add('no-call-tracking');
+          if (document.body) {
+            document.body.setAttribute('data-callrail-ignore', 'true');
+            document.body.setAttribute('data-dynamic-number-ignore', 'true');
+            document.body.setAttribute('data-call-tracking-ignore', 'true');
+            document.body.classList.add('no-call-tracking');
+          }
+        }
+      })();
+    </script>
 
     <div id="root"></div>
   </body>

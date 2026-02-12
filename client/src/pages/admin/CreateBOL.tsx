@@ -73,6 +73,7 @@ interface BOLFormData {
   timeOut: string;
   scaleOperatorInitials: string;
   loadType: string;
+  clientTag: string;
   orderId: string;
 }
 
@@ -148,6 +149,7 @@ export default function CreateBOL() {
     timeOut: '',
     scaleOperatorInitials: '',
     loadType: 'Outbound',
+    clientTag: '',
     orderId: ''
   });
 
@@ -278,6 +280,7 @@ export default function CreateBOL() {
         timeOut: '',
         scaleOperatorInitials: sourceBol.scale_operator_initials || '',
         loadType: sourceBol.load_type || 'Outbound',
+        clientTag: sourceBol.client_tag || '',
         orderId: sourceBol.order_id || ''
       });
     }
@@ -667,18 +670,34 @@ export default function CreateBOL() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="loadType">Load Type</Label>
-                      <Select value={formData.loadType} onValueChange={(v) => handleChange('loadType', v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select load type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LOAD_TYPES.map(type => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="loadType">Load Type</Label>
+                        <Select value={formData.loadType} onValueChange={(v) => handleChange('loadType', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select load type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LOAD_TYPES.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="clientTag">Client / Deal</Label>
+                        <Select value={formData.clientTag || 'none'} onValueChange={(v) => handleChange('clientTag', v === 'none' ? '' : v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="vanguard">Vanguard / Tyson</SelectItem>
+                            <SelectItem value="willcox">Willcox Pistachio</SelectItem>
+                            <SelectItem value="3lag">Jack / 3LAG</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="materialDescription">Material Description</Label>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle, Copy } from 'lucide-react';
+import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle, Copy, ShieldCheck, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,8 @@ interface BOLDetails {
   notes: string;
   reference_number: string;
   status: string;
+  load_type: string;
+  client_tag: string;
   created_at: string;
   created_by: string;
   sent_to_email?: string;
@@ -78,6 +80,20 @@ export default function ViewBOL() {
       if (!response.ok) throw new Error('Failed to fetch BOL');
       return response.json();
     }
+  });
+
+  // Fetch linked CODs for this BOL
+  const { data: linkedCODs } = useQuery<Array<{ id: number; cod_number: string; date_received: string; status: string; received_from: string }>>({
+    queryKey: ['bol-cods', id],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/operations/bols/${id}/cods`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!id
   });
 
   // Status update mutation
@@ -328,6 +344,25 @@ export default function ViewBOL() {
                   <div className="flex items-center gap-2">
                     <h1 className="text-lg font-bold font-mono text-[#264027]">{bol.bol_number}</h1>
                     {getStatusBadge(bol.status)}
+                    {bol.load_type && (
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide ${
+                        bol.load_type === 'Inbound' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        bol.load_type === 'Outbound' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        'bg-gray-100 text-gray-600 border border-gray-200'
+                      }`}>
+                        {bol.load_type === 'Inbound' ? 'INBOUND' : bol.load_type === 'Outbound' ? 'OUTBOUND' : bol.load_type.toUpperCase()}
+                      </span>
+                    )}
+                    {bol.client_tag && (
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                        bol.client_tag === 'vanguard' ? 'bg-purple-50 text-purple-700' :
+                        bol.client_tag === 'willcox' ? 'bg-orange-50 text-orange-700' :
+                        bol.client_tag === '3lag' ? 'bg-indigo-50 text-indigo-700' :
+                        'bg-gray-50 text-gray-600'
+                      }`}>
+                        {bol.client_tag === 'vanguard' ? 'Vanguard' : bol.client_tag === 'willcox' ? 'Willcox' : bol.client_tag === '3lag' ? '3LAG' : bol.client_tag}
+                      </span>
+                    )}
                   </div>
                   {nextStatus && (
                     <Button
@@ -486,6 +521,35 @@ export default function ViewBOL() {
                   <div className="bg-yellow-50 rounded-md border border-yellow-200 p-3">
                     <div className="text-[10px] font-semibold text-yellow-700 uppercase tracking-wide mb-1">Notes</div>
                     <div className="text-xs text-gray-700 whitespace-pre-wrap">{bol.notes}</div>
+                  </div>
+                )}
+
+                {/* Linked CODs */}
+                {linkedCODs && linkedCODs.length > 0 && (
+                  <div className="bg-white rounded-md border border-gray-200 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />
+                      <span className="text-xs font-semibold text-gray-700">Linked CODs</span>
+                      <span className="text-[10px] text-gray-400 ml-1">({linkedCODs.length})</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {linkedCODs.map(cod => (
+                        <button
+                          key={cod.id}
+                          onClick={() => navigate(`/admin/operations/cods/${cod.id}`)}
+                          className="w-full flex items-center justify-between p-2 rounded bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Link className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs font-mono font-medium text-purple-700">{cod.cod_number}</span>
+                            <span className="text-[10px] text-gray-500">{cod.received_from}</span>
+                          </div>
+                          <span className="text-[10px] text-gray-400">
+                            {format(new Date(cod.date_received), 'MM/dd/yy')}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

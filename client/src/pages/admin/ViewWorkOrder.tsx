@@ -10,6 +10,16 @@ import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 import { format } from 'date-fns';
 
+interface WorkOrderLine {
+  id: number;
+  product_name: string | null;
+  size_category: string;
+  size_category_name: string | null;
+  quantity: number;
+  quantity_type: string;
+  total_weight_lbs: number | null;
+}
+
 interface WorkOrderDetails {
   id: number;
   wo_number: string;
@@ -41,6 +51,7 @@ interface WorkOrderDetails {
   created_by: string;
   created_at: string;
   updated_at: string;
+  lines?: WorkOrderLine[];
 }
 
 export default function ViewWorkOrder() {
@@ -292,63 +303,88 @@ export default function ViewWorkOrder() {
 
               {/* Work Order Details */}
               <div className="space-y-3">
-                {/* Product Information */}
-                <div className="bg-white rounded-md border border-gray-200 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Package className="w-3.5 h-3.5 text-[#264027]" />
-                    <span className="text-xs font-semibold text-gray-700">Product</span>
-                  </div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {workOrder.product_name || 'Custom Order'}
-                  </div>
-                  {workOrder.product_id && (
-                    <div className="text-xs text-gray-500 font-mono">{workOrder.product_id}</div>
-                  )}
-                  {workOrder.ingredient_ratios && (
-                    <div className="text-xs text-gray-600 mt-1">{workOrder.ingredient_ratios}</div>
-                  )}
-                  {workOrder.custom_notes && (
-                    <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
-                      {workOrder.custom_notes}
-                    </div>
-                  )}
-                </div>
-
-                {/* Size & Quantity */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Line items (when multiple) or single Product / Size & Quantity */}
+                {workOrder.lines && workOrder.lines.length > 0 ? (
                   <div className="bg-white rounded-md border border-gray-200 p-3">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <Ruler className="w-3.5 h-3.5 text-[#6f732f]" />
-                      <span className="text-xs font-semibold text-gray-700">Size Category</span>
+                      <Package className="w-3.5 h-3.5 text-[#264027]" />
+                      <span className="text-xs font-semibold text-gray-700">Line items</span>
                     </div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {workOrder.size_category_name || workOrder.size_category}
+                    <div className="space-y-2">
+                      {workOrder.lines.map((line, i) => (
+                        <div key={line.id} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-900">{line.product_name || 'Custom'}</span>
+                            <span className="text-gray-500 ml-1">— {line.size_category_name || line.size_category}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-medium text-[#264027]">{line.quantity} {line.quantity_type === 'pallet' ? 'Pallet' : 'Unit'}{line.quantity > 1 ? 's' : ''}</span>
+                            {line.total_weight_lbs != null && (
+                              <div className="text-xs text-gray-500">{line.total_weight_lbs.toLocaleString()} lbs</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    {workOrder.units_per_pallet && (
-                      <div className="text-xs text-gray-500">
-                        {workOrder.units_per_pallet} units/pallet
-                      </div>
-                    )}
-                    {workOrder.estimated_pallet_weight && (
-                      <div className="text-xs text-gray-500">
-                        ~{workOrder.estimated_pallet_weight}
+                    {workOrder.total_weight_lbs > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 text-sm font-medium text-[#264027]">
+                        Total: {workOrder.total_weight_lbs.toLocaleString()} lbs
                       </div>
                     )}
                   </div>
-
-                  <div className="bg-white rounded-md border border-gray-200 p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Hash className="w-3.5 h-3.5 text-[#b38a58]" />
-                      <span className="text-xs font-semibold text-gray-700">Quantity</span>
+                ) : (
+                  <>
+                    <div className="bg-white rounded-md border border-gray-200 p-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Package className="w-3.5 h-3.5 text-[#264027]" />
+                        <span className="text-xs font-semibold text-gray-700">Product</span>
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {workOrder.product_name || 'Custom Order'}
+                      </div>
+                      {workOrder.product_id && (
+                        <div className="text-xs text-gray-500 font-mono">{workOrder.product_id}</div>
+                      )}
+                      {workOrder.ingredient_ratios && (
+                        <div className="text-xs text-gray-600 mt-1">{workOrder.ingredient_ratios}</div>
+                      )}
+                      {workOrder.custom_notes && (
+                        <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600">
+                          {workOrder.custom_notes}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-2xl font-bold text-[#264027]">
-                      {workOrder.quantity}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white rounded-md border border-gray-200 p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Ruler className="w-3.5 h-3.5 text-[#6f732f]" />
+                          <span className="text-xs font-semibold text-gray-700">Size Category</span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {workOrder.size_category_name || workOrder.size_category}
+                        </div>
+                        {workOrder.units_per_pallet && (
+                          <div className="text-xs text-gray-500">
+                            {workOrder.units_per_pallet} units/pallet
+                          </div>
+                        )}
+                        {workOrder.estimated_pallet_weight && (
+                          <div className="text-xs text-gray-500">~{workOrder.estimated_pallet_weight}</div>
+                        )}
+                      </div>
+                      <div className="bg-white rounded-md border border-gray-200 p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Hash className="w-3.5 h-3.5 text-[#b38a58]" />
+                          <span className="text-xs font-semibold text-gray-700">Quantity</span>
+                        </div>
+                        <div className="text-2xl font-bold text-[#264027]">{workOrder.quantity}</div>
+                        <div className="text-xs text-gray-500">
+                          {workOrder.quantity_type === 'pallet' ? 'Pallet' : 'Unit'}{workOrder.quantity > 1 ? 's' : ''}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {workOrder.quantity_type === 'pallet' ? 'Pallet' : 'Unit'}{workOrder.quantity > 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 {/* Weight Calculation */}
                 {workOrder.total_weight_lbs > 0 && (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Printer, Eye, Search, Trash2, X } from 'lucide-react';
+import { ClipboardList, Plus, Printer, Eye, Pencil, Search, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -350,6 +350,16 @@ export default function WorkOrders() {
                               title="View Details"
                             >
                               <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/operations/work-orders/${wo.id}`);
+                              }}
+                              className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-[#264027] transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={(e) => handleDeleteClick(e, [wo.id])}

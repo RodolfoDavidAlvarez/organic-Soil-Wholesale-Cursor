@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Plus, Trash2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,8 @@ interface CODFormData {
   authorizedByTitle: string;
   authorizedDate: string;
   notes: string;
+  clientTag: string;
+  bolId: string;
 }
 
 const DESTRUCTION_LOCATIONS = [
@@ -39,6 +41,9 @@ const DESTRUCTION_LOCATIONS = [
 ];
 
 const COMMON_MATERIALS = [
+  'Corn Dogs',
+  'Frozen Food Products',
+  'Poultry Products',
   'Organic Food Waste',
   'Green Waste',
   'Agricultural Waste',
@@ -47,6 +52,7 @@ const COMMON_MATERIALS = [
   'Expired Food Products',
   'Packaging Materials',
   'Wood Waste',
+  'Dog Food / Pet Food',
   'Other Organic Material'
 ];
 
@@ -76,7 +82,22 @@ export default function CreateCOD() {
     authorizedByName: '',
     authorizedByTitle: '',
     authorizedDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    clientTag: '',
+    bolId: ''
+  });
+
+  // Fetch recent BOLs for linking
+  const { data: recentBOLs } = useQuery<Array<{ id: number; bol_number: string; customer_name: string; date: string }>>({
+    queryKey: ['recent-bols-for-cod'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/operations/bols?dateFilter=3months', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return [];
+      return response.json();
+    }
   });
 
   const createCODMutation = useMutation({
@@ -285,6 +306,46 @@ export default function CreateCOD() {
                         placeholder="e.g., WO-2026-001"
                         className="text-sm"
                       />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Associations */}
+                <Card>
+                  <CardHeader className="px-4 py-4">
+                    <CardTitle className="text-base md:text-lg">Associations</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">Link this COD to a client and BOL</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4 px-4 pb-4">
+                    <div>
+                      <Label htmlFor="clientTag" className="text-xs md:text-sm">Client / Deal</Label>
+                      <Select value={formData.clientTag || 'none'} onValueChange={(v) => handleChange('clientTag', v === 'none' ? '' : v)}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="vanguard">Vanguard / Tyson</SelectItem>
+                          <SelectItem value="willcox">Willcox Pistachio</SelectItem>
+                          <SelectItem value="3lag">Jack / 3LAG</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="bolId" className="text-xs md:text-sm">Link to BOL (Optional)</Label>
+                      <Select value={formData.bolId || 'none'} onValueChange={(v) => handleChange('bolId', v === 'none' ? '' : v)}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select BOL" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No linked BOL</SelectItem>
+                          {(recentBOLs || []).map(bol => (
+                            <SelectItem key={bol.id} value={String(bol.id)}>
+                              {bol.bol_number} — {bol.customer_name} ({bol.date})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </CardContent>
                 </Card>

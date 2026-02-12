@@ -32,6 +32,8 @@ interface COD {
   notes: string;
   status: string;
   created_at: string;
+  client_tag: string;
+  bol_id: number;
 }
 
 export default function CODs() {
@@ -39,6 +41,10 @@ export default function CODs() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('client') || 'all';
+  });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; ids: number[] }>({ show: false, ids: [] });
   const queryClient = useQueryClient();
@@ -61,13 +67,15 @@ export default function CODs() {
   });
 
   const filteredCODs = cods?.filter(cod => {
+    if (clientFilter !== 'all' && (cod.client_tag || '') !== clientFilter) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       (cod.cod_number || '').toLowerCase().includes(query) ||
       (cod.received_from || '').toLowerCase().includes(query) ||
       (cod.destruction_location || '').toLowerCase().includes(query) ||
-      (cod.vanguard_work_order || '').toLowerCase().includes(query)
+      (cod.vanguard_work_order || '').toLowerCase().includes(query) ||
+      (cod.client_tag || '').toLowerCase().includes(query)
     );
   }) || [];
 
@@ -219,6 +227,17 @@ export default function CODs() {
                   <SelectItem value="month" className="text-xs">This Month</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue placeholder="Client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All Clients</SelectItem>
+                  <SelectItem value="vanguard" className="text-xs">Vanguard</SelectItem>
+                  <SelectItem value="willcox" className="text-xs">Willcox</SelectItem>
+                  <SelectItem value="3lag" className="text-xs">3LAG</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Table */}
@@ -275,9 +294,21 @@ export default function CODs() {
                           />
                         </td>
                         <td className="py-2 px-3">
-                          <span className="font-mono font-medium text-[#264027]">
-                            {cod.cod_number || '—'}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-medium text-[#264027]">
+                              {cod.cod_number || '—'}
+                            </span>
+                            {cod.client_tag && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                cod.client_tag === 'vanguard' ? 'bg-purple-50 text-purple-700' :
+                                cod.client_tag === 'willcox' ? 'bg-orange-50 text-orange-700' :
+                                cod.client_tag === '3lag' ? 'bg-indigo-50 text-indigo-700' :
+                                'bg-gray-50 text-gray-600'
+                              }`}>
+                                {cod.client_tag === 'vanguard' ? 'Vanguard' : cod.client_tag === 'willcox' ? 'Willcox' : cod.client_tag === '3lag' ? '3LAG' : cod.client_tag}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-2 px-3 text-gray-600 hidden sm:table-cell">
                           {format(new Date(cod.date_received), 'MM/dd/yy')}
