@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { sendAdminQuoteRequestNotification } from '../services/email.js';
+import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
 
 const router = Router();
 
@@ -63,6 +64,23 @@ router.post('/submit', async (req, res) => {
       console.error('Failed to send admin notification:', emailError);
       // Don't fail the submission if email fails
     }
+
+    const productSummary = Array.isArray(products)
+      ? products.map((p: any, i: number) => `${p} x ${Array.isArray(quantities) ? quantities[i] : ''}`).join(', ')
+      : String(products);
+    forwardToMosLeads({
+      full_name: name,
+      email,
+      phone: phone || undefined,
+      company: company || undefined,
+      message:
+        `Quote request:\n${productSummary}` +
+        (deliveryLocation ? `\nDelivery: ${deliveryLocation}` : '') +
+        (notes ? `\nNotes: ${notes}` : ''),
+      source: 'osw_quote_request',
+      source_url: 'https://organicsoilwholesale.com/quote',
+      source_data: { osw_quote_request_id: data.id, products, quantities, deliveryLocation },
+    });
 
     res.json({ 
       success: true, 

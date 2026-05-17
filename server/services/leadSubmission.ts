@@ -1,5 +1,6 @@
 import { supabase } from "../db/supabase.js";
 import { sendAdminLeadNotification } from "./emailNotifications.js";
+import { forwardToMosLeads } from "./forwardToMosLeads.js";
 
 export interface LeadSubmissionPayload {
   name?: string;
@@ -69,6 +70,16 @@ export async function processLeadSubmission(
   } catch (notificationError) {
     console.error("Failed to send admin notification:", notificationError);
   }
+
+  forwardToMosLeads({
+    full_name: name,
+    email,
+    phone,
+    message: notes || undefined,
+    source: 'osw_lead_form',
+    source_url: 'https://organicsoilwholesale.com/',
+    source_data: { osw_contact_message_id: data.id },
+  });
 
   return {
     leadId: data.id,
