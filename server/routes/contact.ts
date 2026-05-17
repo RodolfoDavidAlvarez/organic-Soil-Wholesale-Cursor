@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { sendAdminContactFormNotification } from '../services/email.js';
+import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
 
 const router = Router();
 
@@ -59,6 +60,17 @@ router.post('/submit', async (req, res) => {
       console.error('Failed to send admin notification:', emailError);
       // Don't fail the submission if email fails
     }
+
+    forwardToMosLeads({
+      full_name: name,
+      email,
+      phone: phone || undefined,
+      company: company || undefined,
+      message: subject ? `${subject}\n\n${message}` : message,
+      source: 'osw_contact_form',
+      source_url: 'https://organicsoilwholesale.com/contact',
+      source_data: { osw_contact_submission_id: data.id, subject },
+    });
 
     res.json({ 
       success: true, 
