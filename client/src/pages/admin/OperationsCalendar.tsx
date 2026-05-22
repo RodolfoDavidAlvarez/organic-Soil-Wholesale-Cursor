@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
+import {
+  format,
+  addDays,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isSameDay,
+  isSameMonth,
+  parseISO,
+  isToday
+} from 'date-fns';
 import { useLocation } from 'wouter';
 import { Calendar, ChevronLeft, ChevronRight, Truck, Package, MapPin, User, Phone, Clock, Plus, Pencil, Trash2, Save, Link2, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -93,17 +106,33 @@ const emptyLoad: Omit<ScheduledLoad, 'id'> = {
   notes: ''
 };
 
+// Build the full month grid (6 rows x 7 cols = 42 days, including padding from prev/next months)
+function getMonthGrid(date: Date): Date[] {
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const days: Date[] = [];
+  let current = gridStart;
+  while (current <= gridEnd) {
+    days.push(current);
+    current = addDays(current, 1);
+  }
+  return days;
+}
+
 export default function OperationsCalendar() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
-  // Parse week from URL query param
+  // Parse month from URL query param
   const getInitialDate = () => {
     const params = new URLSearchParams(window.location.search);
-    const weekParam = params.get('week');
-    if (weekParam) {
+    const monthParam = params.get('month') || params.get('week');
+    if (monthParam) {
       try {
-        return parseISO(weekParam);
+        return parseISO(monthParam);
       } catch {
         return new Date();
       }
@@ -119,19 +148,19 @@ export default function OperationsCalendar() {
   const [newLoad, setNewLoad] = useState<Omit<ScheduledLoad, 'id'>>(emptyLoad);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Get week days
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Build month grid
+  const monthGrid = getMonthGrid(currentDate);
+  const gridStart = monthGrid[0];
+  const gridEnd = monthGrid[monthGrid.length - 1];
 
-  // Fetch scheduled loads for the current week
+  // Fetch scheduled loads for the visible month grid range
   const { data: loads = [], isLoading, error } = useQuery<ScheduledLoad[]>({
-    queryKey: ['scheduled-loads', format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd')],
+    queryKey: ['scheduled-loads', format(gridStart, 'yyyy-MM-dd'), format(gridEnd, 'yyyy-MM-dd')],
     queryFn: async () => {
       const token = localStorage.getItem('adminToken');
       const params = new URLSearchParams({
-        weekStart: format(weekStart, 'yyyy-MM-dd'),
-        weekEnd: format(addDays(weekEnd, 1), 'yyyy-MM-dd') // Add 1 day to include end date
+        weekStart: format(gridStart, 'yyyy-MM-dd'),
+        weekEnd: format(addDays(gridEnd, 1), 'yyyy-MM-dd') // Add 1 day to include end date
       });
 
       const response = await fetch(`/api/admin/operations/scheduled-loads?${params}`, {
@@ -206,16 +235,16 @@ export default function OperationsCalendar() {
     }
   });
 
-  // Update URL when week changes
+  // Update URL when month changes
   useEffect(() => {
-    const weekDate = format(weekStart, 'yyyy-MM-dd');
-    navigate(`/admin/operations/calendar?week=${weekDate}`, { replace: true });
-  }, [weekStart, navigate]);
+    const monthDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+    navigate(`/admin/operations/calendar?month=${monthDate}`, { replace: true });
+  }, [currentDate, navigate]);
 
-  // Copy week link to clipboard
-  const copyWeekLink = async () => {
-    const weekDate = format(weekStart, 'yyyy-MM-dd');
-    const url = `${window.location.origin}/admin/operations/calendar?week=${weekDate}`;
+  // Copy month link to clipboard
+  const copyMonthLink = async () => {
+    const monthDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+    const url = `${window.location.origin}/admin/operations/calendar?month=${monthDate}`;
     await navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
@@ -226,14 +255,14 @@ export default function OperationsCalendar() {
     return loads.filter(load => isSameDay(parseISO(load.date), date));
   };
 
-  // Navigate weeks
-  const goToPrevWeek = () => setCurrentDate(addDays(currentDate, -7));
-  const goToNextWeek = () => setCurrentDate(addDays(currentDate, 7));
+  // Navigate months
+  const goToPrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
 
-  // Count loads by type
-  const weekInbound = loads.filter(l => l.routeType === 'inbound').length;
-  const weekOutbound = loads.filter(l => l.routeType === 'outbound').length;
+  // Count loads by type (only loads within the current month)
+  const monthInbound = loads.filter(l => l.routeType === 'inbound' && isSameMonth(parseISO(l.date), currentDate)).length;
+  const monthOutbound = loads.filter(l => l.routeType === 'outbound' && isSameMonth(parseISO(l.date), currentDate)).length;
 
   // Add new load
   const handleAddLoad = () => {
@@ -251,6 +280,14 @@ export default function OperationsCalendar() {
     deleteMutation.mutate(id);
   };
 
+  // Split grid into rows of 7
+  const weeks: Date[][] = [];
+  for (let i = 0; i < monthGrid.length; i += 7) {
+    weeks.push(monthGrid.slice(i, i + 7));
+  }
+
+  const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
   return (
     <ProtectedAdminRoute>
       <OperationsLayout>
@@ -263,15 +300,15 @@ export default function OperationsCalendar() {
                 <h1 className="text-lg font-semibold text-gray-900">Logistics Calendar</h1>
               </div>
 
-              {/* Mobile: Week Navigation */}
+              {/* Mobile: Month Navigation */}
               <div className="flex items-center justify-between sm:hidden">
-                <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-10 w-10">
+                <Button variant="outline" size="icon" onClick={goToPrevMonth} className="h-10 w-10">
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
                 <span className="text-sm font-medium text-center px-2">
-                  {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
+                  {format(currentDate, 'MMMM yyyy')}
                 </span>
-                <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-10 w-10">
+                <Button variant="outline" size="icon" onClick={goToNextMonth} className="h-10 w-10">
                   <ChevronRight className="w-5 h-5" />
                 </Button>
               </div>
@@ -289,7 +326,7 @@ export default function OperationsCalendar() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={copyWeekLink}
+                  onClick={copyMonthLink}
                   className="h-10 px-3"
                 >
                   {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4" />}
@@ -312,7 +349,7 @@ export default function OperationsCalendar() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={copyWeekLink}
+                  onClick={copyMonthLink}
                   className="text-xs"
                 >
                   {linkCopied ? (
@@ -324,32 +361,32 @@ export default function OperationsCalendar() {
                 <Button variant="outline" size="sm" onClick={goToToday} className="text-xs">
                   Today
                 </Button>
-                <Button variant="outline" size="icon" onClick={goToPrevWeek} className="h-8 w-8">
+                <Button variant="outline" size="icon" onClick={goToPrevMonth} className="h-8 w-8">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm font-medium min-w-[180px] text-center">
-                  {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+                <span className="text-sm font-medium min-w-[160px] text-center">
+                  {format(currentDate, 'MMMM yyyy')}
                 </span>
-                <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-8 w-8">
+                <Button variant="outline" size="icon" onClick={goToNextMonth} className="h-8 w-8">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Week Summary - Simple */}
+            {/* Month Summary */}
             <div className="flex items-center gap-6 mb-4 bg-white rounded-lg border p-4">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" />
-                <span className="text-2xl font-bold text-blue-600">{weekInbound}</span>
+                <span className="text-2xl font-bold text-blue-600">{monthInbound}</span>
                 <span className="text-sm text-gray-500">inbound</span>
               </div>
               <div className="flex items-center gap-2">
                 <Truck className="w-5 h-5 text-green-500" />
-                <span className="text-2xl font-bold text-green-600">{weekOutbound}</span>
+                <span className="text-2xl font-bold text-green-600">{monthOutbound}</span>
                 <span className="text-sm text-gray-500">outbound</span>
               </div>
               <div className="flex items-center gap-2 ml-auto">
-                <span className="text-3xl font-bold text-gray-900">{weekInbound + weekOutbound}</span>
+                <span className="text-3xl font-bold text-gray-900">{monthInbound + monthOutbound}</span>
                 <span className="text-sm text-gray-500">total loads</span>
               </div>
             </div>
@@ -368,64 +405,90 @@ export default function OperationsCalendar() {
               </div>
             )}
 
-            {/* Calendar Grid */}
+            {/* Month Calendar Grid */}
             {!isLoading && !error && (
               <div className="bg-white rounded-lg border overflow-hidden">
+                {/* Day of week headers */}
                 <div className="grid grid-cols-7 border-b bg-gray-50">
-                  {weekDays.map((day) => (
+                  {dayHeaders.map((day) => (
                     <div
-                      key={day.toISOString()}
-                      className={`p-2 text-center border-r last:border-r-0 ${
-                        isSameDay(day, new Date()) ? 'bg-[#264027]/10' : ''
-                      }`}
+                      key={day}
+                      className="p-2 text-center border-r last:border-r-0"
                     >
-                      <div className="text-xs font-medium text-gray-500">{format(day, 'EEE')}</div>
-                      <div className={`text-lg font-semibold ${isSameDay(day, new Date()) ? 'text-[#264027]' : 'text-gray-900'}`}>
-                        {format(day, 'd')}
-                      </div>
+                      <div className="text-xs font-medium text-gray-500 uppercase">{day}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7 min-h-[400px]">
-                  {weekDays.map((day) => {
-                    const dayLoads = getLoadsForDate(day);
-                    return (
-                      <div
-                        key={day.toISOString()}
-                        className={`border-r last:border-r-0 p-1 ${isSameDay(day, new Date()) ? 'bg-[#264027]/5' : ''}`}
-                      >
-                        {dayLoads.map((load) => (
-                          <button
-                            key={load.id}
-                            onClick={() => setSelectedLoad(load)}
-                            className={`w-full text-left p-1.5 mb-1 rounded text-[10px] transition-all hover:shadow-md ${
-                              load.routeType === 'inbound'
-                                ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
-                                : 'bg-green-50 border border-green-200 hover:bg-green-100'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1 mb-0.5">
-                              {load.routeType === 'inbound' ? (
-                                <Package className="w-2.5 h-2.5 text-blue-600" />
-                              ) : (
-                                <Truck className="w-2.5 h-2.5 text-green-600" />
-                              )}
-                              <span className={`font-semibold truncate ${load.routeType === 'inbound' ? 'text-blue-700' : 'text-green-700'}`}>
-                                {load.customer}
-                              </span>
+                {/* Week rows */}
+                {weeks.map((week, weekIndex) => (
+                  <div key={weekIndex} className="grid grid-cols-7 border-b last:border-b-0">
+                    {week.map((day) => {
+                      const dayLoads = getLoadsForDate(day);
+                      const inCurrentMonth = isSameMonth(day, currentDate);
+                      const todayHighlight = isToday(day);
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={`border-r last:border-r-0 p-1 min-h-[90px] sm:min-h-[110px] ${
+                            todayHighlight
+                              ? 'bg-[#264027]/5'
+                              : inCurrentMonth
+                                ? 'bg-white'
+                                : 'bg-gray-50/70'
+                          }`}
+                        >
+                          {/* Date number */}
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span
+                              className={`text-xs font-medium leading-none px-1 py-0.5 rounded ${
+                                todayHighlight
+                                  ? 'bg-[#264027] text-white'
+                                  : inCurrentMonth
+                                    ? 'text-gray-900'
+                                    : 'text-gray-400'
+                              }`}
+                            >
+                              {format(day, 'd')}
+                            </span>
+                          </div>
+
+                          {/* Load cards */}
+                          {dayLoads.slice(0, 3).map((load) => (
+                            <button
+                              key={load.id}
+                              onClick={() => setSelectedLoad(load)}
+                              className={`w-full text-left px-1 py-0.5 mb-0.5 rounded text-[9px] sm:text-[10px] leading-tight transition-all hover:shadow-md truncate ${
+                                load.routeType === 'inbound'
+                                  ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                                  : 'bg-green-50 border border-green-200 hover:bg-green-100'
+                              }`}
+                            >
+                              <div className="flex items-center gap-0.5">
+                                {load.routeType === 'inbound' ? (
+                                  <Package className="w-2 h-2 text-blue-600 flex-shrink-0" />
+                                ) : (
+                                  <Truck className="w-2 h-2 text-green-600 flex-shrink-0" />
+                                )}
+                                <span className={`font-semibold truncate ${load.routeType === 'inbound' ? 'text-blue-700' : 'text-green-700'}`}>
+                                  {load.customer}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+
+                          {/* Overflow indicator */}
+                          {dayLoads.length > 3 && (
+                            <div className="text-[9px] text-gray-500 text-center font-medium">
+                              +{dayLoads.length - 3} more
                             </div>
-                            <div className="text-gray-600 truncate">{load.driver || 'TBD'}</div>
-                            <div className="text-gray-500 truncate">{load.timeSlot || load.material}</div>
-                          </button>
-                        ))}
-                        {dayLoads.length === 0 && (
-                          <div className="h-full min-h-[60px]"></div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
 

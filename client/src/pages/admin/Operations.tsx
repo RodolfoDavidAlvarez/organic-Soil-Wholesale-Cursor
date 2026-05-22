@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Printer, Eye, Search, Trash2, X, Copy } from 'lucide-react';
+import { FileText, Plus, Printer, Eye, Search, Trash2, X, Copy, ArrowUp, ArrowDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,6 +29,9 @@ interface BOL {
   carrier_name: string;
   load_type: string;
   client_tag: string;
+  billing_status: string;
+  invoice_number?: string;
+  invoice_amount?: number;
 }
 
 export default function Operations() {
@@ -37,12 +40,15 @@ export default function Operations() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [directionFilter, setDirectionFilter] = useState('all');
+  const [billingFilter, setBillingFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('client') || 'all';
   });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; ids: number[] }>({ show: false, ids: [] });
+  const [sortField, setSortField] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const queryClient = useQueryClient();
 
   const { data: bols, isLoading } = useQuery<BOL[]>({
@@ -67,6 +73,8 @@ export default function Operations() {
     if (directionFilter !== 'all' && (bol.load_type || '').toLowerCase() !== directionFilter.toLowerCase()) return false;
     // Client filter
     if (clientFilter !== 'all' && (bol.client_tag || '') !== clientFilter) return false;
+    // Billing filter
+    if (billingFilter !== 'all' && (bol.billing_status || 'unbilled') !== billingFilter) return false;
     // Search
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -79,6 +87,24 @@ export default function Operations() {
       (bol.client_tag || '').toLowerCase().includes(query)
     );
   }) || [];
+
+  const sortedBOLs = [...filteredBOLs].sort((a, b) => {
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    switch (sortField) {
+      case 'bol_number': return dir * (a.bol_number || '').localeCompare(b.bol_number || '');
+      case 'date': return dir * (new Date(a.date).getTime() - new Date(b.date).getTime());
+      case 'customer': return dir * (a.customer_name || '').localeCompare(b.customer_name || '');
+      case 'destination': {
+        const destA = `${a.destination_city || ''}, ${a.destination_state || ''}`;
+        const destB = `${b.destination_city || ''}, ${b.destination_state || ''}`;
+        return dir * destA.localeCompare(destB);
+      }
+      case 'material': return dir * (a.material_type || '').localeCompare(b.material_type || '');
+      case 'weight': return dir * ((a.net_weight || 0) - (b.net_weight || 0));
+      case 'status': return dir * (a.status || '').localeCompare(b.status || '');
+      default: return 0;
+    }
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -117,7 +143,7 @@ export default function Operations() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? filteredBOLs.map(b => b.id) : []);
+    setSelectedIds(checked ? sortedBOLs.map(b => b.id) : []);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, ids: number[]) => {
@@ -127,6 +153,15 @@ export default function Operations() {
 
   const confirmDelete = () => {
     deleteMutation.mutate(deleteConfirm.ids);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'date' ? 'desc' : 'asc');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -154,12 +189,41 @@ export default function Operations() {
   const getClientBadge = (clientTag: string) => {
     if (!clientTag) return null;
     const config: Record<string, { label: string, className: string }> = {
-      vanguard: { label: "Vanguard", className: "bg-purple-50 text-purple-700" },
-      willcox: { label: "Willcox", className: "bg-orange-50 text-orange-700" },
-      '3lag': { label: "3LAG", className: "bg-indigo-50 text-indigo-700" },
+      vanguard: { label: "Vanguard", className: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
+      willcox: { label: "Willcox", className: "bg-orange-50 text-orange-700 hover:bg-orange-100" },
+      '3lag': { label: "3LAG", className: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100" },
+      flower_gods: { label: "Flower of Gods", className: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" },
     };
-    const { label, className } = config[clientTag] || { label: clientTag, className: "bg-gray-50 text-gray-600" };
-    return <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${className}`}>{label}</span>;
+    const { label, className } = config[clientTag] || { label: clientTag, className: "bg-gray-50 text-gray-600 hover:bg-gray-100" };
+    return (
+      <span
+        className={`px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${className}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setClientFilter(clientFilter === clientTag ? 'all' : clientTag);
+        }}
+        title={`Click to filter by ${label}`}
+      >
+        {label}
+      </span>
+    );
+  };
+
+  const getBillingBadge = (billingStatus: string, invoiceNumber?: string) => {
+    const status = billingStatus || 'unbilled';
+    if (status === 'billed') {
+      return (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200" title={invoiceNumber ? `Invoice: ${invoiceNumber}` : 'Billed'}>
+          <DollarSign className="w-2.5 h-2.5" />
+          {invoiceNumber || 'Billed'}
+        </span>
+      );
+    }
+    return (
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600 border border-red-200">
+        Unbilled
+      </span>
+    );
   };
 
   // Calculate totals
@@ -273,6 +337,17 @@ export default function Operations() {
                   <SelectItem value="vanguard" className="text-xs">Vanguard</SelectItem>
                   <SelectItem value="willcox" className="text-xs">Willcox</SelectItem>
                   <SelectItem value="3lag" className="text-xs">3LAG</SelectItem>
+                  <SelectItem value="flower_gods" className="text-xs">Flower of Gods</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={billingFilter} onValueChange={setBillingFilter}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue placeholder="Billing" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All Billing</SelectItem>
+                  <SelectItem value="unbilled" className="text-xs">Unbilled</SelectItem>
+                  <SelectItem value="billed" className="text-xs">Billed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -301,24 +376,39 @@ export default function Operations() {
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="py-2 px-2 w-8">
                         <Checkbox
-                          checked={selectedIds.length === filteredBOLs.length && filteredBOLs.length > 0}
+                          checked={selectedIds.length === sortedBOLs.length && sortedBOLs.length > 0}
                           onCheckedChange={(checked) => handleSelectAll(!!checked)}
                           className="h-3.5 w-3.5"
                         />
                       </th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">BOL #</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('bol_number')}>
+                        <span className="flex items-center gap-1">BOL # {sortField === 'bol_number' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
                       <th className="text-center py-2 px-2 font-medium text-gray-600">Type</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden sm:table-cell">Date</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">Customer</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden md:table-cell">Destination</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden lg:table-cell">Material</th>
-                      <th className="text-right py-2 px-3 font-medium text-gray-600">Weight</th>
-                      <th className="text-center py-2 px-3 font-medium text-gray-600">Status</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden sm:table-cell cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('date')}>
+                        <span className="flex items-center gap-1">Date {sortField === 'date' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('customer')}>
+                        <span className="flex items-center gap-1">Customer {sortField === 'customer' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden md:table-cell cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('destination')}>
+                        <span className="flex items-center gap-1">Destination {sortField === 'destination' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600 hidden lg:table-cell cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('material')}>
+                        <span className="flex items-center gap-1">Material {sortField === 'material' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-right py-2 px-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('weight')}>
+                        <span className="flex items-center justify-end gap-1">Weight {sortField === 'weight' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-center py-2 px-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900" onClick={() => handleSort('status')}>
+                        <span className="flex items-center justify-center gap-1">Status {sortField === 'status' && (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}</span>
+                      </th>
+                      <th className="text-center py-2 px-3 font-medium text-gray-600 hidden sm:table-cell">Billing</th>
                       <th className="text-right py-2 px-3 font-medium text-gray-600 w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredBOLs.map((bol) => (
+                    {sortedBOLs.map((bol) => (
                       <tr
                         key={bol.id}
                         onClick={() => handleRowClick(bol.id)}
@@ -364,6 +454,9 @@ export default function Operations() {
                         </td>
                         <td className="py-2 px-3 text-center">
                           {getStatusBadge(bol.status)}
+                        </td>
+                        <td className="py-2 px-3 text-center hidden sm:table-cell">
+                          {getBillingBadge(bol.billing_status, bol.invoice_number)}
                         </td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">

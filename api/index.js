@@ -517,6 +517,136 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       return res.status(201).json({ success: true, contact, segment: finalSegment, email: emailResult });
     }
 
+    // ============ PAY & PICKUP ENDPOINTS ============
+
+    // Get pay & pickup products with inventory
+    const inventoryProductsMatch = path.match(/^\/api\/inventory\/products\/(\d+)$/);
+    if (inventoryProductsMatch && req.method === 'GET') {
+      const locationId = parseInt(inventoryProductsMatch[1]);
+      const payAndPickup = url.searchParams.get('payAndPickup') === 'true';
+      const includeOutOfStock = url.searchParams.get('includeOutOfStock') === 'true';
+
+      // Query inventory joined with products (exclude size_price_options to use inventory pricing)
+      let query = db.from('inventory').select(`
+        *,
+        products!inner (
+          id, name, description, category, image_url, texture_photo_url,
+          display_title, marketing_title, ingredients, recommended_uses,
+          target_audience, story, usage, certifications, features,
+          additional_images, available_size_options, pay_and_pickup_badge,
+          pay_and_pickup_description, pay_and_pickup_hero_image,
+          pay_and_pickup_display_order, is_pay_and_pickup_enabled,
+          product_video_url, product_video_title
+        )
+      `).eq('location_id', locationId);
+
+      if (!includeOutOfStock && !payAndPickup) {
+        query = query.gt('quantity_available', 0);
+      }
+
+      if (payAndPickup) {
+        query = query.eq('products.is_pay_and_pickup_enabled', true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Retail bag sizes for pay & pickup (filter out wholesale pallet/truckload sizes)
+      const retailSizes = new Set(['9lb bag', '25lb bag', '1 cf bag', '1.5 cf bag', '2 cf bag']);
+      const sizeOrder = { '9lb bag': 1, '25lb bag': 2, '1 cf bag': 3, '1.5 cf bag': 4, '2 cf bag': 5, 'bulk (50lb)': 6, 'bulk pickup': 7, 'pallet of 9 lb bags': 8, 'pallet of 1cf bags': 9, '2.2 cubic yard tote': 10, '2.2 cy tote': 10, 'truckload': 11, 'bulk delivery': 12 };
+
+      // Group by product, filtering to retail sizes for P&P
+      const productMap = new Map();
+      for (const item of (data || [])) {
+        if (payAndPickup && !item.products?.is_pay_and_pickup_enabled) continue;
+
+        // For pay & pickup, only include retail bag sizes (skip pallets, truckloads, etc.)
+        const sizeNorm = item.size_option.toLowerCase();
+        if (payAndPickup && !retailSizes.has(sizeNorm)) continue;
+
+        // Skip $0 or missing prices
+        if (!item.price || item.price <= 0) continue;
+
+        const pid = item.product_id;
+        const record = productMap.get(pid) || { ...item.products, inventory: [], sizePriceOptions: [] };
+
+        record.inventory.push({
+          size_option: item.size_option,
+          quantity_available: item.quantity_available,
+          quantity_reserved: item.quantity_reserved || 0,
+          price: item.price,
+          pricing: { base_price: item.price, final_price: item.price, discount_amount: 0, tier_applied: 'regular', savings: 0 }
+        });
+
+        const sizeKey = sizeNorm.replace(/\s+/g, '-').replace(/[()]/g, '');
+        const displayOrder = sizeOrder[sizeNorm] || 99;
+        if (!record.sizePriceOptions.some(o => o.key === sizeKey)) {
+          record.sizePriceOptions.push({ key: sizeKey, label: item.size_option, price: item.price, priceCents: Math.round(item.price * 100), isActive: true, displayOrder });
+        }
+
+        productMap.set(pid, record);
+      }
+
+      // Sort size options and products
+      for (const product of productMap.values()) {
+        product.sizePriceOptions.sort((a, b) => a.displayOrder - b.displayOrder);
+        // Override size_price_options with inventory-based pricing (prevents frontend from using wholesale DB prices)
+        product.size_price_options = product.sizePriceOptions;
+      }
+      const products = Array.from(productMap.values()).sort((a, b) => (a.pay_and_pickup_display_order || 0) - (b.pay_and_pickup_display_order || 0));
+
+      return res.json({ success: true, location_id: locationId, products });
+    }
+
+    // Create pay & pickup order
+    if (path === '/api/pay-and-pickup/create-order' && req.method === 'POST') {
+      const { customerInfo, items, pickupType, locationId = 1 } = req.body || {};
+      if (!customerInfo || !items || !items.length) return res.status(400).json({ error: 'Customer info and items required' });
+
+      // Calculate totals
+      let subtotal = 0;
+      const orderItems = items.map(item => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        return { product_id: item.productId, product_name: item.productName, size_option: item.size, quantity: item.quantity, unit_price: item.price, total_price: itemTotal };
+      });
+
+      const taxRate = 0.086;
+      const tax = Math.round(subtotal * taxRate * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+
+      // Create order
+      const orderNumber = 'PP-' + Date.now().toString(36).toUpperCase();
+      const { data: order, error: orderError } = await db.from('orders').insert({
+        order_number: orderNumber,
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        customer_email: customerInfo.email || null,
+        pickup_type: pickupType || 'pickup',
+        location_id: locationId,
+        subtotal, tax, total,
+        status: 'pending',
+        items: orderItems,
+        created_at: new Date().toISOString()
+      }).select().single();
+
+      if (orderError) throw orderError;
+
+      return res.json({
+        success: true,
+        orderId: order.id,
+        orderNumber,
+        subtotal, tax, total,
+        estimatedReadyTime: '10-15 minutes'
+      });
+    }
+
+    // Pay & pickup test endpoint
+    if (path === '/api/pay-and-pickup/test' && req.method === 'GET') {
+      const { data, error } = await db.from('products').select('id, name, is_pay_and_pickup_enabled').eq('is_pay_and_pickup_enabled', true);
+      return res.json({ success: true, products: data || [], error: error?.message });
+    }
+
     // ============ EXISTING ENDPOINTS ============
 
     // Products list
@@ -1165,7 +1295,10 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         licensePlate: "license_plate", trailerNumber: "trailer_number", notes: "notes",
         referenceNumber: "reference_number", timeIn: "time_in", timeOut: "time_out",
         scaleOperatorInitials: "scale_operator_initials", loadType: "load_type",
-        clientTag: "client_tag", status: "status", orderId: "order_id"
+        clientTag: "client_tag", status: "status", orderId: "order_id",
+        billingStatus: "billing_status", invoiceId: "invoice_id",
+        invoiceNumber: "invoice_number", invoiceAmount: "invoice_amount",
+        invoiceDate: "invoice_date", billingNotes: "billing_notes"
       };
 
       const snakeCaseUpdates = {};
@@ -2260,6 +2393,7 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
         preferred_delivery_date: body.preferredDeliveryDate || null,
         preferred_delivery_time: body.preferredDeliveryTime,
         linked_bol_id: body.linkedBolId || null,
+        work_order_notes: body.workOrderNotes || null,
         status: 'pending',
         priority: body.priority || 'normal',
         created_by: admin.email || 'admin@ssw.com',
@@ -2544,6 +2678,329 @@ ${pages}
       return res.json(data);
     }
 
+    // ============ OPERATIONS TASK BOARD ENDPOINTS ============
+
+    // GET /api/admin/operations/tasks/projects - List all projects
+    if (path === '/api/admin/operations/tasks/projects' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data, error } = await db.from('ops_projects').select('*').order('name');
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    // POST /api/admin/operations/tasks/projects - Create a project
+    if (path === '/api/admin/operations/tasks/projects' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { name, color } = req.body || {};
+      if (!name) return res.status(400).json({ message: 'Name is required' });
+
+      const { data, error } = await db.from('ops_projects').insert({ name, color: color || 'gray' }).select().single();
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    // PATCH /api/admin/operations/tasks/projects/:id - Update a project
+    const projectPatchMatch = path.match(/^\/api\/admin\/operations\/tasks\/projects\/([^/]+)$/);
+    if (projectPatchMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const projectId = projectPatchMatch[1];
+      const { name, color } = req.body || {};
+
+      const { data: existing } = await db.from('ops_projects').select('name').eq('id', projectId).single();
+
+      const updates = {};
+      if (name) updates.name = name;
+      if (color) updates.color = color;
+
+      const { data, error } = await db.from('ops_projects').update(updates).eq('id', projectId).select().single();
+      if (error) throw error;
+
+      if (name && existing && existing.name !== name) {
+        await db.from('ops_tasks').update({ project: name, updated_at: new Date().toISOString() }).eq('project', existing.name);
+      }
+
+      return res.json(data);
+    }
+
+    // DELETE /api/admin/operations/tasks/projects/:id - Delete a project
+    const projectDeleteMatch = path.match(/^\/api\/admin\/operations\/tasks\/projects\/([^/]+)$/);
+    if (projectDeleteMatch && req.method === 'DELETE') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const projectId = projectDeleteMatch[1];
+
+      const { data: existing } = await db.from('ops_projects').select('name').eq('id', projectId).single();
+      if (existing) {
+        await db.from('ops_tasks').update({ project: null, updated_at: new Date().toISOString() }).eq('project', existing.name);
+      }
+
+      const { error } = await db.from('ops_projects').delete().eq('id', projectId);
+      if (error) throw error;
+      return res.json({ success: true });
+    }
+
+    // GET /api/admin/operations/tasks - List all tasks
+    if (path === '/api/admin/operations/tasks' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const assignee = url.searchParams.get('assignee');
+      const project = url.searchParams.get('project');
+      const status = url.searchParams.get('status');
+
+      let query = db.from('ops_tasks').select('*').order('position', { ascending: true }).order('created_at', { ascending: false });
+      if (assignee) query = query.eq('assignee', assignee);
+      if (project) query = query.eq('project', project);
+      if (status) query = query.eq('status', status);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    // POST /api/admin/operations/tasks - Create a task
+    if (path === '/api/admin/operations/tasks' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { title, description, status, assignee, project, priority, due_date } = req.body || {};
+      if (!title) return res.status(400).json({ message: 'Title is required' });
+
+      const { data: maxPos } = await db.from('ops_tasks').select('position').eq('status', status || 'todo').order('position', { ascending: false }).limit(1);
+      const nextPosition = (maxPos && maxPos.length > 0) ? maxPos[0].position + 1 : 0;
+
+      const { data, error } = await db.from('ops_tasks').insert({
+        title,
+        description: description || null,
+        status: status || 'todo',
+        assignee: assignee || null,
+        project: project || null,
+        priority: priority || 'medium',
+        due_date: due_date || null,
+        position: nextPosition,
+        created_by: admin.email || 'system',
+      }).select().single();
+
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    // PATCH /api/admin/operations/tasks/:id/move - Move a task
+    const taskMoveMatch = path.match(/^\/api\/admin\/operations\/tasks\/([^/]+)\/move$/);
+    if (taskMoveMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const taskId = taskMoveMatch[1];
+      const { status, position } = req.body || {};
+
+      const STATUSES = ['todo', 'in_progress', 'done'];
+      if (!status || !STATUSES.includes(status)) {
+        return res.status(400).json({ message: 'Valid status is required' });
+      }
+
+      const { data, error } = await db.from('ops_tasks').update({
+        status,
+        position: position ?? 0,
+        updated_at: new Date().toISOString(),
+      }).eq('id', taskId).select().single();
+
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // PATCH /api/admin/operations/tasks/:id - Update a task
+    const taskPatchMatch = path.match(/^\/api\/admin\/operations\/tasks\/([^/]+)$/);
+    if (taskPatchMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const taskId = taskPatchMatch[1];
+      const updates = { updated_at: new Date().toISOString() };
+      const allowedFields = ['title', 'description', 'status', 'assignee', 'project', 'priority', 'due_date', 'position'];
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) updates[field] = req.body[field];
+      }
+
+      const { data, error } = await db.from('ops_tasks').update(updates).eq('id', taskId).select().single();
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // DELETE /api/admin/operations/tasks/:id - Delete a task
+    const taskDeleteMatch = path.match(/^\/api\/admin\/operations\/tasks\/([^/]+)$/);
+    if (taskDeleteMatch && req.method === 'DELETE') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const taskId = taskDeleteMatch[1];
+      const { error } = await db.from('ops_tasks').delete().eq('id', taskId);
+      if (error) throw error;
+      return res.json({ success: true });
+    }
+
+    // ============ OPERATIONS SETTINGS ENDPOINTS ============
+
+    // GET /api/admin/operations/settings/work-order-notifications
+    if (path === '/api/admin/operations/settings/work-order-notifications' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data, error } = await db.from('ops_work_order_notification_recipients').select('*').order('created_at', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    // POST /api/admin/operations/settings/work-order-notifications
+    if (path === '/api/admin/operations/settings/work-order-notifications' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { name, email, phone, notify_by_email, notify_by_phone } = req.body || {};
+      if (!name || !name.trim()) return res.status(400).json({ message: 'Name is required' });
+      if (!email || !email.trim()) return res.status(400).json({ message: 'Email is required' });
+
+      const hasPhone = phone != null && String(phone).trim() !== '';
+      const { data, error } = await db.from('ops_work_order_notification_recipients').insert({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: hasPhone ? String(phone).trim() : null,
+        notify_by_email: notify_by_email !== false,
+        notify_by_phone: hasPhone && notify_by_phone === true,
+      }).select().single();
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    // PATCH /api/admin/operations/settings/work-order-notifications/:id
+    const notifPatchMatch = path.match(/^\/api\/admin\/operations\/settings\/work-order-notifications\/(\d+)$/);
+    if (notifPatchMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const nId = parseInt(notifPatchMatch[1], 10);
+      const { name, email, phone, notify_by_email, notify_by_phone } = req.body || {};
+      const updates = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (email !== undefined) updates.email = email.trim().toLowerCase();
+      if (phone !== undefined) updates.phone = phone != null && String(phone).trim() !== '' ? String(phone).trim() : null;
+      if (typeof notify_by_email === 'boolean') updates.notify_by_email = notify_by_email;
+      if (typeof notify_by_phone === 'boolean') updates.notify_by_phone = notify_by_phone;
+
+      const { data, error } = await db.from('ops_work_order_notification_recipients').update(updates).eq('id', nId).select().single();
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // DELETE /api/admin/operations/settings/work-order-notifications/:id
+    const notifDeleteMatch = path.match(/^\/api\/admin\/operations\/settings\/work-order-notifications\/(\d+)$/);
+    if (notifDeleteMatch && req.method === 'DELETE') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const nId = parseInt(notifDeleteMatch[1], 10);
+      const { error } = await db.from('ops_work_order_notification_recipients').delete().eq('id', nId);
+      if (error) throw error;
+      return res.json({ success: true });
+    }
+
+    // ============ SCHEDULED LOADS (Logistics Calendar) ENDPOINTS ============
+
+    // GET /api/admin/operations/scheduled-loads
+    if (path === '/api/admin/operations/scheduled-loads' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const weekStart = url.searchParams.get('weekStart');
+      const weekEnd = url.searchParams.get('weekEnd');
+
+      let query = db.from('scheduled_loads').select('*').order('date', { ascending: true });
+      if (weekStart) query = query.gte('date', weekStart);
+      if (weekEnd) query = query.lte('date', weekEnd);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    // POST /api/admin/operations/scheduled-loads
+    if (path === '/api/admin/operations/scheduled-loads' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { date, timeSlot, routeType, customer, destination, material, quantity, driver, carrierName, truckNumber, status, deal, contactName, contactPhone, notes } = req.body || {};
+      if (!date || !routeType || !customer || !destination || !material) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const { data, error } = await db.from('scheduled_loads').insert({
+        date, time_slot: timeSlot, route_type: routeType, customer, destination, material, quantity, driver,
+        carrier_name: carrierName, truck_number: truckNumber, status: status || 'scheduled',
+        deal, contact_name: contactName, contact_phone: contactPhone, notes,
+        created_by: admin.email || 'admin@ssw.com',
+      }).select().single();
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    // GET /api/admin/operations/scheduled-loads/:id
+    const loadDetailMatch = path.match(/^\/api\/admin\/operations\/scheduled-loads\/(\d+)$/);
+    if (loadDetailMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data, error } = await db.from('scheduled_loads').select('*').eq('id', loadDetailMatch[1]).single();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ message: 'Scheduled load not found' });
+      return res.json(data);
+    }
+
+    // PATCH /api/admin/operations/scheduled-loads/:id
+    if (loadDetailMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const fieldMap = { date: 'date', timeSlot: 'time_slot', routeType: 'route_type', customer: 'customer', destination: 'destination', material: 'material', quantity: 'quantity', driver: 'driver', carrierName: 'carrier_name', truckNumber: 'truck_number', status: 'status', deal: 'deal', contactName: 'contact_name', contactPhone: 'contact_phone', notes: 'notes' };
+      const updates = { updated_at: new Date().toISOString() };
+      for (const [key, value] of Object.entries(req.body || {})) {
+        if (fieldMap[key]) updates[fieldMap[key]] = value;
+      }
+
+      const { data, error } = await db.from('scheduled_loads').update(updates).eq('id', loadDetailMatch[1]).select().single();
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // DELETE /api/admin/operations/scheduled-loads/:id
+    if (loadDetailMatch && req.method === 'DELETE') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { error } = await db.from('scheduled_loads').delete().eq('id', loadDetailMatch[1]);
+      if (error) throw error;
+      return res.json({ success: true });
+    }
+
+    // POST /api/admin/operations/scheduled-loads/bulk-delete
+    if (path === '/api/admin/operations/scheduled-loads/bulk-delete' && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { ids } = req.body || {};
+      if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'No IDs provided' });
+
+      const { error } = await db.from('scheduled_loads').delete().in('id', ids);
+      if (error) throw error;
+      return res.json({ success: true, deleted: ids.length });
+    }
+
     // ============ UNSUBSCRIBE ENDPOINTS ============
 
     // Airtable configuration for Email Marketing 2026
@@ -2675,6 +3132,1059 @@ ${pages}
         subscribed: record.fields?.Subscribed !== false,
         unsubscribedDate: record.fields?.["Unsubscribed Date"] || null,
       });
+    }
+
+    // ============ CUSTOMER AUTH ENDPOINTS ============
+
+    // Customer signup
+    if (path === '/api/auth/signup' && req.method === 'POST') {
+      const { email, password, fullName, phone, companyName, accountType = 'retail' } = req.body || {};
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+      if (!['retail', 'wholesale', 'commercial'].includes(accountType)) {
+        return res.status(400).json({ error: 'Invalid account type' });
+      }
+
+      const sb = await getSupabase();
+
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await sb.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: false,
+      });
+
+      if (authError) {
+        console.error('Signup error:', authError);
+        return res.status(400).json({ error: authError.message });
+      }
+
+      // Update customer profile with additional data
+      const { error: profileError } = await sb
+        .from('customer_profiles')
+        .update({
+          full_name: fullName || null,
+          phone: phone || null,
+          company_name: companyName || null,
+          account_type: accountType,
+          is_approved: true,
+        })
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+      }
+
+      // Generate email verification token
+      const crypto = await import('crypto');
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      await sb.from('email_verification_tokens').insert({
+        email,
+        token: verificationToken,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      });
+
+      // Send verification email
+      try {
+        const r = await getResend();
+        const baseUrl = 'https://www.organicsoilwholesale.com';
+        const verificationUrl = `${baseUrl}/verify-email/${verificationToken}`;
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: email,
+          subject: 'Verify your email for Organic Soil Wholesale',
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="background-color:#2c5530;color:white;padding:20px;text-align:center"><h1>Organic Soil Wholesale</h1></div><div style="padding:30px;background-color:#f9f9f9"><h2>Verify Your Email Address</h2><p>Thank you for creating an account!</p><p>Please click the button below to verify your email address:</p><center><a href="${verificationUrl}" style="display:inline-block;padding:12px 30px;background-color:#2c5530;color:white;text-decoration:none;border-radius:5px;margin:20px 0">Verify Email</a></center><p>This link will expire in 24 hours.</p></div><div style="text-align:center;padding:20px;color:#666;font-size:14px"><p>Organic Soil Wholesale &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; (602) 726-7211</p></div></div>`,
+        });
+      } catch (emailErr) {
+        console.error('Failed to send verification email:', emailErr);
+      }
+
+      // Notify Rodo of new signup
+      try {
+        const r = await getResend();
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: 'ralvarez@soilseedandwater.com',
+          subject: `New ${accountType} signup: ${fullName || email}`,
+          html: `<p><strong>New account signup on organicsoilwholesale.com</strong></p><ul><li><strong>Name:</strong> ${fullName || 'N/A'}</li><li><strong>Email:</strong> ${email}</li><li><strong>Phone:</strong> ${phone || 'N/A'}</li><li><strong>Company:</strong> ${companyName || 'N/A'}</li><li><strong>Type:</strong> ${accountType}</li><li><strong>Auto-approved:</strong> Yes (portal access granted)</li></ul>`,
+        });
+      } catch (notifyErr) {
+        console.error('Failed to send signup notification:', notifyErr);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Account created successfully. Please check your email to verify your account.',
+        requiresApproval: false,
+      });
+    }
+
+    // Customer signin
+    if (path === '/api/auth/signin' && req.method === 'POST') {
+      const { email, password } = req.body || {};
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      // Use a separate client for signin to avoid polluting the shared service role client
+      const { createClient } = await import('@supabase/supabase-js');
+      const signinClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { data: authData, error: authError } = await signinClient.auth.signInWithPassword({ email, password });
+
+      if (authError) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Use the main service role client for admin queries (not polluted by signIn)
+      const sb = await getSupabase();
+      const { data: profile } = await sb.from('customer_profiles').select('*').eq('id', authData.user.id).single();
+
+      if (!profile) {
+        return res.status(404).json({ error: 'Profile not found' });
+      }
+
+      // All accounts can sign in now — portal handles gating
+
+      // Log activity
+      await sb.from('customer_activity_log').insert({
+        customer_id: authData.user.id,
+        action: 'signin',
+        ip_address: req.headers['x-forwarded-for'] || req.ip,
+        user_agent: req.headers['user-agent'],
+      });
+
+      return res.json({
+        token: authData.session.access_token,
+        user: { id: authData.user.id, email: authData.user.email, profile },
+      });
+    }
+
+    // Customer session check
+    if (path === '/api/auth/session' && req.method === 'GET') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: 'No token provided' });
+
+      const sb = await getSupabase();
+      const { data: { user }, error } = await sb.auth.getUser(token);
+
+      if (error || !user) return res.status(401).json({ error: 'Invalid session' });
+
+      const { data: profile } = await sb.from('customer_profiles').select('*').eq('id', user.id).single();
+
+      return res.json({ user: { id: user.id, email: user.email, profile } });
+    }
+
+    // Customer signout
+    if (path === '/api/auth/signout' && req.method === 'POST') {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (token) {
+        const sb = await getSupabase();
+        await sb.auth.admin.signOut(token);
+      }
+      return res.json({ success: true });
+    }
+
+    // Email verification
+    const verifyMatch = path.match(/^\/api\/auth\/verify-email\/(.+)$/);
+    if (verifyMatch && req.method === 'POST') {
+      const verifyToken = verifyMatch[1];
+      const sb = await getSupabase();
+
+      const { data: tokenData, error: tokenError } = await sb
+        .from('email_verification_tokens')
+        .select('*')
+        .eq('token', verifyToken)
+        .eq('verified', false)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      if (tokenError || !tokenData) {
+        return res.status(400).json({ error: 'Invalid or expired verification token' });
+      }
+
+      const { data: users } = await sb.auth.admin.listUsers();
+      const user = users.users.find(u => u.email === tokenData.email);
+
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      await sb.auth.admin.updateUserById(user.id, { email_confirm: true });
+      await sb.from('email_verification_tokens').update({ verified: true }).eq('id', tokenData.id);
+
+      return res.json({ success: true, message: 'Email verified successfully' });
+    }
+
+    // ========== CUSTOMER PORTAL ENDPOINTS ==========
+
+    // Helper: get customer from bearer token
+    async function getCustomerFromToken(req) {
+      const tkn = req.headers.authorization?.replace('Bearer ', '');
+      if (!tkn) return null;
+      const sb = await getSupabase();
+      const { data: { user }, error } = await sb.auth.getUser(tkn);
+      if (error || !user) return null;
+      const { data: profile } = await sb.from('customer_profiles').select('*').eq('id', user.id).single();
+      if (!profile) return null;
+      return { id: user.id, email: user.email, profile };
+    }
+
+    // GET /api/portal/profile
+    if (path === '/api/portal/profile' && req.method === 'GET') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+      return res.json({ profile: customer.profile });
+    }
+
+    // GET /api/portal/application
+    if (path === '/api/portal/application' && req.method === 'GET') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const { data: app } = await sb.from('customer_applications').select('*').eq('customer_id', customer.id).single();
+
+      if (!app) {
+        return res.json({ application: { status: 'none' } });
+      }
+      return res.json({ application: app });
+    }
+
+    // POST /api/portal/application
+    if (path === '/api/portal/application' && req.method === 'POST') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const body = req.body || {};
+
+      // Upsert application
+      const appData = {
+        customer_id: customer.id,
+        legal_entity_name: body.legal_entity_name || null,
+        dba_name: body.dba_name || null,
+        ein_tax_id: body.ein_tax_id || null,
+        business_type: body.business_type || null,
+        years_in_business: body.years_in_business || null,
+        ops_contact_name: body.ops_contact_name || null,
+        ops_contact_title: body.ops_contact_title || null,
+        ops_contact_email: body.ops_contact_email || null,
+        ops_contact_phone: body.ops_contact_phone || null,
+        ap_contact_name: body.ap_contact_name || null,
+        ap_contact_title: body.ap_contact_title || null,
+        ap_contact_email: body.ap_contact_email || null,
+        ap_contact_phone: body.ap_contact_phone || null,
+        preferred_payment_method: body.preferred_payment_method || null,
+        preferred_payment_terms: body.preferred_payment_terms || null,
+        has_forklift: body.has_forklift || false,
+        delivery_instructions: body.delivery_instructions || null,
+        credit_references: body.credit_references || [],
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: existing } = await sb.from('customer_applications').select('id').eq('customer_id', customer.id).single();
+
+      let result;
+      if (existing) {
+        const { data, error } = await sb.from('customer_applications').update(appData).eq('customer_id', customer.id).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        result = data;
+      } else {
+        const { data, error } = await sb.from('customer_applications').insert(appData).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        result = data;
+      }
+
+      // Update profile application_status
+      await sb.from('customer_profiles').update({ application_status: 'submitted' }).eq('id', customer.id);
+
+      // Notify Rodo
+      try {
+        const r = await getResend();
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: 'ralvarez@soilseedandwater.com',
+          subject: `New wholesale application: ${body.legal_entity_name || customer.profile.company_name || customer.email}`,
+          html: `<p><strong>New wholesale application submitted</strong></p>
+            <ul>
+              <li><strong>Business:</strong> ${body.legal_entity_name || 'N/A'} ${body.dba_name ? `(DBA: ${body.dba_name})` : ''}</li>
+              <li><strong>Type:</strong> ${body.business_type || 'N/A'}</li>
+              <li><strong>Contact:</strong> ${body.ops_contact_name || 'N/A'} - ${body.ops_contact_email || 'N/A'} - ${body.ops_contact_phone || 'N/A'}</li>
+              <li><strong>Payment:</strong> ${body.preferred_payment_method || 'N/A'} / ${body.preferred_payment_terms || 'N/A'}</li>
+              <li><strong>Forklift:</strong> ${body.has_forklift ? 'Yes' : 'No'}</li>
+            </ul>
+            <p>Review in the admin panel or reply to approve.</p>`,
+        });
+      } catch (notifyErr) {
+        console.error('Failed to send application notification:', notifyErr);
+      }
+
+      return res.json({ success: true, application: result });
+    }
+
+    // POST /api/portal/orders — submit order from cart
+    if (path === '/api/portal/orders' && req.method === 'POST') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const body = req.body || {};
+      const items = body.items || [];
+
+      if (items.length === 0) {
+        return res.status(400).json({ error: 'Order must have at least one item' });
+      }
+
+      // Calculate total
+      const totalAmount = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+      // Update SMS opt-in if provided
+      if (typeof body.sms_opt_in === 'boolean') {
+        await sb.from('customer_profiles').update({ sms_opt_in: body.sms_opt_in }).eq('id', customer.id);
+      }
+
+      // Create order
+      const { data: order, error: orderError } = await sb.from('orders').insert({
+        customer_profile_id: customer.id,
+        customer_name: customer.profile.full_name || customer.email,
+        customer_email: customer.email,
+        business_name: customer.profile.company_name || customer.profile.full_name || customer.email,
+        email: customer.email,
+        phone: customer.profile.phone || '',
+        delivery_type: body.fulfillment_type || 'pickup',
+        order_items: JSON.stringify(items.map(i => ({ name: i.product_name, format: i.format, qty: i.quantity, price: i.unit_price }))),
+        order_type: body.fulfillment_type === 'delivery' ? 'delivery' : 'pickup',
+        status: 'pending',
+        total: Math.round(totalAmount),
+        subtotal: Math.round(totalAmount),
+        fulfillment_type: body.fulfillment_type || 'pickup',
+        delivery_address_json: body.delivery_address || null,
+        preferred_date: body.preferred_date || null,
+        preferred_time_start: body.preferred_time_start || null,
+        preferred_time_end: body.preferred_time_end || null,
+        special_instructions: body.special_instructions || null,
+      }).select().single();
+
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        return res.status(500).json({ error: orderError.message });
+      }
+
+      // Insert order items (format = product name for display, size_option = pallet format)
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        quantity: item.quantity,
+        size_option: item.format,
+        format: item.product_name,
+        unit_price: item.unit_price,
+        total_price: item.unit_price * item.quantity,
+      }));
+
+      const { error: itemsError } = await sb.from('order_items').insert(orderItems);
+      if (itemsError) {
+        console.error('Order items error:', itemsError);
+      }
+
+      // Insert initial status history
+      await sb.from('order_status_history').insert({
+        order_id: order.id,
+        new_status: 'pending',
+        notes: 'Order submitted by customer',
+      });
+
+      // Notify Rodo
+      try {
+        const r = await getResend();
+        const itemsList = items.map(i => `<li>${i.product_name} - ${i.format} x ${i.quantity} ($${(i.unit_price * i.quantity).toLocaleString()})</li>`).join('');
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: 'ralvarez@soilseedandwater.com',
+          subject: `New wholesale order #${order.order_number} - $${totalAmount.toLocaleString()} - ${customer.profile.company_name || customer.email}`,
+          html: `<p><strong>New wholesale order from ${customer.profile.company_name || customer.email}</strong></p>
+            <p><strong>Order #${order.order_number}</strong> - $${totalAmount.toLocaleString()}</p>
+            <p><strong>${body.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}</strong> on ${body.preferred_date || 'TBD'}</p>
+            <ul>${itemsList}</ul>
+            ${body.special_instructions ? `<p><strong>Notes:</strong> ${body.special_instructions}</p>` : ''}`,
+        });
+      } catch (notifyErr) {
+        console.error('Failed to send order notification:', notifyErr);
+      }
+
+      return res.json({ success: true, order });
+    }
+
+    // GET /api/portal/orders — list customer orders
+    if (path === '/api/portal/orders' && req.method === 'GET') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const limit = parseInt(req.query?.limit) || 50;
+
+      const { data: orders, error } = await sb
+        .from('orders')
+        .select('id, order_number, status, total, created_at, fulfillment_type')
+        .eq('customer_profile_id', customer.id)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) return res.status(500).json({ error: error.message });
+
+      // Get item counts
+      const orderIds = (orders || []).map(o => o.id);
+      let itemCounts = {};
+      if (orderIds.length > 0) {
+        const { data: items } = await sb
+          .from('order_items')
+          .select('order_id')
+          .in('order_id', orderIds);
+        if (items) {
+          items.forEach(i => { itemCounts[i.order_id] = (itemCounts[i.order_id] || 0) + 1; });
+        }
+      }
+
+      const enriched = (orders || []).map(o => ({
+        ...o,
+        item_count: itemCounts[o.id] || 0,
+      }));
+
+      return res.json({ orders: enriched });
+    }
+
+    // GET /api/portal/orders/:id — order detail
+    const portalOrderMatch = path.match(/^\/api\/portal\/orders\/([a-f0-9-]+)$/);
+    if (portalOrderMatch && req.method === 'GET') {
+      const customer = await getCustomerFromToken(req);
+      if (!customer) return res.status(401).json({ error: 'Unauthorized' });
+
+      const orderId = portalOrderMatch[1];
+      const sb = await getSupabase();
+
+      const { data: order, error } = await sb
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('customer_profile_id', customer.id)
+        .single();
+
+      if (error || !order) return res.status(404).json({ error: 'Order not found' });
+
+      // Get items
+      const { data: items } = await sb
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+
+      // Get status history
+      const { data: history } = await sb
+        .from('order_status_history')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+
+      return res.json({
+        order: {
+          ...order,
+          delivery_address: order.delivery_address_json,
+          items: items || [],
+          status_history: history || [],
+        },
+      });
+    }
+
+    // ========== ADMIN: CUSTOMERS ==========
+
+    // GET /api/admin/customers
+    if (path === '/api/admin/customers' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const { data, error } = await sb.from('customer_profiles').select('*').order('created_at', { ascending: false });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data || []);
+    }
+
+    // GET /api/admin/customers/:id
+    const adminCustMatch = path.match(/^\/api\/admin\/customers\/([a-f0-9-]+)$/);
+    if (adminCustMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const custId = adminCustMatch[1];
+      const { data: profile } = await sb.from('customer_profiles').select('*').eq('id', custId).single();
+      if (!profile) return res.status(404).json({ error: 'Customer not found' });
+      const { data: application } = await sb.from('customer_applications').select('*').eq('customer_id', custId).single();
+      const { data: orders } = await sb.from('orders').select('id, order_number, status, total, created_at, fulfillment_type').eq('customer_profile_id', custId).order('created_at', { ascending: false });
+      return res.json({ profile, application, orders: orders || [] });
+    }
+
+    // ========== ADMIN: APPLICATIONS ==========
+
+    // GET /api/admin/applications
+    if (path === '/api/admin/applications' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const { data, error } = await sb.from('customer_applications').select('*, customer_profiles!customer_applications_customer_id_fkey(full_name, email, company_name, phone, account_type)').order('submitted_at', { ascending: false });
+      if (error) {
+        // Fallback without join
+        const { data: apps } = await sb.from('customer_applications').select('*').order('submitted_at', { ascending: false });
+        return res.json(apps || []);
+      }
+      return res.json(data || []);
+    }
+
+    // POST /api/admin/applications/:id/approve
+    const approveMatch = path.match(/^\/api\/admin\/applications\/([a-f0-9-]+)\/approve$/);
+    if (approveMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const appId = approveMatch[1];
+      const { data: app } = await sb.from('customer_applications').select('customer_id').eq('id', appId).single();
+      if (!app) return res.status(404).json({ error: 'Application not found' });
+      const body = req.body || {};
+      await sb.from('customer_applications').update({ status: 'approved', reviewed_at: new Date().toISOString(), notes: body.notes || null }).eq('id', appId);
+      // Update profile fields individually to avoid Supabase partial update issues
+      await sb.from('customer_profiles').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', app.customer_id);
+      await sb.from('customer_profiles').update({ application_status: 'approved' }).eq('id', app.customer_id);
+      if (body.credit_limit) await sb.from('customer_profiles').update({ credit_limit: body.credit_limit }).eq('id', app.customer_id);
+      if (body.payment_terms) await sb.from('customer_profiles').update({ payment_terms: body.payment_terms }).eq('id', app.customer_id);
+      return res.json({ success: true });
+    }
+
+    // POST /api/admin/applications/:id/reject
+    const rejectMatch = path.match(/^\/api\/admin\/applications\/([a-f0-9-]+)\/reject$/);
+    if (rejectMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const appId = rejectMatch[1];
+      const { data: app } = await sb.from('customer_applications').select('customer_id').eq('id', appId).single();
+      if (!app) return res.status(404).json({ error: 'Application not found' });
+      const body = req.body || {};
+      await sb.from('customer_applications').update({ status: 'rejected', reviewed_at: new Date().toISOString(), notes: body.reason || null }).eq('id', appId);
+      await sb.from('customer_profiles').update({ application_status: 'rejected' }).eq('id', app.customer_id);
+      return res.json({ success: true });
+    }
+
+    // ========== ADMIN: ORDERS ==========
+
+    // GET /api/admin/orders
+    if (path === '/api/admin/orders' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const status = req.query?.status;
+      let query = sb.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+      if (status && status !== 'all') query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data || []);
+    }
+
+    // GET /api/admin/orders/:id
+    const adminOrderMatch = path.match(/^\/api\/admin\/orders\/(\d+)$/);
+    if (adminOrderMatch && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const orderId = parseInt(adminOrderMatch[1]);
+      const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single();
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      const { data: items } = await sb.from('order_items').select('*').eq('order_id', orderId);
+      const { data: history } = await sb.from('order_status_history').select('*').eq('order_id', orderId).order('created_at', { ascending: false });
+      return res.json({ ...order, items: items || [], status_history: history || [] });
+    }
+
+    // POST /api/admin/orders/:id/status — update order status
+    const adminOrderStatusMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/status$/);
+    if (adminOrderStatusMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const orderId = parseInt(adminOrderStatusMatch[1]);
+      const body = req.body || {};
+      if (!body.status) return res.status(400).json({ error: 'Status required' });
+      const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single();
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      await sb.from('orders').update({ status: body.status, updated_at: new Date().toISOString() }).eq('id', orderId);
+      await sb.from('order_status_history').insert({ order_id: orderId, old_status: order.status, new_status: body.status, notes: body.notes || null });
+
+      // Auto-send customer notification for key status changes (fire and forget)
+      const notifyStatuses = ['approved', 'ready_for_pickup', 'out_for_delivery', 'completed'];
+      let notificationSent = false;
+      if (notifyStatuses.includes(body.status) && body.notify !== false) {
+        const customerEmail = order.customer_email || order.email;
+        if (customerEmail) {
+          const orderRef = order.order_number?.slice(0, 8) || order.id;
+          const statusMessages = {
+            approved: { subject: `Order #${orderRef} Approved`, body: `Great news! Your order #${orderRef} has been approved and is being prepared.` },
+            ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Mon-Fri, 7:00 AM - 2:00 PM.` },
+            out_for_delivery: { subject: `Order #${orderRef} Out for Delivery`, body: `Your order #${orderRef} is on its way! Call (602) 637-0032 with questions.` },
+            completed: { subject: `Order #${orderRef} Completed`, body: `Your order #${orderRef} has been completed. Thank you for your business!` },
+          };
+          const msg = statusMessages[body.status];
+          if (msg) {
+            try {
+              const r = await getResend();
+              await r.emails.send({
+                from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+                replyTo: 'ralvarez@soilseedandwater.com',
+                to: customerEmail,
+                subject: msg.subject,
+                html: `<p>Hi ${order.customer_name || 'there'},</p><p>${msg.body}</p><p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+              });
+              notificationSent = true;
+            } catch (notifyErr) {
+              console.error('Auto-notify email failed:', notifyErr);
+            }
+          }
+        }
+      }
+
+      return res.json({ success: true, notification_sent: notificationSent });
+    }
+
+    // ========== ADMIN: LEADS ==========
+
+    // GET /api/admin/leads
+    if (path === '/api/admin/leads' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const { data, error } = await sb.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data || []);
+    }
+
+    // ========== PUBLIC: LEAD SUBMISSION (Vercel production) ==========
+
+    // POST /api/leads/submit
+    if (path === '/api/leads/submit' && req.method === 'POST') {
+      const { name, email, phone, notes, preferred_date } = req.body || {};
+      if (!name || !email || !phone) return res.status(400).json({ error: 'Name, email, and phone are required' });
+      const sb = await getSupabase();
+      const insertData = {
+        name, email, subject: 'Lead Form Submission',
+        message: `Phone: ${phone}\n\nNotes: ${notes || 'No additional notes'}`,
+        created_at: new Date().toISOString(),
+      };
+      if (preferred_date) insertData.preferred_date = preferred_date;
+      const { data, error } = await sb.from('contact_messages').insert(insertData).select().single();
+      if (error) return res.status(500).json({ error: error.message });
+      // Notify Rodo
+      try {
+        const r = await getResend();
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: 'ralvarez@soilseedandwater.com',
+          subject: `New quote request from ${name}`,
+          html: `<p><strong>New lead from the website</strong></p><ul><li><strong>Name:</strong> ${name}</li><li><strong>Email:</strong> ${email}</li><li><strong>Phone:</strong> ${phone}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${preferred_date}</li>` : ''}<li><strong>Notes:</strong> ${notes || 'None'}</li></ul>`,
+        });
+      } catch (e) { console.error('Lead notification error:', e); }
+      return res.json({ success: true, message: 'Quote request submitted successfully', leadId: data.id });
+    }
+
+    // ========== SCHEDULING ENDPOINTS ==========
+
+    // POST /api/portal/scheduling/available-dates — returns earliest pickup date based on cart items
+    if (path === '/api/portal/scheduling/available-dates' && req.method === 'POST') {
+      const sb = await getSupabase();
+      const body = req.body || {};
+      const productSlugs = body.product_slugs || [];
+
+      // Get product availability info
+      let products = [];
+      if (productSlugs.length > 0) {
+        const { data } = await sb.from('products').select('slug, name, pickup_lead_days, is_yard_available').in('slug', productSlugs);
+        products = data || [];
+      }
+
+      // Calculate earliest date
+      const maxLeadDays = products.length > 0
+        ? Math.max(...products.map(p => p.pickup_lead_days || 7))
+        : 7;
+
+      const hasYardItems = products.some(p => p.is_yard_available);
+      const allYardAvailable = products.length > 0 && products.every(p => p.is_yard_available);
+
+      // Calculate earliest business day
+      const now = new Date();
+      const cutoffHour = 14; // 2 PM MST cutoff
+      const mstHour = now.getUTCHours() - 7; // MST = UTC-7
+
+      let leadDays = maxLeadDays;
+      // If all items are yard-available and it's before cutoff, next business day
+      if (allYardAvailable && mstHour < cutoffHour) {
+        leadDays = 1;
+      }
+
+      const earliest = new Date(now);
+      earliest.setDate(earliest.getDate() + leadDays);
+      // Skip weekends
+      while (earliest.getDay() === 0 || earliest.getDay() === 6) {
+        earliest.setDate(earliest.getDate() + 1);
+      }
+
+      // Generate available dates for the next 30 days (weekdays only)
+      const dates = [];
+      const d = new Date(earliest);
+      for (let i = 0; i < 30; i++) {
+        if (d.getDay() !== 0 && d.getDay() !== 6) {
+          dates.push(d.toISOString().split('T')[0]);
+        }
+        d.setDate(d.getDate() + 1);
+        if (dates.length >= 20) break;
+      }
+
+      const productAvailability = products.map(p => ({
+        slug: p.slug,
+        name: p.name,
+        is_yard_available: p.is_yard_available,
+        pickup_lead_days: p.pickup_lead_days,
+      }));
+
+      return res.json({
+        earliest_date: earliest.toISOString().split('T')[0],
+        available_dates: dates,
+        max_lead_days: maxLeadDays,
+        all_yard_available: allYardAvailable,
+        has_yard_items: hasYardItems,
+        products: productAvailability,
+      });
+    }
+
+    // POST /api/portal/scheduling/time-slots — returns 30-min slots for a date
+    if (path === '/api/portal/scheduling/time-slots' && req.method === 'POST') {
+      const body = req.body || {};
+      const date = body.date;
+
+      if (!date) return res.status(400).json({ error: 'Date is required' });
+
+      const d = new Date(date + 'T12:00:00');
+      if (d.getDay() === 0 || d.getDay() === 6) {
+        return res.json({ slots: [], message: 'No pickup/delivery on weekends' });
+      }
+
+      // Mon-Fri 7 AM - 2 PM, 30-min slots
+      const slots = [];
+      for (let hour = 7; hour < 14; hour++) {
+        for (let min = 0; min < 60; min += 30) {
+          const h = hour > 12 ? hour - 12 : hour;
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const label = `${h}:${min.toString().padStart(2, '0')} ${ampm}`;
+          slots.push({ time: label, available: true });
+        }
+      }
+      // Add 2:00 PM as last slot
+      slots.push({ time: '2:00 PM', available: true });
+
+      return res.json({ date, slots });
+    }
+
+    // ========== PRODUCT AVAILABILITY (Admin) ==========
+
+    // GET /api/admin/products/availability — list all products with availability info
+    if (path === '/api/admin/products/availability' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const { data, error } = await sb.from('products')
+        .select('id, name, slug, is_yard_available, pickup_lead_days, product_status')
+        .order('name');
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data || []);
+    }
+
+    // PATCH /api/admin/products/:id/availability — toggle yard availability and lead days
+    const prodAvailMatch = path.match(/^\/api\/admin\/products\/(\d+)\/availability$/);
+    if (prodAvailMatch && req.method === 'PATCH') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const sb = await getSupabase();
+      const productId = parseInt(prodAvailMatch[1]);
+      const body = req.body || {};
+      const updates = {};
+      if (typeof body.is_yard_available === 'boolean') updates.is_yard_available = body.is_yard_available;
+      if (typeof body.pickup_lead_days === 'number') updates.pickup_lead_days = Math.max(1, Math.min(30, body.pickup_lead_days));
+      if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+      const { data, error } = await sb.from('products').update(updates).eq('id', productId).select('id, name, is_yard_available, pickup_lead_days').single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data);
+    }
+
+    // ========== STRIPE DEPOSITS ==========
+
+    // POST /api/admin/orders/:id/payment-link — create Stripe Payment Link for deposit
+    const paymentLinkMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/payment-link$/);
+    if (paymentLinkMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const orderId = parseInt(paymentLinkMatch[1]);
+      const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single();
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+
+      const body = req.body || {};
+      // Default: 25% of total, minimum $100
+      const depositPct = body.deposit_percent || 25;
+      const depositAmount = Math.max(100, Math.round(order.total * depositPct / 100));
+
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+        // Create a price for the deposit
+        const price = await stripe.prices.create({
+          unit_amount: depositAmount * 100, // cents
+          currency: 'usd',
+          product_data: {
+            name: `Order #${order.order_number?.slice(0, 8) || order.id} - Deposit`,
+            metadata: { order_id: orderId.toString() },
+          },
+        });
+
+        // Create payment link
+        const paymentLink = await stripe.paymentLinks.create({
+          line_items: [{ price: price.id, quantity: 1 }],
+          metadata: { order_id: orderId.toString(), type: 'deposit' },
+          after_completion: {
+            type: 'redirect',
+            redirect: { url: `${process.env.VITE_SUPABASE_URL ? 'https://soilseedandwater.com' : 'http://localhost:5173'}/portal/orders/${order.id}?deposit=success` },
+          },
+        });
+
+        // Update order with payment link info
+        await sb.from('orders').update({
+          deposit_amount: depositAmount,
+          stripe_payment_link_id: paymentLink.id,
+          updated_at: new Date().toISOString(),
+        }).eq('id', orderId);
+
+        // Send payment link to customer
+        const customerEmail = order.customer_email || order.email;
+        if (customerEmail) {
+          const r = await getResend();
+          await r.emails.send({
+            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+            to: customerEmail,
+            subject: `Payment link for Order #${order.order_number?.slice(0, 8) || order.id}`,
+            html: `<p>Hi ${order.customer_name || 'there'},</p>
+              <p>Your order has been approved! To confirm your order, please pay the deposit of <strong>$${depositAmount.toLocaleString()}</strong>.</p>
+              <p><a href="${paymentLink.url}" style="display:inline-block;padding:12px 24px;background:#264027;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">Pay Deposit - $${depositAmount}</a></p>
+              <p>Or copy this link: ${paymentLink.url}</p>
+              <p>If you prefer to pay in full or have questions, just reply to this email.</p>
+              <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+          });
+        }
+
+        return res.json({ success: true, payment_link: paymentLink.url, deposit_amount: depositAmount });
+      } catch (err) {
+        console.error('Payment link error:', err);
+        return res.status(500).json({ error: err.message || 'Failed to create payment link' });
+      }
+    }
+
+    // POST /api/webhooks/stripe — handle Stripe webhook for deposit payments
+    if (path === '/api/webhooks/stripe' && req.method === 'POST') {
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+        const sb = await getSupabase();
+
+        // Verify webhook signature if secret is configured
+        let event = req.body;
+        const sig = req.headers['stripe-signature'];
+        if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
+          try {
+            event = stripe.webhooks.constructEvent(
+              typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+              sig,
+              process.env.STRIPE_WEBHOOK_SECRET
+            );
+          } catch (err) {
+            console.error('Webhook signature verification failed:', err.message);
+            return res.status(400).json({ error: 'Invalid signature' });
+          }
+        }
+
+        if (!event || !event.type) return res.status(400).json({ error: 'Invalid event' });
+
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data?.object;
+          const orderId = session?.metadata?.order_id;
+
+          if (orderId && session?.metadata?.type === 'deposit') {
+            // Mark deposit as paid
+            await sb.from('orders').update({
+              deposit_paid: true,
+              deposit_paid_at: new Date().toISOString(),
+              stripe_payment_intent_id: session.payment_intent || null,
+              updated_at: new Date().toISOString(),
+            }).eq('id', parseInt(orderId));
+
+            // Log status change
+            await sb.from('order_status_history').insert({
+              order_id: parseInt(orderId),
+              old_status: 'pending',
+              new_status: 'deposit_paid',
+              notes: `Deposit paid via Stripe. Payment Intent: ${session.payment_intent || 'N/A'}`,
+            });
+
+            // Notify Rodo via SMS
+            try {
+              const twilio = (await import('twilio')).default;
+              const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+              const { data: order } = await sb.from('orders').select('order_number, customer_name, deposit_amount').eq('id', parseInt(orderId)).single();
+              if (order) {
+                await twilioClient.messages.create({
+                  body: `Deposit paid! Order #${order.order_number?.slice(0, 8)} - $${order.deposit_amount} from ${order.customer_name}`,
+                  from: process.env.TWILIO_PHONE_NUMBER,
+                  to: process.env.RODO_PHONE,
+                });
+              }
+            } catch (smsErr) {
+              console.error('SMS notification error:', smsErr);
+            }
+
+            // Send confirmation email to customer
+            try {
+              const { data: order } = await sb.from('orders').select('*').eq('id', parseInt(orderId)).single();
+              if (order) {
+                const r = await getResend();
+                await r.emails.send({
+                  from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+                  to: order.customer_email || order.email,
+                  subject: `Deposit confirmed - Order #${order.order_number?.slice(0, 8) || order.id}`,
+                  html: `<p>Hi ${order.customer_name || 'there'},</p>
+                    <p>Your deposit of <strong>$${order.deposit_amount}</strong> has been received for Order #${order.order_number?.slice(0, 8) || order.id}.</p>
+                    <p>We'll notify you when your order is ready for ${order.fulfillment_type === 'delivery' ? 'delivery' : 'pickup'}.</p>
+                    <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+                });
+              }
+            } catch (emailErr) {
+              console.error('Deposit confirmation email error:', emailErr);
+            }
+          }
+        }
+
+        return res.json({ received: true });
+      } catch (err) {
+        console.error('Webhook error:', err);
+        return res.status(500).json({ error: 'Webhook processing failed' });
+      }
+    }
+
+    // ========== ORDER NOTIFICATIONS ==========
+
+    // POST /api/admin/orders/:id/notify — send status change notification to customer
+    const notifyMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/notify$/);
+    if (notifyMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+
+      const sb = await getSupabase();
+      const orderId = parseInt(notifyMatch[1]);
+      const { data: order } = await sb.from('orders').select('*').eq('id', orderId).single();
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+
+      const customerEmail = order.customer_email || order.email;
+      if (!customerEmail) return res.status(400).json({ error: 'No customer email' });
+
+      const status = order.status;
+      const orderRef = order.order_number?.slice(0, 8) || order.id;
+
+      const statusMessages = {
+        approved: {
+          subject: `Order #${orderRef} Approved`,
+          html: `<p>Hi ${order.customer_name || 'there'},</p>
+            <p>Great news! Your order #${orderRef} has been approved and is being prepared.</p>
+            ${order.preferred_date ? `<p><strong>Scheduled for:</strong> ${new Date(order.preferred_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>` : ''}
+            <p>We'll notify you when it's ready.</p>
+            <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+        },
+        ready_for_pickup: {
+          subject: `Order #${orderRef} Ready for Pickup`,
+          html: `<p>Hi ${order.customer_name || 'there'},</p>
+            <p>Your order #${orderRef} is ready for pickup!</p>
+            <p><strong>Pickup Location:</strong><br>1634 N 19th Ave, Phoenix, AZ 85009<br>Mon-Fri, 7:00 AM - 2:00 PM</p>
+            <p>Please bring a valid ID when picking up your order.</p>
+            <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+        },
+        out_for_delivery: {
+          subject: `Order #${orderRef} Out for Delivery`,
+          html: `<p>Hi ${order.customer_name || 'there'},</p>
+            <p>Your order #${orderRef} is on its way! Our driver will arrive at the scheduled time.</p>
+            <p>If you need to make any changes, call us at (602) 637-0032.</p>
+            <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+        },
+        completed: {
+          subject: `Order #${orderRef} Completed`,
+          html: `<p>Hi ${order.customer_name || 'there'},</p>
+            <p>Your order #${orderRef} has been completed. Thank you for your business!</p>
+            <p>If you have any questions or need to reorder, just reply to this email or visit our website.</p>
+            <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
+        },
+      };
+
+      const template = statusMessages[status];
+      if (!template) return res.status(400).json({ error: `No notification template for status: ${status}` });
+
+      try {
+        const r = await getResend();
+        await r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to: customerEmail,
+          subject: template.subject,
+          html: template.html,
+        });
+
+        // Send SMS if opted in
+        const { data: profile } = await sb.from('customer_profiles').select('sms_opt_in, phone').eq('id', order.customer_profile_id).single();
+        if (profile?.sms_opt_in && profile?.phone) {
+          try {
+            const twilio = (await import('twilio')).default;
+            const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            const smsMessages = {
+              approved: `SSW: Order #${orderRef} approved! We're preparing it now.`,
+              ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. Mon-Fri 7AM-2PM.`,
+              out_for_delivery: `SSW: Order #${orderRef} is out for delivery! Call (602) 637-0032 with questions.`,
+              completed: `SSW: Order #${orderRef} completed. Thanks for your business!`,
+            };
+            if (smsMessages[status]) {
+              await twilioClient.messages.create({
+                body: smsMessages[status],
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: profile.phone.startsWith('+') ? profile.phone : `+1${profile.phone.replace(/\D/g, '')}`,
+              });
+            }
+          } catch (smsErr) {
+            console.error('SMS notification error:', smsErr);
+          }
+        }
+
+        return res.json({ success: true, status, email_sent: true });
+      } catch (err) {
+        console.error('Notification error:', err);
+        return res.status(500).json({ error: err.message || 'Failed to send notification' });
+      }
     }
 
     // 404

@@ -1,5 +1,7 @@
 import { supabase } from "../db/supabase.js";
-import { sendAdminLeadNotification } from "./emailNotifications.js";
+import { sendAdminLeadNotification, sendCustomerQuoteConfirmation } from "./emailNotifications.js";
+import { forwardToMosLeads } from "./forwardToMosLeads.js";
+import { sendLeadSmsAlert } from "./smsNotifications.js";
 import { forwardToMosLeads } from "./forwardToMosLeads.js";
 
 export interface LeadSubmissionPayload {
@@ -7,6 +9,7 @@ export interface LeadSubmissionPayload {
   email?: string;
   phone?: string;
   notes?: string;
+  preferred_date?: string;
 }
 
 export interface LeadSubmissionResult {
@@ -27,7 +30,7 @@ export class LeadSubmissionError extends Error {
 export async function processLeadSubmission(
   payload: LeadSubmissionPayload
 ): Promise<LeadSubmissionResult> {
-  const { name, email, phone, notes } = payload;
+  const { name, email, phone, notes, preferred_date } = payload;
 
   if (!name || !email || !phone) {
     throw new LeadSubmissionError("Name, email, and phone are required", 400);
@@ -40,15 +43,18 @@ export async function processLeadSubmission(
 
   const submittedAt = new Date().toISOString();
 
+  const insertData: any = {
+    name,
+    email,
+    subject: "Lead Form Submission",
+    message: `Phone: ${phone}\n\nNotes: ${notes || "No additional notes"}`,
+    created_at: submittedAt,
+  };
+  if (preferred_date) insertData.preferred_date = preferred_date;
+
   const { data, error } = await supabase
     .from("contact_messages")
-    .insert({
-      name,
-      email,
-      subject: "Lead Form Submission",
-      message: `Phone: ${phone}\n\nNotes: ${notes || "No additional notes"}`,
-      created_at: submittedAt,
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -60,15 +66,25 @@ export async function processLeadSubmission(
   }
 
   try {
-    await sendAdminLeadNotification({
-      name,
-      email,
-      phone,
-      notes,
-      submittedAt,
-    });
+    await Promise.all([
+      sendAdminLeadNotification({
+        name,
+        email,
+        phone,
+        notes,
+        submittedAt,
+      }),
+      sendCustomerQuoteConfirmation({
+        name,
+        email,
+        phone,
+        notes,
+        submittedAt,
+      }),
+      sendLeadSmsAlert({ name, phone, notes }),
+    ]);
   } catch (notificationError) {
-    console.error("Failed to send admin notification:", notificationError);
+    console.error("Failed to send notifications:", notificationError);
   }
 
   forwardToMosLeads({

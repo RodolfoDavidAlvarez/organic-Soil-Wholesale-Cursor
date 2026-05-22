@@ -1,7 +1,7 @@
 // Product images with local file references
 export const productImages = [
   {
-    name: "Dan's Gold",
+    name: "Simon's Gold",
     url: "DansGold9lbs (1).jpg"
   },
   {

@@ -2,13 +2,14 @@ import { Resend } from "resend";
 import { supabase } from "../db/supabase.js";
 
 // Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY || "re_jUf6QpaW_4yMduvZiHiYg5CQGP6dhxyJi");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email configuration
-const FROM_EMAIL = "Organic Soil Wholesale <ralvarez@soilseedandwater.com>";
+const FROM_EMAIL = "Organic Soil Wholesale <info@soilseedandwater.com>";
+const REPLY_TO_EMAIL = "ralvarez@soilseedandwater.com";
 const COMPANY_NAME = "Organic Soil Wholesale";
-const COMPANY_PHONE = "(928) 550-1649";
-const COMPANY_ADDRESS = "Flagstaff, AZ";
+const COMPANY_PHONE = "(602) 726-7211";
+const COMPANY_ADDRESS = "1634 N 19th Ave, Phoenix, AZ 85009";
 
 // Get active admin emails for a specific notification type
 async function getAdminEmailsForNotification(notificationType: string): Promise<string[]> {
@@ -49,6 +50,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject,
       html,

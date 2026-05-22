@@ -11,8 +11,10 @@ import FloatingCTA from "@/components/layout/FloatingCTA";
 import { lazy, Suspense, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { QuoteCartProvider } from "@/contexts/QuoteCartContext";
 import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 import { GrokWidget } from "@/components/GrokWidget";
+import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -26,6 +28,7 @@ const Order = lazy(() => import("@/pages/Order"));
 const SpecialRequest = lazy(() => import("@/pages/SpecialRequest"));
 const Landscapers = lazy(() => import("@/pages/Landscapers"));
 const Wholesale = lazy(() => import("@/pages/Wholesale"));
+const Nurseries = lazy(() => import("@/pages/Nurseries"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
@@ -72,6 +75,7 @@ const AdminCODs = lazy(() => import("@/pages/admin/CODs"));
 const AdminCreateCOD = lazy(() => import("@/pages/admin/CreateCOD"));
 const AdminViewCOD = lazy(() => import("@/pages/admin/ViewCOD"));
 const AdminOperationsSettings = lazy(() => import("@/pages/admin/OperationsSettings"));
+const AdminTaskBoard = lazy(() => import("@/pages/admin/TaskBoard"));
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
@@ -108,6 +112,7 @@ function Router() {
         <Route path="/special-request" component={SpecialRequest} />
         <Route path="/landscapers" component={Landscapers} />
         <Route path="/wholesale" component={Wholesale} />
+        <Route path="/nurseries" component={Nurseries} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/store-locator" component={StoreLocatorEnhanced} />
@@ -158,6 +163,7 @@ function Router() {
         <Route path="/admin/operations/work-orders" component={AdminWorkOrders} />
         <Route path="/admin/operations/calendar" component={AdminOperationsCalendar} />
         <Route path="/admin/operations/settings" component={AdminOperationsSettings} />
+        <Route path="/admin/operations/tasks" component={AdminTaskBoard} />
         <Route path="/admin/operations/resources" component={AdminOperationsResources} />
         <Route path="/admin/operations/cods/new" component={AdminCreateCOD} />
         <Route path="/admin/operations/cods/:id" component={AdminViewCOD} />
@@ -176,6 +182,8 @@ function App() {
   const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through");
   const isTriviaGame = location.startsWith("/trivia");
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
+  const isQuoteFlow = location.startsWith("/order");
+  const isProductFlow = location.startsWith("/products");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
   const isRepresentativeLanding = location.startsWith("/rep/");
@@ -188,22 +196,25 @@ function App() {
       <HelmetProvider>
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <AuthProvider>
-            <AdminAuthProvider>
-              <TooltipProvider>
-                <div className="min-h-screen flex flex-col">
-                  {showStandardLayout && <Header />}
-                  <main className="flex-grow" style={showStandardLayout ? { paddingTop: "var(--app-header-height, 6.5rem)" } : undefined}>
-                    <Router />
-                  </main>
-                  {showStandardLayout && <Footer />}
-                  <Toaster />
-                  <ScrollToTop />
-                  <Analytics />
-                  {showStandardLayout && <FloatingCTA />}
-                  {GROK_ASSISTANT_ENABLED && <GrokWidget />}
-                </div>
-              </TooltipProvider>
-            </AdminAuthProvider>
+            <QuoteCartProvider>
+              <AdminAuthProvider>
+                <TooltipProvider>
+                  <div className="min-h-screen flex flex-col">
+                    {showStandardLayout && <Header />}
+                    <main className="flex-grow" style={showStandardLayout ? { paddingTop: "var(--app-header-height, 6.5rem)" } : undefined}>
+                      <Router />
+                    </main>
+                    {showStandardLayout && <Footer />}
+                    <Toaster />
+                    <ScrollToTop />
+                    <Analytics />
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
+                    {showStandardLayout && <QuoteCartDrawer />}
+                    {GROK_ASSISTANT_ENABLED && <GrokWidget />}
+                  </div>
+                </TooltipProvider>
+              </AdminAuthProvider>
+            </QuoteCartProvider>
           </AuthProvider>
         </ThemeProvider>
       </HelmetProvider>

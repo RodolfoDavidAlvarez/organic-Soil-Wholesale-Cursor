@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
+import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
 
 const router = Router();
 
@@ -25,6 +26,12 @@ function getStripe() {
 router.post('/create-session', async (req, res) => {
   try {
     const { items, customerInfo, pickupTime, locationId, isQuickOrder } = req.body;
+    const customerNotes = [
+      customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
+      customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
+      typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
+      customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
+    ].filter(Boolean).join('\n');
 
     // Use the provided locationId or default to Phoenix (1)
     const checkoutLocationId = locationId || 1;
@@ -57,26 +64,46 @@ router.post('/create-session', async (req, res) => {
       });
     }
 
+    // Total in cents — `orders.total` is integer (legacy schema stores cents)
+    const totalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    const totalCents = Math.round(totalDollars * 100);
+
     // Create order in database with pending status
     const orderData: any = {
       email: customerInfo.email || null,
       phone: customerInfo.phone,
       status: 'pending_payment',
       payment_status: 'pending',
+      delivery_type: 'pickup',
+      fulfillment_type: 'pickup',
       pickup_scheduled_at: pickupTime || null,
-      total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
-      location_id: checkoutLocationId
+      subtotal: totalCents,
+      total: totalCents,
+      total_amount: totalDollars,
+      location_id: checkoutLocationId,
+      customer_name: customerInfo.name || customerInfo.businessName || null,
+      customer_email: customerInfo.email || null,
+      notes: customerNotes || null,
+      // Legacy NOT NULL JSONB column — mirror line items here too
+      order_items: items.map((item: any) => ({
+        product_id: item.productId,
+        name: item.name,
+        size: item.sizeOption,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,
+      })),
     };
 
     // Handle different customer info structures
     if (isQuickOrder) {
       // Quick order uses name field
-      orderData.business_name = customerInfo.name;
-      orderData.order_type = 'quick_order';
+      orderData.business_name = customerInfo.company || customerInfo.name;
+      orderData.order_type = 'pickup';
     } else {
       // Regular checkout uses businessName
       orderData.business_name = customerInfo.businessName;
-      orderData.order_type = 'standard';
+      orderData.order_type = 'regular';
     }
 
     const { data: order, error: orderError } = await supabase
@@ -104,19 +131,30 @@ router.post('/create-session', async (req, res) => {
 
     if (itemsError) throw itemsError;
 
+    // Absolutize image URLs — Stripe requires explicit scheme
+    const origin = (req.headers.origin as string) || (req.headers.referer as string)?.replace(/(https?:\/\/[^/]+).*/, '$1') || 'https://organicsoilwholesale.com';
+    const absolutizeImage = (url: string | undefined) => {
+      if (!url) return null;
+      if (/^https?:\/\//i.test(url)) return url;
+      return `${origin.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
     // Create Stripe line items
-    const lineItems = items.map((item: any) => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name,
-          description: item.sizeOption,
-          images: item.imageUrl ? [item.imageUrl] : [],
+    const lineItems = items.map((item: any) => {
+      const img = absolutizeImage(item.imageUrl);
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.name,
+            description: item.sizeOption,
+            ...(img ? { images: [img] } : {}),
+          },
+          unit_amount: Math.round(item.price * 100),
         },
-        unit_amount: Math.round(item.price * 100), // Convert to cents
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
 
     // Create Stripe checkout session
     const session = await getStripe().checkout.sessions.create({
@@ -128,8 +166,11 @@ router.post('/create-session', async (req, res) => {
       metadata: {
         order_id: order.id.toString(),
         pickup_time: pickupTime,
+        customer_type: customerInfo.customerCategory || '',
+        company: customerInfo.company || '',
+        marketing_opt_in: typeof customerInfo.marketingOptIn === 'boolean' ? String(customerInfo.marketingOptIn) : '',
       },
-      customer_email: customerInfo.email,
+      customer_email: customerInfo.email || undefined,
     });
 
     // Update order with Stripe session ID
@@ -349,7 +390,49 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     }
   }
 
+  // Fan out to MOS so yard reps get a push notification with the full order detail.
+  // Phase B will land the matching POST /api/pickup-orders endpoint; until then this
+  // fire-and-forget call logs a 404 we can replay later.
+  if (fullOrder && Array.isArray(fullOrder.order_items)) {
+    forwardPickupOrderToMos({
+      osw_order_id: orderId,
+      osw_order_number: fullOrder.order_number || undefined,
+      customer_name: fullOrder.business_name || 'Customer',
+      customer_phone: fullOrder.phone || '',
+      customer_email: fullOrder.email || undefined,
+      items: fullOrder.order_items.map((item: any) => ({
+        product_id: item.product_id,
+        product_name: item.products?.name || 'Product',
+        size_option: item.size_option || '',
+        quantity: item.quantity || 1,
+        unit_price_cents: Math.round((item.unit_price || 0) * 100),
+        total_price_cents: Math.round((item.total_price || 0) * 100),
+      })),
+      pickup_at: fullOrder.pickup_scheduled_at || new Date().toISOString(),
+      slot_label: fullOrder.pickup_scheduled_at
+        ? formatPickupSlot(fullOrder.pickup_scheduled_at)
+        : undefined,
+      total_cents: Math.round((fullOrder.total_amount || fullOrder.total || 0) * 100),
+      payment_status: 'paid',
+      source: 'osw_pay_pickup',
+    });
+  }
+
   console.log(`Order ${orderId} successfully paid and inventory reserved`);
+}
+
+/** Format a pickup ISO into a human slot label like "9 – 10 AM, Tue May 20" */
+function formatPickupSlot(pickupIso: string): string {
+  try {
+    const d = new Date(pickupIso);
+    const hour = d.getUTCHours();
+    const next = hour + 1;
+    const ampm = (h: number) => (h % 12 === 0 ? 12 : h % 12) + ' ' + (h < 12 ? 'AM' : 'PM');
+    const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return `${ampm(hour)} – ${ampm(next)}, ${date}`;
+  } catch {
+    return pickupIso;
+  }
 }
 
 // Handle failed payment

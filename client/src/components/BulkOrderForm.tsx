@@ -87,7 +87,7 @@ const generateCustomerEmail = (formData: any) => `
                 <p><strong>Preferred Delivery Date:</strong> ${formData.deliveryDate}</p>
             </div>
             
-            <p>If you have any additional questions or information to provide, please don't hesitate to contact us at (928) 550-1649.</p>
+            <p>If you have any additional questions or information to provide, please don't hesitate to contact us at (602) 726-7211.</p>
             <p>Best regards,<br>The Organic Soil Wholesale Team</p>
         </div>
         <div class="footer">

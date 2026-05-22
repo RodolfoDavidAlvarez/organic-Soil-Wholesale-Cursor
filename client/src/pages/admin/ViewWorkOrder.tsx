@@ -174,7 +174,7 @@ export default function ViewWorkOrder() {
   return (
     <ProtectedAdminRoute>
       <OperationsLayout>
-        <div className="min-h-screen bg-gray-50 p-3 md:p-4">
+        <div className="min-h-screen bg-[#fafaf9] p-3 md:p-4">
           {/* Header */}
           <div className="max-w-7xl mx-auto mb-3">
             <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ export default function ViewWorkOrder() {
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-4">
             {/* PDF Preview - Left Side */}
             <div className="lg:w-1/2 xl:w-2/5">
-              <div className="bg-white rounded-md border border-gray-200 overflow-hidden sticky top-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-4">
                 <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
                   <div className="flex items-center gap-2">
                     <FileIcon className="w-3.5 h-3.5 text-gray-500" />
@@ -269,7 +269,7 @@ export default function ViewWorkOrder() {
             {/* Details - Right Side */}
             <div className="lg:w-1/2 xl:w-3/5 space-y-3">
               {/* Title Card */}
-              <div className="bg-white rounded-md border border-gray-200 p-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <h1 className="text-lg font-bold font-mono text-[#264027]">{workOrder.wo_number}</h1>
                   {getStatusBadge(workOrder.status)}
@@ -305,7 +305,7 @@ export default function ViewWorkOrder() {
               <div className="space-y-3">
                 {/* Line items (when multiple) or single Product / Size & Quantity */}
                 {workOrder.lines && workOrder.lines.length > 0 ? (
-                  <div className="bg-white rounded-md border border-gray-200 p-3">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
                     <div className="flex items-center gap-1.5 mb-2">
                       <Package className="w-3.5 h-3.5 text-[#264027]" />
                       <span className="text-xs font-semibold text-gray-700">Line items</span>
@@ -334,7 +334,7 @@ export default function ViewWorkOrder() {
                   </div>
                 ) : (
                   <>
-                    <div className="bg-white rounded-md border border-gray-200 p-3">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Package className="w-3.5 h-3.5 text-[#264027]" />
                         <span className="text-xs font-semibold text-gray-700">Product</span>
@@ -355,7 +355,7 @@ export default function ViewWorkOrder() {
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white rounded-md border border-gray-200 p-3">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
                         <div className="flex items-center gap-1.5 mb-2">
                           <Ruler className="w-3.5 h-3.5 text-[#6f732f]" />
                           <span className="text-xs font-semibold text-gray-700">Size Category</span>
@@ -372,7 +372,7 @@ export default function ViewWorkOrder() {
                           <div className="text-xs text-gray-500">~{workOrder.estimated_pallet_weight}</div>
                         )}
                       </div>
-                      <div className="bg-white rounded-md border border-gray-200 p-3">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
                         <div className="flex items-center gap-1.5 mb-2">
                           <Hash className="w-3.5 h-3.5 text-[#b38a58]" />
                           <span className="text-xs font-semibold text-gray-700">Quantity</span>
@@ -388,7 +388,7 @@ export default function ViewWorkOrder() {
 
                 {/* Weight Calculation */}
                 {workOrder.total_weight_lbs > 0 && (
-                  <div className="bg-[#264027] rounded-md p-3 text-white">
+                  <div className="bg-[#264027] rounded-xl shadow-sm p-3 text-white">
                     <div className="flex items-center gap-1.5 mb-2">
                       <ClipboardList className="w-3.5 h-3.5" />
                       <span className="text-xs font-semibold">Total Estimated Weight</span>
@@ -401,7 +401,7 @@ export default function ViewWorkOrder() {
 
                 {/* Mixing Guidelines */}
                 {workOrder.mixing_guidelines && (
-                  <div className="bg-green-50 rounded-md border border-green-200 p-3">
+                  <div className="bg-green-50 rounded-xl shadow-sm border border-green-200 p-3">
                     <div className="text-[10px] font-semibold text-green-700 uppercase tracking-wide mb-2">
                       Mixing Guidelines
                     </div>
@@ -413,7 +413,7 @@ export default function ViewWorkOrder() {
 
                 {/* Transportation */}
                 {workOrder.needs_transportation && (
-                  <div className="bg-white rounded-md border border-gray-200 p-3">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
                     <div className="flex items-center gap-1.5 mb-2">
                       <Truck className="w-3.5 h-3.5 text-blue-500" />
                       <span className="text-xs font-semibold text-gray-700">Delivery Information</span>
@@ -447,7 +447,7 @@ export default function ViewWorkOrder() {
                 )}
 
                 {!workOrder.needs_transportation && (
-                  <div className="bg-gray-50 rounded-md border border-gray-200 p-3">
+                  <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <AlertCircle className="w-3.5 h-3.5" />
                       Customer Pickup - No transportation required
@@ -456,7 +456,7 @@ export default function ViewWorkOrder() {
                 )}
 
                 {/* Metadata */}
-                <div className="bg-gray-50 rounded-md border border-gray-200 p-3">
+                <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-3">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-gray-500">Created by:</span>

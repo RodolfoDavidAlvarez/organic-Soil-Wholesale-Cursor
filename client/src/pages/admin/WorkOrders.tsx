@@ -152,7 +152,7 @@ export default function WorkOrders() {
   return (
     <ProtectedAdminRoute>
       <OperationsLayout>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#fafaf9]">
           <div className="p-3 md:p-4 max-w-[1400px] mx-auto">
 
             {/* Compact Header */}
@@ -179,10 +179,10 @@ export default function WorkOrders() {
                     </button>
                   </div>
                 ) : (
-                  <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500">
-                    <span><strong className="text-gray-700">{filteredWorkOrders.length}</strong> total</span>
-                    <span><strong className="text-gray-700">{thisWeekCount}</strong> this week</span>
-                    <span><strong className="text-gray-700">{totalPallets}</strong> pallets</span>
+                  <div className="hidden sm:flex items-center gap-4 text-xs text-gray-600">
+                    <span><strong className="text-gray-900">{filteredWorkOrders.length}</strong> total</span>
+                    <span><strong className="text-gray-900">{thisWeekCount}</strong> this week</span>
+                    <span><strong className="text-gray-900">{totalPallets}</strong> pallets</span>
                   </div>
                 )}
               </div>
@@ -198,7 +198,7 @@ export default function WorkOrders() {
 
             {/* Compact Filters */}
             <div className="flex flex-wrap gap-2 mb-3">
-              <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+              <div className="relative flex-1 min-w-[200px] max-w-[280px]">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <Input
                   placeholder="Search..."
@@ -234,7 +234,7 @@ export default function WorkOrders() {
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               {isLoading ? (
                 <div className="p-8 text-center text-sm text-gray-500">
                   Loading...
@@ -267,7 +267,7 @@ export default function WorkOrders() {
               ) : (
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr className="bg-gray-50/80 border-b border-gray-200">
                       <th className="py-2 px-2 w-8">
                         <Checkbox
                           checked={selectedIds.length === filteredWorkOrders.length && filteredWorkOrders.length > 0}

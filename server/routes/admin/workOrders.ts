@@ -27,8 +27,8 @@ const SIZE_CATEGORY_IMAGE_FALLBACKS: Record<string, string[]> = {
   "1cf": ["/size-categories/1cf-pallet.jpg", "/size-categories/1cf-pallet.png"],
   "1.5cf": ["/size-categories/1cf-pallet.jpg", "/size-categories/1cf-pallet.png"],
   "2cf": ["/size-categories/2cf-pallet.jpg", "/size-categories/2cf-pallet.png"],
-  "tote": ["/size-categories/tote.jpg", "/size-categories/tote.png"],
-  "bulk": ["/size-categories/bulk.jpg", "/size-categories/bulk.png"],
+  tote: ["/size-categories/tote.jpg", "/size-categories/tote.png"],
+  bulk: ["/size-categories/bulk.jpg", "/size-categories/bulk.png"],
 };
 
 function imageMimeTypeFromPath(imagePath: string): string {
@@ -105,51 +105,29 @@ async function loadImageAsBase64(imagePathOrUrl?: string | null, fallbackPaths: 
 type WorkOrderPdfType = "workorder" | "label" | "both";
 
 async function getHydratedWorkOrderForPdf(id: string | number): Promise<any | null> {
-  const { data: wo, error } = await supabase
-    .from("ops_work_orders")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data: wo, error } = await supabase.from("ops_work_orders").select("*").eq("id", id).single();
 
   if (error) throw error;
   if (!wo) return null;
 
-  const { data: woLines } = await supabase
-    .from("ops_work_order_lines")
-    .select("*")
-    .eq("work_order_id", id)
-    .order("sort_order", { ascending: true });
+  const { data: woLines } = await supabase.from("ops_work_order_lines").select("*").eq("work_order_id", id).order("sort_order", { ascending: true });
   (wo as any).lines = woLines || [];
 
   // Hydrate product and size-category illustrations for top-level WO and each line item.
   const lines = ((wo as any).lines || []) as any[];
   const uniqueProductIds = Array.from(
-    new Set(
-      [wo.product_id, ...lines.map((l) => l.product_id)].filter(
-        (value) => typeof value === "string" && value.trim()
-      ) as string[]
-    )
+    new Set([wo.product_id, ...lines.map((l) => l.product_id)].filter((value) => typeof value === "string" && value.trim()) as string[]),
   );
   const uniqueSizeCodes = Array.from(
-    new Set(
-      [wo.size_category, ...lines.map((l) => l.size_category)].filter(
-        (value) => typeof value === "string" && value.trim()
-      ) as string[]
-    )
+    new Set([wo.size_category, ...lines.map((l) => l.size_category)].filter((value) => typeof value === "string" && value.trim()) as string[]),
   );
 
   const [productCacheResult, sizeCacheResult] = await Promise.all([
     uniqueProductIds.length
-      ? supabase
-          .from("ops_products_cache")
-          .select("product_id, illustration_url")
-          .in("product_id", uniqueProductIds)
+      ? supabase.from("ops_products_cache").select("product_id, illustration_url").in("product_id", uniqueProductIds)
       : Promise.resolve({ data: [], error: null } as any),
     uniqueSizeCodes.length
-      ? supabase
-          .from("ops_size_categories_cache")
-          .select("code, illustration_url")
-          .in("code", uniqueSizeCodes)
+      ? supabase.from("ops_size_categories_cache").select("code, illustration_url").in("code", uniqueSizeCodes)
       : Promise.resolve({ data: [], error: null } as any),
   ]);
 
@@ -164,13 +142,10 @@ async function getHydratedWorkOrderForPdf(id: string | number): Promise<any | nu
     ((productCacheResult.data || []) as Array<{ product_id: string; illustration_url: string | null }>).map((p) => [
       p.product_id,
       p.illustration_url || null,
-    ])
+    ]),
   );
   const sizeIllustrationPathByCode = new Map<string, string | null>(
-    ((sizeCacheResult.data || []) as Array<{ code: string; illustration_url: string | null }>).map((s) => [
-      s.code,
-      s.illustration_url || null,
-    ])
+    ((sizeCacheResult.data || []) as Array<{ code: string; illustration_url: string | null }>).map((s) => [s.code, s.illustration_url || null]),
   );
 
   const productBase64ById = new Map<string, string | null>();
@@ -180,7 +155,7 @@ async function getHydratedWorkOrderForPdf(id: string | number): Promise<any | nu
       const localFallback = `/product-illustrations/${productId.toLowerCase()}-small.webp`;
       const base64 = await loadImageAsBase64(cachedPath, [localFallback]);
       productBase64ById.set(productId, base64);
-    })
+    }),
   );
 
   const sizeBase64ByCode = new Map<string, string | null>();
@@ -189,20 +164,16 @@ async function getHydratedWorkOrderForPdf(id: string | number): Promise<any | nu
       const cachedPath = sizeIllustrationPathByCode.get(sizeCode) || null;
       const base64 = await loadImageAsBase64(cachedPath, getSizeCategoryFallbackPaths(sizeCode));
       sizeBase64ByCode.set(sizeCode, base64);
-    })
+    }),
   );
 
   wo.illustration_base64 = wo.product_id ? productBase64ById.get(wo.product_id) || null : null;
-  wo.size_category_illustration_base64 = wo.size_category
-    ? sizeBase64ByCode.get(wo.size_category) || null
-    : null;
+  wo.size_category_illustration_base64 = wo.size_category ? sizeBase64ByCode.get(wo.size_category) || null : null;
 
   (wo as any).lines = lines.map((line) => ({
     ...line,
     product_illustration_base64: line.product_id ? productBase64ById.get(line.product_id) || null : null,
-    size_category_illustration_base64: line.size_category
-      ? sizeBase64ByCode.get(line.size_category) || null
-      : null,
+    size_category_illustration_base64: line.size_category ? sizeBase64ByCode.get(line.size_category) || null : null,
   }));
 
   return wo;
@@ -252,7 +223,10 @@ async function generateWorkOrderPdfBuffer(wo: any, pdfType: WorkOrderPdfType = "
   }
 }
 
-async function generateWorkOrderPdfById(id: string | number, pdfType: WorkOrderPdfType = "workorder"): Promise<{ pdfBuffer: Buffer; filename: string; wo: any }> {
+async function generateWorkOrderPdfById(
+  id: string | number,
+  pdfType: WorkOrderPdfType = "workorder",
+): Promise<{ pdfBuffer: Buffer; filename: string; wo: any }> {
   const wo = await getHydratedWorkOrderForPdf(id);
   if (!wo) {
     throw new Error("Work order not found");
@@ -292,8 +266,7 @@ async function sendNewWorkOrderNotifications(wo: {
 
   // Only send email to recipients who have email and have "notify by email" enabled
   const toEmail = recipients.filter(
-    (r: { email?: string | null; notify_by_email?: boolean }) =>
-      (r.email || "").trim() && r.notify_by_email !== false
+    (r: { email?: string | null; notify_by_email?: boolean }) => (r.email || "").trim() && r.notify_by_email !== false,
   );
   if (toEmail.length === 0) return;
 
@@ -508,9 +481,7 @@ router.post("/calculate-mix", async (req: AdminRequest, res) => {
     const { productName, ingredientRatios, sizeCategory, sizeCategoryName, unitsPerPallet, estimatedPalletWeight, quantity, quantityType } = req.body;
 
     // Parse estimated pallet weight (remove commas and "lbs")
-    const palletWeightLbs = estimatedPalletWeight
-      ? parseFloat(estimatedPalletWeight.replace(/,/g, "").replace(/\s*lbs?/i, ""))
-      : 0;
+    const palletWeightLbs = estimatedPalletWeight ? parseFloat(estimatedPalletWeight.replace(/,/g, "").replace(/\s*lbs?/i, "")) : 0;
 
     // Calculate total weight
     let totalWeight = 0;
@@ -550,9 +521,7 @@ router.post("/calculate-mix", async (req: AdminRequest, res) => {
     }
 
     // Build mixing guidelines text
-    const guidelines = `Pallet configuration: ${sizeCategoryName || sizeCategory}${
-      unitsPerPallet ? `, ${unitsPerPallet} units per pallet` : ""
-    }
+    const guidelines = `Pallet configuration: ${sizeCategoryName || sizeCategory}${unitsPerPallet ? `, ${unitsPerPallet} units per pallet` : ""}
 
 ${palletConfig ? `Total estimated final weight: ${palletConfig}` : ""}
 
@@ -602,10 +571,7 @@ router.get("/", async (req: AdminRequest, res) => {
   try {
     const { status, dateFilter, search } = req.query;
 
-    let query = supabase
-      .from("ops_work_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("ops_work_orders").select("*").order("created_at", { ascending: false });
 
     // Apply status filter
     if (status && status !== "all") {
@@ -647,7 +613,7 @@ router.get("/", async (req: AdminRequest, res) => {
         (wo) =>
           wo.wo_number?.toLowerCase().includes(searchLower) ||
           wo.product_name?.toLowerCase().includes(searchLower) ||
-          wo.product_id?.toLowerCase().includes(searchLower)
+          wo.product_id?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -683,8 +649,16 @@ router.post("/", async (req: AdminRequest, res) => {
 
       const first = lines[0];
       const totalWeightLbs = lines.reduce((sum: number, l: any) => sum + (parseFloat(l.totalWeightLbs) || 0), 0);
-      const productName = lines.length > 1 ? "Multiple products" : (first.productName || first.customNotes || "Custom");
-      const mixingGuidelines = lines.length === 1 ? first.mixingGuidelines : lines.map((l: any, i: number) => `Line ${i + 1}: ${l.productName || l.customNotes || 'Custom'} — ${l.sizeCategoryName || l.sizeCategory}, ${l.quantity} ${l.quantityType}(s)${l.mixingGuidelines ? `\n${l.mixingGuidelines}` : ''}`).join('\n\n');
+      const productName = lines.length > 1 ? "Multiple products" : first.productName || first.customNotes || "Custom";
+      const mixingGuidelines =
+        lines.length === 1
+          ? first.mixingGuidelines
+          : lines
+              .map(
+                (l: any, i: number) =>
+                  `Line ${i + 1}: ${l.productName || l.customNotes || "Custom"} — ${l.sizeCategoryName || l.sizeCategory}, ${l.quantity} ${l.quantityType}(s)${l.mixingGuidelines ? `\n${l.mixingGuidelines}` : ""}`,
+              )
+              .join("\n\n");
 
       const { data: wo, error: woError } = await supabase
         .from("ops_work_orders")
@@ -862,20 +836,12 @@ router.get("/:id", async (req: AdminRequest, res) => {
   try {
     const { id } = req.params;
 
-    const { data: wo, error } = await supabase
-      .from("ops_work_orders")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const { data: wo, error } = await supabase.from("ops_work_orders").select("*").eq("id", id).single();
 
     if (error) throw error;
     if (!wo) return res.status(404).json({ message: "Work order not found" });
 
-    const { data: lines } = await supabase
-      .from("ops_work_order_lines")
-      .select("*")
-      .eq("work_order_id", id)
-      .order("sort_order", { ascending: true });
+    const { data: lines } = await supabase.from("ops_work_order_lines").select("*").eq("work_order_id", id).order("sort_order", { ascending: true });
 
     res.json({ ...wo, lines: lines || [] });
   } catch (error: any) {
@@ -928,12 +894,7 @@ router.patch("/:id", async (req: AdminRequest, res) => {
 
     snakeCaseUpdates.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
-      .from("ops_work_orders")
-      .update(snakeCaseUpdates)
-      .eq("id", id)
-      .select()
-      .single();
+    const { data, error } = await supabase.from("ops_work_orders").update(snakeCaseUpdates).eq("id", id).select().single();
 
     if (error) throw error;
 
@@ -1371,7 +1332,9 @@ function generateWorkOrderPDFHTML(wo: any): string {
       </div>
     </div>
 
-    ${(wo as any).lines?.length > 0 ? `
+    ${
+      (wo as any).lines?.length > 0
+        ? `
     <div class="section">
       <div class="section-title">Line Items</div>
       <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
@@ -1384,19 +1347,25 @@ function generateWorkOrderPDFHTML(wo: any): string {
           </tr>
         </thead>
         <tbody>
-          ${(wo as any).lines.map((l: any, i: number) => `
+          ${(wo as any).lines
+            .map(
+              (l: any, i: number) => `
           <tr style="border-bottom: 1px solid #e0e0e0;">
             <td style="padding: 8px;">${l.product_name || "Custom"}</td>
             <td style="padding: 8px;">${l.size_category_name || l.size_category}</td>
             <td style="padding: 8px;">${l.quantity} ${l.quantity_type === "pallet" ? "Pallet" : "Unit"}${l.quantity > 1 ? "s" : ""}</td>
             <td style="padding: 8px;">${l.total_weight_lbs ? l.total_weight_lbs.toLocaleString() + " lbs" : "—"}</td>
           </tr>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </tbody>
       </table>
       ${wo.total_weight_lbs ? `<p style="margin-top: 8px; font-weight: 600; color: #264027;">Total estimated weight: ${Number(wo.total_weight_lbs).toLocaleString()} lbs</p>` : ""}
       <div class="line-visual-grid">
-        ${(wo as any).lines.map((l: any, i: number) => `
+        ${(wo as any).lines
+          .map(
+            (l: any, i: number) => `
         <div class="line-visual-card">
           <div class="line-visual-header">
             <div class="line-visual-tile" style="display:block;">
@@ -1406,16 +1375,18 @@ function generateWorkOrderPDFHTML(wo: any): string {
             </div>
             <div class="line-visual-tile" style="display:block;">
               <div class="line-visual-title">Product Illustration</div>
-              ${l.product_illustration_base64
-                ? `<img src="${l.product_illustration_base64}" alt="${l.product_name || "Product"}" />`
-                : `<span style="color:#999; font-size:9pt;">No Product Image</span>`
+              ${
+                l.product_illustration_base64
+                  ? `<img src="${l.product_illustration_base64}" alt="${l.product_name || "Product"}" />`
+                  : `<span style="color:#999; font-size:9pt;">No Product Image</span>`
               }
             </div>
             <div class="line-visual-tile" style="display:block;">
               <div class="line-visual-title">Size Category Photo</div>
-              ${l.size_category_illustration_base64
-                ? `<img src="${l.size_category_illustration_base64}" alt="${l.size_category_name || l.size_category || "Size Category"}" />`
-                : `<span style="color:#999; font-size:9pt;">No Size Image</span>`
+              ${
+                l.size_category_illustration_base64
+                  ? `<img src="${l.size_category_illustration_base64}" alt="${l.size_category_name || l.size_category || "Size Category"}" />`
+                  : `<span style="color:#999; font-size:9pt;">No Size Image</span>`
               }
             </div>
           </div>
@@ -1426,7 +1397,9 @@ function generateWorkOrderPDFHTML(wo: any): string {
             <span class="info-label">Estimated Weight:</span><span class="info-value">${l.total_weight_lbs ? `${Number(l.total_weight_lbs).toLocaleString()} lbs` : "—"}</span>
           </div>
         </div>
-        `).join("")}
+        `,
+          )
+          .join("")}
       </div>
     </div>
     <div class="section">
@@ -1443,14 +1416,16 @@ function generateWorkOrderPDFHTML(wo: any): string {
         ${wo.created_by ? `<span class="info-label">Created By:</span><span class="info-value">${wo.created_by}${wo.created_by_email ? ` (${wo.created_by_email})` : ""}</span>` : ""}
       </div>
     </div>
-    ` : `
+    `
+        : `
     <div class="section">
       <div class="section-title">Product Information</div>
       <div class="product-header">
         <div class="product-image">
-          ${wo.illustration_base64
-            ? `<img src="${wo.illustration_base64}" alt="${wo.product_name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`
-            : `<span style="color: #999; font-size: 10pt;">No Image</span>`
+          ${
+            wo.illustration_base64
+              ? `<img src="${wo.illustration_base64}" alt="${wo.product_name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`
+              : `<span style="color: #999; font-size: 10pt;">No Image</span>`
           }
         </div>
         <div class="product-details">
@@ -1473,9 +1448,10 @@ function generateWorkOrderPDFHTML(wo: any): string {
     <div class="section">
       <div class="section-title">Size & Quantity</div>
       <div class="size-layout">
-        ${wo.size_category_illustration_base64
-          ? `<div class="size-photo"><img src="${wo.size_category_illustration_base64}" alt="${wo.size_category_name || wo.size_category}" /></div>`
-          : ""
+        ${
+          wo.size_category_illustration_base64
+            ? `<div class="size-photo"><img src="${wo.size_category_illustration_base64}" alt="${wo.size_category_name || wo.size_category}" /></div>`
+            : ""
         }
         <div class="highlight-box" style="flex: 1;">
           <div class="highlight-row">
@@ -1491,34 +1467,53 @@ function generateWorkOrderPDFHTML(wo: any): string {
         </div>
       </div>
     </div>
-    `}
+    `
+    }
 
-    ${wo.ingredient_ratios || wo.ingredients_list ? `
+    ${
+      wo.ingredient_ratios || wo.ingredients_list
+        ? `
     <div class="section">
       <div class="section-title">Ingredients</div>
       <div class="info-grid" style="padding: 0 8px;">
-        ${wo.ingredient_ratios ? `
+        ${
+          wo.ingredient_ratios
+            ? `
         <span class="info-label">Ingredient Ratios:</span>
         <span class="info-value">${wo.ingredient_ratios}</span>
-        ` : ""}
-        ${wo.ingredients_list ? `
+        `
+            : ""
+        }
+        ${
+          wo.ingredients_list
+            ? `
         <span class="info-label">Ingredients:</span>
         <span class="info-value">${wo.ingredients_list}</span>
-        ` : ""}
+        `
+            : ""
+        }
       </div>
     </div>
-    ` : ""}
+    `
+        : ""
+    }
 
-    ${wo.mixing_guidelines ? `
+    ${
+      wo.mixing_guidelines
+        ? `
     <div class="section">
       <div class="section-title">Mixing Guidelines</div>
       <div class="mixing-box">
         <div class="mixing-content">${wo.mixing_guidelines}</div>
       </div>
     </div>
-    ` : ""}
+    `
+        : ""
+    }
 
-    ${wo.work_order_notes || wo.custom_notes ? `
+    ${
+      wo.work_order_notes || wo.custom_notes
+        ? `
     <div class="section">
       <div class="section-title">Notes</div>
       <div class="notes-box">
@@ -1527,25 +1522,39 @@ function generateWorkOrderPDFHTML(wo: any): string {
         ${wo.custom_notes || ""}
       </div>
     </div>
-    ` : ""}
+    `
+        : ""
+    }
 
-    ${wo.needs_transportation ? `
+    ${
+      wo.needs_transportation
+        ? `
     <div class="section">
       <div class="section-title">Delivery Information</div>
       <div class="info-grid" style="padding: 0 8px;">
         <span class="info-label">Destination:</span>
         <span class="info-value">${wo.destination_address || ""}${wo.destination_city ? `, ${wo.destination_city}` : ""}${wo.destination_state ? `, ${wo.destination_state}` : ""} ${wo.destination_zip || ""}</span>
-        ${wo.preferred_delivery_date ? `
+        ${
+          wo.preferred_delivery_date
+            ? `
         <span class="info-label">Preferred Date:</span>
         <span class="info-value">${formatDate(wo.preferred_delivery_date)}</span>
-        ` : ""}
-        ${wo.preferred_delivery_time ? `
+        `
+            : ""
+        }
+        ${
+          wo.preferred_delivery_time
+            ? `
         <span class="info-label">Preferred Time:</span>
         <span class="info-value">${wo.preferred_delivery_time}</span>
-        ` : ""}
+        `
+            : ""
+        }
       </div>
     </div>
-    ` : ""}
+    `
+        : ""
+    }
 
     <div class="footer">
       Soil Seed & Water | 18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com
@@ -1659,11 +1668,15 @@ function generatePalletLabelHTML(wo: any): string {
     <div class="label-info">
       <strong>${wo.size_category_name || wo.size_category}</strong>
     </div>
-    ${wo.units_per_pallet ? `
+    ${
+      wo.units_per_pallet
+        ? `
     <div class="label-info">
       ${wo.units_per_pallet} units per pallet
     </div>
-    ` : ""}
+    `
+        : ""
+    }
     <div class="label-date">
       Date Produced: _______________
     </div>
@@ -2000,7 +2013,9 @@ function generateCombinedPDFHTML(wo: any): string {
         </div>
       </div>
     </div>
-    ${(wo as any).lines?.length > 0 ? `
+    ${
+      (wo as any).lines?.length > 0
+        ? `
     <div class="section">
       <div class="section-title">Line Items</div>
       <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
@@ -2013,19 +2028,25 @@ function generateCombinedPDFHTML(wo: any): string {
           </tr>
         </thead>
         <tbody>
-          ${(wo as any).lines.map((l: any) => `
+          ${(wo as any).lines
+            .map(
+              (l: any) => `
           <tr style="border-bottom: 1px solid #e0e0e0;">
             <td style="padding: 8px;">${l.product_name || "Custom"}</td>
             <td style="padding: 8px;">${l.size_category_name || l.size_category}</td>
             <td style="padding: 8px;">${l.quantity} ${l.quantity_type === "pallet" ? "Pallet" : "Unit"}${l.quantity > 1 ? "s" : ""}</td>
             <td style="padding: 8px;">${l.total_weight_lbs ? l.total_weight_lbs.toLocaleString() + " lbs" : "—"}</td>
           </tr>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </tbody>
       </table>
       ${wo.total_weight_lbs ? `<p style="margin-top: 8px; font-weight: 600; color: #264027;">Total estimated weight: ${Number(wo.total_weight_lbs).toLocaleString()} lbs</p>` : ""}
       <div class="line-visual-grid">
-        ${(wo as any).lines.map((l: any, i: number) => `
+        ${(wo as any).lines
+          .map(
+            (l: any, i: number) => `
         <div class="line-visual-card">
           <div class="line-visual-header">
             <div class="line-visual-tile" style="display:block;">
@@ -2035,16 +2056,18 @@ function generateCombinedPDFHTML(wo: any): string {
             </div>
             <div class="line-visual-tile" style="display:block;">
               <div class="line-visual-title">Product Illustration</div>
-              ${l.product_illustration_base64
-                ? `<img src="${l.product_illustration_base64}" alt="${l.product_name || "Product"}" />`
-                : `<span style="color:#999; font-size:9pt;">No Product Image</span>`
+              ${
+                l.product_illustration_base64
+                  ? `<img src="${l.product_illustration_base64}" alt="${l.product_name || "Product"}" />`
+                  : `<span style="color:#999; font-size:9pt;">No Product Image</span>`
               }
             </div>
             <div class="line-visual-tile" style="display:block;">
               <div class="line-visual-title">Size Category Photo</div>
-              ${l.size_category_illustration_base64
-                ? `<img src="${l.size_category_illustration_base64}" alt="${l.size_category_name || l.size_category || "Size Category"}" />`
-                : `<span style="color:#999; font-size:9pt;">No Size Image</span>`
+              ${
+                l.size_category_illustration_base64
+                  ? `<img src="${l.size_category_illustration_base64}" alt="${l.size_category_name || l.size_category || "Size Category"}" />`
+                  : `<span style="color:#999; font-size:9pt;">No Size Image</span>`
               }
             </div>
           </div>
@@ -2055,7 +2078,9 @@ function generateCombinedPDFHTML(wo: any): string {
             <span class="info-label">Estimated Weight:</span><span class="info-value">${l.total_weight_lbs ? `${Number(l.total_weight_lbs).toLocaleString()} lbs` : "—"}</span>
           </div>
         </div>
-        `).join("")}
+        `,
+          )
+          .join("")}
       </div>
     </div>
     <div class="section">
@@ -2068,14 +2093,16 @@ function generateCombinedPDFHTML(wo: any): string {
         ${wo.created_by ? `<span class="info-label">Created By:</span><span class="info-value">${wo.created_by}${wo.created_by_email ? ` (${wo.created_by_email})` : ""}</span>` : ""}
       </div>
     </div>
-    ` : `
+    `
+        : `
     <div class="section">
       <div class="section-title">Product Information</div>
       <div class="product-header">
         <div class="product-image">
-          ${wo.illustration_base64
-            ? `<img src="${wo.illustration_base64}" alt="${wo.product_name}" />`
-            : `<span style="color: #999; font-size: 10pt;">No Image</span>`
+          ${
+            wo.illustration_base64
+              ? `<img src="${wo.illustration_base64}" alt="${wo.product_name}" />`
+              : `<span style="color: #999; font-size: 10pt;">No Image</span>`
           }
         </div>
         <div class="product-details">
@@ -2093,9 +2120,10 @@ function generateCombinedPDFHTML(wo: any): string {
     <div class="section">
       <div class="section-title">Size & Quantity</div>
       <div class="size-layout">
-        ${wo.size_category_illustration_base64
-          ? `<div class="size-photo"><img src="${wo.size_category_illustration_base64}" alt="${wo.size_category_name || wo.size_category}" /></div>`
-          : ""
+        ${
+          wo.size_category_illustration_base64
+            ? `<div class="size-photo"><img src="${wo.size_category_illustration_base64}" alt="${wo.size_category_name || wo.size_category}" /></div>`
+            : ""
         }
         <div class="highlight-box" style="flex: 1;">
           <div class="highlight-row">
@@ -2111,8 +2139,11 @@ function generateCombinedPDFHTML(wo: any): string {
         </div>
       </div>
     </div>
-    `}
-    ${wo.ingredient_ratios || wo.ingredients_list ? `
+    `
+    }
+    ${
+      wo.ingredient_ratios || wo.ingredients_list
+        ? `
     <div class="section">
       <div class="section-title">Ingredients</div>
       <div class="info-grid" style="padding: 0 8px;">
@@ -2120,8 +2151,12 @@ function generateCombinedPDFHTML(wo: any): string {
         ${wo.ingredients_list ? `<span class="info-label">Ingredients:</span><span class="info-value">${wo.ingredients_list}</span>` : ""}
       </div>
     </div>
-    ` : ""}
-    ${wo.work_order_notes || wo.custom_notes ? `
+    `
+        : ""
+    }
+    ${
+      wo.work_order_notes || wo.custom_notes
+        ? `
     <div class="section">
       <div class="section-title">Notes</div>
       <div class="notes-box">
@@ -2130,7 +2165,9 @@ function generateCombinedPDFHTML(wo: any): string {
         ${wo.custom_notes || ""}
       </div>
     </div>
-    ` : ""}
+    `
+        : ""
+    }
     <div class="footer">
       Soil Seed & Water | 18980 Stanton Rd, Congress, AZ 85332 | (928) 632-7125 | info@soilseedandwater.com
     </div>

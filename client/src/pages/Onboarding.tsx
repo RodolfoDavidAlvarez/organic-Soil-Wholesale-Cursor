@@ -112,7 +112,7 @@ const Onboarding = () => {
   ];
   
   const productOptions = [
-    { id: "dans-gold", label: "Dan's Gold" },
+    { id: "simons-gold", label: "Simon's Gold" },
     { id: "worm-poop", label: "Mikey's Worm Poop" },
     { id: "cannabis", label: "CannaBag" },
     { id: "ready-go", label: "Ready Go Garden" },

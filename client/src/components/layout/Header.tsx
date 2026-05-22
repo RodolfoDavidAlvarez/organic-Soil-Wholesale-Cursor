@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, ArrowRight, MapPin } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 
 // Define the main product categories with icons
@@ -20,6 +21,7 @@ const Header = () => {
   const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
+  const { totalItems, openDrawer } = useQuoteCart();
   const headerRef = useRef<HTMLElement | null>(null);
 
   const updateHeaderHeight = useCallback(() => {
@@ -97,15 +99,18 @@ const Header = () => {
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer">
               <div className="flex flex-col leading-tight">
-                <span className="text-xl font-bold sm:text-2xl">
-                  Organic <span className="text-primary">Soil</span> Wholesale
+                <span className="text-lg font-heading font-bold sm:text-2xl">
+                  Organic <span className="text-primary">Soil</span> <span className="text-[#c9a227] font-display italic">Wholesale</span>
+                </span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                  by Soil Seed &amp; Water
                 </span>
               </div>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-6">
             {/* Products Dropdown */}
             <div className="relative group flex items-center">
               <Link href="/products">
@@ -181,10 +186,19 @@ const Header = () => {
                 </div>
               </Link>
             ))}
+            <a
+              href="https://weareufe.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative font-medium text-foreground transition-colors duration-200 hover:text-primary"
+            >
+              Our Education Platform
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-primary transition-all duration-300 hover:w-full"></span>
+            </a>
             <div className="flex items-center gap-3">
-              <a href="tel:9285501649" className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200">
+              <a href="tel:6027267211" className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200">
                 <Phone className="h-4 w-4" />
-                <span className="font-medium">(928) 550-1649</span>
+                <span className="font-medium">(602) 726-7211</span>
               </a>
               {/* Authentication buttons temporarily hidden */}
               {false &&
@@ -227,15 +241,19 @@ const Header = () => {
                   </div>
                 ))}
               <div className="flex items-center gap-3">
-                <Link href="/order">
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Request a Quote</span>
-                  </Button>
-                </Link>
+                <button
+                  type="button"
+                  onClick={openDrawer}
+                  className="relative flex items-center gap-2 border border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300 rounded-md px-4 py-2 text-sm font-medium"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Quote Cart</span>
+                  {totalItems > 0 && (
+                    <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                      {totalItems}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
           </nav>
@@ -252,9 +270,12 @@ const Header = () => {
                 <div className="flex flex-col h-full">
                   <div className="flex flex-col gap-2 mb-6">
                     <Link href="/">
-                      <div className="flex items-center space-x-2 cursor-pointer">
-                        <span className="text-lg font-bold">
-                          Organic <span className="text-primary">Soil</span> Wholesale
+                      <div className="flex flex-col leading-tight cursor-pointer">
+                        <span className="text-lg font-heading font-bold">
+                          Organic <span className="text-primary">Soil</span> <span className="text-[#c9a227] font-display italic">Wholesale</span>
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          by Soil Seed &amp; Water
                         </span>
                       </div>
                     </Link>
@@ -299,6 +320,15 @@ const Header = () => {
                         </div>
                       </Link>
                     ))}
+
+                    <a
+                      href="https://weareufe.org"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3 px-4 rounded-md font-medium text-foreground transition-all duration-200 hover:bg-primary/5 hover:text-primary"
+                    >
+                      Our Education Platform
+                    </a>
 
                     <div className="h-px w-full bg-border my-4"></div>
 
@@ -345,17 +375,24 @@ const Header = () => {
 
                     <div className="h-px w-full bg-border my-4"></div>
 
-                    <a href="tel:9285501649" className="flex items-center gap-2 py-3 px-4 text-primary">
+                    <a href="tel:6027267211" className="flex items-center gap-2 py-3 px-4 text-primary">
                       <Phone className="h-4 w-4" />
-                      <span className="font-medium">(928) 550-1649</span>
+                      <span className="font-medium">(602) 726-7211</span>
                     </a>
 
-                    <Link href="/order">
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md" size="lg">
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Request a Quote
-                      </Button>
-                    </Link>
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90 text-white shadow-md relative"
+                      size="lg"
+                      onClick={() => { setIsMobileMenuOpen(false); openDrawer(); }}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Quote Cart
+                      {totalItems > 0 && (
+                        <span className="ml-2 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center">
+                          {totalItems}
+                        </span>
+                      )}
+                    </Button>
                   </nav>
                 </div>
               </SheetContent>

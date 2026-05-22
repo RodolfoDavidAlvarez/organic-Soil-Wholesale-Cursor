@@ -3,33 +3,49 @@ import { MapPin, Phone, Mail, Clock, Leaf } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-white text-foreground relative z-10 mt-auto border-t border-border">
-      <div className="py-16">
+    <footer className="relative z-10 mt-auto border-t border-white/10 bg-[#101f16] text-white">
+      <div className="py-14">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             {/* Company Info */}
-            <div className="md:col-span-4">
-              <div className="mb-4">
-                <span className="text-xl font-bold">
-                  Organic <span className="text-primary">Soil</span> Wholesale
-                </span>
+            <div className="md:col-span-5">
+              <div className="mb-5 flex flex-col gap-5">
+                <img
+                  src="/email-assets/ssw-logo-white.png"
+                  alt="Soil Seed and Water"
+                  className="h-auto w-56 max-w-full"
+                  loading="lazy"
+                />
+                <a
+                  href="https://weareufe.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center rounded-xl border border-white/15 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <img
+                    src="/images/ufe-logo.png"
+                    alt="Urban Farming Education"
+                    className="h-10 w-auto"
+                    loading="lazy"
+                  />
+                </a>
               </div>
-              <p className="text-muted-foreground mb-4 max-w-md">
+              <p className="mb-4 max-w-md text-sm leading-relaxed text-white/70 md:text-base">
                 Arizona&apos;s premier producer of organic compost and soil amendments. Locally produced for landscapers, commercial growers, farms, and government projects.
               </p>
-              <div className="flex items-start gap-2 text-sm text-muted-foreground bg-primary/5 rounded-lg p-3 mb-4">
-                <Leaf className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+                <Leaf className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#9ecb74]" />
                 <span>Supporting sustainable agriculture and Arizona&apos;s circular economy through organic waste diversion.</span>
               </div>
             </div>
 
             {/* Quick Links */}
             <div className="md:col-span-2">
-              <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
+              <h3 className="font-semibold text-lg mb-4 text-white">Quick Links</h3>
               <ul className="space-y-3">
                 <li>
                   <Link href="/products">
-                    <div className="text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -39,7 +55,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <Link href="/about">
-                    <div className="text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -49,7 +65,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <Link href="/contact">
-                    <div className="text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -59,7 +75,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <Link href="/order">
-                    <div className="text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -71,38 +87,38 @@ const Footer = () => {
             </div>
 
             {/* Contact Info */}
-            <div className="md:col-span-3">
-              <h3 className="font-semibold text-lg mb-4">Contact Information</h3>
+            <div className="md:col-span-4">
+              <h3 className="font-semibold text-lg mb-4 text-white">Contact Information</h3>
               <ul className="space-y-4">
                 <li className="flex items-start">
-                  <div className="bg-primary/10 rounded-full p-1.5 mr-3 mt-0.5">
-                    <MapPin className="h-4 w-4 text-primary" />
+                  <div className="mr-3 mt-0.5 rounded-full bg-white/10 p-1.5">
+                    <MapPin className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <span className="text-muted-foreground">
+                  <span className="text-white/70">
                     1634 N 19th Ave
                     <br />
                     Phoenix, AZ 85009
                   </span>
                 </li>
                 <li className="flex items-center">
-                  <div className="bg-primary/10 rounded-full p-1.5 mr-3">
-                    <Phone className="h-4 w-4 text-primary" />
+                  <div className="mr-3 rounded-full bg-white/10 p-1.5">
+                    <Phone className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <a href="tel:9285501649" className="text-muted-foreground hover:text-primary transition-colors duration-200 font-medium">
-                    (928) 550-1649
+                  <a href="tel:6027267211" className="font-medium text-white/70 transition-colors duration-200 hover:text-white">
+                    (602) 726-7211
                   </a>
                 </li>
                 <li className="flex items-center">
-                  <div className="bg-primary/10 rounded-full p-1.5 mr-3">
-                    <Mail className="h-4 w-4 text-primary" />
+                  <div className="mr-3 rounded-full bg-white/10 p-1.5">
+                    <Mail className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <span className="text-muted-foreground">info@soilseedandwater.com</span>
+                  <span className="text-white/70">info@soilseedandwater.com</span>
                 </li>
                 <li className="flex items-start">
-                  <div className="bg-primary/10 rounded-full p-1.5 mr-3 mt-0.5">
-                    <Clock className="h-4 w-4 text-primary" />
+                  <div className="mr-3 mt-0.5 rounded-full bg-white/10 p-1.5">
+                    <Clock className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <span className="text-muted-foreground">
+                  <span className="text-white/70">
                     By appointment only
                   </span>
                 </li>
@@ -112,31 +128,31 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="bg-primary text-primary-foreground py-6">
+      <div className="border-t border-white/10 bg-[#0b160f] py-6 text-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-primary-foreground/80 text-sm mb-4 md:mb-0">
+            <p className="mb-4 text-sm text-white/60 md:mb-0">
               &copy; {new Date().getFullYear()} Soil Seed and Water LLC. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <Link href="/privacy" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              <Link href="/privacy" className="text-sm text-white/60 transition-colors duration-200 hover:text-white">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              <Link href="/terms" className="text-sm text-white/60 transition-colors duration-200 hover:text-white">
                 Terms of Service
               </Link>
               <a
                 href="https://soilseedandwater.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200"
+                className="text-sm text-white/60 transition-colors duration-200 hover:text-white"
               >
                 Retail Store
               </a>
-              <Link href="/store-locator" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              <Link href="/store-locator" className="text-sm text-white/60 transition-colors duration-200 hover:text-white">
                 Store Locator
               </Link>
-              <Link href="/admin" className="text-primary-foreground/80 hover:text-primary-foreground text-sm transition-colors duration-200">
+              <Link href="/admin" className="text-sm text-white/60 transition-colors duration-200 hover:text-white">
                 Admin
               </Link>
             </div>

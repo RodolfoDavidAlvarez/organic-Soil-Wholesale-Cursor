@@ -32,11 +32,13 @@ import specialRequestRoutes from "./specialRequests.js";
 import leadRoutes from "./leads.js";
 import representativeRoutes from "./representatives.js";
 import businessCardRoutes from "./businessCard.js";
-// import authRoutes from "./auth.js";
+import authRoutes from "./auth.js";
 import checkoutRoutes from "./checkout.js";
 import inventoryRoutes from "./inventory.js";
 import grokRoutes from "./grok.js";
 import unsubscribeRoutes from "./unsubscribe.js";
+import schedulingRoutes from "./scheduling.js";
+import webhookRoutes from "./webhooks.js";
 // import pricingRoutes from "./pricing.js";
 
 export function registerRoutes(app: Express): Promise<Server> {
@@ -77,11 +79,13 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/special-request", specialRequestRoutes);
   app.use("/api/leads", leadRoutes);
   app.use("/api", triviaLeadsRoutes);
-  // app.use("/api/auth", authRoutes);
+  app.use("/api/auth", authRoutes);
   app.use("/api/checkout", checkoutRoutes);
   app.use("/api/inventory", inventoryRoutes);
   app.use("/api/grok", grokRoutes);
   app.use("/api/unsubscribe", unsubscribeRoutes);
+  app.use("/api/portal/scheduling", schedulingRoutes);
+  app.use("/api/webhooks", webhookRoutes);
   // app.use("/api/pricing", pricingRoutes);
 
   // Catch-all for API routes that don't exist

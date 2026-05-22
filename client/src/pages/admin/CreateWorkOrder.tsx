@@ -291,7 +291,7 @@ export default function CreateWorkOrder() {
   return (
     <ProtectedAdminRoute>
       <OperationsLayout>
-        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+        <div className="min-h-screen bg-[#fafaf9] p-4 md:p-6">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-4 mb-4">
               <Button variant="ghost" onClick={() => navigate('/admin/operations/work-orders')} size="sm">
@@ -299,7 +299,7 @@ export default function CreateWorkOrder() {
               </Button>
             </div>
             <div className="mb-6">
-              <h1 className="text-xl font-bold text-gray-900">Create Work Order</h1>
+              <h1 className="text-lg font-bold text-gray-900">Create Work Order</h1>
               <p className="text-sm text-gray-500">Add one or more product lines, then set transport and review.</p>
             </div>
 
@@ -344,7 +344,7 @@ export default function CreateWorkOrder() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-5 mb-5">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5">
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div>
@@ -354,7 +354,7 @@ export default function CreateWorkOrder() {
 
                   <div className="space-y-4">
                     {lineItems.map((line, index) => (
-                      <div key={line.id} className="p-4 rounded-lg border border-gray-200 bg-gray-50/50 space-y-3">
+                      <div key={line.id} className="p-4 rounded-lg border border-gray-200/80 bg-gray-50/50 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-gray-500">Line {index + 1}</span>
                           {lineItems.length > 1 && (
@@ -672,18 +672,18 @@ export default function CreateWorkOrder() {
               )}
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-4">
               <Button variant="outline" onClick={() => setCurrentStep((s) => Math.max(1, s - 1))} disabled={currentStep === 1}>Previous</Button>
               {currentStep < 3 ? (
                 <Button
                   onClick={() => setCurrentStep((s) => s + 1)}
                   disabled={currentStep === 1 ? !canProceedProducts : !canProceedTransport}
-                  className="bg-[#264027] hover:bg-[#3c5233]"
+                  className="bg-[#264027] hover:bg-[#3c5233] shadow-sm"
                 >
                   Next <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} disabled={!canSubmit || createWorkOrderMutation.isPending} className="bg-[#264027] hover:bg-[#3c5233]">
+                <Button onClick={handleSubmit} disabled={!canSubmit || createWorkOrderMutation.isPending} className="bg-[#264027] hover:bg-[#3c5233] shadow-sm">
                   {createWorkOrderMutation.isPending ? 'Creating...' : <><ClipboardList className="w-4 h-4 mr-2" /> Create Work Order</>}
                 </Button>
               )}

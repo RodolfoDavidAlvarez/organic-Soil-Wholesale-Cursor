@@ -77,7 +77,9 @@ const normalizeSizePriceOptions = (input: unknown): NormalizedSizeOption[] => {
               ? record.title
               : typeof record.display_name === "string"
                 ? record.display_name
-                : "";
+                : typeof record.size === "string"
+                  ? record.size
+                  : "";
 
       const label = labelCandidate.trim();
       if (!label) {

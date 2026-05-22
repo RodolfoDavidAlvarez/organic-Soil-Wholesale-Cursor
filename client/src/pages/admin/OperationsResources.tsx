@@ -105,7 +105,7 @@ const deals: Deal[] = [
 const sswTeam: Contact[] = [
   { name: 'Simon Carrasco', role: 'Yard Manager / Scale Operator', phone: '602-290-1824', email: 'simoncarrasco64@gmail.com' },
   { name: 'Kerry Cooper', role: 'Logistics / BOLs / CODs', phone: '928-830-3304', email: 'kcooper@soilseedandwater.com' },
-  { name: 'Rodo Alvarez', role: 'Operations', phone: '928-550-1649', email: 'ralvarez@soilseedandwater.com' },
+  { name: 'Rodo Alvarez', role: 'Operations', phone: '602-726-7211', email: 'ralvarez@soilseedandwater.com' },
 ];
 
 // Drivers

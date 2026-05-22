@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle, Copy, ShieldCheck, Link } from 'lucide-react';
+import { ArrowLeft, Printer, Mail, FileText, Truck, MapPin, Package, Scale, FileIcon, X, Maximize2, Pencil, Send, CheckCircle, Copy, ShieldCheck, Link, DollarSign, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,12 @@ interface BOLDetails {
   created_by: string;
   sent_to_email?: string;
   sent_at?: string;
+  billing_status: string;
+  invoice_id?: string;
+  invoice_number?: string;
+  invoice_amount?: number;
+  invoice_date?: string;
+  billing_notes?: string;
 }
 
 const STATUS_FLOW = ['draft', 'completed', 'delivered'] as const;
@@ -65,6 +71,14 @@ export default function ViewBOL() {
     recipientEmail: '',
     recipientName: '',
     customMessage: ''
+  });
+  const [editingClientTag, setEditingClientTag] = useState(false);
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [billingForm, setBillingForm] = useState({
+    invoiceNumber: '',
+    invoiceAmount: '',
+    invoiceDate: '',
+    billingNotes: ''
   });
 
   const token = localStorage.getItem('adminToken');
@@ -163,6 +177,72 @@ export default function ViewBOL() {
       });
     }
   });
+
+  const updateClientTagMutation = useMutation({
+    mutationFn: async (newTag: string) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/operations/bols/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ client_tag: newTag })
+      });
+      if (!response.ok) throw new Error('Failed to update client tag');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bol', id] });
+      queryClient.invalidateQueries({ queryKey: ['bols'] });
+      setEditingClientTag(false);
+      toast({ title: 'Updated', description: 'Client tag updated successfully.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Billing mutation
+  const updateBillingMutation = useMutation({
+    mutationFn: async (data: { billingStatus: string; invoiceNumber?: string; invoiceAmount?: number; invoiceDate?: string; billingNotes?: string }) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/operations/bols/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update billing');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bol', id] });
+      queryClient.invalidateQueries({ queryKey: ['bols'] });
+      setBillingDialogOpen(false);
+      toast({ title: 'Billing Updated', description: 'Billing status has been updated.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleMarkBilled = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateBillingMutation.mutate({
+      billingStatus: 'billed',
+      invoiceNumber: billingForm.invoiceNumber || undefined,
+      invoiceAmount: billingForm.invoiceAmount ? parseFloat(billingForm.invoiceAmount) : undefined,
+      invoiceDate: billingForm.invoiceDate || undefined,
+      billingNotes: billingForm.billingNotes || undefined
+    });
+  };
+
+  const handleMarkUnbilled = () => {
+    updateBillingMutation.mutate({ billingStatus: 'unbilled' });
+  };
 
   const handlePrint = () => {
     window.open(pdfUrl, '_blank');
@@ -344,6 +424,15 @@ export default function ViewBOL() {
                   <div className="flex items-center gap-2">
                     <h1 className="text-lg font-bold font-mono text-[#264027]">{bol.bol_number}</h1>
                     {getStatusBadge(bol.status)}
+                    {(bol.billing_status || 'unbilled') === 'billed' ? (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
+                        <DollarSign className="w-2.5 h-2.5" /> BILLED
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200">
+                        UNBILLED
+                      </span>
+                    )}
                     {bol.load_type && (
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide ${
                         bol.load_type === 'Inbound' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
@@ -353,14 +442,41 @@ export default function ViewBOL() {
                         {bol.load_type === 'Inbound' ? 'INBOUND' : bol.load_type === 'Outbound' ? 'OUTBOUND' : bol.load_type.toUpperCase()}
                       </span>
                     )}
-                    {bol.client_tag && (
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                        bol.client_tag === 'vanguard' ? 'bg-purple-50 text-purple-700' :
-                        bol.client_tag === 'willcox' ? 'bg-orange-50 text-orange-700' :
-                        bol.client_tag === '3lag' ? 'bg-indigo-50 text-indigo-700' :
-                        'bg-gray-50 text-gray-600'
-                      }`}>
-                        {bol.client_tag === 'vanguard' ? 'Vanguard' : bol.client_tag === 'willcox' ? 'Willcox' : bol.client_tag === '3lag' ? '3LAG' : bol.client_tag}
+                    {editingClientTag ? (
+                      <div className="relative">
+                        <select
+                          autoFocus
+                          className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-[#264027]"
+                          value={bol.client_tag || ''}
+                          onChange={(e) => updateClientTagMutation.mutate(e.target.value)}
+                          onBlur={() => setEditingClientTag(false)}
+                        >
+                          <option value="">No Tag</option>
+                          <option value="vanguard">Vanguard</option>
+                          <option value="willcox">Willcox</option>
+                          <option value="3lag">3LAG</option>
+                          <option value="flower_gods">Flower of Gods</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <span
+                        onClick={() => setEditingClientTag(true)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${
+                          bol.client_tag === 'vanguard' ? 'bg-purple-50 text-purple-700 hover:bg-purple-100' :
+                          bol.client_tag === 'willcox' ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' :
+                          bol.client_tag === '3lag' ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' :
+                          bol.client_tag === 'flower_gods' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' :
+                          'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                        title="Click to change client tag"
+                      >
+                        {bol.client_tag ? (
+                          bol.client_tag === 'vanguard' ? 'Vanguard' :
+                          bol.client_tag === 'willcox' ? 'Willcox' :
+                          bol.client_tag === '3lag' ? '3LAG' :
+                          bol.client_tag === 'flower_gods' ? 'Flower of Gods' :
+                          bol.client_tag
+                        ) : '+ Add Tag'}
                       </span>
                     )}
                   </div>
@@ -524,6 +640,73 @@ export default function ViewBOL() {
                   </div>
                 )}
 
+                {/* Billing Status */}
+                <div className={`rounded-md border p-3 ${
+                  (bol.billing_status || 'unbilled') === 'billed'
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Receipt className="w-3.5 h-3.5 text-gray-600" />
+                      <span className="text-xs font-semibold text-gray-700">Billing</span>
+                    </div>
+                    {(bol.billing_status || 'unbilled') === 'billed' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 border border-green-300">
+                          <DollarSign className="w-2.5 h-2.5" /> BILLED
+                        </span>
+                        <button
+                          onClick={handleMarkUnbilled}
+                          className="text-[10px] text-gray-400 hover:text-red-500 underline"
+                        >
+                          Undo
+                        </button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setBillingDialogOpen(true)}
+                        className="h-6 text-[10px] bg-amber-600 hover:bg-amber-700"
+                      >
+                        <DollarSign className="w-3 h-3 mr-0.5" />
+                        Mark as Billed
+                      </Button>
+                    )}
+                  </div>
+                  {(bol.billing_status || 'unbilled') === 'billed' && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {bol.invoice_number && (
+                        <div>
+                          <span className="text-gray-500">Invoice #:</span>
+                          <span className="ml-1 font-mono font-medium text-gray-900">{bol.invoice_number}</span>
+                        </div>
+                      )}
+                      {bol.invoice_amount && (
+                        <div>
+                          <span className="text-gray-500">Amount:</span>
+                          <span className="ml-1 font-semibold text-gray-900">${bol.invoice_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {bol.invoice_date && (
+                        <div>
+                          <span className="text-gray-500">Invoice Date:</span>
+                          <span className="ml-1 text-gray-900">{format(new Date(bol.invoice_date), 'MMM dd, yyyy')}</span>
+                        </div>
+                      )}
+                      {bol.billing_notes && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Notes:</span>
+                          <span className="ml-1 text-gray-700">{bol.billing_notes}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(bol.billing_status || 'unbilled') === 'unbilled' && (
+                    <p className="text-[10px] text-red-600">This weight ticket has not been invoiced yet.</p>
+                  )}
+                </div>
+
                 {/* Linked CODs */}
                 {linkedCODs && linkedCODs.length > 0 && (
                   <div className="bg-white rounded-md border border-gray-200 p-3">
@@ -585,6 +768,82 @@ export default function ViewBOL() {
               />
             </div>
           )}
+
+          {/* Billing Dialog */}
+          <Dialog open={billingDialogOpen} onOpenChange={setBillingDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  Mark as Billed
+                </DialogTitle>
+                <DialogDescription>
+                  Link invoice details to <span className="font-mono font-semibold">{bol.bol_number}</span>
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleMarkBilled}>
+                <div className="space-y-3 py-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invoiceNumber" className="text-xs">Invoice Number</Label>
+                    <Input
+                      id="invoiceNumber"
+                      placeholder="e.g., INV-2026-002"
+                      value={billingForm.invoiceNumber}
+                      onChange={(e) => setBillingForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="invoiceAmount" className="text-xs">Amount ($)</Label>
+                      <Input
+                        id="invoiceAmount"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={billingForm.invoiceAmount}
+                        onChange={(e) => setBillingForm(prev => ({ ...prev, invoiceAmount: e.target.value }))}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="invoiceDate" className="text-xs">Invoice Date</Label>
+                      <Input
+                        id="invoiceDate"
+                        type="date"
+                        value={billingForm.invoiceDate}
+                        onChange={(e) => setBillingForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="billingNotes" className="text-xs">Notes (optional)</Label>
+                    <Textarea
+                      id="billingNotes"
+                      placeholder="e.g., Included in Feb 2026 batch invoice"
+                      value={billingForm.billingNotes}
+                      onChange={(e) => setBillingForm(prev => ({ ...prev, billingNotes: e.target.value }))}
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setBillingDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={updateBillingMutation.isPending}
+                  >
+                    {updateBillingMutation.isPending ? 'Saving...' : 'Mark as Billed'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           {/* Email Dialog */}
           <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>

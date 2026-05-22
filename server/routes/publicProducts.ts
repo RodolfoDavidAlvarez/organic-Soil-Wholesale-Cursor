@@ -152,6 +152,8 @@ type PublicSizePriceOption = {
   description?: string;
   isActive: boolean;
   displayOrder?: number;
+  msrp?: string;
+  unit?: string;
 };
 
 const toMoneyCents = (value: unknown): number | null => {
@@ -212,8 +214,8 @@ const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
     }
 
     const record = value as Record<string, unknown>;
-    const rawKeyCandidates = [record.key, record.size_key, record.slug, record.id, record.code];
-    const rawLabelCandidates = [record.label, record.name, record.title, record.display_name];
+    const rawKeyCandidates = [record.key, record.size_key, record.slug, record.id, record.code, record.size];
+    const rawLabelCandidates = [record.label, record.name, record.title, record.display_name, record.size];
 
     const rawKey = rawKeyCandidates.find(
       (candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0,
@@ -279,6 +281,9 @@ const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
       isActive = activeField !== 0;
     }
 
+    const msrp = typeof record.msrp === 'string' ? record.msrp : undefined;
+    const unit = typeof record.unit === 'string' ? record.unit : undefined;
+
     return {
       key: key ?? label ?? '',
       label: label ?? key ?? '',
@@ -288,6 +293,8 @@ const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
       description,
       isActive,
       displayOrder,
+      msrp,
+      unit,
     };
   };
 
@@ -309,6 +316,8 @@ const normalizeSizePriceOptions = (input: unknown): PublicSizePriceOption[] => {
 type RawProduct = {
   id: number;
   name: string;
+  product_id?: string | null;
+  sku?: string | null;
   slug?: string | null;
   description: string;
   category: string;
@@ -346,8 +355,12 @@ type RawProduct = {
   pay_and_pickup_hero_image?: string | null;
   is_catalog_enabled?: boolean | null;
   catalog_display_order?: number | null;
+  catalog_order_number?: number | null;
   size_price_options?: unknown;
   product_status?: string | null;
+  npk?: string | null;
+  sort_order?: number | null;
+  is_hidden?: boolean | null;
 };
 
 const slugifyValue = (value?: string | null) =>
@@ -508,7 +521,13 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
       description: record.pay_and_pickup_description ?? undefined,
       heroImage: record.pay_and_pickup_hero_image ?? undefined
     },
-    slug: buildProductSlug(record)
+    slug: buildProductSlug(record),
+    productId: record.product_id ?? record.sku ?? undefined,
+    sku: record.sku ?? record.product_id ?? undefined,
+    catalogOrderNumber: record.catalog_order_number ?? record.catalog_display_order ?? undefined,
+    npk: record.npk ?? undefined,
+    sortOrder: record.sort_order ?? undefined,
+    isHidden: Boolean(record.is_hidden),
   };
 };
 

@@ -1,5 +1,6 @@
-import { useMemo, useState, useCallback, useEffect, type KeyboardEvent, type ReactNode } from "react";
+import { useMemo, useState, useCallback, useEffect, type KeyboardEvent } from "react";
 import { useRoute, Link } from "wouter";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,24 +11,29 @@ import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
+import { useQuoteCart } from "@/contexts/QuoteCartContext";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Leaf,
   ShoppingBag,
-  Truck,
-  Sparkles,
+  ShoppingCart,
+  FileText,
+  Minus,
+  Plus,
+  Check,
   Maximize2,
   ChevronLeft,
   ChevronRight,
-  Youtube,
-  ImagePlus,
   Play,
   ShieldCheck,
-  Phone,
-  MapPin,
-  Package,
+  ImagePlus,
 } from "lucide-react";
-import { SIZE_CATALOG_BY_KEY } from "@/data/sizeCatalog";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type ApiProduct = {
   id: number;
@@ -38,8 +44,6 @@ type ApiProduct = {
   product_type?: string | null;
   category?: string | null;
   description?: string | null;
-  marketingTitle?: string | null;
-  marketing_title?: string | null;
   marketingNote?: string | null;
   marketing_note?: string | null;
   story?: string | null;
@@ -63,29 +67,38 @@ type ApiProduct = {
   product_video_url?: string | null;
   sizePriceOptions?: unknown;
   size_price_options?: unknown;
-  availableSizeOptions?: string[] | null;
-  available_size_options?: string[] | null;
+  npk?: string | null;
+  certifications?: string | null;
   seoKeywords?: string | null;
   seo_keywords?: string | null;
-  payAndPickup?: {
-    isEnabled?: boolean;
-    badge?: string | null;
-    description?: string | null;
-    heroImage?: string | null;
-  };
   slug?: string | null;
 };
 
-type SizeOption = {
-  key: string;
-  label: string;
-  price?: number;
-  displayOrder?: number;
-  description?: string;
-  image?: string;
+type PriceTier = {
+  size: string;
+  price: number;
+  msrp: number | null;
+  unit: string;
+  qty: number | null;
 };
 
-type NormalizedProduct = {
+type SizeChoice = PriceTier & {
+  kind: "single" | "pallet" | "bulk";
+  displayLabel: string;
+  subLabel: string;
+  displayPrice: number;
+};
+
+type SizeCategory = {
+  key: string;
+  label: string;
+  price: number;
+  priceLabel: string;
+  image: string;
+  choices: SizeChoice[];
+};
+
+type Product = {
   id: number;
   slug: string;
   name: string;
@@ -93,1078 +106,836 @@ type NormalizedProduct = {
   category: string;
   productType?: string;
   description: string;
-  previewCopy?: string;
-  marketingTitle?: string;
   marketingNote?: string;
-  story?: string;
   usage?: string;
-  features?: string;
-  targetAudience?: string;
-  recommendedUses?: string;
-  ingredients?: string;
-  price?: number;
+  targetAudience: string[];
+  npk?: string;
+  certifications: string[];
   imageUrl?: string;
   texturePhotoUrl?: string;
   additionalImages: string[];
   videoUrls: string[];
-  sizeOptions: SizeOption[];
-  availableSizes: string[];
+  priceTiers: PriceTier[];
   seoKeywords?: string;
-  payAndPickup?: {
-    isEnabled: boolean;
-    badge?: string;
-    description?: string;
-    heroImage?: string;
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const parseDollars = (v: unknown): number | null => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v.replace(/[^0-9.]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
+const extractQty = (size: string): number | null => {
+  const m = size.match(/\((\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+};
+
+const fmt = (n: number): string => {
+  if (n >= 1000) return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+  return `$${n.toFixed(2)}`;
+};
+
+const SIZE_CATEGORY_PHOTO: Record<string, string> = {
+  "9lb Bag": "/images/sizes/9lb-bag-single.jpg",
+  "Pallet (144 x 9lb)": "/images/sizes/9lb-pallet.jpg",
+  "1CF Bag": "/images/sizes/1cf-bag-single.png",
+  "Pallet (50 x 1CF)": "/images/sizes/1cf-pallet.jpg",
+  "2CF Bag": "/images/sizes/2cf-bag-single.png",
+  "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
+  Tote: "/images/sizes/2-2cy-tote.png",
+  "Truckload (~24 tons)": "/images/sizes/truckload.png",
+  "Truckload (22 pallets)": "/images/sizes/truckload.png",
+  "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
+};
+
+const productMsrpOverrides: Record<number, Record<string, { price: number; priceLabel?: string }>> = {
+  1000: {
+    "1CF Bag": { price: 24.9 },
+    Tote: { price: 60 },
+    "Truckload (~24 tons)": { price: 30, priceLabel: "$30.00/ton" },
+  },
+  137: {
+    "1CF Bag": { price: 15.99 },
+    "Truckload (22 pallets)": { price: 60, priceLabel: "$60.00/yd" },
+  },
+  3000: {
+    "Truckload (22 pallets)": { price: 30, priceLabel: "$30.00/yd" },
+  },
+};
+
+const categoryLabel = (size: string, productId?: number) => {
+  if (size.includes("9lb")) return "9 lb Bag";
+  if (size.includes("1CF")) return productId === 137 ? "1.5 cu ft Bag" : "40 lb Bag (1 cu ft)";
+  if (size.includes("2CF")) return "2 cu ft Bag";
+  if (size.includes("Tote")) return productId === 137 || productId === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
+  if (size.includes("Truckload") || size.includes("Bulk")) return productId === 137 || productId === 3000 ? "Truckload (~90 cu yd)" : "Truckload (~24 tons)";
+  return size;
+};
+
+const priceForTier = (productId: number, tier: PriceTier) => {
+  const override = productMsrpOverrides[productId]?.[tier.size];
+  const price = override?.price ?? tier.msrp ?? tier.price;
+  return {
+    price,
+    priceLabel: override?.priceLabel ?? fmt(price),
   };
 };
 
-type InfoTab = {
-  id: string;
-  label: string;
-  content: ReactNode;
-  helper?: string;
+const imageForChoice = (choice: SizeChoice, fallback: string) => {
+  return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-const parseSizeOptions = (input: unknown): SizeOption[] => {
-  if (!Array.isArray(input)) {
-    return [];
-  }
-
-  return input
-    .filter((option: any) => option?.is_active === true) // Only show active size options
-    .map((option: any): SizeOption | null => {
-      if (!option) return null;
-      const label = (option.label ?? option.name ?? option.title ?? "").toString().trim();
-      if (!label) return null;
-      const key = option.key ?? slugify(label);
-      // Prices hidden for now - uncomment when ready to show pricing
-      // const price =
-      //   typeof option.price === "number"
-      //     ? option.price
-      //     : typeof option.priceCents === "number"
-      //       ? option.priceCents / 100
-      //       : typeof option.price_cents === "number"
-      //         ? option.price_cents / 100
-      //         : undefined;
-      const displayOrder =
-        typeof option.display_order === "number" ? option.display_order : typeof option.displayOrder === "number" ? option.displayOrder : undefined;
-      const description = typeof option.description === "string" && option.description.trim().length > 0 ? option.description.trim() : undefined;
-      // Fall back to SIZE_CATALOG image if option doesn't have one
-      // Check for empty strings, null, or undefined
-      const optionImage = typeof option.image === "string" && option.image.trim().length > 0 ? option.image.trim() : undefined;
-      const catalogEntry = SIZE_CATALOG_BY_KEY[key as keyof typeof SIZE_CATALOG_BY_KEY];
-      // Prioritize uploaded image, but fall back to catalog default if missing
-      const image = optionImage || catalogEntry?.image;
-      return {
-        key,
-        label,
-        // price hidden for now
-        ...(displayOrder !== undefined && { displayOrder }),
-        ...(description !== undefined && { description }),
-        ...(image !== undefined && { image }),
-      };
+const parsePriceTiers = (raw: unknown): PriceTier[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((opt: any) => opt && (opt.isActive !== false && opt.is_active !== false))
+    .map((opt: any): PriceTier | null => {
+      const size = (opt.size || opt.label || opt.key || "").toString().trim();
+      if (!size) return null;
+      const price = parseDollars(opt.price) ?? (parseDollars(opt.priceCents ?? opt.price_cents) !== null ? (parseDollars(opt.priceCents ?? opt.price_cents)! / 100) : null);
+      if (price === null) return null;
+      const msrp = parseDollars(opt.msrp);
+      const unit = (opt.unit || opt.description || "").toString().trim();
+      const qty = extractQty(size);
+      return { size, price, msrp, unit, qty };
     })
-    .filter((option): option is SizeOption => option !== null)
-    .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
+    .filter((t): t is PriceTier => t !== null);
 };
 
-const normalizeProduct = (record: ApiProduct): NormalizedProduct => {
-  const additionalImages = Array.isArray(record.additionalImages)
-    ? record.additionalImages
-    : Array.isArray(record.additional_images)
-      ? record.additional_images
-      : [];
+const isBagTier = (tier: PriceTier): boolean => {
+  const s = tier.size.toLowerCase();
+  return s.includes("bag") && !s.includes("pallet") && !s.includes("tote") && !s.includes("truck") && !s.includes("bulk");
+};
+
+const buildSizeCategories = (product: Product): SizeCategory[] => {
+  const categoryMap = new Map<string, SizeCategory>();
+
+  product.priceTiers.forEach((tier) => {
+    if (tier.size.startsWith("Pallet")) return;
+
+    const pricing = priceForTier(product.id, tier);
+    const key = categoryLabel(tier.size, product.id);
+    categoryMap.set(key, {
+      key,
+      label: key,
+      price: pricing.price,
+      priceLabel: pricing.priceLabel,
+      image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
+      choices: [
+        {
+          ...tier,
+          kind: tier.size.includes("Truckload") || tier.size.includes("Bulk") ? "bulk" : "single",
+          displayLabel: key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
+          subLabel: key.includes("Truckload")
+            ? tier.size.includes("24") ? "24 tons" : "90 cubic yards"
+            : key.includes("Super Sack")
+              ? product.id === 137 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
+              : "one bag",
+          displayPrice: pricing.price,
+        },
+      ],
+    });
+  });
+
+  product.priceTiers.forEach((tier) => {
+    if (!tier.size.startsWith("Pallet")) return;
+
+    const baseKey = tier.size.includes("9lb")
+      ? "9 lb Bag"
+      : tier.size.includes("1CF")
+        ? categoryLabel("1CF Bag", product.id)
+        : tier.size.includes("2CF")
+          ? categoryLabel("2CF Bag", product.id)
+          : categoryLabel(tier.size, product.id);
+    const category = categoryMap.get(baseKey);
+    if (!category) return;
+
+    const unitPrice = category.choices.find((choice) => choice.kind === "single")?.displayPrice;
+    const price = tier.qty && unitPrice ? tier.qty * unitPrice : priceForTier(product.id, tier).price;
+
+    category.choices.unshift({
+      ...tier,
+      kind: "pallet",
+      displayLabel: "Pallet",
+      subLabel: tier.qty ? `Pallet of ${tier.qty}` : "Pallet",
+      displayPrice: price,
+    });
+  });
+
+  return Array.from(categoryMap.values());
+};
+
+const parseList = (value?: string | null, delimiter = /[|,]/): string[] =>
+  value ? value.split(delimiter).map((s) => s.trim()).filter(Boolean) : [];
+
+const normalizeProduct = (record: ApiProduct): Product => {
+  const additionalImages = (Array.isArray(record.additionalImages) ? record.additionalImages : Array.isArray(record.additional_images) ? record.additional_images : []) as string[];
 
   const videoUrls = (() => {
-    // Support both array and single video URL
-    if (Array.isArray(record.videoUrls)) {
-      return record.videoUrls.filter((url): url is string => typeof url === "string" && url.trim().length > 0);
-    }
-    if (Array.isArray(record.video_urls)) {
-      return record.video_urls.filter((url): url is string => typeof url === "string" && url.trim().length > 0);
-    }
-    // Legacy support for single video
-    const singleVideo = record.productVideoUrl ?? record.product_video_url;
-    if (typeof singleVideo === "string" && singleVideo.trim().length > 0) {
-      return [singleVideo.trim()];
-    }
-    return [];
+    if (Array.isArray(record.videoUrls)) return record.videoUrls.filter((u): u is string => typeof u === "string" && u.trim().length > 0);
+    if (Array.isArray(record.video_urls)) return record.video_urls.filter((u): u is string => typeof u === "string" && u.trim().length > 0);
+    const single = record.productVideoUrl ?? record.product_video_url;
+    return typeof single === "string" && single.trim().length > 0 ? [single.trim()] : [];
   })();
 
-  const sizeOptions = parseSizeOptions(record.sizePriceOptions ?? record.size_price_options) ?? [];
-  const availableSizes = record.availableSizeOptions ?? record.available_size_options ?? [];
-
-  const marketingTitle = record.marketingTitle ?? record.marketing_title ?? undefined;
-  const marketingNote = record.marketingNote ?? record.marketing_note ?? undefined;
-  const previewCopy = marketingNote?.trim().length ? marketingNote.trim() : record.description?.trim();
-
-  const payAndPickup = record.payAndPickup
-    ? {
-        isEnabled: Boolean(record.payAndPickup?.isEnabled),
-        badge: record.payAndPickup?.badge ?? undefined,
-        description: record.payAndPickup?.description ?? undefined,
-        heroImage: record.payAndPickup?.heroImage ?? undefined,
-      }
-    : undefined;
+  const priceTiers = parsePriceTiers(record.sizePriceOptions ?? record.size_price_options);
 
   return {
     id: record.id,
     slug: record.slug ?? generateProductSlug(record.product_type || record.productType, record.name) ?? record.id.toString(),
     name: record.name ?? "Product",
-    displayTitle: record.displayTitle ?? record.display_title ?? record.productType ?? record.product_type ?? record.name ?? "Product",
-    category: record.category ?? "Uncategorized",
+    displayTitle: record.displayTitle ?? record.display_title ?? record.name ?? "Product",
+    category: record.category ?? "Soil amendment",
     productType: record.productType ?? record.product_type ?? undefined,
-    description: record.description ?? "No description provided.",
-    previewCopy: previewCopy ?? undefined,
-    marketingTitle,
-    marketingNote,
-    story: record.story ?? undefined,
+    description: record.description ?? "",
+    marketingNote: record.marketingNote ?? record.marketing_note ?? undefined,
     usage: record.usage ?? undefined,
-    features: record.features ?? undefined,
-    targetAudience: record.targetAudience ?? record.target_audience ?? undefined,
-    recommendedUses: record.recommendedUses ?? record.recommended_uses ?? undefined,
-    ingredients: record.ingredients ?? undefined,
-    price: typeof record.price === "number" ? record.price : typeof record.price === "string" ? Number(record.price) : undefined,
+    targetAudience: parseList(record.targetAudience ?? record.target_audience),
+    npk: record.npk ?? undefined,
+    certifications: parseList(record.certifications),
     imageUrl: record.imageUrl ?? record.image_url ?? undefined,
     texturePhotoUrl: record.texturePhotoUrl ?? record.texture_photo_url ?? undefined,
     additionalImages,
     videoUrls,
-    sizeOptions,
-    availableSizes,
+    priceTiers,
     seoKeywords: record.seoKeywords ?? record.seo_keywords ?? undefined,
-    payAndPickup,
   };
 };
 
-// Fetch product by slug (restored for new system)
-const fetchProduct = async (identifier: string): Promise<NormalizedProduct> => {
+const fetchProduct = async (identifier: string): Promise<Product> => {
   const response = await fetch(`/api/public/products/${identifier}`);
-  if (!response.ok) {
-    throw new Error("Product not found");
-  }
-  const body = await response.json();
-  return normalizeProduct(body);
+  if (!response.ok) throw new Error("Product not found");
+  return normalizeProduct(await response.json());
 };
 
-const parseList = (value?: string, delimiterPattern = /[|,]/) =>
-  value
-    ? value
-        .split(delimiterPattern)
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-    : [];
+const PAY_PICKUP_PRODUCT_IDS = new Set([1000, 1001, 137, 3000]);
 
-const formatCurrency = (value?: number) =>
-  typeof value === "number" ? value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }) : undefined;
-
-const DEFAULT_IMAGE = "/potting-soil.jpg";
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 const ProductDetail = () => {
   const [, params] = useRoute<{ slug: string }>("/products/:slug");
+  const [, navigate] = useLocation();
+  const { addItem, openDrawer } = useQuoteCart();
+  const { toast } = useToast();
   const slug = params?.slug ?? "";
 
-  const {
-    data: product,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: product, isLoading, error } = useQuery({
     queryKey: ["publicProduct", slug],
     queryFn: () => fetchProduct(slug),
     enabled: Boolean(slug),
   });
 
-  // Create unified gallery with images and videos
+  // --- Gallery ---
   type GalleryItem = { type: "image"; url: string } | { type: "video"; url: string; videoId: string };
 
   const galleryItems = useMemo((): GalleryItem[] => {
-    if (!product) {
-      return [];
-    }
+    if (!product) return [];
     const items: GalleryItem[] = [];
-    const seenUrls = new Set<string>();
+    const seen = new Set<string>();
+    const norm = (u: string) => u.trim().toLowerCase().replace(/\?.*$/, "").replace(/#.*$/, "");
 
-    // Normalize URL for comparison (trim, lowercase for comparison only)
-    const normalizeUrl = (url: string) => url.trim().toLowerCase();
+    [product.texturePhotoUrl, product.imageUrl, ...product.additionalImages]
+      .filter((u): u is string => Boolean(u?.trim()))
+      .forEach((url) => {
+        const key = norm(url);
+        if (!seen.has(key)) { seen.add(key); items.push({ type: "image", url: url.trim() }); }
+      });
 
-    // Add images - TEXTURE PHOTO FIRST per CLAUDE.md guidelines
-    // Priority: texturePhotoUrl > imageUrl > additionalImages
-    const images = [
-      product.texturePhotoUrl,
-      product.imageUrl,
-      ...product.additionalImages
-    ].filter((url): url is string => Boolean(url && typeof url === "string" && url.trim()));
-
-    images.forEach((url) => {
-      const trimmedUrl = url.trim();
-      const normalizedUrl = normalizeUrl(trimmedUrl);
-      if (!seenUrls.has(normalizedUrl)) {
-        seenUrls.add(normalizedUrl);
-        items.push({ type: "image", url: trimmedUrl });
-      }
-    });
-
-    // Add videos
     product.videoUrls.forEach((videoUrl) => {
       const videoId = extractYouTubeVideoId(videoUrl);
-      if (videoId) {
-        items.push({ type: "video", url: videoUrl, videoId });
-      }
+      if (videoId) items.push({ type: "video", url: videoUrl, videoId });
     });
 
     return items;
   }, [product]);
 
-  const hasImages = galleryItems.some((item) => item.type === "image");
-  const heroImage = hasImages ? (galleryItems.find((item) => item.type === "image")?.url ?? DEFAULT_IMAGE) : null;
+  const heroImage = galleryItems.find((i) => i.type === "image")?.url ?? null;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
-  const totalGalleryItems = galleryItems.length;
   const activeGalleryItem = galleryItems[activeGalleryIndex];
-  const showGalleryControls = totalGalleryItems > 1;
 
-  // Size image expansion
-  const [expandedSizeImage, setExpandedSizeImage] = useState<{ url: string; label: string } | null>(null);
+  const openGalleryAt = useCallback((index: number) => {
+    if (!galleryItems.length) return;
+    setActiveGalleryIndex(((index % galleryItems.length) + galleryItems.length) % galleryItems.length);
+    requestAnimationFrame(() => setIsGalleryOpen(true));
+  }, [galleryItems.length]);
 
-  const openGalleryAt = useCallback(
-    (index: number) => {
-      if (!totalGalleryItems) return;
-      const normalizedIndex = ((index % totalGalleryItems) + totalGalleryItems) % totalGalleryItems;
-      // Set index first, then open with a tiny delay for smoother animation
-      setActiveGalleryIndex(normalizedIndex);
-      // Use requestAnimationFrame for smooth transition
-      requestAnimationFrame(() => {
-        setIsGalleryOpen(true);
-      });
-    },
-    [totalGalleryItems]
-  );
+  const goToPrev = useCallback(() => {
+    if (!galleryItems.length) return;
+    setActiveGalleryIndex((p) => (p - 1 + galleryItems.length) % galleryItems.length);
+  }, [galleryItems.length]);
 
-  const goToPreviousItem = useCallback(() => {
-    if (!totalGalleryItems) return;
-    setActiveGalleryIndex((prev) => (prev - 1 + totalGalleryItems) % totalGalleryItems);
-  }, [totalGalleryItems]);
+  const goToNext = useCallback(() => {
+    if (!galleryItems.length) return;
+    setActiveGalleryIndex((p) => (p + 1) % galleryItems.length);
+  }, [galleryItems.length]);
 
-  const goToNextItem = useCallback(() => {
-    if (!totalGalleryItems) return;
-    setActiveGalleryIndex((prev) => (prev + 1) % totalGalleryItems);
-  }, [totalGalleryItems]);
-  const primaryDescription = product?.description?.trim().length
-    ? product.description
-    : product?.previewCopy?.trim().length
-      ? product.previewCopy
-      : "Detailed information about this Soil Seed & Water product.";
-  const fallbackKeywords =
-    [product?.category, product?.productType, "Soil Seed and Water"].filter((value): value is string => Boolean(value && value.trim())).join(", ") ||
-    "Soil Seed and Water";
-  const keywordList = product?.seoKeywords?.trim().length ? product.seoKeywords : fallbackKeywords;
+  const msrpPreview = useMemo(() => {
+    if (!product?.priceTiers.length) return null;
+    return product.priceTiers.find((tier) => isBagTier(tier) && tier.msrp) ?? product.priceTiers.find((tier) => tier.msrp) ?? null;
+  }, [product?.priceTiers]);
 
-  const featureList = useMemo(() => parseList(product?.features, /\|/), [product]);
-  const recommendedUses = useMemo(() => parseList(product?.recommendedUses), [product]);
-  const targetAudiences = useMemo(() => parseList(product?.targetAudience), [product]);
-  const ingredients = useMemo(() => parseList(product?.ingredients), [product]);
-  const featureSpotlights = featureList.slice(0, 3);
-
-  const sizesToDisplay = useMemo(() => {
-    if (product?.sizeOptions?.length) {
-      return product.sizeOptions;
-    }
-    return (product?.availableSizes ?? []).map((label) => ({
-      key: slugify(label),
-      label,
-      price: undefined,
-    }));
+  const sizeCategories = useMemo(() => {
+    if (!product) return [];
+    return buildSizeCategories(product);
   }, [product]);
 
-  const heroStats = useMemo(
-    () =>
-      product
-        ? [
-            {
-              label: "Category",
-              value: product.category ?? "Specialty soil",
-              icon: Leaf,
-            },
-            {
-              label: "Format",
-              value: product.productType ?? "Custom blend",
-              icon: Sparkles,
-            },
-            {
-              label: "Sizes",
-              value: sizesToDisplay.length ? `${sizesToDisplay.length} option${sizesToDisplay.length > 1 ? "s" : ""}` : "Request sizing",
-              icon: Package,
-            },
-            {
-              label: "Availability",
-              value: "Delivery planning included",
-              icon: Truck,
-            },
-          ]
-        : [],
-    [product, sizesToDisplay.length]
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
+  const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [justAdded, setJustAdded] = useState(false);
+
+  const selectedCategory = useMemo(
+    () => sizeCategories.find((category) => category.key === selectedCategoryKey),
+    [selectedCategoryKey, sizeCategories]
   );
 
-  const confidencePoints = [
-    {
-      icon: ShieldCheck,
-      title: "Agronomist verified",
-      description: "Every batch is checked for consistency and moisture before release.",
-    },
-    {
-      icon: MapPin,
-      title: "Regional logistics",
-      description: "Coordinated delivery and pickup scheduling across California & Nevada.",
-    },
-    {
-      icon: Phone,
-      title: "Live soil reps",
-      description: "Talk to Soil Seed & Water specialists for blends, sizing, and lead times.",
-    },
-  ];
+  const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
+  const selectedChoice = useMemo(
+    () =>
+      selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
+      (needsChoice ? undefined : selectedCategory?.choices[0]),
+    [needsChoice, selectedCategory, selectedChoiceSize]
+  );
 
-  const infoTabs = useMemo<InfoTab[]>(() => {
-    if (!product) {
-      return [];
-    }
+  const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
+  const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
 
-    return [
-      {
-        id: "overview",
-        label: "Overview",
-        content: (
-          <div className="space-y-4">
-            <p className="text-base leading-relaxed text-muted-foreground">{primaryDescription}</p>
-            {product.marketingNote && (
-              <p className="rounded-2xl border border-dashed bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{product.marketingNote}</p>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "features",
-        label: "Highlights",
-        content: featureList.length ? (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {featureList.map((item) => (
-              <li key={item} className="flex items-start gap-3 rounded-2xl border bg-muted/30 px-4 py-3 text-sm leading-relaxed">
-                <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">Add feature bullets in the admin editor to showcase agronomic benefits here.</p>
-        ),
-      },
-      {
-        id: "usage",
-        label: "Usage",
-        content: (
-          <div className="space-y-4">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {product.usage ?? "Include application guidance text in the admin editor so crews know how to deploy the material."}
-            </p>
-            {recommendedUses.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {recommendedUses.map((item) => (
-                  <span key={item} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "story",
-        label: "Story",
-        content: (
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {product.story ?? "Share what makes this blend unique — growers love knowing the backstory and sourcing details."}
-          </p>
-        ),
-      },
-      {
-        id: "composition",
-        label: "Ingredients",
-        content: (
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Ingredients</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ingredients.length > 0 ? (
-                  ingredients.map((item) => (
-                    <span key={item} className="rounded-full border px-3 py-1 text-xs">
-                      {item}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground">Populate the ingredient field to display the blend details.</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Ideal for</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {targetAudiences.length > 0 ? (
-                  targetAudiences.map((item) => (
-                    <span key={item} className="rounded-full border px-3 py-1 text-xs">
-                      {item}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground">Fill in the “target audience” field in the CMS to tailor this list.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        ),
-      },
-    ];
-  }, [featureList, ingredients, primaryDescription, product, recommendedUses, targetAudiences]);
-
-  const [activeInfoTab, setActiveInfoTab] = useState("overview");
-
+  // Reset gallery index on product change
   useEffect(() => {
-    setActiveInfoTab("overview");
+    setActiveGalleryIndex(0);
+    setSelectedCategoryKey("");
+    setSelectedChoiceSize("");
+    setQuantity(1);
   }, [product?.id]);
 
-  const activeTabContent = infoTabs.find((tab) => tab.id === activeInfoTab) ?? infoTabs[0];
+  useEffect(() => {
+    if (!product || window.location.hash !== "#buy") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("buy")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [product]);
+
+  const addSelectionToCart = useCallback((next?: "products" | "checkout" | "quote") => {
+    if (!product || !selectedChoice) return;
+
+    addItem({
+      productId: product.id,
+      productName: product.displayTitle,
+      productSlug: product.slug,
+      format: selectedChoice.displayLabel === "Single bag" ? selectedCategory?.label ?? selectedChoice.size : selectedChoice.displayLabel,
+      quantity,
+      unitPrice: selectedChoice.displayPrice,
+      unit: selectedChoice.unit || "per unit",
+      mode: canPayOnline ? "pay" : "quote",
+      imageUrl: product.imageUrl || product.texturePhotoUrl,
+    });
+
+    setJustAdded(true);
+    toast({
+      title: "Added to cart",
+      description: `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
+    });
+    window.setTimeout(() => setJustAdded(false), 1400);
+
+    if (next === "products") navigate("/products");
+    if (next === "checkout") canPayOnline ? openDrawer() : navigate("/order");
+    if (next === "quote") navigate("/order");
+  }, [addItem, canPayOnline, navigate, openDrawer, product, quantity, selectedCategory?.label, selectedChoice, toast]);
+
+  // --- SEO ---
+  const seoDescription = product?.marketingNote || product?.description || "Wholesale organic soil products from Soil Seed & Water.";
+  const seoKeywords = product?.seoKeywords || [product?.category, product?.productType, "organic soil", "wholesale"].filter(Boolean).join(", ");
+
+  // --- Thumbnails (excluding hero) ---
+  const thumbnails = useMemo(() => {
+    return galleryItems
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !(item.type === "image" && item.url === heroImage));
+  }, [galleryItems, heroImage]);
 
   return (
     <>
       <SEO
         title={product ? `${product.displayTitle} — Soil Seed & Water` : "Product Detail"}
-        description={primaryDescription}
+        description={seoDescription}
         canonical={`https://organicsoilwholesale.com/products/${product?.slug ?? slug}`}
-        keywords={keywordList}
+        keywords={seoKeywords}
       />
 
-      <section className="relative bg-white py-4 sm:py-8 lg:py-12 overflow-hidden">
+      <section className="py-4 sm:py-8 lg:py-10 bg-muted/20" aria-label="Product details">
+        <div className="container mx-auto px-3 sm:px-4 max-w-6xl">
+          {/* Back */}
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground h-11 min-h-[44px] px-3 touch-manipulation rounded-lg mb-4" asChild>
+            <Link href="/products">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Products
+            </Link>
+          </Button>
 
-        <div className="container mx-auto px-3 sm:px-4 relative z-10">
-          <div className="mb-4 sm:mb-8">
-            <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-white/80 h-11 min-h-[44px] touch-manipulation" asChild>
-              <Link href="/products">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Products
-              </Link>
-            </Button>
-          </div>
-
+          {/* Loading */}
           {isLoading && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <Skeleton className="h-[420px] rounded-3xl" />
-              <Skeleton className="h-[420px] rounded-3xl" />
+              <Skeleton className="h-[400px] rounded-2xl" />
+              <Skeleton className="h-[400px] rounded-2xl" />
             </div>
           )}
 
+          {/* Error */}
           {!isLoading && error && (
-            <Card className="rounded-3xl border-destructive/30 bg-destructive/5 p-8 text-center">
+            <Card className="rounded-2xl border-destructive/30 bg-destructive/5 p-8 text-center">
               <h2 className="text-2xl font-semibold text-destructive">Product not available</h2>
-              <p className="mt-2 text-muted-foreground">
-                We couldn&apos;t find that product in the catalog. It may have been archived or renamed in the admin dashboard.
-              </p>
-              <div className="mt-6">
-                <Button asChild>
-                  <Link href="/products">Return to catalog</Link>
-                </Button>
-              </div>
+              <p className="mt-2 text-muted-foreground">We couldn&apos;t find that product. It may have been archived or renamed.</p>
+              <Button asChild className="mt-6"><Link href="/products">Return to catalog</Link></Button>
             </Card>
           )}
 
-
+          {/* Product Content */}
           {!isLoading && product && (
-            <div className="space-y-6 sm:space-y-10 overflow-hidden">
-              <div className="flex flex-col gap-6 sm:gap-10 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(300px,2fr)] xl:items-start">
-                <section className="w-full space-y-6 sm:space-y-8 overflow-hidden">
-                  <div className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border-2 border-border bg-white shadow-sm">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.8),_transparent_55%)]" />
-                    <div className="relative z-10 flex flex-col lg:grid lg:items-center lg:gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-                      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-10">
-                        <div className="flex flex-wrap gap-2 text-xs font-semibold tracking-wide">
-                          <Badge className="bg-primary text-white border-0">
-                            <Leaf className="h-3 w-3 mr-1" />
-                            {product.category}
-                          </Badge>
-                          {product.productType && (
-                            <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
-                              {product.productType}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="space-y-3 sm:space-y-4">
-                          <div>
-                            <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary font-semibold">Organic Soil Wholesale</p>
-                            <h1 className="mt-2 sm:mt-3 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-heading font-bold leading-tight text-foreground">{product.displayTitle}</h1>
-                          </div>
-                          <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                            {product.previewCopy ?? primaryDescription ?? "Premium Arizona-produced soil solutions for thriving landscapes."}
-                          </p>
-                          {featureSpotlights.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                              {featureSpotlights.map((item) => (
-                                <span key={item} className="rounded-full bg-white/90 border border-primary/20 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-foreground shadow-sm backdrop-blur">
-                                  {item}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {recommendedUses.length > 0 && (
-                            <div>
-                              <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Top uses</p>
-                              <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1.5 sm:gap-2">
-                                {recommendedUses.map((item) => (
-                                  <span
-                                    key={item}
-                                    className="rounded-full border border-white/60 bg-white/40 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs text-foreground backdrop-blur"
-                                  >
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                            <Leaf className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
-                            <span className="font-medium">{product.category}</span>
-                          </div>
-                          {product.productType && (
-                            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                              <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
-                              <span className="font-medium">{product.productType}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/90 border border-gray-100 px-2.5 sm:px-4 py-1.5 sm:py-2 shadow-sm">
-                            <Truck className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
-                            <span className="font-medium">Delivery available</span>
-                          </div>
-                        </div>
+            <div className="space-y-6 sm:space-y-8">
+
+              {/* ============================================================ */}
+              {/* HERO: Image + Product Info                                    */}
+              {/* ============================================================ */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl border shadow-sm overflow-hidden">
+                <div className="flex flex-col lg:grid lg:grid-cols-2">
+                  {/* Image */}
+                  <div
+                    className="relative bg-gray-50 min-h-[280px] sm:min-h-[360px] lg:min-h-[440px] cursor-pointer group"
+                    role={galleryItems.length > 0 ? "button" : undefined}
+                    tabIndex={galleryItems.length > 0 ? 0 : -1}
+                    onClick={() => galleryItems.length > 0 && openGalleryAt(0)}
+                    onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                      if (galleryItems.length && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault(); openGalleryAt(0);
+                      }
+                    }}
+                    aria-label={galleryItems.length > 0 ? "Open product gallery" : undefined}
+                  >
+                    {heroImage ? (
+                      <OptimizedImage
+                        src={heroImage}
+                        alt={product.displayTitle}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-8">
+                        No image available
                       </div>
-                      <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:pb-10">
-                        {heroImage ? (
-                          <div
-                            className="group relative overflow-hidden rounded-2xl sm:rounded-[28px] border bg-white shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
-                            role={totalGalleryItems > 0 ? "button" : undefined}
-                            tabIndex={totalGalleryItems > 0 ? 0 : -1}
-                            onClick={() => totalGalleryItems > 0 && openGalleryAt(0)}
-                            onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-                              if (!totalGalleryItems) return;
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openGalleryAt(0);
-                              }
-                            }}
-                          >
-                            <OptimizedImage
-                              src={heroImage}
-                              alt={product.displayTitle}
-                              className="w-full h-auto object-contain sm:object-cover transition duration-500 group-hover:scale-[1.03]"
-                            />
-                            {totalGalleryItems > 0 && (
-                              <div className="pointer-events-none absolute bottom-3 right-3 sm:bottom-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 rounded-full bg-black/80 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium text-white shadow-lg">
-                                <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                <span>Open gallery</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex min-h-[200px] sm:min-h-[280px] items-center justify-center rounded-2xl sm:rounded-[28px] border border-dashed border-muted bg-white/40 text-sm text-muted-foreground p-4 text-center">
-                            Upload a feature image or video in the admin editor to showcase this blend.
-                          </div>
-                        )}
+                    )}
+                    {galleryItems.length > 1 && (
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm">
+                        <Maximize2 className="h-3 w-3" />
+                        {galleryItems.length} photos
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {heroStats.length > 0 && (
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-                      {heroStats.map((stat, index) => {
-                        const Icon = stat.icon;
-                        const iconColors = ["text-primary", "text-primary", "text-primary", "text-primary"];
-                        return (
-                          <div key={stat.label} className="rounded-xl sm:rounded-2xl border border-gray-100 bg-white p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground font-medium">
-                              <Icon className={`h-3.5 sm:h-4 w-3.5 sm:w-4 ${iconColors[index % iconColors.length]}`} />
-                              {stat.label}
-                            </div>
-                            <p className="mt-1.5 sm:mt-2 text-base sm:text-lg font-semibold text-foreground">{stat.value}</p>
+                  {/* Product Info */}
+                  <div className="p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <Badge className="bg-primary text-primary-foreground border-0 text-xs">
+                        <Leaf className="h-3 w-3 mr-1" />
+                        {product.category}
+                      </Badge>
+                      {product.certifications.map((cert) => (
+                        <Badge key={cert} className="bg-green-50 text-green-700 border-green-200 text-xs font-medium">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          {cert}
+                        </Badge>
+                      ))}
+                      {product.npk && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-xs font-medium">
+                          NPK: {product.npk}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold tracking-tight text-foreground">
+                      {product.displayTitle}
+                    </h1>
+
+                    {/* Description */}
+                    {product.description && (
+                      <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        {product.marketingNote || product.description}
+                      </p>
+                    )}
+
+                    {/* MSRP preview */}
+                    {msrpPreview?.msrp && (
+                      <div className="mt-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          Starts at
+                        </p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl sm:text-3xl font-bold text-primary">
+                            {fmt(msrpPreview.msrp)}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            / {categoryLabel(msrpPreview.size, product.id)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div id="buy" className="mt-5 scroll-mt-24">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose size</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Pick a size, then choose single, pallet, super sack, or truckload when available.
+                          </p>
+                        </div>
+                        {selectedCategory && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategoryKey("");
+                              setSelectedChoiceSize("");
+                              setQuantity(1);
+                            }}
+                            className="text-left text-sm font-semibold text-primary hover:text-primary/80 sm:text-right"
+                          >
+                            Previous
+                          </button>
+                        )}
+                      </div>
+
+                      {!selectedCategory && sizeCategories.length > 0 && (
+                        <div className="mt-3 space-y-3">
+                          <div className="divide-y divide-border/70 border-y border-border/70">
+                            {sizeCategories.map((category) => (
+                              <button
+                                key={category.key}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCategoryKey(category.key);
+                                  setSelectedChoiceSize("");
+                                  setQuantity(1);
+                                }}
+                                className="flex min-h-[62px] w-full items-center gap-3 py-2.5 text-left transition hover:bg-muted/40 touch-manipulation"
+                              >
+                                {category.image && (
+                                  <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-border/70">
+                                    <OptimizedImage src={category.image} alt="" className="h-full w-full object-cover" />
+                                  </span>
+                                )}
+                                <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+                                  <span className="block text-sm font-bold text-foreground">{category.label}</span>
+                                  <span className="mt-0.5 block text-sm font-bold text-primary">{category.priceLabel}</span>
+                                </span>
+                              </button>
+                            ))}
                           </div>
+                          <Button
+                            size="lg"
+                            className="min-h-[48px] w-full rounded-xl font-semibold shadow-none touch-manipulation"
+                            disabled
+                          >
+                            {canPayOnline ? <ShoppingCart className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
+                            {canPayOnline ? "Add to Cart" : "Request a Quote"}
+                          </Button>
+                        </div>
+                      )}
+
+                      {selectedCategory && (
+                        <div className="mt-3 space-y-3">
+                          <div className="flex items-center gap-3 border-y border-border/70 py-3">
+                            {selectedCategory.image && (
+                              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-border/70">
+                                <OptimizedImage src={selectedCategory.image} alt="" className="h-full w-full object-cover" />
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected size</p>
+                              <p className="text-sm font-bold text-foreground">{selectedCategory.label}</p>
+                            </div>
+                            <p className="shrink-0 text-sm font-bold text-primary">{selectedCategory.priceLabel}</p>
+                          </div>
+
+                          {needsChoice && (
+                            <div>
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                Pick pallet or single
+                              </p>
+                              <div className="divide-y divide-border/70 border-y border-border/70">
+                                {selectedCategory.choices.map((choice) => {
+                                  const isSelected = choice.size === selectedChoiceSize;
+                                  const choiceImage = imageForChoice(choice, selectedCategory.image);
+                                  return (
+                                    <button
+                                      key={choice.size}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedChoiceSize(choice.size);
+                                        setQuantity(1);
+                                      }}
+                                      className={cn(
+                                        "flex w-full items-center justify-between gap-3 py-3 text-left transition touch-manipulation",
+                                        isSelected
+                                          ? "bg-primary/[0.06] px-2"
+                                          : "hover:bg-muted/40"
+                                      )}
+                                    >
+                                        <span className="min-w-0">
+                                        <span className="flex items-center gap-3">
+                                          {choiceImage && (
+                                            <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-border/70">
+                                              <OptimizedImage src={choiceImage} alt="" className="h-full w-full object-cover" />
+                                            </span>
+                                          )}
+                                          <span className="min-w-0">
+                                            <span className="block text-sm font-bold text-foreground">{choice.displayLabel}</span>
+                                            <span className="mt-0.5 block text-xs text-muted-foreground">{choice.subLabel}</span>
+                                          </span>
+                                        </span>
+                                      </span>
+                                      <span className="shrink-0 text-lg font-bold text-primary">{fmt(choice.displayPrice)}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="border-t border-border/70 pt-3">
+                            <div className="flex items-end justify-between gap-3">
+                              <div>
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantity</p>
+                                <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white p-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                    className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </button>
+                                  <span className="w-10 text-center text-base font-bold">{quantity}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setQuantity((q) => q + 1)}
+                                    className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">
+                                  {selectedChoice ? `${quantity}x ${selectedChoice.displayLabel}` : "Choose a format"}
+                                </p>
+                                <p className="mt-0.5 text-2xl font-bold text-primary">{selectedChoice ? fmt(selectedTotal) : "$0.00"}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {canPayOnline ? (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <Button
+                                size="lg"
+                                className="min-h-[48px] rounded-xl font-semibold shadow-md touch-manipulation sm:col-span-2"
+                                disabled={!selectedChoice}
+                                onClick={() => addSelectionToCart()}
+                              >
+                                {justAdded ? <Check className="mr-2 h-4 w-4" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                                {justAdded ? "Added" : "Add to Cart"}
+                              </Button>
+                              <Button
+                                size="lg"
+                                variant="outline"
+                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation sm:col-span-2"
+                                disabled={!selectedChoice}
+                                onClick={() => addSelectionToCart("checkout")}
+                              >
+                                Buy Now
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="lg"
+                              className="min-h-[48px] w-full rounded-xl font-semibold shadow-md touch-manipulation"
+                              disabled={!selectedChoice}
+                              onClick={() => addSelectionToCart("quote")}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Request a Quote
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thumbnail strip */}
+                {thumbnails.length > 0 && (
+                  <div className="px-4 pb-4 sm:px-6 sm:pb-5 border-t border-border/50 pt-3">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {thumbnails.map(({ item, index: gi }) => {
+                        if (item.type === "image") {
+                          return (
+                            <button key={item.url} type="button" onClick={() => openGalleryAt(gi)}
+                              className="h-14 w-18 sm:h-16 sm:w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition touch-manipulation"
+                              aria-label={`View image ${gi + 1}`}>
+                              <OptimizedImage src={item.url} alt="" className="h-full w-full object-cover" />
+                            </button>
+                          );
+                        }
+                        return (
+                          <button key={item.url} type="button" onClick={() => openGalleryAt(gi)}
+                            className="relative h-14 w-18 sm:h-16 sm:w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm hover:shadow-md transition touch-manipulation"
+                            aria-label={`View video ${gi + 1}`}>
+                            <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="rounded-full bg-red-600 p-1"><Play className="h-2.5 w-2.5 fill-white text-white" /></div>
+                            </div>
+                          </button>
                         );
                       })}
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
 
-                  {galleryItems.length > 1 && (
-                    <div className="rounded-3xl border bg-white/90 p-4 shadow-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Media</p>
-                          <h2 className="text-lg font-semibold text-foreground">Gallery preview</h2>
-                        </div>
-                        <Button variant="ghost" size="sm" className="text-sm font-semibold" onClick={() => openGalleryAt(activeGalleryIndex)}>
-                          <Maximize2 className="mr-2 h-4 w-4" />
-                          View all
-                        </Button>
-                      </div>
-                      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                        {galleryItems.map((item, index) => {
-                          if (item.type === "image") {
-                            return (
-                              <button
-                                key={item.url}
-                                type="button"
-                                onClick={() => openGalleryAt(index)}
-                                className="h-28 w-40 flex-shrink-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                                aria-label={`View image ${index + 1}`}
-                              >
-                                <OptimizedImage src={item.url} alt={`${product.displayTitle} ${index + 1}`} className="h-full w-full object-cover" />
-                              </button>
-                            );
-                          }
-                          const thumbnailUrl = `https://img.youtube.com/vi/${item.videoId}/maxresdefault.jpg`;
-                          return (
-                            <button
-                              key={item.url}
-                              type="button"
-                              onClick={() => openGalleryAt(index)}
-                              className="group relative h-28 w-40 flex-shrink-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                              aria-label={`View video ${index + 1}`}
-                            >
-                              <img
-                                src={thumbnailUrl}
-                                alt="Video thumbnail"
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`;
-                                }}
-                              />
-                              <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-3 text-white">
-                                <div className="rounded-full bg-red-600/90 p-2 shadow-lg transition-transform group-hover:scale-110">
-                                  <Play className="h-4 w-4 fill-white text-white" />
-                                </div>
-                                <div className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">Video</div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+              {/* ============================================================ */}
+              {/* PRODUCT DETAILS: How to Use + Best For                        */}
+              {/* ============================================================ */}
+              {(product.usage || product.targetAudience.length > 0) && (
+                <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                  {product.usage && (
+                    <Card className="rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
+                      <h2 className="text-base sm:text-lg font-semibold mb-3">How to Use</h2>
+                      <p className="text-sm leading-relaxed text-muted-foreground">{product.usage}</p>
+                    </Card>
                   )}
-
-                  {featureList.length > 0 && (
-                    <Card className="rounded-3xl border bg-white p-6 shadow-lg">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Highlights</p>
-                          <h2 className="text-xl font-semibold">Why crews love it</h2>
-                        </div>
-                      </div>
-                      <ul className="mt-6 grid gap-3 md:grid-cols-2">
-                        {featureList.map((item) => (
-                          <li key={item} className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+                  {product.targetAudience.length > 0 && (
+                    <Card className="rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
+                      <h2 className="text-base sm:text-lg font-semibold mb-3">Best For</h2>
+                      <ul className="space-y-2">
+                        {product.targetAudience.map((item) => (
+                          <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Leaf className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                             {item}
                           </li>
                         ))}
                       </ul>
                     </Card>
                   )}
+                </div>
+              )}
 
-                  {infoTabs.length > 0 && (
-                    <Card className="rounded-3xl border bg-white p-4 shadow-lg">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Leaf className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Knowledge base</p>
-                          <h2 className="text-lg font-semibold">Details at a glance</h2>
-                        </div>
-                      </div>
-                      <div className="hidden md:block">
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {infoTabs.map((tab) => (
-                            <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => setActiveInfoTab(tab.id)}
-                              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                                activeInfoTab === tab.id ? "bg-primary text-primary-foreground shadow" : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {tab.label}
-                            </button>
-                          ))}
-                        </div>
-                        {activeTabContent && <div className="mt-6 text-sm text-muted-foreground">{activeTabContent.content}</div>}
-                      </div>
-                      <div className="mt-4 space-y-3 md:hidden">
-                        {infoTabs.map((tab, index) => (
-                          <details key={tab.id} className="rounded-2xl border bg-muted/30 p-4" open={index === 0}>
-                            <summary className="cursor-pointer text-sm font-semibold text-foreground">{tab.label}</summary>
-                            <div className="mt-3 text-sm text-muted-foreground">{tab.content}</div>
-                          </details>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-                    <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
-                        <div>
-                          <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Application</p>
-                          <h2 className="text-lg sm:text-xl font-semibold">Usage guidance</h2>
-                        </div>
-                      </div>
-                      <p className="mt-3 sm:mt-4 text-sm leading-relaxed text-muted-foreground">
-                        {product.usage ?? "Add usage instructions in the admin editor to provide application guidance here."}
-                      </p>
-                      {recommendedUses.length > 0 && (
-                        <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
-                          {recommendedUses.map((item) => (
-                            <span key={item} className="rounded-full bg-muted px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs text-muted-foreground">
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-
-                    <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Story</p>
-                      <h2 className="mt-1 text-lg sm:text-xl font-semibold">Product narrative</h2>
-                      <p className="mt-2 sm:mt-3 text-sm leading-relaxed text-muted-foreground">
-                        {product.story ?? "Share the origin story or agronomic insight within the admin editor to highlight it here."}
-                      </p>
-                    </Card>
-                  </div>
-
-                  <Card className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
-                    <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Ingredients &amp; audiences</p>
-                    <h2 className="mt-1 text-lg sm:text-xl font-semibold">What's inside &amp; who it's for</h2>
-                    <div className="mt-3 sm:mt-4 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-sm font-semibold">Ingredients</p>
-                        <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2">
-                          {ingredients.length > 0 ? (
-                            ingredients.map((item) => (
-                              <span key={item} className="rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs">
-                                {item}
-                              </span>
-                            ))
-                          ) : (
-                            <p className="text-xs text-muted-foreground">Add ingredient text in the admin panel to show it here.</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Best for</p>
-                        <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2">
-                          {targetAudiences.length > 0 ? (
-                            targetAudiences.map((item) => (
-                              <span key={item} className="rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs">
-                                {item}
-                              </span>
-                            ))
-                          ) : (
-                            <p className="text-xs text-muted-foreground">Fill in the "target audience" field in admin to populate this list.</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {/* ============================================================ */}
+              {/* VIDEO                                                         */}
+              {/* ============================================================ */}
+              {product.videoUrls.length > 0 && (() => {
+                const videoId = extractYouTubeVideoId(product.videoUrls[0]);
+                if (!videoId) return null;
+                return (
+                  <Card className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+                    <YouTubePlayer videoId={videoId} title={product.displayTitle} className="w-full" />
                   </Card>
-                </section>
+                );
+              })()}
 
-                <aside className="w-full space-y-4 sm:space-y-6 overflow-hidden">
-                  <Card className="rounded-2xl sm:rounded-3xl border-0 bg-gray-900 p-4 sm:p-6 text-white shadow-sm overflow-hidden relative">
-                    {/* Subtle pattern overlay */}
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(77,124,94,0.15),_transparent_50%)]" />
-                    <div className="relative z-10">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary-light font-semibold">Order Direct</p>
-                      <h3 className="mt-2 sm:mt-3 text-xl sm:text-2xl font-heading font-bold leading-tight">Get a wholesale quote today</h3>
-                      <p className="mt-2 sm:mt-3 text-sm text-white/80 leading-relaxed">
-                        Our team coordinates blending, packaging, and logistics across Arizona so you can focus on your projects.
-                      </p>
-                      <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-                        <Button size="lg" className="w-full min-h-[48px] h-12 text-base bg-primary hover:bg-primary/90 shadow-sm touch-manipulation" asChild>
-                          <Link href="/order">
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Request a Quote
-                          </Link>
-                        </Button>
-                        <Button
-                          size="lg"
-                          variant="outline"
-                          className="w-full min-h-[48px] h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 touch-manipulation"
-                          asChild
-                        >
-                          <Link href="/contact">
-                            <Phone className="mr-2 h-4 w-4" />
-                            Talk to an Expert
-                          </Link>
-                        </Button>
-                      </div>
-                      <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/10 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-white/60">
-                        <MapPin className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary-light flex-shrink-0" />
-                        <span>Arizona-produced • Local delivery available</span>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card id="size-options" className="rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-lg">
-                    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-                      <div>
-                        <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground">Available sizes</p>
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                          {sizesToDisplay.length > 0 ? `${sizesToDisplay.length} size option${sizesToDisplay.length > 1 ? "s" : ""}` : "Size catalog"}
-                        </h3>
-                      </div>
-                      {sizesToDisplay.length > 0 && <span className="text-[10px] sm:text-xs text-muted-foreground">Tap to inspect</span>}
-                    </div>
-                    <div className="mt-3 sm:mt-4 flex gap-2 sm:gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
-                      {sizesToDisplay.length === 0 && (
-                        <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                          Activate a size or add pricing in the admin editor to show options here.
-                        </div>
-                      )}
-                      {sizesToDisplay.map((option) => {
-                        const cardContent = (
-                          <>
-                            {option.image && (
-                              <img src={option.image} alt={option.label} className="h-20 sm:h-28 w-full rounded-lg sm:rounded-xl object-cover" loading="lazy" />
-                            )}
-                            <div className="space-y-1 sm:space-y-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-sm sm:text-base">{option.label}</span>
-                              </div>
-                              {option.description && <p className="text-[11px] sm:text-xs text-muted-foreground">{option.description}</p>}
-                            </div>
-                          </>
-                        );
-
-                        if (option.image) {
-                          return (
-                            <button
-                              key={option.key}
-                              type="button"
-                              className="min-w-[160px] sm:min-w-[200px] rounded-xl sm:rounded-2xl border bg-muted/10 p-3 sm:p-4 text-left shadow-sm transition hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 touch-manipulation"
-                              onClick={() => setExpandedSizeImage({ url: option.image!, label: option.label })}
-                              aria-label={`View larger image of ${option.label}`}
-                            >
-                              {cardContent}
-                            </button>
-                          );
-                        }
-
-                        return (
-                          <div key={option.key} className="min-w-[160px] sm:min-w-[200px] rounded-xl sm:rounded-2xl border bg-muted/10 p-3 sm:p-4 shadow-sm">
-                            {cardContent}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-
-                  <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-primary/10 p-2">
-                        <ShieldCheck className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">Confidence</p>
-                        <h3 className="text-lg font-heading font-semibold">Why teams trust us</h3>
-                      </div>
-                    </div>
-                    <ul className="mt-6 space-y-4">
-                      {confidencePoints.map((point, index) => {
-                        const Icon = point.icon;
-                        const bgColors = ["bg-primary/10", "bg-primary/10", "bg-primary/10"];
-                        const iconColors = ["text-primary", "text-primary", "text-primary"];
-                        return (
-                          <li key={point.title} className="flex gap-3">
-                            <div className={`rounded-full ${bgColors[index % bgColors.length]} p-2.5 flex-shrink-0`}>
-                              <Icon className={`h-4 w-4 ${iconColors[index % iconColors.length]}`} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">{point.title}</p>
-                              <p className="text-sm text-muted-foreground leading-relaxed">{point.description}</p>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </Card>
-                </aside>
+              {/* ============================================================ */}
+              {/* BOTTOM CTA                                                    */}
+              {/* ============================================================ */}
+              <div className="bg-gray-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center text-white">
+                <h2 className="text-xl sm:text-2xl font-heading font-bold">
+                  Need help with <span className="text-primary-light">{product.displayTitle}</span>?
+                </h2>
+                <p className="mt-2 text-sm text-white/70">Call us for delivery timing, bulk questions, or product fit.</p>
+                <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
+                  <Button size="lg" className="min-h-[48px] bg-primary hover:bg-primary/90 shadow-lg touch-manipulation" asChild>
+                    <a href="tel:+16027267211">
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Call (602) 726-7211
+                    </a>
+                  </Button>
+                </div>
               </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* Bottom CTA Section */}
-      {!isLoading && product && (
-        <section className="bg-background py-16 border-t border-border">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-2xl font-heading font-bold text-foreground sm:text-3xl">
-              Ready to order <span className="text-primary">{product.displayTitle}</span>?
-            </h2>
-            <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-              Get wholesale pricing and delivery scheduling for your project.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" asChild>
-                <Link href="/order">
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Request a Quote
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-primary/30 hover:bg-primary/5" asChild>
-                <Link href="/products">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Catalog
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ================================================================== */}
+      {/* GALLERY DIALOG                                                      */}
+      {/* ================================================================== */}
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-        <DialogContent className="sm:max-w-5xl border-none bg-black/90 text-white duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-100 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <DialogContent className="sm:max-w-5xl border-none bg-black/95 text-white">
           <DialogHeader className="sr-only">
             <DialogTitle>{product?.displayTitle ?? "Product gallery"}</DialogTitle>
-            <DialogDescription>Expanded view of the product imagery.</DialogDescription>
+            <DialogDescription>Product images and videos.</DialogDescription>
           </DialogHeader>
-          {totalGalleryItems > 0 ? (
-            <div className="space-y-4 animate-in fade-in-0 duration-300">
+          {galleryItems.length > 0 ? (
+            <div className="space-y-4">
               <div className="relative overflow-hidden rounded-2xl bg-black">
-                <div key={activeGalleryIndex} className="animate-in fade-in-0 zoom-in-95 duration-500">
+                <div key={activeGalleryIndex} className="animate-in fade-in-0 duration-300">
                   {activeGalleryItem?.type === "video" ? (
-                    <YouTubePlayer
-                      videoId={activeGalleryItem.videoId}
-                      title={product?.displayTitle ?? "Product video"}
-                      className="w-full"
-                      autoPlay={true}
-                      muted={false}
-                    />
+                    <YouTubePlayer videoId={activeGalleryItem.videoId} title={product?.displayTitle ?? "Video"} className="w-full" autoPlay muted={false} />
                   ) : activeGalleryItem?.type === "image" ? (
-                    <OptimizedImage
-                      src={activeGalleryItem.url}
-                      alt={product?.displayTitle ?? "Product image"}
-                      className="mx-auto max-h-[70vh] w-full object-contain"
-                    />
+                    <OptimizedImage src={activeGalleryItem.url} alt={product?.displayTitle ?? "Product"} className="mx-auto max-h-[70vh] w-full object-contain" />
                   ) : null}
                 </div>
-                {showGalleryControls && (
+                {galleryItems.length > 1 && (
                   <>
-                    <button
-                      type="button"
-                      className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white transition-all duration-200 hover:bg-white/40 hover:scale-110 backdrop-blur-sm"
-                      onClick={goToPreviousItem}
-                      aria-label="Previous item"
-                    >
+                    <button type="button" className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white hover:bg-white/40 backdrop-blur-sm transition" onClick={goToPrev} aria-label="Previous">
                       <ChevronLeft className="h-5 w-5" />
                     </button>
-                    <button
-                      type="button"
-                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white transition-all duration-200 hover:bg-white/40 hover:scale-110 backdrop-blur-sm"
-                      onClick={goToNextItem}
-                      aria-label="Next item"
-                    >
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white hover:bg-white/40 backdrop-blur-sm transition" onClick={goToNext} aria-label="Next">
                       <ChevronRight className="h-5 w-5" />
                     </button>
                   </>
                 )}
               </div>
-              {showGalleryControls && (
-                <div className="flex gap-2 overflow-x-auto animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-150">
+              {galleryItems.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto">
                   {galleryItems.map((item, index) => {
                     const isActive = index === activeGalleryIndex;
                     if (item.type === "image") {
                       return (
-                        <button
-                          key={`${item.url}-${index}`}
-                          type="button"
-                          onClick={() => {
-                            setActiveGalleryIndex(index);
-                          }}
-                          className={`h-16 w-20 flex-shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${isActive ? "border-white scale-105 ring-2 ring-white/50" : "border-white/30 hover:border-white/60"}`}
-                          aria-label={`Show image ${index + 1}`}
-                          aria-current={isActive}
-                        >
-                          <OptimizedImage src={item.url} alt="" className="h-full w-full object-cover transition-transform duration-200" />
-                        </button>
-                      );
-                    } else {
-                      const thumbnailUrl = `https://img.youtube.com/vi/${item.videoId}/maxresdefault.jpg`;
-                      return (
-                        <button
-                          key={`${item.url}-${index}`}
-                          type="button"
-                          onClick={() => {
-                            setActiveGalleryIndex(index);
-                          }}
-                          className={`relative h-16 w-20 flex-shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${isActive ? "border-white scale-105 ring-2 ring-white/50" : "border-white/30 hover:border-white/60"}`}
-                          aria-label={`Show video ${index + 1}`}
-                          aria-current={isActive}
-                        >
-                          <img
-                            src={thumbnailUrl}
-                            alt="Video thumbnail"
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              // Fallback to hqdefault if maxresdefault fails
-                              (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`;
-                            }}
-                          />
-                          {/* Play button in bottom-right corner */}
-                          <div className="absolute bottom-1 right-1 rounded-full bg-red-600 p-1 shadow-lg">
-                            <Play className="h-3 w-3 text-white fill-white" />
-                          </div>
+                        <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
+                          className={`h-14 w-18 flex-shrink-0 overflow-hidden rounded-lg border transition ${isActive ? "border-white ring-2 ring-white/50 scale-105" : "border-white/30 hover:border-white/60"}`}
+                          aria-label={`Image ${index + 1}`} aria-current={isActive}>
+                          <OptimizedImage src={item.url} alt="" className="h-full w-full object-cover" />
                         </button>
                       );
                     }
+                    return (
+                      <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
+                        className={`relative h-14 w-18 flex-shrink-0 overflow-hidden rounded-lg border transition ${isActive ? "border-white ring-2 ring-white/50 scale-105" : "border-white/30 hover:border-white/60"}`}
+                        aria-label={`Video ${index + 1}`} aria-current={isActive}>
+                        <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-cover" />
+                        <div className="absolute bottom-1 right-1 rounded-full bg-red-600 p-0.5">
+                          <Play className="h-2.5 w-2.5 text-white fill-white" />
+                        </div>
+                      </button>
+                    );
                   })}
                 </div>
               )}
-              <p className="text-center text-xs text-white/70 animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-300">
-                {activeGalleryIndex + 1} of {totalGalleryItems}
-              </p>
+              <p className="text-center text-xs text-white/60">{activeGalleryIndex + 1} of {galleryItems.length}</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ImagePlus className="h-12 w-12 text-white/50 mb-4" />
-              <p className="text-sm text-white/70">No media available for this product yet.</p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Expanded Size Image Dialog */}
-      <Dialog open={expandedSizeImage !== null} onOpenChange={(open) => !open && setExpandedSizeImage(null)}>
-        <DialogContent className="sm:max-w-4xl border-none bg-black/95 text-white duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-100">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{expandedSizeImage?.label ?? "Size image"}</DialogTitle>
-            <DialogDescription>Expanded view of the size category image.</DialogDescription>
-          </DialogHeader>
-          {expandedSizeImage && (
-            <div className="space-y-4 animate-in fade-in-0 duration-300">
-              <div className="relative overflow-hidden rounded-2xl bg-black">
-                <OptimizedImage src={expandedSizeImage.url} alt={expandedSizeImage.label} className="w-full h-auto max-h-[80vh] object-contain" />
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-semibold">{expandedSizeImage.label}</p>
-              </div>
+            <div className="flex flex-col items-center py-12 text-center">
+              <ImagePlus className="h-12 w-12 text-white/40 mb-4" />
+              <p className="text-sm text-white/60">No media available.</p>
             </div>
           )}
         </DialogContent>

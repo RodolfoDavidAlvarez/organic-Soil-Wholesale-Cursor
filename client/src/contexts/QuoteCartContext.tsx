@@ -1,0 +1,105 @@
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
+
+export type CartItem = {
+  productId: number;
+  productName: string;
+  productSlug: string;
+  format: string;
+  quantity: number;
+  unitPrice: number;
+  unit: string;
+  /** 'pay' = pay-now via Stripe at pickup slot · 'quote' = request a quote */
+  mode?: 'pay' | 'quote';
+  /** Thumbnail for cart drawer line item */
+  imageUrl?: string;
+};
+
+type QuoteCartContextValue = {
+  items: CartItem[];
+  addItem: (item: CartItem) => void;
+  removeItem: (productId: number, format: string) => void;
+  updateQuantity: (productId: number, format: string, quantity: number) => void;
+  clearCart: () => void;
+  totalItems: number;
+  totalPrice: number;
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
+};
+
+const STORAGE_KEY = "osw-quote-cart";
+
+const loadCart = (): CartItem[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveCart = (items: CartItem[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch { /* quota exceeded — ignore */ }
+};
+
+const QuoteCartContext = createContext<QuoteCartContextValue | null>(null);
+
+export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
+  const [items, setItems] = useState<CartItem[]>(loadCart);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    saveCart(items);
+  }, [items]);
+
+  const addItem = useCallback((newItem: CartItem) => {
+    setItems((prev) => {
+      const idx = prev.findIndex(
+        (i) => i.productId === newItem.productId && i.format === newItem.format
+      );
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + newItem.quantity };
+        return updated;
+      }
+      return [...prev, newItem];
+    });
+  }, []);
+
+  const removeItem = useCallback((productId: number, format: string) => {
+    setItems((prev) => prev.filter((i) => !(i.productId === productId && i.format === format)));
+  }, []);
+
+  const updateQuantity = useCallback((productId: number, format: string, quantity: number) => {
+    if (quantity < 1) return;
+    setItems((prev) =>
+      prev.map((i) =>
+        i.productId === productId && i.format === format ? { ...i, quantity } : i
+      )
+    );
+  }, []);
+
+  const clearCart = useCallback(() => setItems([]), []);
+
+  const totalItems = useMemo(() => items.length, [items]);
+  const totalPrice = useMemo(() => items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [items]);
+
+  const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
+
+  return (
+    <QuoteCartContext.Provider
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isDrawerOpen, openDrawer, closeDrawer }}
+    >
+      {children}
+    </QuoteCartContext.Provider>
+  );
+};
+
+export const useQuoteCart = () => {
+  const ctx = useContext(QuoteCartContext);
+  if (!ctx) throw new Error("useQuoteCart must be used within QuoteCartProvider");
+  return ctx;
+};

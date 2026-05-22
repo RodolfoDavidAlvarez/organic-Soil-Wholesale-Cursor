@@ -1,6 +1,45 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { YouTubePlayer } from "@/components/YouTubePlayer";
+import { MapPin, PlayCircle, Sprout, Truck, Users } from "lucide-react";
+
+const fieldPhotos = [
+  {
+    src: "/images/field-content/field-application.jpg",
+    alt: "Growers walking compost piles in Arizona",
+    label: "Congress production yard",
+  },
+  {
+    src: "/images/field-content/super-sack-loading-poster.jpg",
+    alt: "Super sack loading into a truck",
+    label: "Super sack loading",
+  },
+  {
+    src: "/images/field-content/orchard-application-poster.jpg",
+    alt: "Compost application in orchard rows",
+    label: "Orchard application",
+  },
+  {
+    src: "/images/field-content/congress-yard-tour.jpg",
+    alt: "Sunflower growing in Arizona soil",
+    label: "Living soil in use",
+  },
+];
+
+const fieldVideos = [
+  {
+    src: "/videos/field-content/super-sack-loading.mp4",
+    poster: "/images/field-content/super-sack-loading-poster.jpg",
+    title: "Loading super sacks",
+    copy: "Real material moving through the yard for larger orders.",
+  },
+  {
+    src: "/videos/field-content/orchard-application.mp4",
+    poster: "/images/field-content/orchard-application-poster.jpg",
+    title: "Applying in orchard rows",
+    copy: "Field work with growers who need soil that performs at scale.",
+  },
+];
 
 const About = () => {
   return (
@@ -10,7 +49,7 @@ const About = () => {
           <div className="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
             <h1 className="text-3xl font-heading font-bold text-primary mb-6">About Soil Seed and Water</h1>
             <p className="text-lg text-neutral-800 mb-6">
-              Soil Seed and Water comes from a group of gardeners, landscapers, and farmers looking for an intuitive line of organic soil products.
+              Soil Seed and Water comes from growers, gardeners, landscapers, and farmers building practical organic soil products for Arizona.
             </p>
 
             <div className="mb-8">
@@ -75,26 +114,74 @@ const About = () => {
             </div>
           </div>
           <div className="lg:w-1/2 w-full">
-            <div className="relative rounded-2xl border border-neutral-200/60 bg-black shadow-2xl overflow-hidden w-full">
-              <YouTubePlayer
-                videoId="A5i_Jcz6-XA"
-                title="Soil Seed and Water Operations Walkthrough"
-                autoPlay
-                muted
-                loop={false}
-                className="w-full aspect-video"
+            <div className="relative overflow-hidden rounded-2xl border border-neutral-200/60 bg-neutral-100 shadow-2xl">
+              <img
+                src="/images/field-content/field-application.jpg"
+                alt="Soil Seed and Water team reviewing compost piles in Arizona"
+                className="h-[420px] w-full object-cover lg:h-[560px]"
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-5 text-white">
-                <div className="flex flex-col gap-2 text-sm sm:text-base">
-                  <span className="inline-flex w-max items-center gap-2 rounded-full bg-primary/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/90">
-                    Custom Blend In Action
-                  </span>
-                  <p className="max-w-sm leading-snug text-white/90">
-                    Watch our team build a tailored soil mix for a grower who needed better water retention without sacrificing drainage.
-                  </p>
-                </div>
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-5 text-white">
+                <span className="inline-flex w-max items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                  Real Arizona operation
+                </span>
+                <p className="mt-3 max-w-md text-sm leading-relaxed text-white/90 sm:text-base">
+                  Compost, worm castings, blends, pallets, and truckloads handled by the same people you talk to when you order.
+                </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Photo Strip */}
+        <div className="mt-16 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {fieldPhotos.map((photo) => (
+            <figure key={photo.src} className="group relative overflow-hidden rounded-xl bg-neutral-100">
+              <img src={photo.src} alt={photo.alt} className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
+              <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-8 text-xs font-semibold text-white">
+                {photo.label}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <div className="mt-12 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+          <div className="rounded-2xl bg-primary p-6 text-white lg:p-8">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">From the yard</p>
+            <h2 className="font-heading text-2xl font-bold">Real material. Real growers. Real logistics.</h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/85">
+              We produce and move soil products for gardens, nurseries, farms, landscapers, and commercial projects across Arizona.
+            </p>
+            <div className="mt-6 grid gap-3 text-sm">
+              <p className="flex items-center gap-2"><Truck className="h-4 w-4" /> Pallets, super sacks, and truckloads</p>
+              <p className="flex items-center gap-2"><Sprout className="h-4 w-4" /> Compost, castings, mulch, and blends</p>
+              <p className="flex items-center gap-2"><Users className="h-4 w-4" /> Built with growers and field partners</p>
+              <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Pickup at Phoenix Agave Yard</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {fieldVideos.map((video) => (
+              <div key={video.src} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                <div className="relative bg-black">
+                  <video
+                    className="aspect-video w-full object-cover"
+                    controls
+                    preload="metadata"
+                    poster={video.poster}
+                    playsInline
+                  >
+                    <source src={video.src} type="video/mp4" />
+                  </video>
+                </div>
+                <div className="p-4">
+                  <p className="flex items-center gap-2 font-heading text-base font-bold text-neutral-900">
+                    <PlayCircle className="h-4 w-4 text-primary" />
+                    {video.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-700">{video.copy}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -45,22 +45,26 @@ import ProductShowcase from "@/components/ProductShowcase";
 import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import TestimonialGallery from "@/components/TestimonialGallery";
 
 // Temporary local Product type to resolve linter error
 type Product = {
   id: number;
   name: string;
+  slug?: string;
   description?: string;
   category: string;
   price?: number;
   stockQuantity?: number;
   imageUrl?: string;
+  texturePhotoUrl?: string;
   additionalImages?: string[];
   ingredients?: string;
   targetAudience?: string;
   recommendedUses?: string;
   certifications?: { name: string }[];
   sizeOptions?: { name: string; price: number }[];
+  productType?: string;
 };
 
 type FeaturedProduct = Product & { productName?: string };
@@ -100,52 +104,37 @@ const Home = () => {
   const showcaseFarmersVideoUrl =
     "https://www.youtube.com/embed/HbR7BH-6uxI?autoplay=1&mute=1&loop=1&playlist=HbR7BH-6uxI&controls=0&modestbranding=1&rel=0&playsinline=1";
 
-  // Amazon reviews for Mikey's Worm Poop
-  const reviews = [
+  // Customer-submitted testimonials pulled from the OSW testimonial system.
+  const customerStories = [
     {
       id: 1,
-      name: "Andre",
-      title: "Best worm casting we've ever seen",
-      date: "August 20, 2025",
-      size: "9 lbs",
-      body: "Fresh ready to use.",
-      rating: 5,
+      name: "Client Testimonial",
+      company: "Phoenix grower",
+      location: "Phoenix, AZ",
+      product: "Soil Craft",
+      title: "Same seed. Same water. Better soil.",
+      body: "Both plants were started from the same seeds with the same watering and sunlight. The fuller, healthier plant was grown in your soil. I am loving your product so far.",
+      image: "/images/testimonials/soil-craft-spring-crop.jpg",
     },
     {
       id: 2,
-      name: "Andre",
-      title: "Do they use little toilets to collect the poop?",
-      date: "September 28, 2024",
-      size: "9 lbs",
-      body: "The bag was a nice gauge plastic. A nice consistency with no long turds. It had a fresh worm poo smell. It looks like ground coco but doesn't taste like it. Very earthy with a hint of beetle larvae.",
-      rating: 5,
+      name: "Pat Bernard",
+      company: "The Bernard Company",
+      location: "Yarnell, AZ",
+      product: "Premium Nature's Blanket",
+      title: "Product looked outstanding.",
+      body: "A real delivery photo from a customer project using Premium Nature's Blanket. The submitted note was simple: the product looked outstanding.",
+      image: "/images/testimonials/premium-nature-blanket-yarnell.jpg",
     },
     {
       id: 3,
-      name: "Andre",
-      title: "Great plant growth guao",
-      date: "September 6, 2024",
-      size: "9 lbs",
-      body: "Planting my roses",
-      rating: 5,
-    },
-    {
-      id: 4,
-      name: "Andre",
-      title: "So far so good!",
-      date: "August 22, 2024",
-      size: "9 lbs",
-      body: "Anytime I can get my hands on good organic fertilizer I'll take it This Mikey's Worm Poop Worm Castings Organic Fertilizer seems to be doing a smash up job so far. It's made well and a quality product. I feel it's important to use organic materials as much as possible when it comes to my own personal garden. Growing as organic as possible is key. The fertilizer is easy to work with. You mix a little in your soil and your good to go. The fertilizer has the appearance of pebbles and dirt/soil so it's really easy to manage. I have sprinkled some on top of the soil for my potted citrus tress so the fertilizer is versatile with where you want to utilize it. So far it's definitely worth the purchase. Here's hoping I grow a really great crop.",
-      rating: 5,
-    },
-    {
-      id: 5,
-      name: "Bopper",
-      title: "Great value, well packaged for shipping, and good quality castings",
-      date: "July 15, 2024",
-      size: "9 lbs",
-      body: "Recommend! Mikey's Worm Poop from Soil Seed & Water is a great value - nine pounds of worm castings will go a good ways with my fall container gardening. The texture is good, no issues with gnats or flies, and no odor. I am always reluctant to try soil and soil amendments online because shipping and packaging can be an issue - I've received open bags, contaminated materials, etc. Mikey's Worm Poop is well packaged for shipping - the bag is strong and there's a double seal at the top where the bag can be resealed. Risk of contamination during shipping seems low as a result. Castings are well processed and the OMRI certification is also a huge plus. Also, the manufacturer has a website where I can read more about their backstory / process - which I like to see with gardening amendments I order online to make sure I'm not getting something I can't trust. Soil Seed & Water is a legitimate company with a great backstory!",
-      rating: 5,
+      name: "Shane McCandless",
+      company: "Trinity Landscaping",
+      location: "Arizona",
+      product: "Landscape project material",
+      title: "Finished project proof.",
+      body: "The customer sent finished project photos after the job was done. This is the kind of field proof landscapers need before trusting a supplier.",
+      image: "/images/testimonials/trinity-landscaping-finished-project.jpg",
     },
   ];
 
@@ -161,31 +150,21 @@ const Home = () => {
       case "Mikey's Worm Poop":
         return "Worm Castings";
       case "SuperBooster":
-        return "Organic Concentrated Amendment for Roses";
-      case "Dan's Gold":
+        return "Concentrated Amendment for Fruits & Vegetables";
+      case "Simon's Gold":
         return "All Natural Dairy Compost";
-      case "Ready Go Garden":
-        return "Organic Potting Soil";
-      case "CannaBag":
-        return "Cannabis Potting Soil";
+      case "Soil Craft":
+        return "Premium Potting Soil";
       case "Amazonian Dark Earth":
         return "Biochar Mineral";
-      case "Raw Dairy Manure":
-        return "All-Natural Dairy Manure";
-      case "Screened Raw Dairy Manure":
-        return "Screened All-Natural Dairy Manure";
-      case "Cyanobacteria":
-        return "Microbial Soil Amendment";
       case "Tee Top Divot Repair Blend":
-        return "Golf Course Tee Top Divot Repair Mix";
+        return "Golf Course Divot Repair Mix";
       case "Turf Daddy Blend":
-        return "Overseed and Aeration Blend";
+        return "Overseed & Aeration Blend";
       case "Artemis Root Boost Blend":
-        return "Tree and Shrub Planting Amendment";
+        return "Tree & Shrub Planting Amendment";
       case "Bacchus Blend":
         return "Vineyard Blend";
-      case "Mikey's Worm Tea (Liquid)":
-        return "Liquid Vermicompost Tea";
       default:
         return product.description || product.name;
     }
@@ -388,36 +367,40 @@ const Home = () => {
   // Featured products data
   const featuredProducts: FeaturedProduct[] = [
     {
-      id: 1, // Dan's Gold Dairy Compost
+      id: 1000,
       name: "Dairy Compost",
-      productName: "Dan's Gold",
+      productName: "Simon's Gold",
+      slug: "simons-gold",
       imageUrl: "Compost Texture Look.jpg",
       texturePhotoUrl: "Compost Texture Look.jpg",
       description: "ALL NATURAL DAIRY COMPOST",
       category: "Amendment",
     },
     {
-      id: 2, // Mikey's Worm Poop
+      id: 1001,
       name: "Worm Castings",
       productName: "Mikey's Worm Poop",
+      slug: "mikeys-worm-poop",
       imageUrl: "Worm castting product texture.png",
       texturePhotoUrl: "Worm castting product texture.png",
       description: "ALL NATURAL VERMICOMPOST",
       category: "Amendment",
     },
     {
-      id: 23, // SuperBooster (corrected ID)
+      id: 4000,
       name: "Organic Concentrated Blend",
       productName: "SuperBooster",
+      slug: "superbooster",
       imageUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       texturePhotoUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       description: "ORGANIC CONCENTRATED AMENDMENT",
       category: "Concentrated Amendment",
     },
     {
-      id: 3, // Amazonian Dark Earth
+      id: 1002,
       name: "Biochar",
       productName: "Amazonian Dark Earth",
+      slug: "amazonian-dark-earth",
       imageUrl: "Biochar Product Texture Look.jpg",
       texturePhotoUrl: "Biochar Product Texture Look.jpg",
       description: "BIOCHAR MINERAL",
@@ -452,28 +435,175 @@ const Home = () => {
         <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
       </SEO>
 
-      {/* Hero Section with Title */}
-      <section className="relative pt-10 md:pt-16 pb-16 bg-white overflow-hidden min-h-[60vh]">
+      {/* Turf Daddy Hero — Organic Soil Wholesale brand */}
+      <section className="relative isolate overflow-hidden bg-stone-900 text-white">
+        <div className="absolute inset-0 -z-10">
+          <img
+            src="/images/optimized/turf-daddy-blend-lifestyle.jpg"
+            alt="Turf Daddy applied to a lawn"
+            className="h-full w-full object-cover opacity-40"
+            loading="eager"
+            fetchPriority="high"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/70 to-stone-950/40" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-stone-50 to-transparent" />
+        </div>
+        <div className="container mx-auto px-4 py-20 md:py-28 lg:py-36">
+          <div className="grid items-center gap-12 lg:grid-cols-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="lg:col-span-5"
+            >
+              <div className="mb-5">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-stone-300/80">
+                  by Soil Seed &amp; Water
+                </p>
+              </div>
+              <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                Bulk soil that <span className="text-[#d6c1a0]">grows results</span> you can see.
+              </h1>
+              <p className="mt-5 max-w-xl text-base text-stone-200 md:text-lg">
+                Dairy compost, worm castings, premium potting blends and amendments — produced in Arizona, delivered by the pallet, supersack, or truckload to landscapers, farms, and nurseries.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/products")}
+                  className="h-14 gap-2 bg-[#d6c1a0] px-8 text-base font-semibold text-stone-900 shadow-lg hover:bg-[#c4a878]"
+                >
+                  Get a Bulk Quote <ArrowRight className="h-5 w-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/products")}
+                  className="h-14 gap-2 border-white/30 bg-white/5 px-8 text-base font-semibold text-white backdrop-blur hover:bg-white/15 hover:text-white"
+                >
+                  Browse Products
+                </Button>
+              </div>
+              <div className="mt-10 grid grid-cols-3 gap-6 border-t border-white/15 pt-6 text-sm text-stone-300">
+                <div>
+                  <p className="font-bold text-white">Made in AZ</p>
+                  <p className="text-xs text-stone-400">Phoenix-based</p>
+                </div>
+                <div>
+                  <p className="font-bold text-white">OMRI eligible</p>
+                  <p className="text-xs text-stone-400">Organic-program ready</p>
+                </div>
+                <div>
+                  <p className="font-bold text-white">Same-week</p>
+                  <p className="text-xs text-stone-400">delivery across AZ</p>
+                </div>
+              </div>
+              <figure className="mt-8 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 lg:hidden">
+                <img
+                  src="/images/hero/turf-daddy-before-after-hero.jpg"
+                  alt="Turf Daddy before-and-after lawn transformation"
+                  className="block w-full"
+                />
+                <figcaption className="bg-black/80 p-4">
+                  <p className="text-sm font-semibold leading-tight text-white">
+                    Turf Daddy testimonial: before / after results.
+                  </p>
+                </figcaption>
+              </figure>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+              className="hidden lg:col-span-7 lg:block"
+            >
+              <div className="relative">
+                <div className="absolute -inset-10 rounded-3xl bg-gradient-to-br from-[#d6c1a0]/40 to-transparent blur-3xl" />
+                <figure className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/10">
+                  <img
+                    src="/images/hero/turf-daddy-before-after-hero.jpg"
+                    alt="Turf Daddy before-and-after lawn transformation"
+                    className="block w-full"
+                  />
+                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-5 md:p-6">
+                    <p className="text-base font-semibold leading-tight text-white md:text-lg">
+                      Turf Daddy testimonial <span className="text-[#d6c1a0]">before / after results.</span>
+                    </p>
+                  </figcaption>
+                </figure>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial Gallery — immediately after hero */}
+      <TestimonialGallery />
+
+      <section className="bg-stone-50 py-10 md:py-14">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#7a5a2e]">
+                Arizona-made soil
+              </p>
+              <h2 className="font-heading text-2xl font-bold leading-tight text-stone-900 md:text-3xl">
+                Built in real yards for real projects.
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-stone-600 md:text-base">
+                From Phoenix pickup to farm and orchard deliveries, our products are made, loaded, and used here in Arizona.
+              </p>
+              <Button
+                onClick={() => navigate("/products")}
+                className="mt-5 bg-primary px-6 text-white hover:bg-primary/90"
+              >
+                Shop pickup products
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <img
+                src="/images/field-content/field-application.jpg"
+                alt="Growers reviewing compost in Arizona"
+                className="h-56 w-full rounded-2xl object-cover shadow-sm"
+                loading="lazy"
+              />
+              <img
+                src="/images/field-content/super-sack-loading-poster.jpg"
+                alt="Super sack loading for wholesale order"
+                className="h-56 w-full rounded-2xl object-cover shadow-sm"
+                loading="lazy"
+              />
+              <img
+                src="/images/field-content/orchard-application-poster.jpg"
+                alt="Compost applied in orchard rows"
+                className="h-56 w-full rounded-2xl object-cover shadow-sm"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Distribution + Featured Products */}
+      <section className="relative pt-10 md:pt-16 pb-16 bg-white overflow-hidden">
         <div className="container mx-auto px-4 relative z-10 h-full flex items-center">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
-            {/* Left Column - Title, Availability Checker, and Size Categories */}
+            {/* Left Column - Availability Checker, and Size Categories */}
             <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-6 mt-8 lg:mt-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
                 className="text-center lg:text-left"
               >
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 leading-tight">
-                  Premium{" "}
-                  <span className="text-primary">Organic Compost</span>
-                </h1>
-                <p className="text-xl md:text-2xl text-muted-foreground mb-4">
-                  Wholesale Bulk Delivery
-                </p>
+                <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-3 leading-tight">
+                  Pickup, pallet, or truckload.
+                </h2>
                 <p className="text-base text-muted-foreground/80 max-w-md">
-                  Locally produced soil amendments for landscapers, farms, nurseries, and commercial growers.
+                  Locally produced soil amendments and bulk loads for landscapers, farms, nurseries, and commercial growers.
                 </p>
               </motion.div>
 
@@ -621,12 +751,10 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Amazon Reviews - Mikey's Worm Poop */}
-      <section className="py-20 md:py-28 px-4 md:px-8 bg-background relative overflow-hidden">
-        
+      {/* Customer Proof — DEPRECATED, kept temporarily for reference. To be removed. */}
+      <section className="hidden">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-            {/* Left Side: Header & Product Info */}
             <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-28">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -635,54 +763,51 @@ const Home = () => {
                 transition={{ duration: 0.6 }}
                 className="text-left space-y-6"
               >
-                {/* Rating Badge */}
-                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-amber-50 border border-amber-200/50 rounded-full px-4 py-2.5 shadow-sm">
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    ))}
-                  </div>
-                  <span className="ml-1 font-bold text-amber-900 text-sm">5.0</span>
-                  <span className="text-amber-700 text-xs font-medium">Customer Rating</span>
+                {/* Proof Badge */}
+                <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2.5 shadow-sm">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span className="font-bold text-primary text-sm">Real customer proof</span>
                 </div>
                 
                 {/* Title */}
                 <div className="space-y-3">
                   <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold text-primary tracking-tight leading-[1.1]">
-                    Mikey&apos;s Worm Poop
+                    Results From Real Jobs
                   </h2>
                   <p className="text-xl md:text-2xl text-muted-foreground font-medium">
-                    Real Customer Reviews
+                    Customer-submitted projects, products, and notes
                   </p>
                 </div>
                 
                 <p className="text-muted-foreground text-base leading-relaxed">
-                  See what gardeners and growers are saying about our premium organic worm castings on Amazon.
+                  These are not stock claims. They come from customer submissions in the OSW testimonial system, cleaned up only for spelling, length, and privacy.
                 </p>
               </motion.div>
 
-              {/* Product Visuals */}
+              {/* Proof Visuals */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
-                  <OptimizedImage
-                    src="/images/optimized/mikeys-worm-poop9lbs.jpg"
-                    alt="Mikey's Worm Poop 9lb bag"
-                    className="w-full h-full object-contain p-3"
+                  <img
+                    src="/images/testimonials/soil-craft-spring-crop.jpg"
+                    alt="Customer spring crop comparison using Soil Craft"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
                     sizes="(max-width: 768px) 50vw, 200px"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
-                    The Product
+                    Grow Result
                   </div>
                 </div>
                 <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
-                  <OptimizedImage
-                    src="/images/optimized/worm-castting-product-texture.jpg"
-                    alt="Worm castings texture"
+                  <img
+                    src="/images/testimonials/premium-nature-blanket-yarnell.jpg"
+                    alt="Premium Nature's Blanket delivered for a customer project"
                     className="w-full h-full object-cover"
+                    loading="lazy"
                     sizes="(max-width: 768px) 50vw, 200px"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
-                    Rich Texture
+                    Delivered Material
                   </div>
                 </div>
               </div>
@@ -700,12 +825,12 @@ const Home = () => {
                   size="lg"
                   onClick={() => handleProductSelect(products.find(p => p.name === "Mikey's Worm Poop") || products[0])}
                 >
-                  Shop Worm Castings <ArrowRight className="w-5 h-5" />
+                  Browse Products <ArrowRight className="w-5 h-5" />
                 </Button>
               </motion.div>
             </div>
 
-            {/* Right Side: Reviews Carousel */}
+            {/* Right Side: Customer Stories Carousel */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -715,8 +840,8 @@ const Home = () => {
             >
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Recent Reviews</h3>
-                  <p className="text-sm text-muted-foreground">From verified Amazon customers</p>
+                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Customer Stories</h3>
+                  <p className="text-sm text-muted-foreground">Project notes and field photos from real submissions</p>
                 </div>
               </div>
 
@@ -732,8 +857,8 @@ const Home = () => {
                   <CarouselNext className="static translate-y-0 hover:bg-primary hover:text-white border-gray-300 shadow-md hover:shadow-lg transition-all" />
                 </div>
                 <CarouselContent className="-ml-4">
-                  {reviews.map((review, index) => (
-                    <CarouselItem key={review.id} className="pl-4 md:basis-1/2">
+                  {customerStories.map((story, index) => (
+                    <CarouselItem key={story.id} className="pl-4 md:basis-1/2">
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -741,6 +866,14 @@ const Home = () => {
                         transition={{ duration: 0.4, delay: index * 0.1 }}
                       >
                         <Card className="h-full border-2 border-border bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-300 flex flex-col group">
+                          <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg bg-muted">
+                            <img
+                              src={story.image}
+                              alt={`${story.product} customer project`}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                              loading="lazy"
+                            />
+                          </div>
                           <CardHeader className="pb-4">
                             <div className="flex justify-between items-start gap-3 mb-3">
                               <div className="flex gap-0.5">
@@ -749,30 +882,33 @@ const Home = () => {
                                 ))}
                               </div>
                               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full font-bold shadow-sm">
-                                <CheckCircle className="w-3.5 h-3.5" /> Verified
+                                <CheckCircle className="w-3.5 h-3.5" /> Customer
                               </div>
                             </div>
                             <CardTitle className="text-xl font-bold text-gray-900 leading-tight mt-2 line-clamp-2 group-hover:text-primary transition-colors duration-300">
-                              &quot;{review.title}&quot;
+                              &quot;{story.title}&quot;
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="pb-5 flex-grow">
                             <p className="text-muted-foreground text-sm leading-relaxed line-clamp-5">
-                              {review.body}
+                              {story.body}
+                            </p>
+                            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-primary">
+                              {story.product}
                             </p>
                           </CardContent>
                           <CardFooter className="pt-4 border-t border-border mt-auto">
                             <div className="flex justify-between items-center w-full">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                  {review.name.charAt(0)}
+                                  {story.name.charAt(0)}
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-sm text-gray-900">{review.name}</span>
-                                  <span className="text-xs text-muted-foreground font-medium">{review.size} Purchase</span>
+                                  <span className="font-bold text-sm text-gray-900">{story.name}</span>
+                                  <span className="text-xs text-muted-foreground font-medium">{story.company}</span>
                                 </div>
                               </div>
-                              <span className="text-xs text-muted-foreground font-medium">{review.date}</span>
+                              <span className="text-xs text-muted-foreground font-medium">{story.location}</span>
                             </div>
                           </CardFooter>
                         </Card>
@@ -815,7 +951,7 @@ const Home = () => {
                 <div className="relative aspect-video w-full lg:h-full">
                   <iframe
                     src={showcaseVideoUrl}
-                    title="Dan's Gold Dairy Compost Video"
+                    title="Simon's Gold Dairy Compost Video"
                     className="absolute inset-0 h-full w-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
@@ -824,7 +960,7 @@ const Home = () => {
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white">
                   <span className="text-xs uppercase tracking-[0.3em] text-white/60">Flagship Compost</span>
-                  <h3 className="mt-2 text-2xl font-heading font-semibold sm:text-3xl">Dan&apos;s Gold Dairy Compost</h3>
+                  <h3 className="mt-2 text-2xl font-heading font-semibold sm:text-3xl">Simon&apos;s Gold Dairy Compost</h3>
                   <p className="mt-3 text-sm text-white/80 sm:text-base">
                     See how we transform raw dairy into living soil that feeds commercial landscapes and farms across the Southwest.
                   </p>

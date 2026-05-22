@@ -106,6 +106,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -142,6 +143,7 @@ const Contact = () => {
       });
 
       form.reset();
+      setIsSubmitted(true);
     } catch (error) {
       console.error("Contact form error:", error);
       toast({
@@ -195,8 +197,8 @@ const Contact = () => {
                       <div>
                         <h4 className="font-medium text-sm sm:text-base">Phone</h4>
                         <p className="text-xs sm:text-sm text-neutral-700">
-                          <a href="tel:9285501649" className="text-primary hover:underline touch-manipulation">
-                            (928) 550-1649
+                          <a href="tel:6027267211" className="text-primary hover:underline touch-manipulation">
+                            (602) 726-7211
                           </a>
                         </p>
                       </div>
@@ -222,11 +224,43 @@ const Contact = () => {
                       </div>
                     </div>
                   </div>
+
+                  <div className="mt-6 overflow-hidden rounded-xl bg-neutral-100">
+                    <img
+                      src="/images/field-content/team-yard-visit.jpg"
+                      alt="Soil Seed and Water field partners in Arizona"
+                      className="h-44 w-full object-cover"
+                      loading="lazy"
+                    />
+                    <p className="bg-primary px-3 py-2 text-xs font-semibold text-white">
+                      Local team. Arizona yards. Simple pickup and delivery support.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
             <div className="w-full md:w-2/3">
+              {isSubmitted ? (
+                <Card>
+                  <CardContent className="p-6 sm:p-10 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-heading font-bold text-foreground mb-2">Thank You!</h3>
+                    <p className="text-muted-foreground mb-6">Your message has been sent. We'll get back to you shortly.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsSubmitted(false)}
+                      className="min-h-[48px] px-6 touch-manipulation"
+                    >
+                      Send Another Message
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
               <Card>
                 <CardContent className="p-4 sm:p-6">
                   <h3 className="font-heading font-semibold text-base sm:text-lg mb-3 sm:mb-4">Send Us a Message</h3>
@@ -305,6 +339,7 @@ const Contact = () => {
                   </Form>
                 </CardContent>
               </Card>
+              )}
             </div>
           </div>
         </div>

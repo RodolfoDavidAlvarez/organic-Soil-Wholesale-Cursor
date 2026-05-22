@@ -73,7 +73,7 @@ const Terms = () => {
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-foreground/80">
                   <strong>Email:</strong> info@soilseedandwater.com<br />
-                  <strong>Phone:</strong> (928) 550-1649<br />
+                  <strong>Phone:</strong> (602) 726-7211<br />
                   <strong>Address:</strong> 1634 N 19th Ave, Phoenix, AZ 85009
                 </p>
               </div>

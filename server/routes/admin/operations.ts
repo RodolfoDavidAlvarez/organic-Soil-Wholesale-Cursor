@@ -11,11 +11,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import workOrderRoutes from "./workOrders.js";
+import taskRoutes from "./tasks.js";
 
 const router = Router();
 
 // Mount work orders routes
 router.use("/work-orders", workOrderRoutes);
+// Mount task board routes
+router.use("/tasks", taskRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";

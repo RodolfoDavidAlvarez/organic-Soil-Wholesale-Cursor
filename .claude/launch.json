@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "OSW Full Dev (Express + Vite middleware)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "OSW Client Only (Vite standalone)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "client", "run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "OSW Server Only (tsx, no nodemon)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:tsx"],
+      "port": 3000
+    }
+  ]
+}
