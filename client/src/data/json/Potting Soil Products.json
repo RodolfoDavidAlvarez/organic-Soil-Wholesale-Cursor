@@ -23,7 +23,7 @@
     "productType": "Potting Soil",
     "isHidden": false,
     "sizePriceOptions": [
-      { "size": "1CF Bag", "price": "$8.00", "unit": "per bag", "msrp": "$15.99" },
+      { "size": "1.5 CF Bag", "price": "$8.00", "unit": "per bag", "msrp": "$14.99" },
       { "size": "Pallet (50 bags)", "price": "$399.75", "unit": "per pallet" },
       { "size": "Tote (2.2 CY)", "price": "$359.78", "unit": "per tote" },
       { "size": "Truckload (22 pallets)", "price": "$7,123.55", "unit": "per truckload" }
