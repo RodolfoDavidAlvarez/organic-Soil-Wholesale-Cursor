@@ -1,7 +1,157 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import SEO from "@/components/layout/SEO";
 import { PayPickupGrid } from "@/components/PayPickupGrid";
-import { Phone, FileText, MapPin, ArrowUpRight } from "lucide-react";
+import { Phone, FileText, MapPin, ArrowUpRight, CheckCircle2, Loader2, Truck } from "lucide-react";
+
+const MOS_API_BASE = "https://myorganicsoil.com";
+
+type CheckInResult =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "checked_in"; bay: number; order_number: string; customer_first_name: string; items: Array<{ product_name?: string; size_option?: string; quantity?: number }>; alreadyCheckedIn?: boolean }
+  | { status: "no_order"; phone: string }
+  | { status: "error"; message: string };
+
+/** Yard check-in card. Phone in, bay number out. */
+function CheckInPanel() {
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState<CheckInResult>({ status: "idle" });
+
+  // Skip the form for 60 min after a successful check-in on this device
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem("ssw_checkin_v1");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.at && Date.now() - parsed.at < 60 * 60_000 && parsed.bay) {
+          setResult({
+            status: "checked_in",
+            bay: parsed.bay,
+            order_number: parsed.order_number || "",
+            customer_first_name: parsed.customer_first_name || "",
+            items: parsed.items || [],
+            alreadyCheckedIn: true,
+          });
+        }
+      }
+    } catch {}
+  }, []);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!phone.trim()) return;
+    setResult({ status: "loading" });
+    try {
+      const r = await fetch(`${MOS_API_BASE}/api/pickup-orders/check-in-by-phone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, qr_source: "yard_banner_main" }),
+      });
+      const data = await r.json();
+      if (data.status === "checked_in") {
+        try {
+          localStorage.setItem("ssw_checkin_v1", JSON.stringify({ at: Date.now(), ...data }));
+        } catch {}
+        setResult({ status: "checked_in", ...data });
+      } else if (data.status === "no_order") {
+        setResult({ status: "no_order", phone });
+      } else {
+        setResult({ status: "error", message: data.error || "Could not check in. Try again." });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setResult({ status: "error", message });
+    }
+  }
+
+  function reset() {
+    try { localStorage.removeItem("ssw_checkin_v1"); } catch {}
+    setResult({ status: "idle" });
+    setPhone("");
+  }
+
+  if (result.status === "checked_in") {
+    const itemsLabel = (result.items || []).slice(0, 3).map((i) => `${i.quantity || 1}× ${i.product_name || "item"}`).join(", ");
+    return (
+      <section className="bg-gradient-to-br from-green-900 via-green-800 to-green-900 py-10 text-white">
+        <div className="container mx-auto px-4 text-center">
+          <CheckCircle2 className="mx-auto h-16 w-16 text-green-300" strokeWidth={1.5} />
+          <p className="mt-4 text-xs font-bold uppercase tracking-[0.3em] text-green-200">
+            {result.alreadyCheckedIn ? "You're already checked in" : "✓ Checked in"}
+          </p>
+          <h1 className="mt-3 text-5xl font-black tracking-tight sm:text-7xl">
+            BAY <span className="text-green-300">{result.bay}</span>
+          </h1>
+          <p className="mt-3 text-lg font-semibold">
+            {result.customer_first_name ? `Welcome back, ${result.customer_first_name}.` : "Welcome back."}
+            {" "}Pull into Bay {result.bay} and stay in your truck.
+          </p>
+          {itemsLabel && (
+            <p className="mt-2 text-sm text-green-200">
+              Loading now: {itemsLabel}
+            </p>
+          )}
+          {result.order_number && (
+            <p className="mt-1 text-xs text-green-300/80">Order #{result.order_number}</p>
+          )}
+          <p className="mt-4 text-xs text-green-200/80">
+            We'll text you when your truck is ready. Reply HELP if you need anything.
+          </p>
+          <button
+            onClick={reset}
+            className="mt-6 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold backdrop-blur hover:bg-white/20"
+          >
+            Not me? Check in someone else
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bg-gradient-to-br from-green-900 via-green-800 to-green-900 py-6 text-white">
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-2xl">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-green-200">
+            <Truck className="h-4 w-4" />
+            Already paid? Check in here
+          </div>
+          <form onSubmit={submit} className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="Your phone number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={result.status === "loading"}
+              className="flex-1 rounded-lg border-0 bg-white/95 px-4 py-3 text-base font-semibold text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-green-300"
+            />
+            <button
+              type="submit"
+              disabled={result.status === "loading" || !phone.trim()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-5 py-3 text-base font-bold text-stone-900 transition hover:bg-green-400 disabled:opacity-50"
+            >
+              {result.status === "loading" ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Checking…</>
+              ) : (
+                "I'm here"
+              )}
+            </button>
+          </form>
+          {result.status === "no_order" && (
+            <p className="mt-3 text-center text-sm text-amber-200">
+              No active pickup found for that number. Browse the menu below to place a new order.
+            </p>
+          )}
+          {result.status === "error" && (
+            <p className="mt-3 text-center text-sm text-amber-200">{result.message}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /**
  * Pay & Pick Up landing page.
@@ -32,6 +182,9 @@ export default function PayAndPickup() {
         keywords="pay and pickup soil, organic soil phoenix pickup, dairy compost pickup, worm castings pickup, soil craft pickup"
         canonical="https://organicsoilwholesale.com/pay-and-pickup"
       />
+
+      {/* Yard check-in: phone in → bay number out. Skipped after first scan via localStorage. */}
+      <CheckInPanel />
 
       {/* Compact header strip — keeps QR landing visual context but doesn't hog the viewport */}
       <section className="bg-stone-900 text-white">
