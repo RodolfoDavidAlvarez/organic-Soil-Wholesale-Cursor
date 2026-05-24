@@ -118,6 +118,7 @@ function Router() {
         <Route path="/store-locator" component={StoreLocatorEnhanced} />
         <Route path="/pay-and-pickup/:step?" component={PayAndPickup} />
         <Route path="/drive-through/:step?" component={PayAndPickup} />
+        <Route path="/qr" component={PayAndPickup} />
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/drive-thru/admin" component={DriveThruAdmin} />
