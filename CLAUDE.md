@@ -19,11 +19,23 @@
 - Product images are already in client/public/ directory - use local files, not external URLs
 
 ## Pay & Pickup Landing Strategy
-- **Physical Banner QR Code** → Mobile landing page for landscapers
-- Primary Path: `/pay-and-pickup` (legacy alias `/qr`) - Optimized for quick ordering (2-3 taps max)
-- May become DEFAULT ordering interface for all users
-- Focus: Convert drive-by traffic to immediate orders
-- Design: Bold buttons, simple choices, no distractions
+- **`/qr` IS THE MAIN ENTRANCE QR FOR THE OSW YARD.** The printed QR code at the front gate (1634 N 19th Ave, Phoenix — Agave yard) points to `https://organicsoilwholesale.com/qr`. Customers driving in scan it to either pay/order online or check in for an already-paid pickup.
+- **Canonical route**: `/qr` (the printed signage URL). Aliases that render the same component: `/pay-and-pickup`, `/pay-and-pickup/:step?`, `/drive-through/:step?`. **Never rename or remove `/qr` — printed signage in the yard depends on it.**
+- **Mobile-first, hyper-optimized.** 90%+ of scans are phone-in-hand at the gate. Some desktop access is possible but mobile is the priority.
+- **Design pattern**: Welcome screen with two large card-style buttons + product thumbnails (see `PayAndPickup.tsx` for the canonical implementation). Bold, simple, 2-3 taps max to either order or check in.
+- May become DEFAULT ordering interface for all users.
+- Focus: Convert drive-by traffic to immediate orders.
+
+## Catalog Consolidation — Pay-and-Pickup vs Quote (current model)
+
+Historically there were two parallel pages: `/products` (quote-only) and an old `/pay-and-pickup` catalog (card-payment-only). **These were consolidated**: `/products` is now the single source of truth for browsing everything.
+
+- **The 4 mains** are the ONLY products available for direct card payment / pickup. Everything else is quote-only.
+- The 4 mains live in `client/src/components/PayPickupGrid.tsx` → `MAIN_PRODUCT_IDS = [1000, 1001, 137, 3000]` (Simon's Gold, Mikey's Worm Poop, Soil Craft, Nature's Blanket Premium). **Single source of truth — update this array to add/remove a pay-and-pickup product.**
+- `/products` renders `PayPickupGrid` at the top (the buyable 4) + full catalog with `QuoteCart` (everything else).
+- `/qr` (and aliases) renders the QR landing with `PayPickupGrid` behind the "Order & Pick Up" button. Same 4 mains, same source.
+- **Do not** reintroduce a separate `/pay-and-pickup` catalog. The route exists only as an alias for the QR landing now, not as a duplicate listing.
+- Anything outside the 4 mains is quote-only on every surface (QR landing, Products page, Pay & Pickup, etc.).
 
 ## Database Management
 - Use Supabase MPC when needed modifications in the database

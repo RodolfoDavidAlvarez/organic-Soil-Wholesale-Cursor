@@ -33,6 +33,7 @@ const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
 const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
+const Classes = lazy(() => import("@/pages/Classes"));
 const TriviaGame = lazy(() => import("@/pages/TriviaGame"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
 const OrderConfirmation = lazy(() => import("@/pages/OrderConfirmation"));
@@ -119,6 +120,7 @@ function Router() {
         <Route path="/pay-and-pickup/:step?" component={PayAndPickup} />
         <Route path="/drive-through/:step?" component={PayAndPickup} />
         <Route path="/qr" component={PayAndPickup} />
+        <Route path="/classes" component={Classes} />
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/drive-thru/admin" component={DriveThruAdmin} />
@@ -180,7 +182,8 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through");
+  // /qr is the printed-signage URL at the OSW yard main entrance — no global chrome.
+  const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through") || location === "/qr" || location.startsWith("/qr/");
   const isTriviaGame = location.startsWith("/trivia");
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isQuoteFlow = location.startsWith("/order");

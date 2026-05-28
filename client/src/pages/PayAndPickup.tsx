@@ -1,16 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import SEO from "@/components/layout/SEO";
 import { PayPickupGrid } from "@/components/PayPickupGrid";
-import { Phone, FileText, MapPin, ArrowUpRight, CheckCircle2, Loader2, Truck, X, Navigation } from "lucide-react";
+import {
+  Phone,
+  MapPin,
+  ArrowUpRight,
+  CheckCircle2,
+  Loader2,
+  Truck,
+  X,
+  Navigation,
+  ShieldCheck,
+  ChevronRight,
+  ArrowLeft,
+  Leaf,
+} from "lucide-react";
+
+/**
+ * Pay & Pick Up — /qr LANDING PAGE
+ *
+ * ⚠️ /qr is THE printed-signage URL at the OSW yard main entrance.
+ *    The physical QR code at the front gate (1634 N 19th Ave, Phoenix — Agave yard)
+ *    points to https://organicsoilwholesale.com/qr. NEVER rename this route.
+ *
+ * Mobile-first. 90%+ of scans are phone-in-hand at the gate. Optimized for
+ * 2-3 taps from scan → action (order online or check in).
+ *
+ * Routes that hit this component: /qr, /pay-and-pickup, /pay-and-pickup/:step?,
+ * /drive-through/:step?. Welcome screen is the default.
+ *
+ * Three internal views via React state (no full reloads, instant transitions):
+ *   - "welcome" → two-card landing: "Order & Pick Up" + "Walking In"
+ *   - "order"   → PayPickupGrid (browse + pay online)
+ *   - "checkin" → CheckInPanel (already paid → phone in → bay number out)
+ *
+ * Deep links via hash: /qr#order and /qr#checkin
+ */
 
 const MOS_API_BASE = "https://myorganicsoil.com";
 const SSW_PHONE_DIAL = "+16027267211";
-const SSW_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("1634 N 19th Ave, Phoenix AZ 85009")}`;
+const SSW_PHONE_DISPLAY = "(602) 726-7211";
+const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+  "1634 N 19th Ave, Phoenix AZ 85009"
+)}`;
+
+type View = "welcome" | "order" | "checkin";
 
 type CheckInResult =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "checked_in"; bay: number; order_number: string; customer_first_name: string; items: Array<{ product_name?: string; size_option?: string; quantity?: number }>; alreadyCheckedIn?: boolean }
+  | {
+      status: "checked_in";
+      bay: number;
+      order_number: string;
+      customer_first_name: string;
+      items: Array<{ product_name?: string; size_option?: string; quantity?: number }>;
+      alreadyCheckedIn?: boolean;
+    }
   | { status: "no_order"; phone: string }
   | { status: "error"; message: string };
 
@@ -25,16 +71,14 @@ function formatPhone(digits: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
 }
 
-function scrollToMenu() {
-  const grid = document.getElementById("checkin-menu-anchor");
-  if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 /** Animated BAY number — counts 1 → N over 400 ms then settles. */
 function AnimatedBay({ value }: { value: number }) {
   const [n, setN] = useState(1);
   useEffect(() => {
-    if (value <= 1) { setN(value); return; }
+    if (value <= 1) {
+      setN(value);
+      return;
+    }
     let cur = 0;
     const start = performance.now();
     const dur = 400;
@@ -43,7 +87,10 @@ function AnimatedBay({ value }: { value: number }) {
       const t = Math.min(1, (now - start) / dur);
       const ease = 1 - Math.pow(1 - t, 3);
       const next = Math.max(1, Math.round(ease * value));
-      if (next !== cur) { cur = next; setN(next); }
+      if (next !== cur) {
+        cur = next;
+        setN(next);
+      }
       if (t < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -52,15 +99,106 @@ function AnimatedBay({ value }: { value: number }) {
   return <span>{n}</span>;
 }
 
-/** Yard check-in card. Phone in, bay number out. Optimized for one-handed
- *  truck-cab use: autofocus + numeric pad + auto-submit at 10 digits. */
-function CheckInPanel() {
+// ─── Welcome screen — minimal, mobile-first ──────────────────────────────────
+function WelcomeScreen({
+  onOrder,
+  onCheckIn,
+}: {
+  onOrder: () => void;
+  onCheckIn: () => void;
+}) {
+  return (
+    <section className="flex min-h-[100dvh] flex-col bg-white text-stone-900">
+      {/* Top brand strip — tiny, restrained */}
+      <header className="px-6 pt-8 pb-2 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-stone-400">
+          Soil Seed &amp; Water · Phoenix Yard
+        </p>
+      </header>
+
+      {/* Wordmark */}
+      <div className="px-6 pt-10 text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.32em] text-stone-400">Welcome</p>
+        <h1 className="mt-3 text-[44px] font-black leading-[0.95] tracking-tight text-stone-900 sm:text-5xl">
+          <span className="block">Organic <span className="text-[#264027]">Soil</span></span>
+          <span className="mt-1 block italic text-[#b38a58]">Wholesale</span>
+        </h1>
+        <p className="mt-5 text-base text-stone-500">How can we help you today?</p>
+      </div>
+
+      {/* Two actions — minimal, clean lines */}
+      <div className="mt-10 flex-1 px-6">
+        <div className="mx-auto flex max-w-sm flex-col gap-3">
+          <button
+            type="button"
+            onClick={onOrder}
+            className="group flex w-full items-center justify-between rounded-2xl bg-stone-900 px-6 py-5 text-left text-white transition active:scale-[0.985]"
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-400">Pre-order online</p>
+              <h2 className="mt-1 text-lg font-bold leading-tight">Order &amp; Pick Up</h2>
+            </div>
+            <ChevronRight className="h-5 w-5 text-stone-400 transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onCheckIn}
+            className="group flex w-full items-center justify-between rounded-2xl border border-stone-200 bg-white px-6 py-5 text-left text-stone-900 transition hover:border-stone-400 active:scale-[0.985]"
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-400">Already paid</p>
+              <h2 className="mt-1 text-lg font-bold leading-tight">I&apos;m Here</h2>
+            </div>
+            <ChevronRight className="h-5 w-5 text-stone-400 transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Tertiary — link to full OSW site */}
+          <a
+            href="/"
+            className="group mt-1 flex w-full items-center justify-between rounded-2xl px-6 py-4 text-left text-stone-500 transition hover:text-stone-900"
+          >
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-400">Explore everything</p>
+              <h2 className="mt-1 text-sm font-semibold leading-tight">Visit our website</h2>
+            </div>
+            <ChevronRight className="h-4 w-4 text-stone-400 transition-transform group-hover:translate-x-0.5" />
+          </a>
+        </div>
+      </div>
+
+      {/* Footer — quiet text links, no chrome */}
+      <footer className="px-6 pb-10 pt-10 text-center">
+        <div className="mx-auto flex max-w-sm items-center justify-center gap-6 text-xs">
+          <a
+            href={PHOENIX_DIRECTIONS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-stone-500 underline-offset-4 hover:text-stone-900 hover:underline"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            1634 N 19th Ave
+          </a>
+          <a
+            href={`tel:${SSW_PHONE_DIAL}`}
+            className="inline-flex items-center gap-1.5 text-stone-500 underline-offset-4 hover:text-stone-900 hover:underline"
+          >
+            <Phone className="h-3.5 w-3.5" />
+            {SSW_PHONE_DISPLAY}
+          </a>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
+// ─── Check-in view — wraps existing CheckInPanel ─────────────────────────────
+function CheckInPanel({ onBack }: { onBack: () => void }) {
   const [digits, setDigits] = useState("");
   const [result, setResult] = useState<CheckInResult>({ status: "idle" });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const autoSubmitTimer = useRef<number | null>(null);
 
-  // Hydrate cached check-in (within 60 min) so re-scan is instant
   useEffect(() => {
     try {
       const cached = localStorage.getItem("ssw_checkin_v1");
@@ -80,23 +218,19 @@ function CheckInPanel() {
       }
     } catch {}
 
-    // URL pre-fill: /qr?phone=9285501649 → auto-fill and submit immediately
     const params = new URLSearchParams(window.location.search);
     const prefill = digitsOnly(params.get("phone") || "");
     if (prefill.length === 10) {
       setDigits(prefill);
-      // Defer submit to next tick so React state has settled
       setTimeout(() => submitDigits(prefill), 50);
     }
 
-    // Warm DNS/TLS to MOS API so first submit feels instant
     try {
       fetch(`${MOS_API_BASE}/api/health`, { method: "GET", mode: "no-cors", cache: "no-store" }).catch(() => {});
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-submit when user hits 10 digits (280 ms grace to not feel hijacked)
   useEffect(() => {
     if (autoSubmitTimer.current) {
       window.clearTimeout(autoSubmitTimer.current);
@@ -118,7 +252,7 @@ function CheckInPanel() {
       const r = await fetch(`${MOS_API_BASE}/api/pickup-orders/check-in-by-phone`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, qr_source: "yard_banner_main" }),
+        body: JSON.stringify({ phone, qr_source: "yard_entrance_qr" }),
       });
       const data = await r.json();
       if (data.status === "checked_in") {
@@ -147,7 +281,9 @@ function CheckInPanel() {
   }
 
   function resetForNewCustomer() {
-    try { localStorage.removeItem("ssw_checkin_v1"); } catch {}
+    try {
+      localStorage.removeItem("ssw_checkin_v1");
+    } catch {}
     setResult({ status: "idle" });
     setDigits("");
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -158,246 +294,252 @@ function CheckInPanel() {
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  // ─── Full-viewport success overlay ─────────────────────────────────────
+  // Success — BAY assigned. Clean, minimal, no green.
   if (result.status === "checked_in") {
-    const itemsLabel = (result.items || []).slice(0, 2).map((i) => `${i.quantity || 1}× ${i.product_name || "item"}${i.size_option ? ` (${i.size_option})` : ""}`).join(", ");
+    const itemsLabel = (result.items || [])
+      .slice(0, 2)
+      .map((i) => `${i.quantity || 1}× ${i.product_name || "item"}${i.size_option ? ` (${i.size_option})` : ""}`)
+      .join(", ");
     return (
-      <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-950 px-6 text-center text-white">
-        {/* Close X — top right */}
-        <button
-          onClick={resetForNewCustomer}
-          aria-label="Check in someone else"
-          className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-semibold backdrop-blur hover:bg-white/20"
-        >
-          <X className="h-3.5 w-3.5" /> Not me
-        </button>
-
-        <CheckCircle2 className="h-20 w-20 text-green-300 drop-shadow-[0_0_30px_rgba(134,239,172,0.5)]" strokeWidth={1.5} />
-
-        <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.4em] text-green-200">
-          {result.alreadyCheckedIn ? "You're already checked in" : "✓ Checked in"}
-        </p>
-
-        <h1 className="mt-3 text-7xl font-black leading-none tracking-tight sm:text-9xl">
-          BAY <span className="text-green-300 tabular-nums"><AnimatedBay value={result.bay} /></span>
-        </h1>
-
-        <p className="mt-6 max-w-md text-lg font-semibold leading-snug sm:text-2xl">
-          {result.customer_first_name ? `Welcome back, ${result.customer_first_name}. ` : ""}
-          Pull into Bay {result.bay} and stay in your truck.
-        </p>
-
-        {itemsLabel && (
-          <p className="mt-3 max-w-md text-sm text-green-200 sm:text-base">
-            Loading now: {itemsLabel}
+      <div className="fixed inset-0 z-[60] flex flex-col bg-white text-stone-900">
+        {/* Top bar — minimal */}
+        <header className="flex items-center justify-between px-6 pt-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-stone-400">
+            {result.alreadyCheckedIn ? "Already checked in" : "Checked in"}
           </p>
-        )}
-        {result.order_number && (
-          <p className="mt-1 text-xs text-green-300/70">Order #{result.order_number}</p>
-        )}
-
-        <p className="mt-6 max-w-md text-xs text-green-200/80 sm:text-sm">
-          We'll text you when your truck is ready. Reply HELP if you need anything.
-        </p>
-
-        {/* Action buttons */}
-        <div className="mt-8 flex w-full max-w-sm flex-col gap-3 sm:max-w-md sm:flex-row">
-          <a
-            href={`tel:${SSW_PHONE_DIAL}`}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-white px-5 py-4 text-base font-bold text-green-900 transition hover:bg-green-50"
+          <button
+            onClick={resetForNewCustomer}
+            aria-label="Check in someone else"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-stone-500 hover:text-stone-900"
           >
-            <Phone className="h-5 w-5" /> Call us
-          </a>
-          <a
-            href={SSW_DIRECTIONS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/30 bg-transparent px-5 py-4 text-base font-bold text-white transition hover:bg-white/10"
-          >
-            <Navigation className="h-5 w-5" /> Directions
-          </a>
+            <X className="h-3.5 w-3.5" /> Not me
+          </button>
+        </header>
+
+        {/* Hero — the bay number is the entire point */}
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          <p className="text-sm font-medium uppercase tracking-[0.32em] text-stone-400">Pull into</p>
+          <h1 className="mt-2 text-[112px] font-black leading-[0.85] tracking-tight text-stone-900 sm:text-[160px]">
+            BAY <span className="tabular-nums"><AnimatedBay value={result.bay} /></span>
+          </h1>
+
+          <p className="mt-6 max-w-sm text-base font-medium text-stone-600 sm:text-lg">
+            {result.customer_first_name ? `${result.customer_first_name}, stay in your truck. ` : "Stay in your truck. "}
+            We&apos;re loading now.
+          </p>
+
+          {itemsLabel && (
+            <div className="mt-6 w-full max-w-sm rounded-2xl bg-stone-100 px-5 py-4 text-left">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-400">Loading now</p>
+              <p className="mt-1 text-sm font-semibold text-stone-900">{itemsLabel}</p>
+              {result.order_number && (
+                <p className="mt-1 text-xs text-stone-500">Order #{result.order_number}</p>
+              )}
+            </div>
+          )}
+
+          <p className="mt-6 max-w-sm text-xs text-stone-500">
+            We&apos;ll text you when your truck is ready.
+          </p>
         </div>
+
+        {/* Footer actions — full-width text buttons, minimal */}
+        <footer className="px-6 pb-8 pt-4">
+          <div className="mx-auto flex max-w-sm gap-2">
+            <a
+              href={`tel:${SSW_PHONE_DIAL}`}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-5 py-4 text-sm font-semibold text-stone-900 transition hover:border-stone-400"
+            >
+              <Phone className="h-4 w-4" /> Call
+            </a>
+            <a
+              href={PHOENIX_DIRECTIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-5 py-4 text-sm font-semibold text-stone-900 transition hover:border-stone-400"
+            >
+              <Navigation className="h-4 w-4" /> Directions
+            </a>
+          </div>
+        </footer>
       </div>
     );
   }
 
-  // ─── Hero check-in form ────────────────────────────────────────────────
   const formatted = formatPhone(digits);
   const isLoading = result.status === "loading";
-  const inputBorderClass =
-    digits.length === 10 ? "ring-4 ring-green-400" : "ring-0";
 
   return (
-    <section className="relative bg-gradient-to-br from-green-900 via-green-800 to-green-950 py-8 text-white sm:py-12">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-xl text-center">
-          {/* Eyebrow */}
-          <div className="flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.3em] text-green-200">
-            <Truck className="h-3.5 w-3.5" /> Already paid? Check in
-          </div>
+    <section className="flex min-h-[100dvh] flex-col bg-white text-stone-900">
+      {/* Top — back nav */}
+      <header className="px-6 pt-6">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-stone-900"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back
+        </button>
+      </header>
 
-          {/* Big readable headline */}
-          <h2 className="mt-3 text-3xl font-black uppercase leading-none tracking-tight sm:text-5xl">
-            I'M HERE
-          </h2>
-          <p className="mt-2 text-sm text-green-100/80 sm:text-base">
-            Type your phone. We'll tell you which bay to pull into.
-          </p>
+      <div className="flex flex-1 flex-col px-6 pt-12 text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.32em] text-stone-400">Already paid</p>
+        <h1 className="mt-3 text-[44px] font-black leading-[0.95] tracking-tight text-stone-900 sm:text-5xl">
+          I&apos;m Here
+        </h1>
+        <p className="mt-4 text-base text-stone-500">
+          Type your phone. We&apos;ll tell you which bay.
+        </p>
 
-          <form onSubmit={onSubmit} className="mt-5">
-            <input
-              ref={inputRef}
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              autoFocus
-              pattern="[0-9]*"
-              placeholder="(___) ___-____"
-              value={formatted}
-              onChange={(e) => setDigits(digitsOnly(e.target.value))}
-              disabled={isLoading}
-              aria-label="Phone number"
-              className={`block w-full rounded-2xl border-0 bg-white/95 px-4 py-5 text-center text-3xl font-bold tracking-widest text-stone-900 placeholder:text-stone-300 focus:outline-none ${inputBorderClass} transition`}
-            />
+        <form onSubmit={onSubmit} className="mx-auto mt-8 w-full max-w-sm">
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            autoFocus
+            pattern="[0-9]*"
+            placeholder="(___) ___-____"
+            value={formatted}
+            onChange={(e) => setDigits(digitsOnly(e.target.value))}
+            disabled={isLoading}
+            aria-label="Phone number"
+            className="block w-full rounded-2xl border border-stone-200 bg-white px-4 py-5 text-center text-2xl font-bold tracking-widest text-stone-900 placeholder:text-stone-300 transition focus:border-stone-900 focus:outline-none"
+          />
 
-            <button
-              type="submit"
-              disabled={isLoading || digits.length !== 10}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-green-400 px-5 py-5 text-xl font-black uppercase tracking-wide text-green-950 transition hover:bg-green-300 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <><Loader2 className="h-5 w-5 animate-spin" /> Checking your order…</>
-              ) : (
-                "I'm here →"
-              )}
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={isLoading || digits.length !== 10}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-5 text-base font-bold text-white transition hover:bg-stone-800 disabled:opacity-40"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+              </>
+            ) : (
+              <>I&apos;m here <ChevronRight className="h-4 w-4" /></>
+            )}
+          </button>
+        </form>
 
-          {/* No-order state */}
-          {result.status === "no_order" && (
-            <div className="mt-5 rounded-2xl border-2 border-amber-300/40 bg-amber-50/95 p-4 text-stone-900">
-              <p className="text-sm font-semibold sm:text-base">
-                We couldn't find an order under {result.phone}.
-              </p>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                <button
-                  onClick={resetForNewCustomer}
-                  className="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100"
-                >
-                  Try a different number
-                </button>
-                <button
-                  onClick={scrollToMenu}
-                  className="inline-flex items-center justify-center rounded-lg bg-green-700 px-4 py-2 text-sm font-bold text-white hover:bg-green-600"
-                >
-                  Browse the menu ↓
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Error state */}
-          {result.status === "error" && (
-            <div className="mt-5 rounded-2xl border-2 border-amber-300/40 bg-amber-50/95 p-4 text-stone-900">
-              <p className="text-sm font-semibold">{result.message}</p>
+        {result.status === "no_order" && (
+          <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-stone-200 bg-stone-50 p-4 text-left">
+            <p className="text-sm font-semibold text-stone-900">
+              No order found for {result.phone}.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <button
-                onClick={retry}
-                className="mt-3 inline-flex items-center justify-center rounded-lg bg-green-700 px-5 py-2 text-sm font-bold text-white hover:bg-green-600"
+                onClick={resetForNewCustomer}
+                className="inline-flex flex-1 items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-xs font-semibold text-stone-900 hover:border-stone-400"
               >
-                Try again
+                Try a different number
+              </button>
+              <button
+                onClick={onBack}
+                className="inline-flex flex-1 items-center justify-center rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-stone-800"
+              >
+                Order instead
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Hint to scroll for walk-ins */}
-          {result.status === "idle" && (
-            <p className="mt-5 text-xs text-green-200/70">
-              First time? Scroll down for the menu ↓
-            </p>
-          )}
-        </div>
+        {result.status === "error" && (
+          <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-stone-200 bg-stone-50 p-4 text-left">
+            <p className="text-sm font-semibold text-stone-900">{result.message}</p>
+            <button
+              onClick={retry}
+              className="mt-3 inline-flex items-center justify-center rounded-xl bg-stone-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-stone-800"
+            >
+              Try again
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-/**
- * Pay & Pick Up landing page.
- *
- * History: this used to be a 1,773-line 7-step wizard. As of release 2.6 the
- * page is a thin wrapper around <PayPickupGrid />, which is the same component
- * used at the top of /products. Single source of truth for the 4 mains.
- *
- * Routes that hit this component: `/pay-and-pickup`, `/pay-and-pickup/:step?`,
- * `/qr`, `/drive-through/:step?` (mobile drive-by QR landing — same flow).
- */
+// ─── Order view — PayPickupGrid with minimal header ──────────────────────────
+function OrderView({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="min-h-[100dvh] bg-white">
+      <header className="sticky top-0 z-30 border-b border-stone-100 bg-white/90 backdrop-blur">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-stone-900"
+            aria-label="Back to welcome"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </button>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-stone-400">
+            Order &amp; Pick Up
+          </p>
+          <a
+            href={`tel:${SSW_PHONE_DIAL}`}
+            className="inline-flex items-center text-stone-500 hover:text-stone-900"
+            aria-label="Call the yard"
+          >
+            <Phone className="h-4 w-4" />
+          </a>
+        </div>
+      </header>
 
-const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-  "1634 N 19th Ave, Phoenix AZ 85009"
-)}`;
+      <section className="py-6">
+        <div className="container mx-auto px-4">
+          <PayPickupGrid />
+          <div className="mt-8 flex flex-col items-center gap-2 border-t border-stone-100 pt-6 text-center text-xs text-stone-500 sm:flex-row sm:justify-center sm:gap-3">
+            <span>Need bulk or something custom?</span>
+            <a href="/products#request-quote" className="font-semibold text-stone-900 underline-offset-4 hover:underline">
+              Request a quote
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
 
+// ─── Main component — view switcher ──────────────────────────────────────────
 export default function PayAndPickup() {
-  // QR scanners land here mid-scroll; reset to top
+  const [view, setView] = useState<View>("welcome");
+
+  // QR scanners land here mid-scroll; always pin to top, always start at welcome
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    // Honor deep link via hash: /qr#order or /qr#checkin
+    const hash = window.location.hash.replace("#", "").toLowerCase();
+    if (hash === "order") setView("order");
+    else if (hash === "checkin" || hash === "walking-in") setView("checkin");
   }, []);
+
+  // Sync view to hash so back-button behavior feels native
+  useEffect(() => {
+    const target = view === "welcome" ? " " : `#${view}`;
+    if (window.location.hash !== target && !(view === "welcome" && !window.location.hash)) {
+      try {
+        window.history.replaceState(null, "", view === "welcome" ? window.location.pathname : target);
+      } catch {}
+    }
+  }, [view]);
 
   return (
     <>
       <SEO
         title="Pay & Pick Up | Soil Seed & Water"
-        description="Reserve a pickup slot and pay online. Dairy compost, worm castings, Soil Craft potting blend, Nature's Blanket Premium mulch — ready in the yard at the slot you pick."
+        description="Scan, order online, and pick up at the Phoenix yard. Dairy compost, worm castings, Soil Craft potting blend, Nature's Blanket Premium mulch."
         keywords="pay and pickup soil, organic soil phoenix pickup, dairy compost pickup, worm castings pickup, soil craft pickup"
-        canonical="https://organicsoilwholesale.com/pay-and-pickup"
+        canonical="https://organicsoilwholesale.com/qr"
       />
 
-      {/* Yard check-in: phone in → bay number out. Skipped after first scan via localStorage. */}
-      <CheckInPanel />
-
-      {/* Compact header strip — keeps QR landing visual context but doesn't hog the viewport */}
-      <section className="bg-stone-900 text-white">
-        <div className="container mx-auto flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d6c1a0]">
-              Soil Seed &amp; Water · Phoenix yard
-            </p>
-            <p className="text-sm font-semibold">Pay online · pick up at the slot you choose</p>
-          </div>
-          <div className="flex items-center gap-3 text-xs">
-            <a
-              href={PHOENIX_DIRECTIONS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-semibold backdrop-blur hover:bg-white/20"
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              1634 N 19th Ave
-              <ArrowUpRight className="h-3 w-3" />
-            </a>
-            <a
-              href="tel:+16027267211"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#d6c1a0] px-3 py-1.5 font-semibold text-stone-900 hover:bg-[#c4a878]"
-            >
-              <Phone className="h-3.5 w-3.5" />
-              (602) 726-7211
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* The 4 mains — same component used on /products */}
-      <section id="checkin-menu-anchor" className="bg-gradient-to-b from-stone-50 to-white py-6 md:py-10">
-        <div className="container mx-auto px-4">
-          <PayPickupGrid />
-          <div className="mt-6 flex flex-col items-center gap-2 border-t border-stone-200 pt-6 text-center text-sm text-stone-600 sm:flex-row sm:justify-center sm:gap-4">
-            <FileText className="h-4 w-4 text-stone-500" />
-            <span>Need bulk, mulch, or a specialty blend?</span>
-            <a href="/products#request-quote" className="font-semibold text-[#264027] underline">
-              Request a quote →
-            </a>
-          </div>
-        </div>
-      </section>
+      {view === "welcome" && (
+        <WelcomeScreen onOrder={() => setView("order")} onCheckIn={() => setView("checkin")} />
+      )}
+      {view === "order" && <OrderView onBack={() => setView("welcome")} />}
+      {view === "checkin" && <CheckInPanel onBack={() => setView("welcome")} />}
     </>
   );
 }
