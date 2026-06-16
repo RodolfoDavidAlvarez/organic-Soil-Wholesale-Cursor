@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 export type CartItem = {
   productId: number;
@@ -10,8 +11,11 @@ export type CartItem = {
   unit: string;
   /** 'pay' = pay-now via Stripe at pickup slot · 'quote' = request a quote */
   mode?: 'pay' | 'quote';
-  /** Thumbnail for cart drawer line item */
+  /** Thumbnail for cart drawer line item — the product bag photo */
   imageUrl?: string;
+  /** Optional size category photo (e.g., 9lb-bag, pallet, super sack) shown as an
+   *  overlay badge on top of imageUrl so the customer sees what size they picked */
+  sizeImage?: string;
 };
 
 type QuoteCartContextValue = {
@@ -66,10 +70,19 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
       }
       return [...prev, newItem];
     });
+    trackEvent("Cart Item Added", {
+      product_id: newItem.productId,
+      product_slug: newItem.productSlug,
+      format: newItem.format,
+      quantity: newItem.quantity,
+      unit_price: newItem.unitPrice,
+      mode: newItem.mode ?? "quote",
+    });
   }, []);
 
   const removeItem = useCallback((productId: number, format: string) => {
     setItems((prev) => prev.filter((i) => !(i.productId === productId && i.format === format)));
+    trackEvent("Cart Item Removed", { product_id: productId, format });
   }, []);
 
   const updateQuantity = useCallback((productId: number, format: string, quantity: number) => {
@@ -79,14 +92,21 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
         i.productId === productId && i.format === format ? { ...i, quantity } : i
       )
     );
+    trackEvent("Cart Quantity Updated", { product_id: productId, format, quantity });
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
+  const clearCart = useCallback(() => {
+    setItems([]);
+    trackEvent("Cart Cleared");
+  }, []);
 
   const totalItems = useMemo(() => items.length, [items]);
   const totalPrice = useMemo(() => items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [items]);
 
-  const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
+  const openDrawer = useCallback(() => {
+    setIsDrawerOpen(true);
+    trackEvent("Cart Opened", { total_items: items.length });
+  }, [items.length]);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   return (

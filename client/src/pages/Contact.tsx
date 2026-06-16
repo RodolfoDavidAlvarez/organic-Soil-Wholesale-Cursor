@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 // const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e"; // Deprecated - using internal API now
 
@@ -197,8 +198,8 @@ const Contact = () => {
                       <div>
                         <h4 className="font-medium text-sm sm:text-base">Phone</h4>
                         <p className="text-xs sm:text-sm text-neutral-700">
-                          <a href="tel:6027267211" className="text-primary hover:underline touch-manipulation">
-                            (602) 726-7211
+                          <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="text-primary hover:underline touch-manipulation">
+                            {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                           </a>
                         </p>
                       </div>

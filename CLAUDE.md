@@ -1,5 +1,12 @@
 # Project-Specific Instructions
 
+## Official Public Phone Number
+
+- Use **(602) 637-0032** as the official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
+- Do **not** use Rodo's personal number (`928-550-1649`) on public customer-facing pages.
+- Do **not** hardcode CallRail or other tracking numbers in React/server code. Call tracking should be handled through Google Tag Manager / tracking configuration.
+- If a phone number from CallRail appears in screenshots or old code, treat it as a tracking number unless the user confirms it is the official public line.
+
 ## Mobile-First Development Priority
 - **90% of website visitors use mobile phones** - CRITICAL priority
 - Always develop and test mobile view first before desktop
@@ -60,3 +67,9 @@ Historically there were two parallel pages: `/products` (quote-only) and an old 
 | **Anon/Public/Publishable** | ✅ Yes | Frontend code, browser - limited permissions |
 | **Secret/Service Role** | ❌ Never | Backend only - full access, bypasses security |
 | **Access Token** | ❌ Never | API authentication - treat like password |
+
+## 2026-06-10 bulk delivery rule
+- Public checkout uses walking-floor delivery capacity of 24 tons or 90 CY per load.
+- Simon’s Gold / dairy compost bulk is sold by ton online using the current truckload price divided by 24.
+- Trucking quote cost multiplies by required loads: ceil(tons/24) or ceil(CY/90).
+- Legacy OrderForm also labels dairy compost bulk by ton and shows walking-floor load count.

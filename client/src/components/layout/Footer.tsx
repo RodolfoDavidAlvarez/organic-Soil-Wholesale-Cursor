@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { MapPin, Phone, Mail, Clock, Leaf } from "lucide-react";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const Footer = () => {
   return (
@@ -104,8 +105,8 @@ const Footer = () => {
                   <div className="mr-3 rounded-full bg-white/10 p-1.5">
                     <Phone className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <a href="tel:6027267211" className="font-medium text-white/70 transition-colors duration-200 hover:text-white">
-                    (602) 726-7211
+                  <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-medium text-white/70 transition-colors duration-200 hover:text-white">
+                    {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                   </a>
                 </li>
                 <li className="flex items-center">

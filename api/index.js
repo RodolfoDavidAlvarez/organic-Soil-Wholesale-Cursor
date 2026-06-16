@@ -230,6 +230,61 @@ export default async function handler(req, res) {
 
     const db = await getSupabase();
 
+    // ============ CONTACT FORM ============
+    // Public contact form. Records to contact_submissions and forwards to the MOS
+    // sales portal as a lead so the rep team sees/claims it. (Was missing in prod —
+    // the route only existed in the dev Express server, so submissions 404'd.)
+    if (path === '/api/contact/submit' && req.method === 'POST') {
+      const { name, email, phone, company, subject, message } = req.body || {};
+      if (!name || !email || !message) {
+        return res.status(400).json({ error: 'Name, email, and message are required' });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      const submittedAt = new Date().toISOString();
+      const { data: sub, error: subErr } = await db
+        .from('contact_submissions')
+        .insert({ name, email, phone, company, subject, message, status: 'new', created_at: submittedAt })
+        .select()
+        .single();
+      if (subErr) {
+        console.error('[contact/submit] insert failed:', subErr);
+        return res.status(500).json({ error: 'Failed to submit contact form' });
+      }
+      // Forward to the MOS sales portal as a lead (awaited — serverless kills
+      // fire-and-forget after the response returns).
+      try {
+        const secret = process.env.MOS_LEAD_INGEST_SECRET;
+        if (secret) {
+          const r = await fetch(process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
+            body: JSON.stringify({
+              full_name: name,
+              email,
+              phone: phone || undefined,
+              company: company || undefined,
+              message: subject ? `${subject}\n\n${message}` : message,
+              source: 'osw_contact_form',
+              source_url: 'https://organicsoilwholesale.com/contact',
+              source_data: { osw_contact_submission_id: sub.id, subject },
+            }),
+          });
+          if (!r.ok) console.error('[contact/submit] MOS forward', r.status, (await r.text().catch(() => '')).slice(0, 200));
+        } else {
+          console.warn('[contact/submit] MOS_LEAD_INGEST_SECRET not set — lead not forwarded');
+        }
+      } catch (e) {
+        console.error('[contact/submit] MOS forward error:', e?.message || e);
+      }
+      return res.json({
+        success: true,
+        message: "Thank you for contacting us. We'll get back to you soon!",
+        submissionId: sub.id,
+      });
+    }
+
     // ============ CRM ENDPOINTS ============
 
     // Analyze business card with Claude Vision (accepts base64 image)
@@ -641,6 +696,144 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       });
     }
 
+    // POST /api/pay-and-pickup/notify-arrival — customer tapped "Notify a representative"
+    if (path === '/api/pay-and-pickup/notify-arrival' && req.method === 'POST') {
+      const { customerInfo, vehicleInfo } = req.body || {};
+      if (!customerInfo?.name || !customerInfo?.phone) {
+        return res.status(400).json({ error: 'Customer name and phone are required' });
+      }
+
+      const { data, error } = await db.from('arrival_notifications').insert({
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        vehicle_info: vehicleInfo || 'Walk-in / yard QR check-in',
+        arrival_time: new Date().toISOString(),
+        status: 'waiting',
+      }).select().single();
+
+      if (error) {
+        console.error('[notify-arrival] insert error:', error);
+        return res.status(500).json({ error: 'Failed to notify arrival' });
+      }
+
+      const arrivalDetails = {
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        vehicleInfo: vehicleInfo || 'Walk-in / yard QR check-in',
+        arrivalTime: data.arrival_time,
+        notificationId: data.id,
+      };
+
+      // SMS → Sabrina, Kash, Rodolfo (YARD_ADMIN_PHONES env)
+      const yardPhones = (process.env.YARD_ADMIN_PHONES || process.env.RODO_PHONE || '')
+        .split(',').map((s) => s.trim()).filter(Boolean);
+      const smsBody = [
+        'CUSTOMER AT YARD — needs rep',
+        arrivalDetails.customerName,
+        arrivalDetails.customerPhone,
+        arrivalDetails.vehicleInfo,
+        '',
+        '1634 N 19th Ave · go meet them at the gate',
+      ].join('\n');
+
+      if (yardPhones.length && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        // Direct REST call — the twilio npm package is not a dependency of this project.
+        const twilioAuth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+        const smsResults = await Promise.allSettled(yardPhones.map(async (to) => {
+          const resp = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${twilioAuth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ To: to, From: process.env.TWILIO_PHONE_NUMBER, Body: smsBody }).toString(),
+          });
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => '');
+            throw new Error(`twilio ${resp.status}: ${errText.slice(0, 200)}`);
+          }
+          return to;
+        }));
+        const smsSent = smsResults.filter((r) => r.status === 'fulfilled').length;
+        smsResults.forEach((r) => { if (r.status === 'rejected') console.error('[notify-arrival] SMS failed:', r.reason?.message || r.reason); });
+        console.log(`[notify-arrival] SMS sent to ${smsSent}/${yardPhones.length} yard admin(s)`);
+      } else {
+        console.warn('[notify-arrival] Twilio or YARD_ADMIN_PHONES not configured — skipping SMS');
+      }
+
+      // Expo push via MOS (myorganicsoil.com iOS app). Fire-and-AWAIT —
+      // Vercel kills fire-and-forget fetches when the response is sent.
+      const mosSecret = process.env.MOS_LEAD_INGEST_SECRET;
+      if (mosSecret) {
+        try {
+          const phoneDigits = String(customerInfo.phone).replace(/\D/g, '').slice(-10);
+          const mosResp = await fetch(process.env.MOS_LEAD_INTAKE_URL || 'https://myorganicsoil.com/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': mosSecret },
+            body: JSON.stringify({
+              full_name: customerInfo.name,
+              email: `yard+${phoneDigits || 'walkin'}@organicsoilwholesale.com`,
+              phone: customerInfo.phone,
+              company: 'Yard walk-in',
+              message: `Customer at the OSW yard gate — needs a representative. ${arrivalDetails.vehicleInfo}`,
+              source: 'osw_yard_walkin',
+              source_url: 'https://organicsoilwholesale.com/qr',
+              source_data: { notification_id: data.id, vehicle_info: arrivalDetails.vehicleInfo },
+            }),
+          });
+          if (!mosResp.ok) {
+            const t = await mosResp.text().catch(() => '');
+            console.error(`[notify-arrival] MOS push fan-out → ${mosResp.status}: ${t.slice(0, 200)}`);
+          } else {
+            console.log('[notify-arrival] MOS push fan-out → OK');
+          }
+        } catch (mosErr) {
+          console.error('[notify-arrival] MOS push fan-out error:', mosErr?.message || mosErr);
+        }
+      }
+
+      // Admin email
+      try {
+        const { data: admins } = await db.from('admin_notifications')
+          .select('email').eq('active', true).eq('notify_arrivals', true);
+        const adminEmails = admins?.length
+          ? admins.map((a) => a.email)
+          : ['ralvarez@soilseedandwater.com'];
+        const r = await getResend();
+        const vehicleLabel = arrivalDetails.vehicleInfo || 'Vehicle Info Not Provided';
+        await Promise.allSettled(adminEmails.map((to) =>
+          r.emails.send({
+            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+            replyTo: 'ralvarez@soilseedandwater.com',
+            to,
+            subject: `[URGENT] Customer Arrival: ${arrivalDetails.customerName} - ${vehicleLabel}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              <div style="background:#dc2626;color:#fff;padding:24px;text-align:center">
+                <h1 style="margin:0">Customer Has Arrived!</h1>
+                <p style="margin:8px 0 0">Immediate action required</p>
+              </div>
+              <div style="padding:24px">
+                <p><strong>Customer:</strong> ${arrivalDetails.customerName}</p>
+                <p><strong>Phone:</strong> <a href="tel:${arrivalDetails.customerPhone}">${arrivalDetails.customerPhone}</a></p>
+                <p><strong>Vehicle:</strong> ${vehicleLabel}</p>
+                <p><strong>Arrival:</strong> ${new Date(arrivalDetails.arrivalTime).toLocaleString()}</p>
+                <p><strong>Notification #:</strong> ${arrivalDetails.notificationId}</p>
+              </div>
+            </div>`,
+          })
+        ));
+        console.log('[notify-arrival] admin email sent');
+      } catch (emailErr) {
+        console.error('[notify-arrival] email error:', emailErr);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Staff has been notified of your arrival',
+        notificationId: data.id,
+      });
+    }
+
     // Pay & pickup test endpoint
     if (path === '/api/pay-and-pickup/test' && req.method === 'GET') {
       const { data, error } = await db.from('products').select('id, name, is_pay_and_pickup_enabled').eq('is_pay_and_pickup_enabled', true);
@@ -649,11 +842,92 @@ Use "" for fields you cannot clearly read. NEVER guess.`
 
     // ============ EXISTING ENDPOINTS ============
 
-    // Products list
+    // Normalize a single size_price_options entry. The DB rows store
+    // {size, price, unit, msrp} but the client (PayPickupCard) expects
+    // {key, label, price, priceCents, isActive, msrp, unit}. Without this,
+    // size.key is undefined and PayPickupCard's .startsWith() throws.
+    const normalizeSizeOption = (s) => {
+      if (!s || typeof s !== 'object') return null;
+      const rawKey =
+        (typeof s.key === 'string' && s.key.trim()) ||
+        (typeof s.size_key === 'string' && s.size_key.trim()) ||
+        (typeof s.size === 'string' && s.size.trim()) ||
+        (typeof s.label === 'string' && s.label.trim()) ||
+        '';
+      const rawLabel =
+        (typeof s.label === 'string' && s.label.trim()) ||
+        (typeof s.name === 'string' && s.name.trim()) ||
+        (typeof s.size === 'string' && s.size.trim()) ||
+        rawKey;
+      if (!rawKey && !rawLabel) return null;
+      const priceNum = typeof s.price === 'number'
+        ? s.price
+        : typeof s.priceCents === 'number'
+          ? s.priceCents / 100
+          : typeof s.price_cents === 'number'
+            ? s.price_cents / 100
+            : Number(String(s.price ?? '').replace(/[^0-9.]/g, '')) || 0;
+      let isActive = true;
+      if (typeof s.is_active === 'boolean') isActive = s.is_active;
+      else if (typeof s.isActive === 'boolean') isActive = s.isActive;
+      else if (typeof s.active === 'boolean') isActive = s.active;
+      return {
+        key: rawKey || rawLabel,
+        label: rawLabel || rawKey,
+        price: priceNum,
+        priceCents: Math.round(priceNum * 100),
+        unit: typeof s.unit === 'string' ? s.unit : undefined,
+        msrp: typeof s.msrp === 'string' ? s.msrp : undefined,
+        isActive,
+      };
+    };
+
+    const normalizeProductRow = (p) => {
+      if (!p) return p;
+      const rawSizes = Array.isArray(p.size_price_options) ? p.size_price_options : [];
+      const normalizedSizes = rawSizes.map(normalizeSizeOption).filter(Boolean);
+      return {
+        ...p,
+        // Provide both camelCase and snake_case so existing clients keep working
+        size_price_options: normalizedSizes,
+        sizePriceOptions: normalizedSizes,
+        imageUrl: p.image_url ?? p.imageUrl ?? null,
+        texturePhotoUrl: p.texture_photo_url ?? p.texturePhotoUrl ?? null,
+        productType: p.product_type ?? p.productType ?? p.name,
+        displayTitle: p.display_title ?? p.displayTitle ?? p.name,
+      };
+    };
+
+    // Products list — heavy free-text fields stripped (only the grid needs
+    // {id, name, sizes, images}; the detail page hits the single-product
+    // endpoint for the full record). Cached at the edge for 5 minutes with
+    // stale-while-revalidate to keep TTFB <50ms after the first hit.
     if (path === '/api/public/products' && req.method === 'GET') {
-      const { data, error } = await db.from('products').select('*').eq('is_catalog_enabled', true).eq('product_status', 'active').order('catalog_display_order', { ascending: true, nullsFirst: false }).order('name', { ascending: true });
+      const slimColumns = [
+        'id', 'name', 'slug', 'description', 'category', 'price',
+        'image_url', 'texture_photo_url', 'product_type', 'display_title',
+        'marketing_title', 'size_price_options', 'is_catalog_enabled',
+        'catalog_display_order', 'is_pay_and_pickup_enabled',
+        'pay_and_pickup_display_order', 'pay_and_pickup_hero_image',
+        'product_status', 'npk', 'certifications',
+      ].join(', ');
+      const { data, error } = await db
+        .from('products')
+        .select(slimColumns)
+        .eq('is_catalog_enabled', true)
+        .eq('product_status', 'active')
+        .order('catalog_display_order', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
       if (error) throw error;
-      return res.json({ products: data || [] });
+      const products = (data || []).map(normalizeProductRow).map((p) => {
+        // Drop snake_case duplicate of sizePriceOptions to halve payload
+        // (client reads sizePriceOptions ?? size_price_options, so removing
+        // the snake form is safe).
+        const { size_price_options, ...rest } = p;
+        return rest;
+      });
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+      return res.json({ products });
     }
 
     // Single product
@@ -677,7 +951,8 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         if (error.code === 'PGRST116') return res.status(404).json({ error: 'Product not found' });
         throw error;
       }
-      return res.json(data);
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+      return res.json(normalizeProductRow(data));
     }
 
     // Representative by slug
@@ -3199,7 +3474,7 @@ ${pages}
           replyTo: 'ralvarez@soilseedandwater.com',
           to: email,
           subject: 'Verify your email for Organic Soil Wholesale',
-          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="background-color:#2c5530;color:white;padding:20px;text-align:center"><h1>Organic Soil Wholesale</h1></div><div style="padding:30px;background-color:#f9f9f9"><h2>Verify Your Email Address</h2><p>Thank you for creating an account!</p><p>Please click the button below to verify your email address:</p><center><a href="${verificationUrl}" style="display:inline-block;padding:12px 30px;background-color:#2c5530;color:white;text-decoration:none;border-radius:5px;margin:20px 0">Verify Email</a></center><p>This link will expire in 24 hours.</p></div><div style="text-align:center;padding:20px;color:#666;font-size:14px"><p>Organic Soil Wholesale &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; (602) 726-7211</p></div></div>`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="background-color:#2c5530;color:white;padding:20px;text-align:center"><h1>Organic Soil Wholesale</h1></div><div style="padding:30px;background-color:#f9f9f9"><h2>Verify Your Email Address</h2><p>Thank you for creating an account!</p><p>Please click the button below to verify your email address:</p><center><a href="${verificationUrl}" style="display:inline-block;padding:12px 30px;background-color:#2c5530;color:white;text-decoration:none;border-radius:5px;margin:20px 0">Verify Email</a></center><p>This link will expire in 24 hours.</p></div><div style="text-align:center;padding:20px;color:#666;font-size:14px"><p>Organic Soil Wholesale &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; (602) 637-0032</p></div></div>`,
         });
       } catch (emailErr) {
         console.error('Failed to send verification email:', emailErr);
@@ -4184,6 +4459,731 @@ ${pages}
       } catch (err) {
         console.error('Notification error:', err);
         return res.status(500).json({ error: err.message || 'Failed to send notification' });
+      }
+    }
+
+    // ========== TRUCKING QUOTE ==========
+    // Self-contained delivery price calculator. Picks the right truck from cart
+    // contents, looks up round-trip drive time (Haversine fallback when no
+    // Google Maps key), and returns a cost honest enough to pay against.
+
+    const OSW_YARDS = {
+      phoenix:  { label: 'Phoenix, AZ', lat: 33.4675, lng: -112.1000, zip: '85009' },
+      congress: { label: 'Congress, AZ', lat: 34.1608, lng: -112.8515, zip: '85332' },
+    };
+
+    const DEFAULT_TRUCK_RATES = {
+      walking_floor:   { hourly_rate: 165, min_fee: 400, capacity_label: '24 tons / 90 cu yd per load' },
+      flatbed_moffett: { hourly_rate: 150, min_fee: 400, capacity_label: '22 pallets / 22 totes' },
+      hot_shot:        { hourly_rate: 95,  min_fee: 175, capacity_label: '4-10 pallets' },
+      avg_speed_mph:   55,
+      road_factor:     1.30,
+      unload_hours:    0.5,
+    };
+
+    async function getTruckingRates() {
+      try {
+        const { data } = await db.from('sp_settings').select('value').eq('key', 'trucking_rates').single();
+        if (data?.value) return { ...DEFAULT_TRUCK_RATES, ...data.value };
+      } catch (_) { /* settings table missing → defaults */ }
+      return DEFAULT_TRUCK_RATES;
+    }
+
+    // Loose match: caller may pass an item with sizeOption like "Truckload (22 pallets)"
+    // or "9lb Bag" — we need format from the string.
+    function inferFormat(rawKey) {
+      const k = String(rawKey || '').toLowerCase();
+      if (k.includes('truckload') || k.includes('bulk')) return 'bulk';
+      if (k === '2-cy' || k.includes('cubic yard') || k.includes('cu yd') || k.includes(' cy ')) return 'bulk';
+      if (k.includes('pallet') || k.includes('tote') || k.includes('supersack') || k.includes('super sack')) return 'pallet';
+      return 'bag';
+    }
+
+    function walkingFloorLoads(items) {
+      return Math.max(1, (items || []).reduce((sum, item) => {
+        if (inferFormat(item.sizeOption || item.format || '') !== 'bulk') return sum;
+        const unit = String(item.unit || item.sizeOption || item.format || '').toLowerCase();
+        const quantity = Math.max(1, Number(item.quantity) || 1);
+        const capacity = unit.includes('ton') ? 24 : 90;
+        return sum + Math.max(1, Math.ceil(quantity / capacity));
+      }, 0));
+    }
+
+    // Cart items shape: [{ sizeOption, quantity, ... }]
+    function pickTruck(items, milesEstimate = 100) {
+      const formats = items.map((i) => inferFormat(i.sizeOption || i.format || ''));
+      const hasBulk = formats.includes('bulk');
+      const palletQty = items.reduce((sum, i, idx) => {
+        if (formats[idx] === 'pallet') return sum + (Number(i.quantity) || 1);
+        return sum;
+      }, 0);
+
+      if (hasBulk && palletQty === 0) {
+        return { truck: 'walking_floor', split: null };
+      }
+      if (hasBulk && palletQty > 0) {
+        // Mixed → return the heavier-cost truck (walking_floor) and flag a split.
+        // UI will surface a "we'll split into two deliveries" notice.
+        return { truck: 'walking_floor', split: 'mixed' };
+      }
+      if (palletQty <= 4 && milesEstimate < 200) {
+        return { truck: 'hot_shot', split: null };
+      }
+      return { truck: 'flatbed_moffett', split: null };
+    }
+
+    function haversineMiles(a, b) {
+      const toRad = (d) => (d * Math.PI) / 180;
+      const R = 3958.7613; // Earth radius (mi)
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const sa = Math.sin(dLat / 2);
+      const sb = Math.sin(dLng / 2);
+      const h = sa * sa + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sb * sb;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    async function geocodeZip(zip) {
+      // zippopotam.us is free, no key required, ~50ms typical latency
+      const r = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!r.ok) throw new Error(`ZIP ${zip} not found`);
+      const j = await r.json();
+      const place = j?.places?.[0];
+      if (!place) throw new Error(`ZIP ${zip} not resolvable`);
+      return { lat: Number(place.latitude), lng: Number(place.longitude), city: place['place name'], state: place['state abbreviation'] };
+    }
+
+    async function getOneWayDistance(originKey, destZip, rates) {
+      // Cache lookup first
+      try {
+        const { data: cached } = await db
+          .from('sp_trucking_distance_cache')
+          .select('miles_one_way, hours_one_way')
+          .eq('origin_key', originKey)
+          .eq('dest_zip', destZip)
+          .single();
+        if (cached) {
+          return { miles: Number(cached.miles_one_way), hours: Number(cached.hours_one_way), city: null, state: null, cached: true };
+        }
+      } catch (_) { /* miss */ }
+
+      const yard = OSW_YARDS[originKey];
+      if (!yard) throw new Error(`Unknown origin yard: ${originKey}`);
+      const dest = await geocodeZip(destZip);
+      const straightMiles = haversineMiles(yard, dest);
+      const miles = +(straightMiles * (rates.road_factor || 1.3)).toFixed(1);
+      const hours = +(miles / (rates.avg_speed_mph || 55)).toFixed(2);
+
+      // Best-effort cache write
+      try {
+        await db.from('sp_trucking_distance_cache').upsert({
+          origin_key: originKey,
+          dest_zip: destZip,
+          miles_one_way: miles,
+          hours_one_way: hours,
+          source: 'haversine',
+          refreshed_at: new Date().toISOString(),
+        }, { onConflict: 'origin_key,dest_zip' });
+      } catch (_) {}
+
+      return { miles, hours, city: dest.city, state: dest.state, cached: false };
+    }
+
+    async function pickClosestOrigin(destZip, rates) {
+      // Phoenix first; if Congress is materially closer (≥30 mi shorter) use that.
+      const phx = await getOneWayDistance('phoenix', destZip, rates);
+      let congress = null;
+      try { congress = await getOneWayDistance('congress', destZip, rates); } catch (_) {}
+      if (congress && phx.miles - congress.miles >= 30) {
+        return { origin: 'congress', distance: congress };
+      }
+      return { origin: 'phoenix', distance: phx };
+    }
+
+    async function quoteTrucking({ items, zip, roughAccess, originKey }) {
+      const rates = await getTruckingRates();
+      const { origin, distance } = originKey
+        ? { origin: originKey, distance: await getOneWayDistance(originKey, zip, rates) }
+        : await pickClosestOrigin(zip, rates);
+
+      const { truck, split } = pickTruck(items || [], distance.miles);
+      const truckRate = rates[truck];
+      if (!truckRate) throw new Error(`No rate configured for truck ${truck}`);
+      const loadCount = truck === 'walking_floor' ? walkingFloorLoads(items || []) : 1;
+
+      const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
+      const baseCost = roundTripHours * truckRate.hourly_rate;
+      const accessModifier = roughAccess ? 1.2 : 1.0;
+      const subtotal = Math.max(truckRate.min_fee, baseCost) * accessModifier * loadCount;
+      const costCents = Math.round(subtotal * 100);
+
+      return {
+        truck,
+        truckLabel: ({
+          walking_floor: 'Walking-floor (bulk dump)',
+          flatbed_moffett: 'Flatbed with onboard forklift',
+          hot_shot: 'Hot-shot trailer',
+        })[truck],
+        originYard: origin,
+        originLabel: OSW_YARDS[origin].label,
+        milesRoundTrip: +(distance.miles * 2).toFixed(1),
+        hoursRoundTrip: +roundTripHours.toFixed(2),
+        accessModifier,
+        costCents,
+        costDollars: +(costCents / 100).toFixed(2),
+        split,
+        breakdown: {
+          milesOneWay: distance.miles,
+          hoursOneWay: distance.hours,
+          unloadHours: rates.unload_hours || 0.5,
+          hourlyRate: truckRate.hourly_rate,
+          minFee: truckRate.min_fee,
+          capacityLabel: truckRate.capacity_label,
+          loadCount,
+          destinationCity: distance.city,
+          destinationState: distance.state,
+          cached: distance.cached,
+        },
+      };
+    }
+
+    // POST /api/quote/trucking — body { items: [{sizeOption, quantity}], zip, roughAccess?, originKey? }
+    if (path === '/api/quote/trucking' && req.method === 'POST') {
+      try {
+        const { items, zip, roughAccess, originKey } = req.body || {};
+        if (!zip || typeof zip !== 'string' || !/^\d{5}$/.test(zip.trim())) {
+          return res.status(400).json({ error: 'A 5-digit ZIP is required' });
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ error: 'items[] is required' });
+        }
+        const quote = await quoteTrucking({ items, zip: zip.trim(), roughAccess: !!roughAccess, originKey });
+        res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
+        return res.json(quote);
+      } catch (err) {
+        console.error('[trucking quote]', err);
+        return res.status(500).json({ error: err?.message || 'Failed to calculate trucking' });
+      }
+    }
+
+    // GET /api/quote/trucking?zip=85308&truck=walking_floor — quick sanity check
+    if (path === '/api/quote/trucking' && req.method === 'GET') {
+      try {
+        const zip = url.searchParams.get('zip');
+        const truck = url.searchParams.get('truck') || 'walking_floor';
+        const roughAccess = url.searchParams.get('rough') === '1';
+        const originKey = url.searchParams.get('origin') || undefined;
+        if (!zip || !/^\d{5}$/.test(zip)) {
+          return res.status(400).json({ error: 'zip query param required (5 digits)' });
+        }
+        // Simulate one item with a sizeOption that maps to the requested truck
+        const simulatedItem = truck === 'walking_floor'
+          ? { sizeOption: 'Truckload', quantity: 1 }
+          : truck === 'hot_shot'
+            ? { sizeOption: 'Pallet of 1CF Bags', quantity: 2 }
+            : { sizeOption: 'Pallet of 1CF Bags', quantity: 12 };
+        const quote = await quoteTrucking({ items: [simulatedItem], zip, roughAccess, originKey });
+        return res.json(quote);
+      } catch (err) {
+        return res.status(500).json({ error: err?.message || 'quote failed' });
+      }
+    }
+
+    // ========== PAY & PICKUP CHECKOUT ==========
+
+    // Forward an OSW pay-and-pickup order to the MOS sales portal so yard reps
+    // get a push notification in the iOS app. Fire-and-await (Vercel kills
+    // fire-and-forget); MOS failures are logged but never bubble up.
+    async function forwardOswPickupToMos(payload) {
+      const secret = process.env.MOS_LEAD_INGEST_SECRET;
+      // Route by source: 'osw_pay_delivery' → delivery-orders, else pickup-orders.
+      const isDelivery = payload?.source === 'osw_pay_delivery' || payload?.fulfillment_type === 'delivery';
+      const endpoint = isDelivery
+        ? (process.env.MOS_DELIVERY_INGEST_URL || 'https://myorganicsoil.com/api/delivery-orders')
+        : (process.env.MOS_PICKUP_INGEST_URL  || 'https://myorganicsoil.com/api/pickup-orders');
+      const tag = isDelivery ? 'mos-delivery-forward' : 'mos-pickup-forward';
+
+      if (!secret) {
+        console.warn(`[${tag}] MOS_LEAD_INGEST_SECRET not set — skipping`);
+        return { skipped: true };
+      }
+      if (!payload?.customer_name || !payload?.customer_phone || !payload?.items?.length) {
+        console.warn(`[${tag}] missing required fields — skipping`);
+        return { skipped: true };
+      }
+      try {
+        const r = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
+          body: JSON.stringify(payload),
+        });
+        if (!r.ok) {
+          const text = await r.text().catch(() => '');
+          // 404 is expected during the rollout window before MOS implements
+          // /api/delivery-orders. Log it but don't surface as a hard error.
+          const level = r.status === 404 && isDelivery ? 'warn' : 'error';
+          console[level](`[${tag}] order ${payload.osw_order_id} → ${r.status}: ${text.slice(0, 200)}`);
+          return { ok: false, status: r.status };
+        }
+        console.log(`[${tag}] order ${payload.osw_order_id} → OK`);
+        return { ok: true };
+      } catch (err) {
+        console.error(`[${tag}] network error:`, err?.message || err);
+        return { ok: false, error: String(err?.message || err) };
+      }
+    }
+
+    function formatPickupSlotLabel(pickupIso) {
+      try {
+        const d = new Date(pickupIso);
+        // Phoenix = MST year-round (no DST), fixed UTC-7. Format the hour and
+        // date in Phoenix local so yard reps + customers see the slot they
+        // actually picked, not the UTC translation.
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Phoenix',
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: 'numeric', hour12: false,
+        }).formatToParts(d);
+        const get = (t) => parts.find(p => p.type === t)?.value || '';
+        const hour = Number(get('hour'));
+        const next = (hour + 1) % 24;
+        const ampm = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 || h === 24 ? 'AM' : 'PM'}`;
+        const date = `${get('weekday')} ${get('month')} ${get('day')}`;
+        return `${ampm(hour)} – ${ampm(next)}, ${date}`;
+      } catch {
+        return pickupIso;
+      }
+    }
+
+    // POST /api/checkout/webhook — Stripe webhook for OSW pay-and-pickup orders.
+    // On `checkout.session.completed`: mark order paid, reserve inventory, send
+    // confirmation emails, and forward to the MOS sales portal so yard reps see
+    // the order in the iOS app.
+    //
+    // NOTE: Vercel's default body parser converts JSON before this handler runs,
+    // so we can't byte-perfect verify the Stripe signature without a separate
+    // function with bodyParser disabled. We attempt verification when possible
+    // and otherwise trust the parsed event but require the Stripe-Signature
+    // header to be present (basic anti-spam guard). To enforce strict verification,
+    // move this handler to its own function with `export const config = { api: { bodyParser: false } }`.
+    if (path === '/api/checkout/webhook' && req.method === 'POST') {
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+          httpClient: Stripe.createFetchHttpClient(),
+        });
+
+        let event = req.body;
+        const sig = req.headers['stripe-signature'];
+        if (!sig) return res.status(400).json({ error: 'Missing Stripe-Signature header' });
+
+        if (process.env.STRIPE_WEBHOOK_SECRET) {
+          try {
+            event = stripeClient.webhooks.constructEvent(
+              typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+              sig,
+              process.env.STRIPE_WEBHOOK_SECRET
+            );
+          } catch (err) {
+            console.warn('[checkout webhook] signature verification failed, trusting parsed body:', err?.message);
+            event = req.body;
+          }
+        }
+
+        if (!event || !event.type) return res.status(400).json({ error: 'Invalid event' });
+
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data?.object;
+          const orderId = parseInt(session?.metadata?.order_id || '0', 10);
+          if (!orderId) return res.json({ received: true, note: 'no order_id in metadata' });
+
+          // Skip if this is a deposit checkout — let /api/webhooks/stripe handle it.
+          if (session?.metadata?.type === 'deposit') {
+            return res.json({ received: true, note: 'deposit — handled elsewhere' });
+          }
+
+          // Mark order paid
+          await db
+            .from('orders')
+            .update({
+              status: 'paid',
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+              stripe_payment_intent_id: session.payment_intent || null,
+            })
+            .eq('id', orderId);
+
+          // Pull order + items for downstream
+          const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
+          const { data: orderItems } = await db
+            .from('order_items')
+            .select('product_id, quantity, unit_price, total_price, size_option')
+            .eq('order_id', orderId);
+
+          // Reserve inventory (best-effort)
+          if (Array.isArray(orderItems) && order) {
+            const locationId = order.location_id || 1;
+            for (const item of orderItems) {
+              const { data: inv } = await db
+                .from('inventory')
+                .select('id, quantity_available, quantity_reserved')
+                .eq('product_id', item.product_id)
+                .eq('location_id', locationId)
+                .eq('size_option', item.size_option)
+                .single();
+              if (inv) {
+                await db.from('inventory').update({
+                  quantity_available: inv.quantity_available - item.quantity,
+                  quantity_reserved: (inv.quantity_reserved || 0) + item.quantity,
+                }).eq('id', inv.id);
+              }
+              await db.from('order_items').update({
+                status: 'reserved',
+                reserved_at: new Date().toISOString(),
+              }).eq('order_id', orderId).eq('product_id', item.product_id);
+            }
+          }
+
+          // Send confirmation emails (customer + admin) via Resend
+          try {
+            const r = await getResend();
+            const customerEmail = order?.customer_email || order?.email;
+            const orderRef = order?.order_number?.slice(0, 8) || orderId;
+            if (customerEmail) {
+              await r.emails.send({
+                from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+                replyTo: 'ralvarez@soilseedandwater.com',
+                to: customerEmail,
+                subject: `Order #${orderRef} confirmed`,
+                html: `<p>Hi ${order?.customer_name || 'there'},</p>
+                  <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
+                  <p><strong>Pickup:</strong> ${order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : 'See order details'}<br>
+                  <strong>Location:</strong> 1634 N 19th Ave, Phoenix, AZ 85009</p>
+                  <p>Please call (602) 637-0032 when you arrive.</p>
+                  <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
+              });
+            }
+            await r.emails.send({
+              from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+              replyTo: 'ralvarez@soilseedandwater.com',
+              to: ['ralvarez@soilseedandwater.com'],
+              subject: `New pay & pickup order #${orderRef}`,
+              html: `<p>New order from ${order?.customer_name || 'customer'} (${order?.phone || ''}).</p>
+                <p>Items: ${(orderItems || []).length}<br>
+                Total: $${((order?.total_amount) || 0).toFixed(2)}<br>
+                Pickup: ${order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : 'TBD'}</p>`,
+            });
+          } catch (emailErr) {
+            console.error('[checkout webhook] email send failed:', emailErr?.message || emailErr);
+          }
+
+          // Forward to MOS — delivery vs pickup endpoint chosen inside forwarder.
+          const isDeliveryOrder = order?.fulfillment_type === 'delivery';
+          await forwardOswPickupToMos({
+            osw_order_id: orderId,
+            osw_order_number: order?.order_number || undefined,
+            customer_name: order?.customer_name || order?.business_name || 'Customer',
+            customer_phone: order?.phone || '',
+            customer_email: order?.customer_email || order?.email || undefined,
+            items: (orderItems || []).map((item) => ({
+              product_id: item.product_id,
+              product_name: 'Product',
+              size_option: item.size_option || '',
+              quantity: item.quantity || 1,
+              unit_price_cents: Math.round((item.unit_price || 0) * 100),
+              total_price_cents: Math.round((item.total_price || 0) * 100),
+            })),
+            // pickup-shape fields
+            pickup_at: isDeliveryOrder ? null : (order?.pickup_scheduled_at || new Date().toISOString()),
+            slot_label: !isDeliveryOrder && order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : undefined,
+            // delivery-shape fields
+            fulfillment_type: isDeliveryOrder ? 'delivery' : 'pickup',
+            delivery_address: isDeliveryOrder ? order?.delivery_address || null : null,
+            truck_type: isDeliveryOrder ? order?.delivery_truck_type || null : null,
+            origin_yard: isDeliveryOrder ? order?.delivery_origin_yard || null : null,
+            miles_round_trip: isDeliveryOrder ? order?.delivery_miles || null : null,
+            hours_round_trip: isDeliveryOrder ? order?.delivery_hours || null : null,
+            trucking_fee_cents: isDeliveryOrder ? order?.trucking_fee_cents || 0 : 0,
+            // shared
+            total_cents: Math.round(((order?.total_amount) || (order?.total) || 0) * 100),
+            payment_status: 'paid',
+            source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
+          });
+        } else if (event.type === 'payment_intent.payment_failed') {
+          const pi = event.data?.object;
+          const { data: order } = await db
+            .from('orders')
+            .select('id')
+            .eq('stripe_payment_intent_id', pi?.id)
+            .single();
+          if (order) {
+            await db.from('orders').update({
+              payment_status: 'failed',
+              status: 'payment_failed',
+            }).eq('id', order.id);
+          }
+        }
+
+        return res.json({ received: true });
+      } catch (err) {
+        console.error('[checkout webhook] error:', err);
+        return res.status(500).json({ error: 'Webhook processing failed' });
+      }
+    }
+
+    // POST /api/checkout/create-session
+    // Creates a draft order, then either (a) skips Stripe for free orders
+    // (TEST discount code = 100% off) or (b) returns a Stripe Checkout URL.
+    if (path === '/api/checkout/create-session' && req.method === 'POST') {
+      try {
+        const {
+          items, customerInfo, pickupTime, locationId, discountCode,
+          fulfillmentType, deliveryAddress, deliveryQuote,
+        } = req.body || {};
+
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ error: 'No items to check out' });
+        }
+
+        const normalizedDiscount = typeof discountCode === 'string' ? discountCode.trim().toUpperCase() : null;
+        const discountPercent = normalizedDiscount === 'TEST' ? 100 : 0;
+
+        // ---- Delivery (optional). Re-quote server-side so client price can't be trusted. ----
+        const isDelivery = fulfillmentType === 'delivery';
+        let truckingQuote = null;
+        if (isDelivery) {
+          if (!deliveryAddress?.zip || !/^\d{5}$/.test(String(deliveryAddress.zip).trim())) {
+            return res.status(400).json({ error: 'Delivery ZIP is required (5 digits)' });
+          }
+          try {
+            truckingQuote = await quoteTrucking({
+              items,
+              zip: String(deliveryAddress.zip).trim(),
+              roughAccess: !!deliveryAddress?.roughAccess,
+              originKey: deliveryAddress?.originKey,
+            });
+          } catch (err) {
+            return res.status(400).json({ error: `Could not price delivery: ${err.message}` });
+          }
+        }
+
+        const customerNotes = [
+          customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
+          customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
+          typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
+          normalizedDiscount && discountPercent > 0 ? `Discount applied: ${normalizedDiscount} (-${discountPercent}%)` : null,
+          isDelivery && deliveryAddress ? `Delivery to: ${[deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')}` : null,
+          isDelivery && truckingQuote ? `Delivery: ${truckingQuote.truckLabel}, ~${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel} ($${truckingQuote.costDollars})` : null,
+          deliveryAddress?.roughAccess ? 'Site access: hard-to-reach / off-pavement (+20% modifier applied)' : null,
+          // Semi-truck access: only call out the negative case. Customer opted out
+          // of the pre-checked semi-access question, so we MUST call before dispatch.
+          isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room - call before dispatching.' : null,
+          customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
+        ].filter(Boolean).join('\n');
+
+        const checkoutLocationId = locationId || 1;
+
+        const productSubtotalDollars = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
+        const rawSubtotal = productSubtotalDollars + truckingDollars;
+        const totalDollars = Math.max(0, rawSubtotal * (1 - discountPercent / 100));
+        const totalCents = Math.round(totalDollars * 100);
+        const isFreeOrder = totalCents === 0 && discountPercent > 0;
+
+        // Create order
+        const orderData = {
+          email: customerInfo?.email || null,
+          phone: customerInfo?.phone,
+          status: isFreeOrder ? 'paid' : 'pending_payment',
+          payment_status: isFreeOrder ? 'paid' : 'pending',
+          delivery_type: isDelivery ? 'delivery' : 'pickup',
+          fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+          pickup_scheduled_at: isDelivery ? null : (pickupTime || null),
+          subtotal: totalCents,
+          total: totalCents,
+          total_amount: totalDollars,
+          location_id: checkoutLocationId,
+          customer_name: customerInfo?.name || null,
+          customer_email: customerInfo?.email || null,
+          business_name: customerInfo?.company || customerInfo?.name || null,
+          order_type: isDelivery ? 'delivery' : 'pickup',
+          notes: customerNotes || null,
+          paid_at: isFreeOrder ? new Date().toISOString() : null,
+          // Delivery / trucking columns (new). Safe to set when isDelivery is false too.
+          trucking_fee_cents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+          delivery_truck_type: isDelivery && truckingQuote ? truckingQuote.truck : null,
+          delivery_zip: isDelivery ? (deliveryAddress?.zip || null) : null,
+          delivery_miles: isDelivery && truckingQuote ? truckingQuote.milesRoundTrip : null,
+          delivery_hours: isDelivery && truckingQuote ? truckingQuote.hoursRoundTrip : null,
+          access_modifier: isDelivery && truckingQuote ? truckingQuote.accessModifier : null,
+          delivery_origin_yard: isDelivery && truckingQuote ? truckingQuote.originYard : null,
+          delivery_address_json: isDelivery && deliveryAddress
+            ? { street: deliveryAddress.street || '', city: deliveryAddress.city || '', state: deliveryAddress.state || 'AZ', zip: deliveryAddress.zip || '' }
+            : null,
+          order_items: items.map((item) => ({
+            product_id: item.productId,
+            name: item.name,
+            size: item.sizeOption,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.price * item.quantity,
+          })),
+        };
+
+        const { data: order, error: orderError } = await db
+          .from('orders')
+          .insert(orderData)
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error('Order insert error:', orderError);
+          return res.status(500).json({ error: 'Failed to create order' });
+        }
+
+        const orderItems = items.map((item) => ({
+          order_id: order.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity,
+          size_option: item.sizeOption,
+          status: isFreeOrder ? 'reserved' : 'pending',
+        }));
+
+        const { error: itemsError } = await db.from('order_items').insert(orderItems);
+        if (itemsError) console.error('order_items insert error:', itemsError);
+
+        if (isFreeOrder) {
+          // Fan out to MOS so yard reps see the test order in the iOS portal.
+          try {
+            await forwardOswPickupToMos({
+              osw_order_id: order.id,
+              osw_order_number: order.order_number || undefined,
+              customer_name: customerInfo?.name || customerInfo?.company || 'Test Customer',
+              customer_phone: customerInfo?.phone || '',
+              customer_email: customerInfo?.email || undefined,
+              items: items.map((item) => ({
+                product_id: item.productId,
+                product_name: item.name,
+                size_option: item.sizeOption || '',
+                quantity: item.quantity || 1,
+                unit_price_cents: Math.round((item.price || 0) * 100),
+                total_price_cents: Math.round((item.price || 0) * (item.quantity || 1) * 100),
+              })),
+              // pickup-shape fields
+              pickup_at: isDelivery ? null : (pickupTime || new Date().toISOString()),
+              slot_label: !isDelivery && pickupTime ? formatPickupSlotLabel(pickupTime) : undefined,
+              // delivery-shape fields
+              fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+              delivery_address: isDelivery ? orderData.delivery_address_json : null,
+              truck_type: isDelivery && truckingQuote ? truckingQuote.truck : null,
+              origin_yard: isDelivery && truckingQuote ? truckingQuote.originYard : null,
+              miles_round_trip: isDelivery && truckingQuote ? truckingQuote.milesRoundTrip : null,
+              hours_round_trip: isDelivery && truckingQuote ? truckingQuote.hoursRoundTrip : null,
+              trucking_fee_cents: isDelivery && truckingQuote ? truckingQuote.costCents : 0,
+              total_cents: 0,
+              payment_status: 'paid',
+              source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
+            });
+          } catch (e) {
+            console.error('[free-order MOS forward] failed:', e?.message || e);
+          }
+
+          return res.json({
+            free: true,
+            orderId: order.id,
+            confirmationCode: order.confirmation_code,
+            url: null,
+          });
+        }
+
+        // Stripe path. Use fetch-based HTTP client — the default Node http
+        // transport occasionally fails with "connection retried" inside Vercel
+        // serverless functions; fetch is the supported workaround.
+        const Stripe = (await import('stripe')).default;
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeKey) {
+          return res.status(500).json({ error: 'Stripe is not configured on the server' });
+        }
+        const stripeClient = new Stripe(stripeKey, {
+          httpClient: Stripe.createFetchHttpClient(),
+          maxNetworkRetries: 2,
+        });
+
+        const origin =
+          (req.headers.origin) ||
+          (req.headers.referer && req.headers.referer.replace(/(https?:\/\/[^/]+).*/, '$1')) ||
+          'https://organicsoilwholesale.com';
+
+        const absolutizeImage = (urlStr) => {
+          if (!urlStr) return null;
+          if (/^https?:\/\//i.test(urlStr)) return urlStr;
+          return `${origin.replace(/\/$/, '')}${urlStr.startsWith('/') ? '' : '/'}${urlStr}`;
+        };
+
+        const lineItems = items.map((item) => {
+          const img = absolutizeImage(item.imageUrl);
+          return {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: item.name,
+                description: item.sizeOption,
+                ...(img ? { images: [img] } : {}),
+              },
+              unit_amount: Math.round(item.price * 100),
+            },
+            quantity: item.quantity,
+          };
+        });
+
+        // Delivery shows as its own line item so the customer sees the cost transparently.
+        if (isDelivery && truckingQuote && truckingQuote.costCents > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Delivery',
+                description: `${truckingQuote.truckLabel} • ${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel}${deliveryAddress?.roughAccess ? ' • rough-access site' : ''}`,
+              },
+              unit_amount: truckingQuote.costCents,
+            },
+            quantity: 1,
+          });
+        }
+
+        const session = await stripeClient.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: lineItems,
+          mode: 'payment',
+          success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+          cancel_url: `${origin}/checkout?canceled=true`,
+          metadata: {
+            order_id: String(order.id),
+            pickup_time: pickupTime || '',
+            customer_type: customerInfo?.customerCategory || '',
+            company: customerInfo?.company || '',
+          },
+          customer_email: customerInfo?.email || undefined,
+        });
+
+        await db
+          .from('orders')
+          .update({ stripe_checkout_session_id: session.id })
+          .eq('id', order.id);
+
+        return res.json({
+          sessionId: session.id,
+          orderId: order.id,
+          confirmationCode: order.confirmation_code,
+          url: session.url,
+        });
+      } catch (err) {
+        console.error('Checkout error:', err);
+        return res.status(500).json({ error: err.message || 'Failed to create checkout session' });
       }
     }
 

@@ -29,11 +29,11 @@ export interface MosPickupOrderPayload {
   customer_phone: string;
   customer_email?: string;
   items: MosPickupOrderItem[];
-  pickup_at: string; // ISO 8601
+  pickup_at?: string; // ISO 8601
   slot_label?: string;
   total_cents: number;
   payment_status: 'paid';
-  source: 'osw_pay_pickup';
+  source: 'osw_pay_pickup' | 'osw_pay_delivery';
 }
 
 const MOS_PICKUP_ENDPOINT =

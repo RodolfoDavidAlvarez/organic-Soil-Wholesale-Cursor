@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { generateProductSlug } from "@/utils/generateSlug";
@@ -14,6 +14,10 @@ import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { getPayPickupProductDescription } from "@/data/payPickupCopy";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
+import { trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft,
   Leaf,
@@ -29,6 +33,8 @@ import {
   Play,
   ShieldCheck,
   ImagePlus,
+  Phone,
+  X,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +92,7 @@ type SizeChoice = PriceTier & {
   kind: "single" | "pallet" | "bulk";
   displayLabel: string;
   subLabel: string;
+  cartLabel: string;
   displayPrice: number;
 };
 
@@ -142,6 +149,49 @@ const fmt = (n: number): string => {
   return `$${n.toFixed(2)}`;
 };
 
+/** Hero bag photo per main pay-and-pickup product. Mirrors the HERO_OVERRIDES
+ *  map in PayPickupGrid.tsx so the cart line item shows the SAME photo the
+ *  customer just tapped on the list. Update both maps together. */
+const HERO_BAG_PHOTO: Record<number, string> = {
+  1000: "/images/optimized/dansgold9lbs-1.jpg",
+  1001: "/images/optimized/mikeys-worm-poop9lbs.jpg",
+  137: "/images/optimized/soil-craft-bag-studio.jpg",
+  3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+};
+
+const GALLERY_DUPLICATE_GROUPS: Record<number, Record<string, string>> = {
+  1000: {
+    "/images/optimized/compost-texture-look.jpg": "simons-gold-hands-compost",
+    "/uploads/products/1000/gallery-1/1763501397590-hb1oj0.webp": "simons-gold-hands-compost",
+  },
+  1001: {
+    "/mikeys-worm-poop-bestfor.jpg": "mikeys-worm-hands",
+    "/images/optimized/mikeys-worm-poop-bestfor.jpg": "mikeys-worm-hands",
+    "/images/optimized/worm-castting-product-texture.jpg": "mikeys-worm-hands",
+    "/uploads/products/1001/gallery-1/1763526684797-jzp3n6.webp": "mikeys-worm-hands",
+    "/uploads/products/1001/gallery-1/1763526761040-2t7vpc.webp": "mikeys-worm-hands",
+  },
+};
+
+const normalizedGalleryUrl = (url: string) => {
+  const clean = url.trim().toLowerCase().replace(/\?.*$/, "").replace(/#.*$/, "");
+  if (!clean) return "";
+  if (!clean.startsWith("/") && !clean.startsWith("http://") && !clean.startsWith("https://")) {
+    return `/${clean}`;
+  }
+  try {
+    const parsed = new URL(clean, window.location.origin);
+    return parsed.pathname.toLowerCase();
+  } catch {
+    return clean;
+  }
+};
+
+const galleryDedupeKey = (productId: number, url: string) => {
+  const normalized = normalizedGalleryUrl(url);
+  return GALLERY_DUPLICATE_GROUPS[productId]?.[normalized] ?? normalized;
+};
+
 const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "9lb Bag": "/images/sizes/9lb-bag-single.jpg",
   "Pallet (144 x 9lb)": "/images/sizes/9lb-pallet.jpg",
@@ -158,24 +208,27 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
 const productMsrpOverrides: Record<number, Record<string, { price: number; priceLabel?: string }>> = {
   1000: {
     "1CF Bag": { price: 24.9 },
-    Tote: { price: 60 },
-    "Truckload (~24 tons)": { price: 30, priceLabel: "$30.00/ton" },
+    Tote: { price: 150 },
+    "Truckload (~24 tons)": { price: 720 },
   },
   137: {
     "1CF Bag": { price: 15.99 },
-    "Truckload (22 pallets)": { price: 60, priceLabel: "$60.00/yd" },
+    "Truckload (22 pallets)": { price: 5400 },
   },
   3000: {
-    "Truckload (22 pallets)": { price: 30, priceLabel: "$30.00/yd" },
+    "Truckload (22 pallets)": { price: 2700 },
   },
 };
 
-const categoryLabel = (size: string, productId?: number) => {
+const normalizeProductId = (productId?: number | string) => Number(productId);
+
+const categoryLabel = (size: string, productId?: number | string) => {
+  const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return productId === 137 ? "1.5 cu ft Bag" : "40 lb Bag (1 cu ft)";
+  if (size.includes("1CF")) return id === 137 ? "1.5 cu ft Bag" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag";
-  if (size.includes("Tote")) return productId === 137 || productId === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
-  if (size.includes("Truckload") || size.includes("Bulk")) return productId === 137 || productId === 3000 ? "Truckload (~90 cu yd)" : "Truckload (~24 tons)";
+  if (size.includes("Tote")) return id === 137 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
+  if (size.includes("Truckload") || size.includes("Bulk")) return id === 137 || id === 3000 ? "Truckload (~90 cu yd)" : "Truckload (~24 tons)";
   return size;
 };
 
@@ -188,8 +241,45 @@ const priceForTier = (productId: number, tier: PriceTier) => {
   };
 };
 
+const isDairyCompostBulkTier = (productId: number, size: string) =>
+  productId === 1000 && /truckload|bulk/i.test(size);
+
+const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
+
+const palletSizeForBag = (size: string) => {
+  if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
+  if (size.includes("1CF")) return { size: "Pallet (50 x 1CF)", qty: 50, cartLabel: "Pallet of 1CF Bags" };
+  if (size.includes("2CF")) return { size: "Pallet (25 x 2CF)", qty: 25, cartLabel: "Pallet of 2CF Bags" };
+  return null;
+};
+
+const singleCartLabelForSize = (size: string, productId?: number | string) => {
+  const id = normalizeProductId(productId);
+  if (size.includes("9lb")) return "9 lb Bag";
+  if (size.includes("1CF")) return id === 137 ? "1.5 cu ft Bag" : "1CF Bag";
+  if (size.includes("2CF")) return "2CF Bag";
+  return categoryLabel(size, productId);
+};
+
 const imageForChoice = (choice: SizeChoice, fallback: string) => {
   return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
+};
+
+const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {
+  1001: ["truckload", "bulk"],
+};
+
+const shouldHidePayPickupTier = (productId: number | string, size: string) => {
+  const hiddenTerms = HIDDEN_PAY_PICKUP_TIER_TERMS[normalizeProductId(productId)] ?? [];
+  const normalized = size.toLowerCase();
+  return hiddenTerms.some((term) => normalized.includes(term));
+};
+
+const schemaTierLabel = (size: string, productId?: number | string) => {
+  if (size.startsWith("Pallet") && size.includes("9lb")) return "Pallet of 9 lb Bags";
+  if (size.startsWith("Pallet") && size.includes("1CF")) return "Pallet of 1 cu ft Bags";
+  if (size.startsWith("Pallet") && size.includes("2CF")) return "Pallet of 2 cu ft Bags";
+  return categoryLabel(size, productId);
 };
 
 const parsePriceTiers = (raw: unknown): PriceTier[] => {
@@ -217,34 +307,48 @@ const isBagTier = (tier: PriceTier): boolean => {
 const buildSizeCategories = (product: Product): SizeCategory[] => {
   const categoryMap = new Map<string, SizeCategory>();
 
-  product.priceTiers.forEach((tier) => {
+  product.priceTiers
+    .filter((tier) => !shouldHidePayPickupTier(product.id, tier.size))
+    .forEach((tier) => {
     if (tier.size.startsWith("Pallet")) return;
 
     const pricing = priceForTier(product.id, tier);
     const key = categoryLabel(tier.size, product.id);
+    const dairyBulk = isDairyCompostBulkTier(product.id, tier.size);
+    const displayPrice = dairyBulk ? dairyCompostTonPrice(pricing.price) : pricing.price;
     categoryMap.set(key, {
       key,
       label: key,
-      price: pricing.price,
-      priceLabel: pricing.priceLabel,
+      price: displayPrice,
+      priceLabel: dairyBulk ? `$${displayPrice.toFixed(2)}/ton` : pricing.priceLabel,
       image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
       choices: [
         {
           ...tier,
           kind: tier.size.includes("Truckload") || tier.size.includes("Bulk") ? "bulk" : "single",
-          displayLabel: key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
-          subLabel: key.includes("Truckload")
+          displayLabel: dairyBulk ? "Bulk tons" : key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
+          subLabel: dairyBulk
+            ? "24 tons per walking-floor truckload"
+            : key.includes("Truckload")
             ? tier.size.includes("24") ? "24 tons" : "90 cubic yards"
             : key.includes("Super Sack")
               ? product.id === 137 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
               : "one bag",
-          displayPrice: pricing.price,
+          cartLabel: dairyBulk
+            ? "Bulk Dairy Compost (tons)"
+            : key.includes("Truckload") || key.includes("Super Sack")
+            ? key
+            : singleCartLabelForSize(tier.size, product.id),
+          displayPrice,
+          unit: dairyBulk ? "ton" : tier.unit,
         },
       ],
     });
   });
 
-  product.priceTiers.forEach((tier) => {
+  product.priceTiers
+    .filter((tier) => !shouldHidePayPickupTier(product.id, tier.size))
+    .forEach((tier) => {
     if (!tier.size.startsWith("Pallet")) return;
 
     const baseKey = tier.size.includes("9lb")
@@ -259,13 +363,35 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
     const unitPrice = category.choices.find((choice) => choice.kind === "single")?.displayPrice;
     const price = tier.qty && unitPrice ? tier.qty * unitPrice : priceForTier(product.id, tier).price;
+    const palletMeta = palletSizeForBag(tier.size);
 
     category.choices.unshift({
       ...tier,
       kind: "pallet",
       displayLabel: "Pallet",
       subLabel: tier.qty ? `Pallet of ${tier.qty}` : "Pallet",
+      cartLabel: palletMeta?.cartLabel ?? "Pallet",
       displayPrice: price,
+    });
+  });
+
+  categoryMap.forEach((category) => {
+    const single = category.choices.find((choice) => choice.kind === "single");
+    if (!single || category.choices.some((choice) => choice.kind === "pallet")) return;
+
+    const palletMeta = palletSizeForBag(single.size);
+    if (!palletMeta) return;
+
+    category.choices.unshift({
+      ...single,
+      size: palletMeta.size,
+      qty: palletMeta.qty,
+      unit: "per pallet",
+      kind: "pallet",
+      displayLabel: "Pallet",
+      subLabel: `Pallet of ${palletMeta.qty}`,
+      cartLabel: palletMeta.cartLabel,
+      displayPrice: single.displayPrice * palletMeta.qty,
     });
   });
 
@@ -274,6 +400,211 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
 const parseList = (value?: string | null, delimiter = /[|,]/): string[] =>
   value ? value.split(delimiter).map((s) => s.trim()).filter(Boolean) : [];
+
+const usageSteps = (usage?: string) =>
+  usage
+    ? usage
+        .split(/(?<=\.)\s+/)
+        .map((step) => step.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+
+const PRODUCT_DETAIL_CONTENT: Record<number, {
+  highlights: string[];
+  usageSteps: string[];
+  bestFor: string[];
+  note: string;
+  seoKeywords: string[];
+  guideImages: string[];
+}> = {
+  1000: {
+    highlights: ["Improves soil structure", "Supports water conservation", "Slow-release organic matter"],
+    usageSteps: [
+      "Mix with existing soil or potting soil when planting to improve organic matter and soil structure.",
+      "Top dress beds, trees, and planted areas with a light layer, then water thoroughly.",
+      "Use as a steady compost amendment when you want cleaner biology, moisture support, and long-term soil improvement.",
+    ],
+    bestFor: [
+      "Home gardeners",
+      "Vegetable beds",
+      "Fruit trees",
+      "Raised beds",
+      "Nurseries",
+      "Organic farms",
+      "Soil rebuilding",
+      "Arizona gardens",
+    ],
+    note: "Strong fit when you want pure dairy compost, slow-release nutrition, improved soil structure, and better water conservation.",
+    seoKeywords: [
+      "dairy compost",
+      "organic dairy compost",
+      "soil amendment",
+      "compost for gardens",
+      "compost for trees",
+      "Arizona compost",
+      "bulk compost Phoenix",
+      "organic matter for soil",
+    ],
+    guideImages: [
+      "/images/product-guides/simons-gold-01.webp",
+      "/images/product-guides/simons-gold-02.webp",
+      "/images/product-guides/simons-gold-03.webp",
+      "/images/product-guides/simons-gold-04.webp",
+    ],
+  },
+  1001: {
+    highlights: ["Feeds root zones naturally", "Helps retain moisture", "Supports stronger soil biology"],
+    usageSteps: [
+      "Mix into potting soil, raised beds, or garden soil to add concentrated worm castings near the root zone.",
+      "Top dress plants lightly during the growing season, then water in to activate nutrients.",
+      "Use when plants need gentle feeding, better moisture retention, and stronger soil biology.",
+    ],
+    bestFor: [
+      "Home gardeners",
+      "Vegetable beds",
+      "Fruit trees",
+      "Container growers",
+      "Nurseries",
+      "Organic farms",
+      "Seed starts",
+      "Root zones",
+    ],
+    note: "Best when you want nutrient-rich worm castings for stronger root zones, moisture retention, and steady natural plant feeding.",
+    seoKeywords: [
+      "worm castings",
+      "organic worm castings",
+      "vermicompost",
+      "worm poop fertilizer",
+      "natural plant food",
+      "worm castings Phoenix",
+      "soil biology",
+      "root zone amendment",
+    ],
+    guideImages: [
+      "/images/product-guides/mikeys-worm-poop-01.webp",
+      "/images/product-guides/mikeys-worm-poop-02.webp",
+      "/images/product-guides/mikeys-worm-poop-03.webp",
+      "/images/product-guides/mikeys-worm-poop-04.webp",
+    ],
+  },
+  137: {
+    highlights: ["Ready-to-use planting soil", "Supports root development", "Balanced for containers and beds"],
+    usageSteps: [
+      "Fill containers, raised beds, or planting holes with Soil Craft as a ready-to-use growing medium.",
+      "Plant directly into the blend; no extra amendments are needed for most everyday garden and container uses.",
+      "Water thoroughly after planting and keep moisture consistent while roots establish.",
+    ],
+    bestFor: [
+      "Home gardeners",
+      "Container growers",
+      "Raised beds",
+      "Nurseries",
+      "Potted plants",
+      "Vegetable beds",
+      "Flowers",
+      "Patio gardens",
+    ],
+    note: "Built for easy planting when you need balanced organic potting soil, strong roots, and clean growing conditions.",
+    seoKeywords: [
+      "organic potting soil",
+      "premium potting soil",
+      "raised bed soil",
+      "container gardening soil",
+      "garden soil Phoenix",
+      "ready to plant soil",
+      "nursery potting mix",
+      "Soil Craft blend",
+    ],
+    guideImages: [
+      "/images/product-guides/soil-craft-01.webp",
+      "/images/product-guides/soil-craft-02.webp",
+      "/images/product-guides/soil-craft-03.webp",
+      "/images/product-guides/soil-craft-04.webp",
+    ],
+  },
+  3000: {
+    highlights: ["Reduces moisture loss", "Helps suppress weeds", "Protects roots from heat"],
+    usageSteps: [
+      "Spread evenly over clean landscape beds at a depth of about 2-3 inches.",
+      "Keep mulch pulled slightly away from trunks, stems, and crowns to protect plant health.",
+      "Water after application so the mulch settles and begins supporting moisture retention and temperature control.",
+    ],
+    bestFor: [
+      "Landscapers",
+      "Home gardeners",
+      "Trees and shrubs",
+      "Flower beds",
+      "Raised beds",
+      "Pathways",
+      "Commercial beds",
+      "Weed suppression",
+    ],
+    note: "Use it when you want a clean finished bed, better moisture retention, cooler roots, reduced weed pressure, and long-lasting soil cover.",
+    seoKeywords: [
+      "organic mulch",
+      "premium mulch",
+      "wood fiber mulch",
+      "landscape mulch Phoenix",
+      "mulch for garden beds",
+      "weed suppression mulch",
+      "moisture retention mulch",
+      "bulk mulch delivery",
+    ],
+    guideImages: [
+      "/images/product-guides/natures-blanket-premium-01.webp",
+      "/images/product-guides/natures-blanket-premium-02.webp",
+      "/images/product-guides/natures-blanket-premium-03.webp",
+      "/images/product-guides/natures-blanket-premium-04.webp",
+    ],
+  },
+};
+
+const mergeUnique = (items: string[]) => Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
+
+const audienceLabel = (item: string) => {
+  const value = item.toLowerCase();
+  if (value.includes("home gardener")) return "Home gardeners";
+  if (value.includes("fruit")) return "Fruit trees";
+  if (value.includes("vegetable")) return "Vegetable beds";
+  if (value.includes("nursery")) return "Nurseries";
+  if (value.includes("organic")) return "Organic farms";
+  if (value.includes("drought")) return "Dry Arizona sites";
+  if (value.includes("floriculture")) return "Flowers";
+  if (value.includes("cannabis")) return "Specialty growers";
+  if (value.includes("garden installation")) return "New installs";
+  return item;
+};
+
+const priorityAudiences = (items: string[]) => {
+  const order = ["Home gardeners", "Vegetable beds", "Fruit trees", "Flowers", "New installs", "Nurseries", "Organic farms", "Dry Arizona sites"];
+  const unique = Array.from(new Set(items.map(audienceLabel)));
+  return unique.sort((a, b) => {
+    const ai = order.indexOf(a);
+    const bi = order.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+};
+
+const PRODUCT_AUDIENCE_FALLBACKS: Record<number, string[]> = {
+  1000: PRODUCT_DETAIL_CONTENT[1000].bestFor,
+  1001: PRODUCT_DETAIL_CONTENT[1001].bestFor,
+  137: PRODUCT_DETAIL_CONTENT[137].bestFor,
+  3000: [
+    ...PRODUCT_DETAIL_CONTENT[3000].bestFor,
+    "Water retention",
+  ],
+};
+
+const bestFitAudiences = (product: Product) => {
+  const fallback = PRODUCT_AUDIENCE_FALLBACKS[product.id] || [];
+  const combined = [...product.targetAudience, ...fallback];
+  return priorityAudiences(combined).slice(0, 8);
+};
+
+const bestFitNote = (product: Product) => {
+  return PRODUCT_DETAIL_CONTENT[product.id]?.note || "Strong fit when you want steady nutrition, cleaner soil biology, and better performance in beds, trees, or planted areas.";
+};
 
 const normalizeProduct = (record: ApiProduct): Product => {
   const additionalImages = (Array.isArray(record.additionalImages) ? record.additionalImages : Array.isArray(record.additional_images) ? record.additional_images : []) as string[];
@@ -289,7 +620,7 @@ const normalizeProduct = (record: ApiProduct): Product => {
 
   return {
     id: record.id,
-    slug: record.slug ?? generateProductSlug(record.product_type || record.productType, record.name) ?? record.id.toString(),
+    slug: record.slug ?? generateProductSlug(record.product_type ?? record.productType ?? undefined, record.name) ?? record.id.toString(),
     name: record.name ?? "Product",
     displayTitle: record.displayTitle ?? record.display_title ?? record.name ?? "Product",
     category: record.category ?? "Soil amendment",
@@ -334,6 +665,8 @@ const ProductDetail = () => {
     enabled: Boolean(slug),
   });
 
+  const productDetailContent = product ? PRODUCT_DETAIL_CONTENT[product.id] : undefined;
+
   // --- Gallery ---
   type GalleryItem = { type: "image"; url: string } | { type: "video"; url: string; videoId: string };
 
@@ -341,18 +674,28 @@ const ProductDetail = () => {
     if (!product) return [];
     const items: GalleryItem[] = [];
     const seen = new Set<string>();
-    const norm = (u: string) => u.trim().toLowerCase().replace(/\?.*$/, "").replace(/#.*$/, "");
 
-    [product.texturePhotoUrl, product.imageUrl, ...product.additionalImages]
+    // CRITICAL: the list card (PayPickupGrid → PayPickupCard) overrides
+    // product.imageUrl with HERO_BAG_PHOTO so the BAG photo is shown, not the
+    // lifestyle / dirt-close-up that the API returns as imageUrl. The detail
+    // page MUST use the same override or the hero will not match the card the
+    // customer just tapped.
+    const heroBagOverride = HERO_BAG_PHOTO[product.id];
+    [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
       .filter((u): u is string => Boolean(u?.trim()))
       .forEach((url) => {
-        const key = norm(url);
+        const key = galleryDedupeKey(product.id, url);
         if (!seen.has(key)) { seen.add(key); items.push({ type: "image", url: url.trim() }); }
       });
 
     product.videoUrls.forEach((videoUrl) => {
       const videoId = extractYouTubeVideoId(videoUrl);
-      if (videoId) items.push({ type: "video", url: videoUrl, videoId });
+      if (!videoId) return;
+      const key = `video:${videoId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ type: "video", url: videoUrl, videoId });
+      }
     });
 
     return items;
@@ -361,13 +704,23 @@ const ProductDetail = () => {
   const heroImage = galleryItems.find((i) => i.type === "image")?.url ?? null;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [isGuideGalleryOpen, setIsGuideGalleryOpen] = useState(false);
+  const [activeGuideImageIndex, setActiveGuideImageIndex] = useState(0);
   const activeGalleryItem = galleryItems[activeGalleryIndex];
+  const guideImages = productDetailContent?.guideImages ?? [];
+  const activeGuideImage = guideImages[activeGuideImageIndex];
 
   const openGalleryAt = useCallback((index: number) => {
     if (!galleryItems.length) return;
     setActiveGalleryIndex(((index % galleryItems.length) + galleryItems.length) % galleryItems.length);
     requestAnimationFrame(() => setIsGalleryOpen(true));
   }, [galleryItems.length]);
+
+  const openHeroGallery = useCallback(() => {
+    if (!galleryItems.length) return;
+    const isDesktopPointer = window.matchMedia("(min-width: 768px)").matches;
+    if (isDesktopPointer) openGalleryAt(activeGalleryIndex);
+  }, [activeGalleryIndex, galleryItems.length, openGalleryAt]);
 
   const goToPrev = useCallback(() => {
     if (!galleryItems.length) return;
@@ -378,6 +731,22 @@ const ProductDetail = () => {
     if (!galleryItems.length) return;
     setActiveGalleryIndex((p) => (p + 1) % galleryItems.length);
   }, [galleryItems.length]);
+
+  const openGuideImageAt = useCallback((index: number) => {
+    if (!guideImages.length) return;
+    setActiveGuideImageIndex(((index % guideImages.length) + guideImages.length) % guideImages.length);
+    requestAnimationFrame(() => setIsGuideGalleryOpen(true));
+  }, [guideImages.length]);
+
+  const goToPrevGuideImage = useCallback(() => {
+    if (!guideImages.length) return;
+    setActiveGuideImageIndex((p) => (p - 1 + guideImages.length) % guideImages.length);
+  }, [guideImages.length]);
+
+  const goToNextGuideImage = useCallback(() => {
+    if (!guideImages.length) return;
+    setActiveGuideImageIndex((p) => (p + 1) % guideImages.length);
+  }, [guideImages.length]);
 
   const msrpPreview = useMemo(() => {
     if (!product?.priceTiers.length) return null;
@@ -418,51 +787,137 @@ const ProductDetail = () => {
     setQuantity(1);
   }, [product?.id]);
 
+  // NOTE: We intentionally do NOT auto-scroll to #buy on load. Customer should
+  // see the product hero photo first, then scroll to sizes at their own pace.
+  // Strip the hash so it doesn't sit in the URL bar awkwardly.
   useEffect(() => {
-    if (!product || window.location.hash !== "#buy") return;
-    const timer = window.setTimeout(() => {
-      document.getElementById("buy")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-    return () => window.clearTimeout(timer);
-  }, [product]);
+    if (!product) return;
+    if (window.location.hash === "#buy") {
+      try { window.history.replaceState(null, "", window.location.pathname); } catch {}
+    }
+    window.scrollTo(0, 0);
+    trackEvent("Product Detail Viewed", {
+      product_id: product.id,
+      product_slug: product.slug,
+      product_name: product.displayTitle,
+      category: product.category,
+      pay_online: canPayOnline,
+    });
+  }, [product?.id]);
 
   const addSelectionToCart = useCallback((next?: "products" | "checkout" | "quote") => {
     if (!product || !selectedChoice) return;
+
+    trackEvent(next === "checkout" ? "Buy Now Clicked" : "Add To Cart Clicked", {
+      product_id: product.id,
+      product_slug: product.slug,
+      product_name: product.displayTitle,
+      size_category: selectedCategory?.label ?? "",
+      format: selectedChoice.cartLabel,
+      quantity,
+      unit_price: selectedChoice.displayPrice,
+      mode: canPayOnline ? "pay" : "quote",
+      next: next ?? "cart_drawer",
+    });
 
     addItem({
       productId: product.id,
       productName: product.displayTitle,
       productSlug: product.slug,
-      format: selectedChoice.displayLabel === "Single bag" ? selectedCategory?.label ?? selectedChoice.size : selectedChoice.displayLabel,
+      format: selectedChoice.cartLabel,
       quantity,
       unitPrice: selectedChoice.displayPrice,
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
-      imageUrl: product.imageUrl || product.texturePhotoUrl,
+      // Show the SAME bag/hero photo the customer tapped on the list. Fall back
+      // gracefully if no override exists for this product.
+      imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,
+      sizeImage: SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
     });
 
     setJustAdded(true);
-    toast({
-      title: "Added to cart",
-      description: `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
-    });
+    // Only show the toast when we're navigating away. When we're opening the
+    // cart drawer, the drawer itself is the confirmation — the toast would
+    // just stack on top and cover the drawer header.
+    if (next) {
+      toast({
+        title: "Added to cart",
+        description: `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
+      });
+    }
     window.setTimeout(() => setJustAdded(false), 1400);
 
     if (next === "products") navigate("/products");
-    if (next === "checkout") canPayOnline ? openDrawer() : navigate("/order");
+    if (next === "checkout") canPayOnline ? navigate("/checkout") : navigate("/order");
     if (next === "quote") navigate("/order");
+    // Plain "Add to Cart" (no `next`) — open the drawer so the customer can
+    // see what's in their cart and choose to continue or keep shopping.
+    if (!next) openDrawer();
   }, [addItem, canPayOnline, navigate, openDrawer, product, quantity, selectedCategory?.label, selectedChoice, toast]);
 
   // --- SEO ---
-  const seoDescription = product?.marketingNote || product?.description || "Wholesale organic soil products from Soil Seed & Water.";
-  const seoKeywords = product?.seoKeywords || [product?.category, product?.productType, "organic soil", "wholesale"].filter(Boolean).join(", ");
-
-  // --- Thumbnails (excluding hero) ---
-  const thumbnails = useMemo(() => {
-    return galleryItems
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => !(item.type === "image" && item.url === heroImage));
-  }, [galleryItems, heroImage]);
+  const resolvedUsageSteps = product
+    ? mergeUnique([...usageSteps(product.usage), ...(productDetailContent?.usageSteps ?? [])]).slice(0, 3)
+    : [];
+  const syncedProductDescription = product
+    ? getPayPickupProductDescription(product.id, product.marketingNote || product.description)
+    : "";
+  const seoDescription = syncedProductDescription || "Wholesale organic soil products from Soil Seed & Water.";
+  const seoKeywords = mergeUnique([
+    ...(product?.seoKeywords ? product.seoKeywords.split(",") : []),
+    ...(productDetailContent?.seoKeywords ?? []),
+    product?.category ?? "",
+    product?.productType ?? "",
+    "organic soil",
+    "wholesale",
+  ]).join(", ");
+  const productStructuredData = product
+    ? [
+        buildLocalBusinessSchema(),
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.displayTitle,
+          alternateName: product.name,
+          description: seoDescription,
+          image: galleryItems
+            .filter((item): item is Extract<GalleryItem, { type: "image" }> => item.type === "image")
+            .slice(0, 6)
+            .map((item) => absoluteUrl(item.url)),
+          brand: {
+            "@type": "Brand",
+            name: "Soil Seed & Water",
+          },
+          category: product.category || product.productType || "Organic soil product",
+          sku: String(product.id),
+          url: `${SITE_URL}/products/${product.slug}`,
+          offers: product.priceTiers
+            .filter((tier) => !shouldHidePayPickupTier(product.id, tier.size))
+            .map((tier) => ({ tier, pricing: priceForTier(product.id, tier) }))
+            .filter(({ pricing }) => Number.isFinite(pricing.price) && pricing.price > 0)
+            .map(({ tier, pricing }) => ({
+              "@type": "Offer",
+              name: `${product.displayTitle} - ${schemaTierLabel(tier.size, product.id)}`,
+              price: Number(pricing.price.toFixed(2)),
+              priceCurrency: "USD",
+              availability: "https://schema.org/InStock",
+              url: `${SITE_URL}/products/${product.slug}`,
+              seller: {
+                "@type": "LocalBusiness",
+                name: SEO_BUSINESS_NAME,
+              },
+            })),
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Products", item: `${SITE_URL}/products` },
+            { "@type": "ListItem", position: 2, name: product.displayTitle, item: `${SITE_URL}/products/${product.slug}` },
+          ],
+        },
+      ]
+    : undefined;
 
   return (
     <>
@@ -471,12 +926,13 @@ const ProductDetail = () => {
         description={seoDescription}
         canonical={`https://organicsoilwholesale.com/products/${product?.slug ?? slug}`}
         keywords={seoKeywords}
+        structuredData={productStructuredData}
       />
 
-      <section className="py-4 sm:py-8 lg:py-10 bg-muted/20" aria-label="Product details">
+      <section className="bg-muted/20 py-2 sm:py-8 lg:py-10" aria-label="Product details">
         <div className="container mx-auto px-3 sm:px-4 max-w-6xl">
           {/* Back */}
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground h-11 min-h-[44px] px-3 touch-manipulation rounded-lg mb-4" asChild>
+          <Button variant="ghost" className="mb-2 h-10 min-h-[40px] rounded-lg px-2 text-muted-foreground hover:text-foreground touch-manipulation sm:mb-4 sm:h-11 sm:min-h-[44px] sm:px-3" asChild>
             <Link href="/products">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Products
@@ -502,47 +958,110 @@ const ProductDetail = () => {
 
           {/* Product Content */}
           {!isLoading && product && (
-            <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-4 sm:space-y-8">
 
               {/* ============================================================ */}
               {/* HERO: Image + Product Info                                    */}
               {/* ============================================================ */}
-              <div className="bg-white rounded-2xl sm:rounded-3xl border shadow-sm overflow-hidden">
+              <div className="overflow-hidden rounded-2xl border bg-white shadow-sm sm:rounded-3xl">
                 <div className="flex flex-col lg:grid lg:grid-cols-2">
-                  {/* Image */}
-                  <div
-                    className="relative bg-gray-50 min-h-[280px] sm:min-h-[360px] lg:min-h-[440px] cursor-pointer group"
-                    role={galleryItems.length > 0 ? "button" : undefined}
-                    tabIndex={galleryItems.length > 0 ? 0 : -1}
-                    onClick={() => galleryItems.length > 0 && openGalleryAt(0)}
-                    onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                      if (galleryItems.length && (e.key === "Enter" || e.key === " ")) {
-                        e.preventDefault(); openGalleryAt(0);
-                      }
-                    }}
-                    aria-label={galleryItems.length > 0 ? "Open product gallery" : undefined}
-                  >
-                    {heroImage ? (
-                      <OptimizedImage
-                        src={heroImage}
-                        alt={product.displayTitle}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-8">
-                        No image available
+                  {/* Image gallery */}
+                  <div className="bg-gradient-to-b from-white to-stone-50 p-3 sm:p-4 lg:self-start">
+                    <div className="flex flex-col gap-3 lg:flex-row-reverse">
+                      <div
+                        className="group relative h-[245px] rounded-xl bg-white sm:h-[390px] md:cursor-pointer lg:h-[600px] lg:flex-1"
+                        role={galleryItems.length > 0 ? "button" : undefined}
+                        tabIndex={galleryItems.length > 0 ? 0 : -1}
+                        onClick={openHeroGallery}
+                        onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                          if (galleryItems.length && (e.key === "Enter" || e.key === " ")) {
+                            e.preventDefault(); openGalleryAt(activeGalleryIndex);
+                          }
+                        }}
+                        aria-label={galleryItems.length > 0 ? "Product media" : undefined}
+                      >
+                        {activeGalleryItem?.type === "image" ? (
+                          <OptimizedImage
+                            src={activeGalleryItem.url}
+                            alt={product.displayTitle}
+                            className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.02] sm:p-5 lg:p-6"
+                          />
+                        ) : activeGalleryItem?.type === "video" ? (
+                          <>
+                            <img
+                              src={`https://img.youtube.com/vi/${activeGalleryItem.videoId}/hqdefault.jpg`}
+                              alt={`${product.displayTitle} video`}
+                              className="h-full w-full object-contain p-3 sm:p-5 lg:p-6"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg">
+                                <Play className="h-6 w-6 fill-white" />
+                              </span>
+                            </div>
+                          </>
+                        ) : heroImage ? (
+                          <OptimizedImage
+                            src={heroImage}
+                            alt={product.displayTitle}
+                            className="h-full w-full object-contain p-3 sm:p-5 lg:p-6"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+                            No image available
+                          </div>
+                        )}
+                        {galleryItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openGalleryAt(activeGalleryIndex);
+                            }}
+                            className="absolute bottom-3 right-3 flex min-h-[40px] items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-black/80"
+                            aria-label="Open product gallery"
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                            {activeGalleryIndex + 1} / {galleryItems.length}
+                          </button>
+                        )}
                       </div>
-                    )}
-                    {galleryItems.length > 1 && (
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm">
-                        <Maximize2 className="h-3 w-3" />
-                        {galleryItems.length} photos
-                      </div>
-                    )}
+
+                      {galleryItems.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1 lg:w-20 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:pb-0">
+                          {galleryItems.map((item, index) => {
+                            const isActive = index === activeGalleryIndex;
+                            return (
+                              <button
+                                key={`${item.type}-${item.url}`}
+                                type="button"
+                                onClick={() => setActiveGalleryIndex(index)}
+                                aria-current={isActive ? "true" : undefined}
+                                className={cn(
+                                  "relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm transition touch-manipulation sm:h-16 sm:w-16 lg:h-20 lg:w-20",
+                                  isActive ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/60"
+                                )}
+                                aria-label={`Show gallery item ${index + 1}`}
+                              >
+                                {item.type === "image" ? (
+                                  <OptimizedImage src={item.url} alt="" className="h-full w-full object-contain bg-white p-1" width={120} q={55} />
+                                ) : (
+                                  <>
+                                    <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-contain bg-white p-1" />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                                      <Play className="h-4 w-4 fill-white text-white" />
+                                    </div>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Product Info */}
-                  <div className="p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
+                  <div className="flex flex-col justify-start p-4 sm:p-6 lg:p-8">
                     {/* Badges */}
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge className="bg-primary text-primary-foreground border-0 text-xs">
@@ -568,11 +1087,24 @@ const ProductDetail = () => {
                     </h1>
 
                     {/* Description */}
-                    {product.description && (
+                    {syncedProductDescription && (
                       <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
-                        {product.marketingNote || product.description}
+                        {syncedProductDescription}
                       </p>
                     )}
+
+                    {productDetailContent?.highlights.length ? (
+                      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                        {productDetailContent.highlights.map((highlight) => (
+                          <div key={highlight} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-primary/10 bg-primary/5 px-3 py-2">
+                            <Check className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                            <span className="text-xs font-semibold leading-snug text-primary">
+                              {highlight}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
 
                     {/* MSRP preview */}
                     {msrpPreview?.msrp && (
@@ -591,12 +1123,24 @@ const ProductDetail = () => {
                       </div>
                     )}
 
-                    <div id="buy" className="mt-5 scroll-mt-24">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose size</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Pick a size, then choose single, pallet, super sack, or truckload when available.
+                    <div id="buy" className="mt-5 scroll-mt-24 rounded-2xl border border-border/70 bg-stone-50/60 p-3 sm:bg-transparent sm:p-0 sm:border-0">
+                      <div className="mb-3 flex flex-col gap-3 rounded-xl border border-border/70 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                              {selectedCategory ? "Step 2" : "Step 1"}
+                            </span>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                              {selectedCategory ? "Purchase type" : "Choose size"}
+                            </p>
+                          </div>
+                          <p className="text-base font-bold leading-tight text-foreground">
+                            {selectedCategory ? `How do you want ${selectedCategory.label}?` : "Select the product package"}
+                          </p>
+                          <p className="mt-1 text-sm leading-snug text-muted-foreground">
+                            {selectedCategory
+                              ? "Choose single, pallet, super sack, or truckload when available."
+                              : "Start with the package size, then pick the buying format if needed."}
                           </p>
                         </div>
                         {selectedCategory && (
@@ -607,16 +1151,17 @@ const ProductDetail = () => {
                               setSelectedChoiceSize("");
                               setQuantity(1);
                             }}
-                            className="text-left text-sm font-semibold text-primary hover:text-primary/80 sm:text-right"
+                            className="inline-flex min-h-[40px] items-center justify-center gap-2 self-start rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-bold text-primary transition hover:bg-primary/10 sm:self-auto"
                           >
-                            Previous
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to sizes
                           </button>
                         )}
                       </div>
 
                       {!selectedCategory && sizeCategories.length > 0 && (
                         <div className="mt-3 space-y-3">
-                          <div className="divide-y divide-border/70 border-y border-border/70">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-3">
                             {sizeCategories.map((category) => (
                               <button
                                 key={category.key}
@@ -625,28 +1170,46 @@ const ProductDetail = () => {
                                   setSelectedCategoryKey(category.key);
                                   setSelectedChoiceSize("");
                                   setQuantity(1);
+                                  trackEvent("Product Size Selected", {
+                                    product_id: product.id,
+                                    product_slug: product.slug,
+                                    size_category: category.label,
+                                    price: category.price,
+                                  });
                                 }}
-                                className="flex min-h-[62px] w-full items-center gap-3 py-2.5 text-left transition hover:bg-muted/40 touch-manipulation"
+                                className="group flex min-h-[178px] flex-col overflow-hidden rounded-xl border border-border bg-white text-left shadow-sm transition hover:border-primary hover:shadow-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation sm:min-h-0"
                               >
-                                {category.image && (
-                                  <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-border/70">
-                                    <OptimizedImage src={category.image} alt="" className="h-full w-full object-cover" />
+                                <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto">
+                                  {category.image ? (
+                                    <OptimizedImage
+                                      src={category.image}
+                                      alt={category.label}
+                                      className="h-full w-full object-contain p-2 transition-transform duration-200 group-hover:scale-[1.03]"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                                      No photo
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-1 flex-col justify-between gap-1 px-3 py-2.5">
+                                  <span className="block text-sm font-bold leading-tight text-foreground">
+                                    {category.label}
                                   </span>
-                                )}
-                                <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
-                                  <span className="block text-sm font-bold text-foreground">{category.label}</span>
-                                  <span className="mt-0.5 block text-sm font-bold text-primary">{category.priceLabel}</span>
-                                </span>
+                                  <span className="block text-sm font-extrabold text-primary">
+                                    {category.priceLabel}
+                                  </span>
+                                </div>
                               </button>
                             ))}
                           </div>
                           <Button
                             size="lg"
-                            className="min-h-[48px] w-full rounded-xl font-semibold shadow-none touch-manipulation"
+                            className="min-h-[46px] w-full rounded-xl font-semibold shadow-none touch-manipulation"
                             disabled
                           >
                             {canPayOnline ? <ShoppingCart className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
-                            {canPayOnline ? "Add to Cart" : "Request a Quote"}
+                            Select a size first
                           </Button>
                         </div>
                       )}
@@ -671,7 +1234,7 @@ const ProductDetail = () => {
                               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                 Pick pallet or single
                               </p>
-                              <div className="divide-y divide-border/70 border-y border-border/70">
+                              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                 {selectedCategory.choices.map((choice) => {
                                   const isSelected = choice.size === selectedChoiceSize;
                                   const choiceImage = imageForChoice(choice, selectedCategory.image);
@@ -682,28 +1245,52 @@ const ProductDetail = () => {
                                       onClick={() => {
                                         setSelectedChoiceSize(choice.size);
                                         setQuantity(1);
+                                        trackEvent("Product Purchase Type Selected", {
+                                          product_id: product.id,
+                                          product_slug: product.slug,
+                                          size_category: selectedCategory.label,
+                                          format: choice.cartLabel,
+                                          price: choice.displayPrice,
+                                        });
                                       }}
                                       className={cn(
-                                        "flex w-full items-center justify-between gap-3 py-3 text-left transition touch-manipulation",
+                                        "group flex min-h-[188px] flex-col overflow-hidden rounded-xl border bg-white text-left transition touch-manipulation sm:min-h-0",
                                         isSelected
-                                          ? "bg-primary/[0.06] px-2"
-                                          : "hover:bg-muted/40"
+                                          ? "border-primary ring-2 ring-primary/30 shadow-md"
+                                          : "border-border hover:border-primary hover:shadow-sm"
                                       )}
                                     >
-                                        <span className="min-w-0">
-                                        <span className="flex items-center gap-3">
-                                          {choiceImage && (
-                                            <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-border/70">
-                                              <OptimizedImage src={choiceImage} alt="" className="h-full w-full object-cover" />
-                                            </span>
-                                          )}
-                                          <span className="min-w-0">
-                                            <span className="block text-sm font-bold text-foreground">{choice.displayLabel}</span>
-                                            <span className="mt-0.5 block text-xs text-muted-foreground">{choice.subLabel}</span>
+                                      <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto">
+                                        {choiceImage ? (
+                                          <OptimizedImage
+                                            src={choiceImage}
+                                            alt={choice.displayLabel}
+                                            className="h-full w-full object-contain p-2 transition-transform duration-200 group-hover:scale-[1.03]"
+                                          />
+                                        ) : (
+                                          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                                            No photo
+                                          </div>
+                                        )}
+                                        {isSelected && (
+                                          <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
+                                            ✓
                                           </span>
+                                        )}
+                                      </div>
+                                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 py-2.5">
+                                        <div className="min-w-0">
+                                          <span className="block text-sm font-bold leading-tight text-foreground">
+                                            {choice.displayLabel}
+                                          </span>
+                                          <span className="mt-0.5 block text-xs leading-tight text-muted-foreground">
+                                            {choice.subLabel}
+                                          </span>
+                                        </div>
+                                        <span className="block text-base font-extrabold text-primary">
+                                          {fmt(choice.displayPrice)}
                                         </span>
-                                      </span>
-                                      <span className="shrink-0 text-lg font-bold text-primary">{fmt(choice.displayPrice)}</span>
+                                      </div>
                                     </button>
                                   );
                                 })}
@@ -737,7 +1324,7 @@ const ProductDetail = () => {
                               </div>
                               <div className="text-right">
                                 <p className="text-xs text-muted-foreground">
-                                  {selectedChoice ? `${quantity}x ${selectedChoice.displayLabel}` : "Choose a format"}
+                                  {selectedChoice ? `${quantity}x ${selectedChoice.cartLabel}` : "Choose a format"}
                                 </p>
                                 <p className="mt-0.5 text-2xl font-bold text-primary">{selectedChoice ? fmt(selectedTotal) : "$0.00"}</p>
                               </div>
@@ -782,58 +1369,93 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                {/* Thumbnail strip */}
-                {thumbnails.length > 0 && (
-                  <div className="px-4 pb-4 sm:px-6 sm:pb-5 border-t border-border/50 pt-3">
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {thumbnails.map(({ item, index: gi }) => {
-                        if (item.type === "image") {
-                          return (
-                            <button key={item.url} type="button" onClick={() => openGalleryAt(gi)}
-                              className="h-14 w-18 sm:h-16 sm:w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition touch-manipulation"
-                              aria-label={`View image ${gi + 1}`}>
-                              <OptimizedImage src={item.url} alt="" className="h-full w-full object-cover" />
-                            </button>
-                          );
-                        }
-                        return (
-                          <button key={item.url} type="button" onClick={() => openGalleryAt(gi)}
-                            className="relative h-14 w-18 sm:h-16 sm:w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm hover:shadow-md transition touch-manipulation"
-                            aria-label={`View video ${gi + 1}`}>
-                            <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-cover" />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <div className="rounded-full bg-red-600 p-1"><Play className="h-2.5 w-2.5 fill-white text-white" /></div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {productDetailContent?.guideImages.length ? (
+                <Card className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+                  <div className="mb-3 flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Product guide</p>
+                      <h2 className="mt-1 text-base font-semibold sm:text-lg">What this product does</h2>
+                    </div>
+                    <p className="hidden max-w-sm text-right text-xs leading-relaxed text-muted-foreground sm:block">
+                      Quick visual notes from the product guide.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    {productDetailContent.guideImages.map((image, index) => (
+                      <button
+                        type="button"
+                        key={image}
+                        onClick={() => openGuideImageAt(index)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openGuideImageAt(index);
+                          }
+                        }}
+                        className="group relative aspect-square w-[168px] flex-shrink-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-[190px] lg:w-[210px]"
+                        aria-label={`Open ${product.displayTitle} guide image ${index + 1}`}
+                      >
+                        <OptimizedImage
+                          src={image}
+                          alt={`${product.displayTitle} guide ${index + 1}`}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                          width={420}
+                          q={72}
+                        />
+                        <span className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary opacity-0 shadow-sm ring-1 ring-black/5 transition group-hover:opacity-100 group-focus:opacity-100">
+                          <Maximize2 className="h-4 w-4" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              ) : null}
 
               {/* ============================================================ */}
               {/* PRODUCT DETAILS: How to Use + Best For                        */}
               {/* ============================================================ */}
-              {(product.usage || product.targetAudience.length > 0) && (
+              {(resolvedUsageSteps.length > 0 || bestFitAudiences(product).length > 0) && (
                 <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-                  {product.usage && (
-                    <Card className="rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
-                      <h2 className="text-base sm:text-lg font-semibold mb-3">How to Use</h2>
-                      <p className="text-sm leading-relaxed text-muted-foreground">{product.usage}</p>
+                  {resolvedUsageSteps.length > 0 && (
+                    <Card className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Garden use</p>
+                          <h2 className="mt-1 text-base font-semibold sm:text-lg">How to Use</h2>
+                        </div>
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Quick guide</span>
+                      </div>
+                      <div className="space-y-3">
+                        {resolvedUsageSteps.map((step, index) => (
+                          <div key={step} className="flex gap-3 rounded-xl bg-stone-50 p-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                              {index + 1}
+                            </span>
+                            <p className="text-sm leading-relaxed text-stone-600">{step}</p>
+                          </div>
+                        ))}
+                      </div>
                     </Card>
                   )}
-                  {product.targetAudience.length > 0 && (
-                    <Card className="rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
-                      <h2 className="text-base sm:text-lg font-semibold mb-3">Best For</h2>
-                      <ul className="space-y-2">
-                        {product.targetAudience.map((item) => (
-                          <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Leaf className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            {item}
-                          </li>
+                  {bestFitAudiences(product).length > 0 && (
+                    <Card className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+                      <div className="mb-4">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b38a58]">Best fit</p>
+                        <h2 className="mt-1 text-base font-semibold sm:text-lg">Best For</h2>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {bestFitAudiences(product).map((item) => (
+                          <div key={item} className="flex min-h-[42px] items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700">
+                            <Leaf className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                            <span>{item}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
+                      <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-900">
+                        {bestFitNote(product)}
+                      </p>
                     </Card>
                   )}
                 </div>
@@ -862,9 +1484,9 @@ const ProductDetail = () => {
                 <p className="mt-2 text-sm text-white/70">Call us for delivery timing, bulk questions, or product fit.</p>
                 <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
                   <Button size="lg" className="min-h-[48px] bg-primary hover:bg-primary/90 shadow-lg touch-manipulation" asChild>
-                    <a href="tel:+16027267211">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      Call (602) 726-7211
+                    <a href={CUSTOMER_SUPPORT_PHONE_TEL}>
+                      <Phone className="mr-2 h-4 w-4" />
+                      Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                     </a>
                   </Button>
                 </div>
@@ -878,66 +1500,192 @@ const ProductDetail = () => {
       {/* GALLERY DIALOG                                                      */}
       {/* ================================================================== */}
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-        <DialogContent className="sm:max-w-5xl border-none bg-black/95 text-white">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{product?.displayTitle ?? "Product gallery"}</DialogTitle>
-            <DialogDescription>Product images and videos.</DialogDescription>
-          </DialogHeader>
+        <DialogContent
+          hideCloseButton
+          className="flex h-[100svh] max-h-[100svh] w-screen !max-w-[100vw] !gap-0 overflow-hidden rounded-none border-none bg-[#061827] !p-0 text-white shadow-2xl sm:h-[92vh] sm:max-h-[92vh] sm:max-w-6xl sm:rounded-2xl"
+        >
           {galleryItems.length > 0 ? (
-            <div className="space-y-4">
-              <div className="relative overflow-hidden rounded-2xl bg-black">
-                <div key={activeGalleryIndex} className="animate-in fade-in-0 duration-300">
-                  {activeGalleryItem?.type === "video" ? (
-                    <YouTubePlayer videoId={activeGalleryItem.videoId} title={product?.displayTitle ?? "Video"} className="w-full" autoPlay muted={false} />
-                  ) : activeGalleryItem?.type === "image" ? (
-                    <OptimizedImage src={activeGalleryItem.url} alt={product?.displayTitle ?? "Product"} className="mx-auto max-h-[70vh] w-full object-contain" />
-                  ) : null}
+            <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#07111e] px-3 py-2.5 sm:px-5 sm:py-3">
+                <div className="min-w-0 text-left">
+                  <DialogTitle className="truncate text-base font-bold leading-tight text-white sm:text-lg">
+                    {product?.displayTitle ?? "Product gallery"}
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 text-xs text-white/55">
+                    Product images and videos · {activeGalleryIndex + 1} of {galleryItems.length}
+                  </DialogDescription>
                 </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="hidden rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 sm:inline-flex">
+                    {activeGalleryIndex + 1} of {galleryItems.length}
+                  </span>
+                  <DialogClose className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-[#061827] shadow-lg shadow-black/30 transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/70">
+                    <X className="h-4 w-4" />
+                    Close
+                  </DialogClose>
+                </div>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col pb-[env(safe-area-inset-bottom)]">
+                <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 sm:p-5">
+                  <div className="flex h-full max-h-[calc(100svh-166px-env(safe-area-inset-bottom))] min-h-0 w-full items-center justify-center overflow-hidden rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(92vh-190px)] sm:rounded-2xl">
+                    <div key={activeGalleryIndex} className="flex h-full w-full animate-in items-center justify-center fade-in-0 duration-300">
+                      {activeGalleryItem?.type === "video" ? (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <YouTubePlayer videoId={activeGalleryItem.videoId} title={product?.displayTitle ?? "Video"} className="w-full" autoPlay muted={false} />
+                        </div>
+                      ) : activeGalleryItem?.type === "image" ? (
+                        <OptimizedImage
+                          src={activeGalleryItem.url}
+                          alt={product?.displayTitle ?? "Product"}
+                          className="h-full max-h-full w-full max-w-full object-contain p-3 sm:p-4"
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                  {galleryItems.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="absolute left-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:left-7 sm:h-14 sm:w-14"
+                        onClick={goToPrev}
+                        aria-label="Previous"
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </button>
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:right-7 sm:h-14 sm:w-14"
+                        onClick={goToNext}
+                        aria-label="Next"
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
                 {galleryItems.length > 1 && (
+                  <div className="border-t border-white/10 bg-[#07111e] px-3 py-3 sm:px-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="shrink-0 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+                        {activeGalleryIndex + 1} / {galleryItems.length}
+                      </p>
+                      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-1">
+                        {galleryItems.map((item, index) => {
+                          const isActive = index === activeGalleryIndex;
+                          if (item.type === "image") {
+                            return (
+                              <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
+                                className={cn(
+                                  "h-14 w-16 flex-shrink-0 overflow-hidden rounded-lg border bg-white transition sm:h-16 sm:w-20",
+                                  isActive ? "border-white ring-2 ring-white/60 scale-105" : "border-white/20 opacity-70 hover:opacity-100"
+                                )}
+                                aria-label={`Image ${index + 1}`} aria-current={isActive}>
+                                <OptimizedImage src={item.url} alt="" className="h-full w-full object-contain bg-white p-1" />
+                              </button>
+                            );
+                          }
+                          return (
+                            <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
+                              className={cn(
+                                "relative h-14 w-16 flex-shrink-0 overflow-hidden rounded-lg border bg-white transition sm:h-16 sm:w-20",
+                                isActive ? "border-white ring-2 ring-white/60 scale-105" : "border-white/20 opacity-70 hover:opacity-100"
+                              )}
+                              aria-label={`Video ${index + 1}`} aria-current={isActive}>
+                              <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-contain bg-white p-1" />
+                              <div className="absolute bottom-1 right-1 rounded-full bg-red-600 p-1">
+                                <Play className="h-2.5 w-2.5 text-white fill-white" />
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#07111e] px-4 py-3 sm:px-5">
+                <DialogTitle className="text-base font-bold text-white">Product gallery</DialogTitle>
+                <DialogClose className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-[#061827]">
+                  <X className="h-4 w-4" />
+                  Close
+                </DialogClose>
+              </div>
+              <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+                <ImagePlus className="h-12 w-12 text-white/40 mb-4" />
+                <p className="text-sm text-white/60">No media available.</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isGuideGalleryOpen} onOpenChange={setIsGuideGalleryOpen}>
+        <DialogContent
+          hideCloseButton
+          className="flex h-[100svh] max-h-[100svh] w-screen !max-w-[100vw] !gap-0 overflow-hidden rounded-none border-none bg-[#061827] !p-0 text-white shadow-2xl sm:h-auto sm:max-h-[88vh] sm:max-w-4xl sm:rounded-2xl"
+        >
+          {activeGuideImage ? (
+            <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#07111e] px-3 py-2.5 sm:px-5 sm:py-3">
+                <div className="min-w-0 text-left">
+                  <DialogTitle className="truncate text-base font-bold leading-tight text-white sm:text-lg">
+                    {product?.displayTitle ?? "Product guide"}
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 text-xs text-white/55">
+                    Product guide · {activeGuideImageIndex + 1} of {guideImages.length}
+                  </DialogDescription>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="hidden rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 sm:inline-flex">
+                    {activeGuideImageIndex + 1} of {guideImages.length}
+                  </span>
+                  <DialogClose className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-[#061827] shadow-lg shadow-black/30 transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/70">
+                    <X className="h-4 w-4" />
+                    Close
+                  </DialogClose>
+                </div>
+              </div>
+
+              <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:max-h-[calc(88vh-70px)] sm:p-5">
+                <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(88vh-110px)] sm:rounded-2xl">
+                  <div key={activeGuideImageIndex} className="flex h-full w-full animate-in items-center justify-center fade-in-0 duration-300">
+                    <OptimizedImage
+                      src={activeGuideImage}
+                      alt={`${product?.displayTitle ?? "Product"} guide ${activeGuideImageIndex + 1}`}
+                      className="h-full max-h-[calc(100svh-86px)] w-full max-w-full object-contain p-2 sm:max-h-[calc(88vh-112px)] sm:p-4"
+                      width={1200}
+                      q={82}
+                    />
+                  </div>
+                </div>
+                {guideImages.length > 1 && (
                   <>
-                    <button type="button" className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white hover:bg-white/40 backdrop-blur-sm transition" onClick={goToPrev} aria-label="Previous">
-                      <ChevronLeft className="h-5 w-5" />
+                    <button
+                      type="button"
+                      className="absolute left-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:left-7 sm:h-14 sm:w-14"
+                      onClick={goToPrevGuideImage}
+                      aria-label="Previous guide image"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
                     </button>
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white hover:bg-white/40 backdrop-blur-sm transition" onClick={goToNext} aria-label="Next">
-                      <ChevronRight className="h-5 w-5" />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:right-7 sm:h-14 sm:w-14"
+                      onClick={goToNextGuideImage}
+                      aria-label="Next guide image"
+                    >
+                      <ChevronRight className="h-6 w-6" />
                     </button>
                   </>
                 )}
               </div>
-              {galleryItems.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {galleryItems.map((item, index) => {
-                    const isActive = index === activeGalleryIndex;
-                    if (item.type === "image") {
-                      return (
-                        <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
-                          className={`h-14 w-18 flex-shrink-0 overflow-hidden rounded-lg border transition ${isActive ? "border-white ring-2 ring-white/50 scale-105" : "border-white/30 hover:border-white/60"}`}
-                          aria-label={`Image ${index + 1}`} aria-current={isActive}>
-                          <OptimizedImage src={item.url} alt="" className="h-full w-full object-cover" />
-                        </button>
-                      );
-                    }
-                    return (
-                      <button key={`${item.url}-${index}`} type="button" onClick={() => setActiveGalleryIndex(index)}
-                        className={`relative h-14 w-18 flex-shrink-0 overflow-hidden rounded-lg border transition ${isActive ? "border-white ring-2 ring-white/50 scale-105" : "border-white/30 hover:border-white/60"}`}
-                        aria-label={`Video ${index + 1}`} aria-current={isActive}>
-                        <img src={`https://img.youtube.com/vi/${item.videoId}/hqdefault.jpg`} alt="" className="h-full w-full object-cover" />
-                        <div className="absolute bottom-1 right-1 rounded-full bg-red-600 p-0.5">
-                          <Play className="h-2.5 w-2.5 text-white fill-white" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <p className="text-center text-xs text-white/60">{activeGalleryIndex + 1} of {galleryItems.length}</p>
             </div>
-          ) : (
-            <div className="flex flex-col items-center py-12 text-center">
-              <ImagePlus className="h-12 w-12 text-white/40 mb-4" />
-              <p className="text-sm text-white/60">No media available.</p>
-            </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

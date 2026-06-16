@@ -8,7 +8,12 @@ const TWILIO_AUTH = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER;
 const RODO_PHONE = process.env.RODO_PHONE;
 
-export async function sendSmsNotification(message: string, to: string = RODO_PHONE): Promise<boolean> {
+export async function sendSmsNotification(message: string, to: string = RODO_PHONE || ""): Promise<boolean> {
+  if (!to) {
+    console.warn("No SMS recipient configured, skipping SMS");
+    return false;
+  }
+
   if (!TWILIO_SID || !TWILIO_AUTH || !TWILIO_FROM) {
     console.warn("Twilio not configured, skipping SMS");
     return false;

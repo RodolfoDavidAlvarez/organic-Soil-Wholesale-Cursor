@@ -41,7 +41,7 @@ export const products = pgTable("products", {
   certifications: text("certifications"),
   features: text("features"),
   sizeOptions: text("size_options"),
-  sizeCategories: jsonb("size_categories").array().$type<SizeCategory[]>().optional(),
+  sizeCategories: jsonb("size_categories").array().$type<SizeCategory[]>(),
   productType: text("product_type"),
   safetyPrecautions: text("safety_precautions"),
   warranty: text("warranty"),

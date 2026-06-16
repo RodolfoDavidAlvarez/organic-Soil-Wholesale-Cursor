@@ -2,18 +2,34 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, ChevronDown, Leaf, Sprout, Flower, Droplet, Phone, User, LogOut, ArrowRight, MapPin } from "lucide-react";
+import { Menu, ShoppingCart, ChevronDown, Phone, User, LogOut, ArrowRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
-// Define the main product categories with icons
-const PRODUCT_CATEGORIES = [
-  { value: "Amendment", label: "Amendment", icon: Leaf },
-  { value: "Mulch", label: "Mulch", icon: Sprout },
-  { value: "Potting Soil", label: "Potting Soil", icon: Flower },
-  { value: "Concentrated Amendment", label: "Concentrated Amendment", icon: Droplet },
+const MENU_PRODUCTS = [
+  {
+    name: "Simon's Gold",
+    type: "Dairy Compost",
+    path: "/products/simons-gold",
+  },
+  {
+    name: "Mikey's Worm Poop",
+    type: "Worm Castings",
+    path: "/products/mikeys-worm-poop",
+  },
+  {
+    name: "Soil Craft",
+    type: "Premium Potting Soil",
+    path: "/products/soil-craft",
+  },
+  {
+    name: "Nature's Blanket Premium",
+    type: "Premium Dark Mulch",
+    path: "/products/natures-blanket-premium",
+  },
 ];
 
 const Header = () => {
@@ -57,12 +73,6 @@ const Header = () => {
     return location === path;
   };
 
-  const handleCategorySelect = (category: string) => {
-    setIsMobileMenuOpen(false);
-    const encodedCategory = encodeURIComponent(category);
-    setLocation(`/products?category=${encodedCategory}`);
-  };
-
   const navLinks = [
     { name: "Products", path: "/products" },
     { name: "About Us", path: "/about" },
@@ -81,6 +91,35 @@ const Header = () => {
       window.removeEventListener("orientationchange", updateHeaderHeight);
     };
   }, [updateHeaderHeight]);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const enforceOfficialSupportPhone = () => {
+      header.querySelectorAll<HTMLAnchorElement>("[data-official-support-phone]").forEach((link) => {
+        if (link.getAttribute("href") !== CUSTOMER_SUPPORT_PHONE_TEL) {
+          link.setAttribute("href", CUSTOMER_SUPPORT_PHONE_TEL);
+        }
+
+        const textNode = link.querySelector<HTMLElement>("[data-official-support-phone-text]");
+        if (textNode && textNode.textContent !== CUSTOMER_SUPPORT_PHONE_DISPLAY) {
+          textNode.textContent = CUSTOMER_SUPPORT_PHONE_DISPLAY;
+        }
+      });
+    };
+
+    enforceOfficialSupportPhone();
+    const observer = new MutationObserver(enforceOfficialSupportPhone);
+    observer.observe(header, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     updateHeaderHeight();
@@ -110,7 +149,7 @@ const Header = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden lg:flex items-center space-x-6">
             {/* Products Dropdown */}
             <div className="relative group flex items-center">
               <Link href="/products">
@@ -140,7 +179,7 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-56 p-2 bg-white border border-border shadow-lg rounded-xl"
+                  className="w-72 p-2 bg-white border border-border shadow-lg rounded-xl"
                 >
                   <DropdownMenuItem
                     onClick={() => {
@@ -152,19 +191,33 @@ const Header = () => {
                     <span>All Products</span>
                   </DropdownMenuItem>
                   <div className="h-px w-full bg-border my-1"></div>
-                  {PRODUCT_CATEGORIES.map((category) => {
-                    const Icon = category.icon;
-                    return (
-                      <DropdownMenuItem
-                        key={category.value}
-                        onClick={() => handleCategorySelect(category.value)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm cursor-pointer rounded-lg hover:bg-primary/5 hover:text-primary transition-colors duration-200"
-                      >
-                        <Icon className="h-4 w-4 text-primary" />
-                        <span>{category.label}</span>
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Pay &amp; pick up
+                  </div>
+                  {MENU_PRODUCTS.map((product) => (
+                    <DropdownMenuItem
+                      key={product.path}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setLocation(product.path);
+                      }}
+                      className="flex cursor-pointer flex-col items-start gap-0.5 rounded-lg px-4 py-3 text-sm transition-colors duration-200 hover:bg-primary/5 hover:text-primary"
+                    >
+                      <span className="font-semibold">{product.name}</span>
+                      <span className="text-xs text-muted-foreground">{product.type}</span>
+                    </DropdownMenuItem>
+                  ))}
+                  <div className="h-px w-full bg-border my-1"></div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setLocation("/products#request-quote");
+                    }}
+                    className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium cursor-pointer hover:bg-primary/5 hover:text-primary transition-colors duration-200"
+                  >
+                    <span>Bulk quote catalog</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -196,9 +249,17 @@ const Header = () => {
               <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-primary transition-all duration-300 hover:w-full"></span>
             </a>
             <div className="flex items-center gap-3">
-              <a href="tel:6027267211" className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200">
+              <a
+                href={CUSTOMER_SUPPORT_PHONE_TEL}
+                aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
+                data-callrail-ignore="true"
+                data-dynamic-number-ignore="true"
+                data-call-tracking-ignore="true"
+                data-official-support-phone="true"
+                className="no-call-tracking flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200"
+              >
                 <Phone className="h-4 w-4" />
-                <span className="font-medium">(602) 726-7211</span>
+                <span className="font-medium" data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
               </a>
               {/* Authentication buttons temporarily hidden */}
               {false &&
@@ -244,10 +305,11 @@ const Header = () => {
                 <button
                   type="button"
                   onClick={openDrawer}
+                  aria-label={`Open cart, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
                   className="relative flex items-center gap-2 border border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300 rounded-md px-4 py-2 text-sm font-medium"
                 >
                   <ShoppingCart className="h-4 w-4" />
-                  <span>Quote Cart</span>
+                  <span>Cart</span>
                   {totalItems > 0 && (
                     <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                       {totalItems}
@@ -258,17 +320,31 @@ const Header = () => {
             </div>
           </nav>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          {/* Mobile + iPad portrait Cart + Menu (desktop nav kicks in at lg/1024px) */}
+          <div className="lg:hidden flex items-center gap-1">
+            {/* Visible cart icon so customers don't have to dig through the menu */}
+            <button
+              type="button"
+              onClick={openDrawer}
+              aria-label="Open cart"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-primary hover:bg-primary/10 active:bg-primary/20 touch-manipulation"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {totalItems}
+                </span>
+              )}
+            </button>
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Button variant="ghost" size="icon" className="h-11 w-11 touch-manipulation" aria-label="Open menu">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <div className="flex flex-col h-full">
-                  <div className="flex flex-col gap-2 mb-6">
+              <SheetContent side="right" className="flex h-[100svh] max-h-[100svh] w-[min(90vw,360px)] flex-col overflow-hidden p-0 sm:w-[400px]">
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="flex flex-col gap-2 border-b border-border/70 px-5 pb-4 pr-16 pt-5">
                     <Link href="/">
                       <div className="flex flex-col leading-tight cursor-pointer">
                         <span className="text-lg font-heading font-bold">
@@ -281,8 +357,8 @@ const Header = () => {
                     </Link>
                   </div>
 
-                  <nav className="flex flex-col space-y-2">
-                    {/* Products Section with Categories */}
+                  <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+                    {/* Products Section */}
                     <div className="space-y-1">
                       <Link href="/products">
                         <div
@@ -295,16 +371,30 @@ const Header = () => {
                           Products
                         </div>
                       </Link>
-                      <div className="pl-4 space-y-1">
-                        {PRODUCT_CATEGORIES.map((category) => (
-                          <div
-                            key={category.value}
-                            onClick={() => handleCategorySelect(category.value)}
-                            className="py-2 px-4 rounded-md text-sm text-foreground/80 hover:bg-primary/5 hover:text-primary cursor-pointer"
-                          >
-                            {category.label}
-                          </div>
+                      <div className="space-y-2 pl-3">
+                        {MENU_PRODUCTS.map((product) => (
+                          <Link key={product.path} href={product.path}>
+                            <div className="rounded-lg border border-border/70 bg-white px-4 py-3 text-foreground shadow-sm transition-colors duration-200 hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-semibold leading-snug">{product.name}</div>
+                                  <div className="mt-0.5 text-xs leading-snug text-muted-foreground">{product.type}</div>
+                                </div>
+                                <span className="mt-0.5 shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                                  Pickup
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
                         ))}
+                        <Link href="/products#request-quote">
+                          <div
+                            className="flex items-center justify-between rounded-md px-4 py-3 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-primary/5"
+                          >
+                            <span>Bulk quote catalog</span>
+                            <ArrowRight className="h-4 w-4" />
+                          </div>
+                        </Link>
                       </div>
                     </div>
 
@@ -329,8 +419,6 @@ const Header = () => {
                     >
                       Our Education Platform
                     </a>
-
-                    <div className="h-px w-full bg-border my-4"></div>
 
                     {/* Auth section in mobile menu - temporarily hidden */}
                     {false &&
@@ -372,28 +460,36 @@ const Header = () => {
                           </Link>
                         </div>
                       ))}
+                  </nav>
 
-                    <div className="h-px w-full bg-border my-4"></div>
-
-                    <a href="tel:6027267211" className="flex items-center gap-2 py-3 px-4 text-primary">
+                  <div className="shrink-0 border-t border-border/80 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.06)]">
+                    <a
+                      href={CUSTOMER_SUPPORT_PHONE_TEL}
+                      aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
+                      data-callrail-ignore="true"
+                      data-dynamic-number-ignore="true"
+                      data-call-tracking-ignore="true"
+                      data-official-support-phone="true"
+                      className="no-call-tracking mb-3 flex min-h-[44px] items-center justify-center gap-2 rounded-md text-primary"
+                    >
                       <Phone className="h-4 w-4" />
-                      <span className="font-medium">(602) 726-7211</span>
+                      <span className="font-medium" data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
                     </a>
 
                     <Button
-                      className="w-full bg-primary hover:bg-primary/90 text-white shadow-md relative"
+                      className="relative h-12 w-full bg-primary text-white shadow-md hover:bg-primary/90"
                       size="lg"
                       onClick={() => { setIsMobileMenuOpen(false); openDrawer(); }}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
-                      Quote Cart
+                      Cart
                       {totalItems > 0 && (
-                        <span className="ml-2 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center">
+                        <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-primary">
                           {totalItems}
                         </span>
                       )}
                     </Button>
-                  </nav>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

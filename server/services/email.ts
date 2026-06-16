@@ -1,5 +1,10 @@
 import { Resend } from "resend";
 import { supabase } from "../db/supabase.js";
+import {
+  COMPANY_ADDRESS,
+  COMPANY_NAME,
+  CUSTOMER_SUPPORT_PHONE_DISPLAY,
+} from "../config/contact.js";
 
 // Initialize Resend with API key
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -7,9 +12,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Email configuration
 const FROM_EMAIL = "Organic Soil Wholesale <info@soilseedandwater.com>";
 const REPLY_TO_EMAIL = "ralvarez@soilseedandwater.com";
-const COMPANY_NAME = "Organic Soil Wholesale";
-const COMPANY_PHONE = "(602) 726-7211";
-const COMPANY_ADDRESS = "1634 N 19th Ave, Phoenix, AZ 85009";
+const COMPANY_PHONE = CUSTOMER_SUPPORT_PHONE_DISPLAY;
 
 // Get active admin emails for a specific notification type
 async function getAdminEmailsForNotification(notificationType: string): Promise<string[]> {

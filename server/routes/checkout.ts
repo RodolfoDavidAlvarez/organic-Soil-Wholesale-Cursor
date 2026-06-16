@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
+import { quoteTrucking } from './quoteRequests.js';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ function getStripe() {
       throw new Error('Stripe is not configured');
     }
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-06-20',
+      apiVersion: '2025-08-27.basil',
     });
   }
   return stripe;
@@ -25,48 +26,115 @@ function getStripe() {
 // Create checkout session
 router.post('/create-session', async (req, res) => {
   try {
-    const { items, customerInfo, pickupTime, locationId, isQuickOrder } = req.body;
+    const {
+      items,
+      customerInfo,
+      pickupTime,
+      locationId,
+      isQuickOrder,
+      discountCode,
+      fulfillmentType,
+      deliveryAddress,
+    } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'No items to check out' });
+    }
+
+    // Discount handling — extend here as real codes get added.
+    // TEST = 100% off (free order, skips Stripe). Reserved for QA only.
+    const normalizedDiscount = typeof discountCode === 'string' ? discountCode.trim().toUpperCase() : null;
+    let discountPercent = 0;
+    if (normalizedDiscount === 'TEST') discountPercent = 100;
+
+    const isDelivery = fulfillmentType === 'delivery';
+    let truckingQuote: Awaited<ReturnType<typeof quoteTrucking>> | null = null;
+    const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
+      ? deliveryAddress.preferredDate.trim()
+      : '';
+    const preferredDeliveryWindow = isDelivery && typeof deliveryAddress?.preferredWindow === 'string'
+      ? deliveryAddress.preferredWindow.trim()
+      : '';
+
+    if (isDelivery) {
+      const deliveryZip = typeof deliveryAddress?.zip === 'string' ? deliveryAddress.zip.trim() : '';
+      if (!/^\d{5}$/.test(deliveryZip)) {
+        return res.status(400).json({ error: 'Delivery ZIP is required (5 digits)' });
+      }
+
+      try {
+        truckingQuote = await quoteTrucking({
+          items,
+          zip: deliveryZip,
+          roughAccess: !!deliveryAddress?.roughAccess,
+          originKey: deliveryAddress?.originKey,
+        });
+      } catch (error) {
+        return res.status(400).json({
+          error: `Could not price delivery: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
+    }
+
     const customerNotes = [
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
       typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
+      normalizedDiscount && discountPercent > 0 ? `Discount applied: ${normalizedDiscount} (-${discountPercent}%)` : null,
+      isDelivery && deliveryAddress ? `Delivery to: ${[deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')}` : null,
+      isDelivery && truckingQuote ? `Delivery: ${truckingQuote.truckLabel}, ~${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel} ($${truckingQuote.costDollars})` : null,
+      isDelivery && preferredDeliveryDate ? `Preferred delivery day: ${preferredDeliveryDate}` : null,
+      isDelivery && preferredDeliveryWindow ? `Preferred delivery window: ${preferredDeliveryWindow}` : null,
+      deliveryAddress?.roughAccess ? 'Site access: hard-to-reach / off-pavement (+20% modifier applied)' : null,
+      // Semi-truck access: only call out the negative case. Customer opted out
+      // of the pre-checked semi-access question, so we MUST call before dispatch.
+      isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room — call before dispatching.' : null,
       customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
     ].filter(Boolean).join('\n');
 
     // Use the provided locationId or default to Phoenix (1)
     const checkoutLocationId = locationId || 1;
 
-    // Validate inventory availability
-    const inventoryChecks = await Promise.all(
-      items.map(async (item: any) => {
-        const { data } = await supabase
-          .from('inventory')
-          .select('quantity_available')
-          .eq('product_id', item.productId)
-          .eq('location_id', checkoutLocationId)
-          .eq('size_option', item.sizeOption)
-          .single();
+    // Validate inventory availability — skipped on TEST discount so QA flows don't
+    // get blocked by zero inventory rows in dev.
+    if (discountPercent < 100) {
+      const inventoryChecks = await Promise.all(
+        items.map(async (item: any) => {
+          const { data } = await supabase
+            .from('inventory')
+            .select('quantity_available')
+            .eq('product_id', item.productId)
+            .eq('location_id', checkoutLocationId)
+            .eq('size_option', item.sizeOption)
+            .single();
 
-        return {
-          productId: item.productId,
-          requested: item.quantity,
-          available: data?.quantity_available || 0,
-          canFulfill: (data?.quantity_available || 0) >= item.quantity
-        };
-      })
-    );
+          return {
+            productId: item.productId,
+            requested: item.quantity,
+            available: data?.quantity_available || 0,
+            // Treat missing inventory rows as "ok to sell" — many products don't
+            // have per-size inventory rows yet but are still actively offered.
+            canFulfill: data == null ? true : (data.quantity_available ?? 0) >= item.quantity,
+          };
+        })
+      );
 
-    const unavailableItems = inventoryChecks.filter(check => !check.canFulfill);
-    if (unavailableItems.length > 0) {
-      return res.status(400).json({
-        error: 'Some items are not available',
-        unavailableItems
-      });
+      const unavailableItems = inventoryChecks.filter(check => !check.canFulfill);
+      if (unavailableItems.length > 0) {
+        return res.status(400).json({
+          error: 'Some items are not available',
+          unavailableItems
+        });
+      }
     }
 
     // Total in cents — `orders.total` is integer (legacy schema stores cents)
-    const totalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    const productSubtotalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
+    const rawSubtotal = productSubtotalDollars + truckingDollars;
+    const totalDollars = Math.max(0, rawSubtotal * (1 - discountPercent / 100));
     const totalCents = Math.round(totalDollars * 100);
+    const isFreeOrder = totalCents === 0 && discountPercent > 0;
 
     // Create order in database with pending status
     const orderData: any = {
@@ -74,9 +142,9 @@ router.post('/create-session', async (req, res) => {
       phone: customerInfo.phone,
       status: 'pending_payment',
       payment_status: 'pending',
-      delivery_type: 'pickup',
-      fulfillment_type: 'pickup',
-      pickup_scheduled_at: pickupTime || null,
+      delivery_type: isDelivery ? 'delivery' : 'pickup',
+      fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+      pickup_scheduled_at: isDelivery ? null : (pickupTime || null),
       subtotal: totalCents,
       total: totalCents,
       total_amount: totalDollars,
@@ -84,11 +152,29 @@ router.post('/create-session', async (req, res) => {
       customer_name: customerInfo.name || customerInfo.businessName || null,
       customer_email: customerInfo.email || null,
       notes: customerNotes || null,
+      address: isDelivery && deliveryAddress
+        ? [deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')
+        : null,
+      delivery_address_json: isDelivery && deliveryAddress
+        ? {
+            line1: deliveryAddress.street || null,
+            city: deliveryAddress.city || null,
+            state: deliveryAddress.state || null,
+            zip: deliveryAddress.zip || null,
+            roughAccess: !!deliveryAddress.roughAccess,
+            semiAccess: deliveryAddress.semiAccess !== false,
+            originKey: deliveryAddress.originKey || null,
+          }
+        : null,
+      preferred_date: isDelivery && preferredDeliveryDate ? preferredDeliveryDate : null,
+      preferred_time_start: isDelivery && preferredDeliveryWindow ? preferredDeliveryWindow : null,
+      preferred_time_end: null,
       // Legacy NOT NULL JSONB column — mirror line items here too
       order_items: items.map((item: any) => ({
         product_id: item.productId,
         name: item.name,
         size: item.sizeOption,
+        unit: item.unit || null,
         quantity: item.quantity,
         price: item.price,
         total: item.price * item.quantity,
@@ -99,11 +185,11 @@ router.post('/create-session', async (req, res) => {
     if (isQuickOrder) {
       // Quick order uses name field
       orderData.business_name = customerInfo.company || customerInfo.name;
-      orderData.order_type = 'pickup';
+      orderData.order_type = isDelivery ? 'delivery' : 'pickup';
     } else {
       // Regular checkout uses businessName
       orderData.business_name = customerInfo.businessName;
-      orderData.order_type = 'regular';
+      orderData.order_type = isDelivery ? 'delivery' : 'regular';
     }
 
     const { data: order, error: orderError } = await supabase
@@ -131,6 +217,50 @@ router.post('/create-session', async (req, res) => {
 
     if (itemsError) throw itemsError;
 
+    // Free order path — skip Stripe entirely. Mark the order paid and fan out to
+    // MOS so yard reps see the test order in the iOS sales portal exactly like a
+    // real paid order. Customer/admin email sends and inventory reservation
+    // happen later via the same payment-success flow that the webhook triggers.
+    if (isFreeOrder) {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'paid',
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', order.id);
+
+      // Fan out to MOS pickup-orders so yard reps get the push notification.
+      forwardPickupOrderToMos({
+        osw_order_id: order.id,
+        osw_order_number: order.order_number || undefined,
+        customer_name: customerInfo?.name || customerInfo?.company || 'Test Customer',
+        customer_phone: customerInfo?.phone || '',
+        customer_email: customerInfo?.email || undefined,
+        items: items.map((item: any) => ({
+          product_id: item.productId,
+          product_name: item.name,
+          size_option: [item.sizeOption, item.unit].filter(Boolean).join(' · '),
+          quantity: item.quantity || 1,
+          unit_price_cents: Math.round((item.price || 0) * 100),
+          total_price_cents: Math.round((item.price || 0) * (item.quantity || 1) * 100),
+        })),
+        pickup_at: isDelivery ? undefined : (pickupTime || new Date().toISOString()),
+        slot_label: !isDelivery && pickupTime ? formatPickupSlot(pickupTime) : undefined,
+        total_cents: 0,
+        payment_status: 'paid',
+        source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
+      });
+
+      return res.json({
+        free: true,
+        orderId: order.id,
+        confirmationCode: order.confirmation_code,
+        url: null,
+      });
+    }
+
     // Absolutize image URLs — Stripe requires explicit scheme
     const origin = (req.headers.origin as string) || (req.headers.referer as string)?.replace(/(https?:\/\/[^/]+).*/, '$1') || 'https://organicsoilwholesale.com';
     const absolutizeImage = (url: string | undefined) => {
@@ -147,7 +277,7 @@ router.post('/create-session', async (req, res) => {
           currency: 'usd',
           product_data: {
             name: item.name,
-            description: item.sizeOption,
+            description: [item.sizeOption, item.unit].filter(Boolean).join(' · '),
             ...(img ? { images: [img] } : {}),
           },
           unit_amount: Math.round(item.price * 100),
@@ -156,16 +286,41 @@ router.post('/create-session', async (req, res) => {
       };
     });
 
+    if (isDelivery && truckingQuote && truckingQuote.costCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Delivery',
+            description: `${truckingQuote.truckLabel} - ${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel}${deliveryAddress?.roughAccess ? ' - rough-access site' : ''}`,
+          },
+          unit_amount: truckingQuote.costCents,
+        },
+        quantity: 1,
+      });
+    }
+
+    // Stripe requires absolute URLs with explicit scheme. Fall back to the public
+    // domain when the request has no Origin header (e.g., server-to-server).
+    const stripeOrigin = (req.headers.origin as string)
+      || ((req.headers.referer as string)?.replace(/(https?:\/\/[^/]+).*/, '$1'))
+      || process.env.PUBLIC_SITE_ORIGIN
+      || 'https://organicsoilwholesale.com';
+
     // Create Stripe checkout session
     const session = await getStripe().checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${req.headers.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
-      cancel_url: `${req.headers.origin}/checkout?canceled=true`,
+      success_url: `${stripeOrigin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+      cancel_url: `${stripeOrigin}/checkout?canceled=true`,
       metadata: {
         order_id: order.id.toString(),
-        pickup_time: pickupTime,
+        pickup_time: isDelivery ? '' : pickupTime,
+        fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+        delivery_zip: isDelivery ? deliveryAddress?.zip || '' : '',
+        preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
+        preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
         customer_type: customerInfo.customerCategory || '',
         company: customerInfo.company || '',
         marketing_opt_in: typeof customerInfo.marketingOptIn === 'boolean' ? String(customerInfo.marketingOptIn) : '',
@@ -421,14 +576,22 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
   console.log(`Order ${orderId} successfully paid and inventory reserved`);
 }
 
-/** Format a pickup ISO into a human slot label like "9 – 10 AM, Tue May 20" */
+/** Format a pickup ISO into a human slot label like "9 AM – 10 AM, Tue May 20"
+ *  in Phoenix local time (MST, no DST). Using UTC hours here was the cause of
+ *  notifications showing 7 hours off from the actual slot the customer picked. */
 function formatPickupSlot(pickupIso: string): string {
   try {
     const d = new Date(pickupIso);
-    const hour = d.getUTCHours();
-    const next = hour + 1;
-    const ampm = (h: number) => (h % 12 === 0 ? 12 : h % 12) + ' ' + (h < 12 ? 'AM' : 'PM');
-    const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Phoenix',
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: 'numeric', hour12: false,
+    }).formatToParts(d);
+    const get = (t: string) => parts.find(p => p.type === t)?.value || '';
+    const hour = Number(get('hour'));
+    const next = (hour + 1) % 24;
+    const ampm = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 || h === 24 ? 'AM' : 'PM'}`;
+    const date = `${get('weekday')} ${get('month')} ${get('day')}`;
     return `${ampm(hour)} – ${ampm(next)}, ${date}`;
   } catch {
     return pickupIso;

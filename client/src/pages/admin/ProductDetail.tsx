@@ -129,8 +129,10 @@ const getCatalogEntry = (key: string) => SIZE_CATALOG_BY_KEY[key as keyof typeof
 export default function AdminProductDetail() {
   const [, params] = useRoute("/admin/products/:productId");
   const [, navigate] = useLocation();
-  const isCreatingNew = params?.productId === "new";
-  const productId = parseProductId(params?.productId ?? null);
+  const routeParams = params as { productId?: string } | null;
+  const routeProductId = routeParams ? routeParams.productId : undefined;
+  const isCreatingNew = routeProductId === "new";
+  const productId = parseProductId(routeProductId ?? null);
   const isValidProductId = Number.isInteger(productId) && productId > 0;
 
   const { toast } = useToast();
@@ -215,10 +217,10 @@ export default function AdminProductDetail() {
       return;
     }
     const canonicalParam = buildAdminProductRouteParam(product);
-    if (canonicalParam && params?.productId !== canonicalParam) {
+    if (canonicalParam && routeProductId !== canonicalParam) {
       navigate(`/admin/products/${canonicalParam}`, { replace: true });
     }
-  }, [isCreatingNew, isValidProductId, navigate, params?.productId, product]);
+  }, [isCreatingNew, isValidProductId, navigate, routeProductId, product]);
 
   useEffect(() => {
     return () => {
@@ -304,7 +306,7 @@ export default function AdminProductDetail() {
       );
       if (!isCreatingNew) {
         const canonicalParam = buildAdminProductRouteParam(updatedProduct);
-        if (canonicalParam && params?.productId !== canonicalParam) {
+        if (canonicalParam && routeProductId !== canonicalParam) {
           navigate(`/admin/products/${canonicalParam}`, { replace: true });
         }
       }
@@ -1199,7 +1201,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
-                        minRows={4}
+                        rows={4}
                         value={editForm.description}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
                         placeholder="Write a helpful summary that appears below the product name..."
@@ -1275,7 +1277,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="features">Features</Label>
                       <Textarea
                         id="features"
-                        minRows={3}
+                        rows={3}
                         value={editForm.features}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, features: event.target.value } : prev))}
                         placeholder="List key features and soil benefits..."
@@ -1286,7 +1288,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="usage">Usage instructions</Label>
                       <Textarea
                         id="usage"
-                        minRows={3}
+                        rows={3}
                         value={editForm.usage}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, usage: event.target.value } : prev))}
                         placeholder="How to use this product..."
@@ -1297,7 +1299,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="story">Product story</Label>
                       <Textarea
                         id="story"
-                        minRows={4}
+                        rows={4}
                         value={editForm.story}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, story: event.target.value } : prev))}
                         placeholder="Share the origin story or agronomic insight..."
@@ -1308,7 +1310,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="ingredients">Ingredients</Label>
                       <Textarea
                         id="ingredients"
-                        minRows={3}
+                        rows={3}
                         value={editForm.ingredients}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, ingredients: event.target.value } : prev))}
                         placeholder="Composted dairy manure..."
@@ -1319,7 +1321,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="target-audience">Best for (Target audience)</Label>
                       <Textarea
                         id="target-audience"
-                        minRows={3}
+                        rows={3}
                         value={editForm.target_audience}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, target_audience: event.target.value } : prev))}
                         placeholder="Ornamental plants, Landscapers, Trees, Fruit growers..."
@@ -1332,7 +1334,7 @@ export default function AdminProductDetail() {
                       <Label htmlFor="recommended-uses">Recommended uses</Label>
                       <Textarea
                         id="recommended-uses"
-                        minRows={3}
+                        rows={3}
                         value={editForm.recommended_uses}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, recommended_uses: event.target.value } : prev))}
                         placeholder="Best applications for this product..."
@@ -1921,7 +1923,7 @@ export default function AdminProductDetail() {
                       </Label>
                       <Textarea
                         id="paypickup-description"
-                        minRows={4}
+                        rows={4}
                         value={editForm.pay_and_pickup_description}
                         onChange={(event) => setEditForm((prev) => (prev ? { ...prev, pay_and_pickup_description: event.target.value } : prev))}
                         placeholder="What customers should know about picking this up..."
@@ -2035,7 +2037,7 @@ export default function AdminProductDetail() {
                                 checked={option.isActive}
                                 onCheckedChange={(checked) =>
                                   updateSizePriceOptions((options) =>
-                                    options.map((opt) => (opt.key === option.key ? { ...opt, isActive: checked } : opt))
+                                    options.map((opt) => (opt.key === option.key ? { ...opt, isActive: checked === true } : opt))
                                   )
                                 }
                               />

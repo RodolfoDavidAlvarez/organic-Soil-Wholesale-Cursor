@@ -54,7 +54,7 @@ const Profile = () => {
         <div className="rounded-xl bg-white/70 border border-primary/10 shadow-sm p-5">
           <p className="text-sm text-muted-foreground leading-relaxed">
             Need to update your info? Give us a call at{' '}
-            <a href="tel:6027267211" className="text-primary font-medium hover:underline">(602) 726-7211</a> or email{' '}
+            <a href="tel:6026370032" className="text-primary font-medium hover:underline">(602) 637-0032</a> or email{' '}
             <a href="mailto:ralvarez@soilseedandwater.com" className="text-primary font-medium hover:underline">ralvarez@soilseedandwater.com</a>
           </p>
         </div>

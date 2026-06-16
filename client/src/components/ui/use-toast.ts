@@ -3,7 +3,9 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Was 1000000ms (~16min). Once Radix has visually closed the toast, purge it
+// from state quickly so it can't linger / re-render.
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;

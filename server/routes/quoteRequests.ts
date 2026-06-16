@@ -5,6 +5,311 @@ import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
 
 const router = Router();
 
+type OriginKey = 'phoenix' | 'congress';
+type TruckType = 'walking_floor' | 'flatbed_moffett' | 'hot_shot';
+
+interface QuoteItem {
+  sizeOption?: string;
+  format?: string;
+  quantity?: number;
+  unit?: string;
+  productName?: string;
+}
+
+interface Yard {
+  label: string;
+  lat: number;
+  lng: number;
+  zip: string;
+}
+
+interface TruckRate {
+  hourly_rate: number;
+  min_fee: number;
+  capacity_label: string;
+}
+
+interface TruckingRates {
+  walking_floor: TruckRate;
+  flatbed_moffett: TruckRate;
+  hot_shot: TruckRate;
+  avg_speed_mph: number;
+  road_factor: number;
+  unload_hours: number;
+}
+
+interface DistanceResult {
+  miles: number;
+  hours: number;
+  city: string | null;
+  state: string | null;
+  cached: boolean;
+}
+
+const OSW_YARDS: Record<OriginKey, Yard> = {
+  phoenix: { label: 'Phoenix, AZ', lat: 33.4675, lng: -112.1000, zip: '85009' },
+  congress: { label: 'Congress, AZ', lat: 34.1608, lng: -112.8515, zip: '85332' },
+};
+
+const DEFAULT_TRUCK_RATES: TruckingRates = {
+  walking_floor: { hourly_rate: 165, min_fee: 400, capacity_label: '24 tons / 90 cu yd per load' },
+  flatbed_moffett: { hourly_rate: 150, min_fee: 400, capacity_label: '22 pallets / 22 totes' },
+  hot_shot: { hourly_rate: 95, min_fee: 175, capacity_label: '4-10 pallets' },
+  avg_speed_mph: 55,
+  road_factor: 1.30,
+  unload_hours: 0.5,
+};
+
+async function getTruckingRates(): Promise<TruckingRates> {
+  try {
+    const { data } = await supabase
+      .from('sp_settings')
+      .select('value')
+      .eq('key', 'trucking_rates')
+      .single();
+
+    if (data?.value && typeof data.value === 'object') {
+      return { ...DEFAULT_TRUCK_RATES, ...data.value };
+    }
+  } catch {
+    // Settings table may not exist in local/dev yet. Defaults keep checkout usable.
+  }
+
+  return DEFAULT_TRUCK_RATES;
+}
+
+function inferFormat(rawKey: string | undefined): 'bulk' | 'pallet' | 'bag' {
+  const key = String(rawKey || '').toLowerCase();
+  if (key.includes('truckload') || key.includes('bulk')) return 'bulk';
+  if (key === '2-cy' || key.includes('cubic yard') || key.includes('cu yd') || key.includes(' cy ')) return 'bulk';
+  if (key.includes('pallet') || key.includes('tote') || key.includes('supersack') || key.includes('super sack')) return 'pallet';
+  return 'bag';
+}
+
+function pickTruck(items: QuoteItem[], milesEstimate = 100): { truck: TruckType; split: 'mixed' | null } {
+  const formats = items.map((item) => inferFormat(item.sizeOption || item.format));
+  const hasBulk = formats.includes('bulk');
+  const palletQty = items.reduce((sum, item, index) => {
+    if (formats[index] === 'pallet') return sum + (Number(item.quantity) || 1);
+    return sum;
+  }, 0);
+
+  if (hasBulk && palletQty === 0) return { truck: 'walking_floor', split: null };
+  if (hasBulk && palletQty > 0) return { truck: 'walking_floor', split: 'mixed' };
+  if (palletQty <= 4 && milesEstimate < 200) return { truck: 'hot_shot', split: null };
+  return { truck: 'flatbed_moffett', split: null };
+}
+
+function walkingFloorLoads(items: QuoteItem[]) {
+  return Math.max(1, items.reduce((sum, item) => {
+    if (inferFormat(item.sizeOption || item.format) !== 'bulk') return sum;
+    const unit = String(item.unit || item.sizeOption || item.format || '').toLowerCase();
+    const quantity = Math.max(1, Number(item.quantity) || 1);
+    const capacity = unit.includes('ton') ? 24 : 90;
+    return sum + Math.max(1, Math.ceil(quantity / capacity));
+  }, 0));
+}
+
+function haversineMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (degrees: number) => (degrees * Math.PI) / 180;
+  const earthRadiusMiles = 3958.7613;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  return 2 * earthRadiusMiles * Math.asin(Math.sqrt(h));
+}
+
+async function geocodeZip(zip: string): Promise<{ lat: number; lng: number; city: string; state: string }> {
+  const response = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`, {
+    signal: AbortSignal.timeout(5000),
+  });
+
+  if (!response.ok) throw new Error(`ZIP ${zip} not found`);
+
+  const data = await response.json() as {
+    places?: Array<{ latitude: string; longitude: string; 'place name': string; 'state abbreviation': string }>;
+  };
+  const place = data.places?.[0];
+  if (!place) throw new Error(`ZIP ${zip} not found`);
+
+  return {
+    lat: Number(place.latitude),
+    lng: Number(place.longitude),
+    city: place['place name'],
+    state: place['state abbreviation'],
+  };
+}
+
+async function getOneWayDistance(originKey: OriginKey, destZip: string, rates: TruckingRates): Promise<DistanceResult> {
+  try {
+    const { data: cached } = await supabase
+      .from('sp_trucking_distance_cache')
+      .select('miles_one_way, hours_one_way')
+      .eq('origin_key', originKey)
+      .eq('dest_zip', destZip)
+      .single();
+
+    if (cached) {
+      return {
+        miles: Number(cached.miles_one_way),
+        hours: Number(cached.hours_one_way),
+        city: null,
+        state: null,
+        cached: true,
+      };
+    }
+  } catch {
+    // Cache miss or local table missing.
+  }
+
+  const yard = OSW_YARDS[originKey];
+  const dest = await geocodeZip(destZip);
+  const straightMiles = haversineMiles(yard, dest);
+  const miles = +(straightMiles * (rates.road_factor || 1.3)).toFixed(1);
+  const hours = +(miles / (rates.avg_speed_mph || 55)).toFixed(2);
+
+  try {
+    await supabase.from('sp_trucking_distance_cache').upsert({
+      origin_key: originKey,
+      dest_zip: destZip,
+      miles_one_way: miles,
+      hours_one_way: hours,
+      source: 'haversine',
+      refreshed_at: new Date().toISOString(),
+    }, { onConflict: 'origin_key,dest_zip' });
+  } catch {
+    // Best effort only.
+  }
+
+  return { miles, hours, city: dest.city, state: dest.state, cached: false };
+}
+
+async function pickClosestOrigin(destZip: string, rates: TruckingRates): Promise<{ origin: OriginKey; distance: DistanceResult }> {
+  const phoenix = await getOneWayDistance('phoenix', destZip, rates);
+  try {
+    const congress = await getOneWayDistance('congress', destZip, rates);
+    if (phoenix.miles - congress.miles >= 30) {
+      return { origin: 'congress', distance: congress };
+    }
+  } catch {
+    // Phoenix remains the fallback.
+  }
+
+  return { origin: 'phoenix', distance: phoenix };
+}
+
+export async function quoteTrucking({
+  items,
+  zip,
+  roughAccess,
+  originKey,
+}: {
+  items: QuoteItem[];
+  zip: string;
+  roughAccess: boolean;
+  originKey?: OriginKey;
+}) {
+  const rates = await getTruckingRates();
+  const { origin, distance } = originKey
+    ? { origin: originKey, distance: await getOneWayDistance(originKey, zip, rates) }
+    : await pickClosestOrigin(zip, rates);
+
+  const { truck, split } = pickTruck(items || [], distance.miles);
+  const truckRate = rates[truck];
+  const loadCount = truck === 'walking_floor' ? walkingFloorLoads(items || []) : 1;
+  const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
+  const baseCost = roundTripHours * truckRate.hourly_rate;
+  const accessModifier = roughAccess ? 1.2 : 1.0;
+  const subtotal = Math.max(truckRate.min_fee, baseCost) * accessModifier * loadCount;
+  const costCents = Math.round(subtotal * 100);
+
+  return {
+    truck,
+    truckLabel: {
+      walking_floor: 'Walking-floor (bulk dump)',
+      flatbed_moffett: 'Flatbed with onboard forklift',
+      hot_shot: 'Hot-shot trailer',
+    }[truck],
+    originYard: origin,
+    originLabel: OSW_YARDS[origin].label,
+    milesRoundTrip: +(distance.miles * 2).toFixed(1),
+    hoursRoundTrip: +roundTripHours.toFixed(2),
+    accessModifier,
+    costCents,
+    costDollars: +(costCents / 100).toFixed(2),
+    split,
+    breakdown: {
+      milesOneWay: distance.miles,
+      hoursOneWay: distance.hours,
+      unloadHours: rates.unload_hours || 0.5,
+      hourlyRate: truckRate.hourly_rate,
+      minFee: truckRate.min_fee,
+      capacityLabel: truckRate.capacity_label,
+      loadCount,
+      destinationCity: distance.city,
+      destinationState: distance.state,
+      cached: distance.cached,
+    },
+  };
+}
+
+// Delivery trucking quote for checkout.
+router.post('/trucking', async (req, res) => {
+  try {
+    const { items, zip, roughAccess, originKey } = req.body || {};
+    const cleanZip = typeof zip === 'string' ? zip.trim() : '';
+
+    if (!/^\d{5}$/.test(cleanZip)) {
+      return res.status(400).json({ error: 'A 5-digit ZIP is required' });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items[] is required' });
+    }
+    if (originKey && originKey !== 'phoenix' && originKey !== 'congress') {
+      return res.status(400).json({ error: 'originKey must be phoenix or congress' });
+    }
+
+    const quote = await quoteTrucking({
+      items,
+      zip: cleanZip,
+      roughAccess: !!roughAccess,
+      originKey,
+    });
+
+    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
+    return res.json(quote);
+  } catch (error) {
+    console.error('[trucking quote]', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to calculate trucking' });
+  }
+});
+
+router.get('/trucking', async (req, res) => {
+  try {
+    const zip = typeof req.query.zip === 'string' ? req.query.zip : '';
+    const truck = typeof req.query.truck === 'string' ? req.query.truck : 'walking_floor';
+    const roughAccess = req.query.rough === '1';
+    const originKey = req.query.origin === 'phoenix' || req.query.origin === 'congress' ? req.query.origin : undefined;
+
+    if (!/^\d{5}$/.test(zip)) {
+      return res.status(400).json({ error: 'zip query param required (5 digits)' });
+    }
+
+    const simulatedItem =
+      truck === 'walking_floor'
+        ? { sizeOption: 'Truckload', quantity: 1 }
+        : truck === 'hot_shot'
+          ? { sizeOption: 'Pallet of 1CF Bags', quantity: 2 }
+          : { sizeOption: 'Pallet of 1CF Bags', quantity: 12 };
+
+    return res.json(await quoteTrucking({ items: [simulatedItem], zip, roughAccess, originKey }));
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'quote failed' });
+  }
+});
+
 // Submit quote request
 router.post('/submit', async (req, res) => {
   try {

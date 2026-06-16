@@ -1,5 +1,5 @@
 import React, { useState, ReactNode } from "react";
-import { useNavigate, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
   LayoutDashboard,
   Package,

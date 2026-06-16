@@ -1,3 +1,8 @@
+import {
+  CUSTOMER_SUPPORT_PHONE_DIGITS,
+  CUSTOMER_SUPPORT_PHONE_DISPLAY,
+} from "../config/contact.js";
+
 // Admin notification for contact form submissions
 export async function sendAdminContactFormNotification(contactDetails: {
   name: string;
@@ -159,10 +164,10 @@ export async function sendAdminContactFormNotification(contactDetails: {
   // Get active admin emails for contact forms
   const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_contact_forms", true);
 
-  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+  const adminEmails = data?.map((admin: { email: string }) => admin.email) || ["ralvarez@soilseedandwater.com"];
 
   // Send to all admins
-  const emailPromises = adminEmails.map((email) =>
+  const emailPromises = adminEmails.map((email: string) =>
     sendEmail({
       to: email,
       subject: `[CONTACT] ${contactDetails.subject || "New Contact Form"} - ${contactDetails.name}`,
@@ -357,10 +362,10 @@ export async function sendAdminQuoteRequestNotification(quoteDetails: {
   // Get active admin emails for quote requests
   const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_quote_requests", true);
 
-  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+  const adminEmails = data?.map((admin: { email: string }) => admin.email) || ["ralvarez@soilseedandwater.com"];
 
   // Send to all admins
-  const emailPromises = adminEmails.map((email) =>
+  const emailPromises = adminEmails.map((email: string) =>
     sendEmail({
       to: email,
       subject: `[QUOTE REQUEST] ${quoteDetails.company || quoteDetails.name} - ${quoteDetails.products.split("\n")[0].substring(0, 50)}...`,
@@ -530,10 +535,10 @@ export async function sendAdminSpecialRequestNotification(requestDetails: {
   // Get active admin emails for special requests
   const { data, error } = await supabase.from("admin_notifications").select("email").eq("active", true).eq("notify_special_requests", true);
 
-  const adminEmails = data?.map((admin) => admin.email) || ["ralvarez@soilseedandwater.com"];
+  const adminEmails = data?.map((admin: { email: string }) => admin.email) || ["ralvarez@soilseedandwater.com"];
 
   // Send to all admins
-  const emailPromises = adminEmails.map((email) =>
+  const emailPromises = adminEmails.map((email: string) =>
     sendEmail({
       to: email,
       subject: `[SPECIAL REQUEST] ${requestDetails.name} - ${requestDetails.message.substring(0, 50)}...`,
@@ -704,13 +709,13 @@ export async function sendCustomerQuoteConfirmation(leadDetails: { name: string;
 
             <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #e5e7eb; text-align: center;">
               <p style="margin: 0 0 8px 0; font-weight: 600; color: #1a1a1a;">Need something sooner?</p>
-              <p style="margin: 0; color: #4b5563;">Call us directly at <a href="tel:6027267211" style="color: #264027; font-weight: 600;">(602) 726-7211</a></p>
+              <p style="margin: 0; color: #4b5563;">Call us directly at <a href="tel:${CUSTOMER_SUPPORT_PHONE_DIGITS}" style="color: #264027; font-weight: 600;">${CUSTOMER_SUPPORT_PHONE_DISPLAY}</a></p>
             </div>
           </div>
           <div style="text-align: center; padding: 24px 32px; color: #9ca3af; font-size: 13px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
             <p style="margin: 4px 0; font-weight: 600; color: #6b7280;">Soil Seed & Water</p>
             <p style="margin: 4px 0;">1634 N 19th Ave, Phoenix, AZ 85009</p>
-            <p style="margin: 4px 0;"><a href="tel:6027267211" style="color: #6b7280;">(602) 726-7211</a></p>
+            <p style="margin: 4px 0;"><a href="tel:${CUSTOMER_SUPPORT_PHONE_DIGITS}" style="color: #6b7280;">${CUSTOMER_SUPPORT_PHONE_DISPLAY}</a></p>
           </div>
         </div>
       </div>

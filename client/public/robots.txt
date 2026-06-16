@@ -1,16 +1,16 @@
 User-agent: *
 Allow: /
 
-# Main sitemap
+Disallow: /checkout
+Disallow: /qr
+Disallow: /check-in
+Disallow: /order-confirmation
+Disallow: /pay-and-pickup
+Disallow: /drive-through
+Disallow: /rep/
+Disallow: /admin/
+Disallow: /portal/
+Disallow: /operations
+Disallow: /api/
+
 Sitemap: https://organicsoilwholesale.com/sitemap.xml
-
-# Disallow retail product pages that require smaller quantities
-Disallow: /retail/
-Disallow: /small-quantities/
-
-# Focus on commercial and wholesale content
-Allow: /products
-Allow: /landscapers
-Allow: /order
-Allow: /special-request
-Allow: /contact

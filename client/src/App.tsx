@@ -16,6 +16,7 @@ import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
+import { trackEvent } from "@/lib/analytics";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Products = lazy(() => import("@/pages/Products"));
@@ -32,7 +33,9 @@ const Nurseries = lazy(() => import("@/pages/Nurseries"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
+const YardMap = lazy(() => import("@/pages/YardMap"));
 const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
+const PublicOperationsCalendar = lazy(() => import("@/pages/PublicOperationsCalendar"));
 const Classes = lazy(() => import("@/pages/Classes"));
 const TriviaGame = lazy(() => import("@/pages/TriviaGame"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
@@ -103,9 +106,9 @@ function Router() {
     <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/products" component={Products} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
         <Route path="/products/:slug" component={ProductDetail} />
+        <Route path="/products" component={Products} />
         <Route path="/about" component={About} />
         <Route path="/contact" component={Contact} />
         <Route path="/faq" component={FAQ} />
@@ -117,9 +120,12 @@ function Router() {
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/store-locator" component={StoreLocatorEnhanced} />
+        <Route path="/yard-map" component={YardMap} />
         <Route path="/pay-and-pickup/:step?" component={PayAndPickup} />
         <Route path="/drive-through/:step?" component={PayAndPickup} />
         <Route path="/qr" component={PayAndPickup} />
+        <Route path="/check-in" component={PayAndPickup} />
+        <Route path="/operations-calendar" component={PublicOperationsCalendar} />
         <Route path="/classes" component={Classes} />
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
@@ -183,7 +189,12 @@ function Router() {
 function App() {
   const [location] = useLocation();
   // /qr is the printed-signage URL at the OSW yard main entrance — no global chrome.
-  const isPayAndPickup = location.startsWith("/pay-and-pickup") || location.startsWith("/drive-through") || location === "/qr" || location.startsWith("/qr/");
+  const isPayAndPickup =
+    location.startsWith("/pay-and-pickup") ||
+    location.startsWith("/drive-through") ||
+    location === "/qr" ||
+    location.startsWith("/qr/") ||
+    location === "/check-in";
   const isTriviaGame = location.startsWith("/trivia");
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isQuoteFlow = location.startsWith("/order");
@@ -193,7 +204,23 @@ function App() {
   const isRepresentativeLanding = location.startsWith("/rep/");
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe;
+  const isOperationsCalendar = location.startsWith("/operations-calendar");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar;
+
+  useEffect(() => {
+    trackEvent("Route Viewed", {
+      path: location,
+      area: isCheckoutFlow
+        ? "checkout"
+        : isPayAndPickup
+          ? "yard_qr"
+          : isProductFlow
+            ? "products"
+            : isAdminPanel
+              ? "admin"
+              : "marketing",
+    });
+  }, [isAdminPanel, isCheckoutFlow, isPayAndPickup, isProductFlow, location]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,3 +1,5 @@
+import { CUSTOMER_SUPPORT_PHONE_PLAIN } from "../config/contact.js";
+
 const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
 
 export type SendSmsArgs = {
@@ -87,6 +89,6 @@ export function formatPickupConfirmationSms(args: {
   if (args.receiptUrl) {
     lines.push("", `Receipt + QR: ${args.receiptUrl}`);
   }
-  lines.push("", "Questions? Reply here or call 602-726-7211.");
+  lines.push("", `Questions? Reply here or call ${CUSTOMER_SUPPORT_PHONE_PLAIN}.`);
   return lines.join("\n");
 }

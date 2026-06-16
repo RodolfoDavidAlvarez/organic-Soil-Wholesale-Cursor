@@ -39,7 +39,7 @@ const DISPLAY_CATEGORIES = Object.keys(productsByCategory)
   .filter((category) => category !== "Discarded product")
   .sort((a, b) => {
     // Custom sorting with the specified order: Amendment, Potting, Mulch, Concentrated Amendment
-    const order = { Amendment: 1, "Potting Soil": 2, Mulch: 3, "Concentrated Amendment": 4, Other: 5 };
+    const order: Record<string, number> = { Amendment: 1, "Potting Soil": 2, Mulch: 3, "Concentrated Amendment": 4, Other: 5 };
     return (order[a] || 999) - (order[b] || 999);
   })
   .map((category) => {
@@ -87,6 +87,35 @@ interface BusinessInfo {
   deliveryType: "delivery" | "pickup";
   address?: string;
   pickupLocation?: string;
+}
+
+const TON_TRUCKLOAD_CAPACITY = 24;
+const CY_TRUCKLOAD_CAPACITY = 90;
+
+type BulkProductMeta = { productType?: string | null; category?: string | null };
+
+function isDairyCompost(productType?: string | null) {
+  return String(productType || "").toUpperCase().includes("DAIRY COMPOST");
+}
+
+function bulkUnit(product?: BulkProductMeta) {
+  if (isDairyCompost(product?.productType)) return "ton";
+  return product?.category === "Amendment" || product?.category === "Concentrated Amendment" ? "ton" : "cubic yard";
+}
+
+function bulkCapacity(product?: BulkProductMeta) {
+  return bulkUnit(product) === "ton" ? TON_TRUCKLOAD_CAPACITY : CY_TRUCKLOAD_CAPACITY;
+}
+
+function bulkTruckloads(quantity: number, product?: BulkProductMeta) {
+  return Math.max(1, Math.ceil(Math.max(1, quantity) / bulkCapacity(product)));
+}
+
+function quantityLabel(selection: ProductSelection, product?: BulkProductMeta) {
+  if (selection.sizeOption !== "bulk") return `${selection.quantity}`;
+  const unit = bulkUnit(product);
+  const loads = bulkTruckloads(selection.quantity, product);
+  return `${selection.quantity} ${unit}${selection.quantity === 1 ? "" : "s"} · ${loads} delivery truckload${loads === 1 ? "" : "s"}`;
 }
 
 export const OrderForm: React.FC = () => {
@@ -152,7 +181,7 @@ export const OrderForm: React.FC = () => {
       return;
     }
 
-    if (category === "bulk-pickup" && !["ORGANIC DAIRY COMPOST"].includes(product.productType)) {
+    if (category === "bulk-pickup" && !["ORGANIC DAIRY COMPOST"].includes(product.productType || "")) {
       toast({
         title: "Product Restriction",
         description: "Only Dairy Compost is available for bulk pickup",
@@ -248,9 +277,14 @@ export const OrderForm: React.FC = () => {
           ...product,
           productName: productData?.productType || "Unknown Product",
           productDescription: productData?.description || "",
-          productImageUrl: productData?.imageUrl || "",
-          categoryName: categoryInfo?.label || "Standard",
-          categoryDescription: categoryInfo?.description || "",
+              productImageUrl: productData?.imageUrl || "",
+              categoryName: categoryInfo?.label || "Standard",
+              categoryDescription: product.sizeOption === "bulk"
+            ? `${quantityLabel(product, productData)}. Walking floor capacity: ${bulkCapacity(productData)} ${bulkUnit(productData)}s per truckload.`
+            : categoryInfo?.description || "",
+          bulkUnit: product.sizeOption === "bulk" ? bulkUnit(productData) : undefined,
+          truckloadCapacity: product.sizeOption === "bulk" ? bulkCapacity(productData) : undefined,
+          truckloads: product.sizeOption === "bulk" ? bulkTruckloads(product.quantity, productData) : undefined,
           category: productData?.category || "Unknown Category",
         };
       });
@@ -390,8 +424,8 @@ export const OrderForm: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                featuredProduct.imageUrl && (
-                  <OptimizedImage src={featuredProduct.imageUrl} alt={featuredProduct.productType} className="w-full h-full object-cover" />
+	                featuredProduct.imageUrl && (
+	                  <OptimizedImage src={featuredProduct.imageUrl} alt={featuredProduct.productType || featuredProduct.name} className="w-full h-full object-cover" />
                 )
               )}
             </div>
@@ -435,7 +469,7 @@ export const OrderForm: React.FC = () => {
                         />
                       ) : (
                         product.imageUrl && (
-                          <OptimizedImage src={product.imageUrl} alt={product.productType} className="w-full h-full object-cover" />
+	                          <OptimizedImage src={product.imageUrl} alt={product.productType || product.name} className="w-full h-full object-cover" />
                         )
                       )}
                     </div>
@@ -520,7 +554,7 @@ export const OrderForm: React.FC = () => {
                         <div key={product.id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
                             {productData?.imageUrl && (
-                              <OptimizedImage src={productData.imageUrl} alt={productData.productType} className="w-full h-full object-cover" />
+	                              <OptimizedImage src={productData.imageUrl} alt={productData.productType || productData.name} className="w-full h-full object-cover" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -544,7 +578,7 @@ export const OrderForm: React.FC = () => {
                             </div>
                             <div className="flex items-center">
                               <Label htmlFor={`quantity-${product.id}`} className="text-xs mr-2">
-                                Qty:
+                                {product.sizeOption === "bulk" ? bulkUnit(productData) : "Qty"}:
                               </Label>
                               <Input
                                 id={`quantity-${product.id}`}
@@ -556,6 +590,11 @@ export const OrderForm: React.FC = () => {
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </div>
+                            {product.sizeOption === "bulk" && (
+                              <p className="text-[11px] text-green-700 mt-1">
+                                {bulkTruckloads(product.quantity, productData)} walking-floor delivery load{bulkTruckloads(product.quantity, productData) === 1 ? "" : "s"}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
@@ -584,7 +623,7 @@ export const OrderForm: React.FC = () => {
                       let isCompatible = true;
 
                       if (category.value === "bulk-pickup" && product) {
-                        isCompatible = ["ORGANIC DAIRY COMPOST"].includes(product.productType);
+                        isCompatible = ["ORGANIC DAIRY COMPOST"].includes(product.productType || "");
                       }
 
                       if (!isCompatible) return null;
@@ -593,9 +632,11 @@ export const OrderForm: React.FC = () => {
                       let description = category.description;
                       if (category.value === "bulk" && product) {
                         if (product.category === "Amendment" || product.category === "Concentrated Amendment") {
-                          description = "22-24 tons per truckload";
+                          description = isDairyCompost(product.productType)
+                            ? "Order by ton. 24 tons per walking-floor truckload"
+                            : "24 tons per walking-floor truckload";
                         } else if (product.category === "Potting Soil" || product.category === "Mulch") {
-                          description = "90-110 CYs per truckload";
+                          description = "90 CY per walking-floor truckload";
                         }
                       }
 
@@ -847,8 +888,8 @@ export const OrderForm: React.FC = () => {
 
                 return (
                   <div key={product.id} className="flex flex-col sm:flex-row items-start gap-4 border-b pb-4 last:border-0 last:pb-0">
-                    {productData && (
-                      <OptimizedImage src={productData.imageUrl} alt={productData.productType} className="w-16 h-16 object-cover rounded-md" />
+                    {productData?.imageUrl && (
+                      <OptimizedImage src={productData.imageUrl} alt={productData.productType || productData.name} className="w-16 h-16 object-cover rounded-md" />
                     )}
                     <div className="flex-1">
                       <p className="font-medium text-green-800 mb-2">{productData?.productType}</p>
@@ -857,7 +898,7 @@ export const OrderForm: React.FC = () => {
                           <strong>Size Category:</strong> {categoryInfo?.label}
                         </p>
                         <p className="mb-1">
-                          <strong>Quantity:</strong> {product.quantity}
+                          <strong>Quantity:</strong> {quantityLabel(product, productData)}
                         </p>
                       </div>
                       <div className="mt-1 text-xs text-gray-500">{categoryInfo?.description}</div>

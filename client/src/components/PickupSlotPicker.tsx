@@ -107,13 +107,13 @@ export function PickupSlotPicker({
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-4", className)}>
       {/* Date scroller */}
       <div>
-        <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
-          <Calendar className="h-3.5 w-3.5" /> Pickup day
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-stone-500">
+          <Calendar className="h-3.5 w-3.5 text-[#b38a58]" /> Pickup day
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
           {dates.map((d) => {
             const isSelected = d.ymdStr === selectedDate;
             return (
@@ -125,10 +125,10 @@ export function PickupSlotPicker({
                   if (value?.pickupDate !== d.ymdStr) onChange(null);
                 }}
                 className={cn(
-                  "shrink-0 min-w-[78px] rounded-xl border px-3 py-2 text-center text-sm font-medium transition",
+                  "min-h-[46px] min-w-[118px] shrink-0 snap-start rounded-xl border px-3 py-2 text-center text-sm font-semibold leading-tight transition touch-manipulation",
                   isSelected
                     ? "border-[#264027] bg-[#264027] text-white shadow-sm"
-                    : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
+                    : "border-stone-200 bg-white text-stone-700 hover:border-[#264027]/40 hover:bg-[#264027]/5"
                 )}
               >
                 {d.label}
@@ -140,8 +140,8 @@ export function PickupSlotPicker({
 
       {/* Slot grid */}
       <div>
-        <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
-          <Clock className="h-3.5 w-3.5" /> Slot
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-stone-500">
+          <Clock className="h-3.5 w-3.5 text-[#b38a58]" /> Slot
         </div>
         {availableSlots.length === 0 ? (
           <p className="rounded-lg bg-stone-50 px-3 py-2.5 text-sm text-stone-500">
@@ -158,10 +158,10 @@ export function PickupSlotPicker({
                   type="button"
                   onClick={() => handleSlotPick(slot)}
                   className={cn(
-                    "rounded-xl border px-3 py-2.5 text-center text-sm font-semibold transition",
+                    "min-h-[48px] rounded-xl border px-2 py-2.5 text-center text-sm font-bold leading-tight transition touch-manipulation",
                     isSelected
                       ? "border-[#264027] bg-[#264027] text-white shadow-sm"
-                      : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
+                      : "border-stone-200 bg-white text-stone-700 hover:border-[#264027]/40 hover:bg-[#264027]/5"
                   )}
                 >
                   {slot.label}

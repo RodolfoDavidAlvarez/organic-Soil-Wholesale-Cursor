@@ -253,7 +253,8 @@ const DriveThruAdmin = () => {
 
   const handleAddProduct = () => {
     const tempId = `temp-${Date.now()}`;
-    const orderIndex = (products?.at(-1)?.orderIndex ?? products.length) + 1;
+    const lastProduct = products.length > 0 ? products[products.length - 1] : undefined;
+    const orderIndex = (lastProduct?.orderIndex ?? products.length) + 1;
     const newProduct: EditableProduct = {
       id: tempId,
       slug: "",

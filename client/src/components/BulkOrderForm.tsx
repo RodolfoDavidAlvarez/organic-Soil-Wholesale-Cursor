@@ -87,7 +87,7 @@ const generateCustomerEmail = (formData: any) => `
                 <p><strong>Preferred Delivery Date:</strong> ${formData.deliveryDate}</p>
             </div>
             
-            <p>If you have any additional questions or information to provide, please don't hesitate to contact us at (602) 726-7211.</p>
+            <p>If you have any additional questions or information to provide, please don't hesitate to contact us at (602) 637-0032.</p>
             <p>Best regards,<br>The Organic Soil Wholesale Team</p>
         </div>
         <div class="footer">
@@ -224,9 +224,10 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
 
         onClose();
       } catch (fetchError) {
+        const errorDetails = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
         console.error("Fetch error details:", {
-          message: fetchError.message,
-          stack: fetchError.stack,
+          message: errorDetails.message,
+          stack: errorDetails.stack,
           url: WEBHOOK_URL,
         });
         throw fetchError; // Re-throw to be caught by the outer try-catch

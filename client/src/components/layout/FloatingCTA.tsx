@@ -3,9 +3,9 @@ import { ShoppingCart, Phone } from 'lucide-react';
 
 const FloatingCTA = () => {
   return (
-    <div className="fixed bottom-6 right-6 z-50 md:hidden flex flex-col gap-3">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] right-4 z-50 md:hidden flex flex-col gap-3">
       <a
-        href="tel:6027267211"
+        href="tel:6026370032"
         className="flex items-center justify-center w-12 h-12 rounded-full bg-white text-primary shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20"
         aria-label="Call us"
       >

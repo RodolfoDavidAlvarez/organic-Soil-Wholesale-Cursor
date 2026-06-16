@@ -8,7 +8,8 @@ interface SEOProps {
   ogImage?: string;
   ogType?: string;
   twitterCard?: string;
-  structuredData?: any;
+  robots?: string;
+  structuredData?: any | any[];
   children?: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ const SEO = ({
   ogImage = 'https://organicsoilwholesale.com/images/og-image.jpg',
   ogType = 'website',
   twitterCard = 'summary_large_image',
+  robots,
   structuredData,
   children,
 }: SEOProps) => {
@@ -41,6 +43,7 @@ const SEO = ({
       {title && <title>{pageTitle}</title>}
       {description && <meta name="description" content={description} />}
       {keywords && <meta name="keywords" content={keywords} />}
+      {robots && <meta name="robots" content={robots} />}
       {canonical && <link rel="canonical" href={canonical} />}
 
       {/* Open Graph / Facebook */}
@@ -58,11 +61,11 @@ const SEO = ({
       {ogImage && <meta name="twitter:image" content={ogImage} />}
 
       {/* Structured Data */}
-      {structuredData && (
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
+      {structuredData && (Array.isArray(structuredData) ? structuredData : [structuredData]).map((data, index) => (
+        <script key={`structured-data-${index}`} type="application/ld+json">
+          {JSON.stringify(data)}
         </script>
-      )}
+      ))}
 
       {/* Additional head elements */}
       {children}

@@ -38,7 +38,8 @@ export default function ProductEdit() {
   const { admin, loading: authLoading } = useAdminAuth();
   const [, params] = useRoute("/products/:id/edit");
   const [, navigate] = useLocation();
-  const productId = params?.id;
+  const routeParams = params as { id?: string } | null;
+  const productId = routeParams ? routeParams.id : undefined;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [editedProduct, setEditedProduct] = useState<Product | null>(null);

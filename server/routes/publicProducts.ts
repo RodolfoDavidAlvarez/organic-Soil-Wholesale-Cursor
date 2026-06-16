@@ -534,10 +534,20 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
 async function getProductsFromDatabase(params: {
   category?: string | string[];
   payAndPickup?: string | string[];
+  ids?: string | string[];
 }) {
-  const { category, payAndPickup } = params;
+  const { category, payAndPickup, ids } = params;
 
   let query = supabase.from<RawProduct>('products').select('*');
+
+  const parsedIds = (Array.isArray(ids) ? ids.join(',') : ids)
+    ?.split(',')
+    .map((id) => Number(id.trim()))
+    .filter((id) => Number.isFinite(id));
+
+  if (parsedIds && parsedIds.length > 0) {
+    query = query.in('id', parsedIds);
+  }
 
   if (category && category !== 'all') {
     query = query.eq('category', category as string);
@@ -685,25 +695,53 @@ function getProductsFromFallback(category?: string | string[]) {
   return products;
 }
 
+const filterProductsByIds = <T extends { id?: number }>(products: T[], ids?: string | string[]) => {
+  const parsedIds = (Array.isArray(ids) ? ids.join(',') : ids)
+    ?.split(',')
+    .map((id) => Number(id.trim()))
+    .filter((id) => Number.isFinite(id));
+
+  if (!parsedIds || parsedIds.length === 0) {
+    return products;
+  }
+
+  const allowed = new Set(parsedIds);
+  return products.filter((product) => product.id !== undefined && allowed.has(product.id));
+};
+
+const asQueryValue = (value: unknown): string | string[] | undefined => {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return value;
+  }
+  return undefined;
+};
+
 // Get all active products for public display
 router.get('/', async (req, res) => {
   try {
     let productsFromDatabase: Awaited<ReturnType<typeof getProductsFromDatabase>> | undefined;
+    const category = asQueryValue(req.query.category);
+    const payAndPickup = asQueryValue(req.query.payAndPickup);
+    const ids = asQueryValue(req.query.ids);
 
     try {
       productsFromDatabase = await getProductsFromDatabase({
-        category: req.query.category,
-        payAndPickup: req.query.payAndPickup
+        category,
+        payAndPickup,
+        ids
       });
     } catch (databaseError) {
       console.warn('Falling back to static product data:', databaseError);
     }
 
     if (productsFromDatabase !== undefined) {
+      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       return res.json({ products: productsFromDatabase });
     }
 
-    const fallbackProducts = getProductsFromFallback(req.query.category);
+    const fallbackProducts = filterProductsByIds(getProductsFromFallback(category), ids);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     return res.json({ products: fallbackProducts });
   } catch (error) {
     console.error('Error in products endpoint:', error);

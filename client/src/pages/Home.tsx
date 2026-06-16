@@ -373,7 +373,7 @@ const Home = () => {
       slug: "simons-gold",
       imageUrl: "Compost Texture Look.jpg",
       texturePhotoUrl: "Compost Texture Look.jpg",
-      description: "ALL NATURAL DAIRY COMPOST",
+      description: "All-natural dairy compost",
       category: "Amendment",
     },
     {
@@ -383,7 +383,7 @@ const Home = () => {
       slug: "mikeys-worm-poop",
       imageUrl: "Worm castting product texture.png",
       texturePhotoUrl: "Worm castting product texture.png",
-      description: "ALL NATURAL VERMICOMPOST",
+      description: "All-natural vermicompost",
       category: "Amendment",
     },
     {
@@ -393,7 +393,7 @@ const Home = () => {
       slug: "superbooster",
       imageUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       texturePhotoUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
-      description: "ORGANIC CONCENTRATED AMENDMENT",
+      description: "Organic concentrated amendment",
       category: "Concentrated Amendment",
     },
     {
@@ -403,7 +403,7 @@ const Home = () => {
       slug: "amazonian-dark-earth",
       imageUrl: "Biochar Product Texture Look.jpg",
       texturePhotoUrl: "Biochar Product Texture Look.jpg",
-      description: "BIOCHAR MINERAL",
+      description: "Biochar mineral amendment",
       category: "Amendment",
     },
   ];
@@ -751,176 +751,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Customer Proof — DEPRECATED, kept temporarily for reference. To be removed. */}
-      <section className="hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-            <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-28">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="text-left space-y-6"
-              >
-                {/* Proof Badge */}
-                <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2.5 shadow-sm">
-                  <CheckCircle className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-primary text-sm">Real customer proof</span>
-                </div>
-                
-                {/* Title */}
-                <div className="space-y-3">
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold text-primary tracking-tight leading-[1.1]">
-                    Results From Real Jobs
-                  </h2>
-                  <p className="text-xl md:text-2xl text-muted-foreground font-medium">
-                    Customer-submitted projects, products, and notes
-                  </p>
-                </div>
-                
-                <p className="text-muted-foreground text-base leading-relaxed">
-                  These are not stock claims. They come from customer submissions in the OSW testimonial system, cleaned up only for spelling, length, and privacy.
-                </p>
-              </motion.div>
-
-              {/* Proof Visuals */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
-                  <img
-                    src="/images/testimonials/soil-craft-spring-crop.jpg"
-                    alt="Customer spring crop comparison using Soil Craft"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    sizes="(max-width: 768px) 50vw, 200px"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
-                    Grow Result
-                  </div>
-                </div>
-                <div className="group relative rounded-xl overflow-hidden border border-border bg-white aspect-square">
-                  <img
-                    src="/images/testimonials/premium-nature-blanket-yarnell.jpg"
-                    alt="Premium Nature's Blanket delivered for a customer project"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    sizes="(max-width: 768px) 50vw, 200px"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-foreground text-xs font-semibold py-2 px-3 text-center border-t border-border">
-                    Delivered Material
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="pt-2"
-              >
-                <Button
-                  className="w-full gap-2 h-14 text-lg font-semibold shadow-sm hover:shadow transition-all duration-300 bg-primary hover:bg-primary/90"
-                  size="lg"
-                  onClick={() => handleProductSelect(products.find(p => p.name === "Mikey's Worm Poop") || products[0])}
-                >
-                  Browse Products <ArrowRight className="w-5 h-5" />
-                </Button>
-              </motion.div>
-            </div>
-
-            {/* Right Side: Customer Stories Carousel */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="lg:col-span-8 bg-white rounded-xl p-8 md:p-10 border-2 border-border shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Customer Stories</h3>
-                  <p className="text-sm text-muted-foreground">Project notes and field photos from real submissions</p>
-                </div>
-              </div>
-
-              <Carousel 
-                opts={{ 
-                  align: "start", 
-                  loop: true,
-                }} 
-                className="w-full"
-              >
-                <div className="flex items-center justify-end mb-4 gap-2">
-                  <CarouselPrevious className="static translate-y-0 hover:bg-primary hover:text-white border-gray-300 shadow-md hover:shadow-lg transition-all" />
-                  <CarouselNext className="static translate-y-0 hover:bg-primary hover:text-white border-gray-300 shadow-md hover:shadow-lg transition-all" />
-                </div>
-                <CarouselContent className="-ml-4">
-                  {customerStories.map((story, index) => (
-                    <CarouselItem key={story.id} className="pl-4 md:basis-1/2">
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: index * 0.1 }}
-                      >
-                        <Card className="h-full border-2 border-border bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-300 flex flex-col group">
-                          <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg bg-muted">
-                            <img
-                              src={story.image}
-                              alt={`${story.product} customer project`}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              loading="lazy"
-                            />
-                          </div>
-                          <CardHeader className="pb-4">
-                            <div className="flex justify-between items-start gap-3 mb-3">
-                              <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400 drop-shadow-sm" />
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full font-bold shadow-sm">
-                                <CheckCircle className="w-3.5 h-3.5" /> Customer
-                              </div>
-                            </div>
-                            <CardTitle className="text-xl font-bold text-gray-900 leading-tight mt-2 line-clamp-2 group-hover:text-primary transition-colors duration-300">
-                              &quot;{story.title}&quot;
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pb-5 flex-grow">
-                            <p className="text-muted-foreground text-sm leading-relaxed line-clamp-5">
-                              {story.body}
-                            </p>
-                            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-primary">
-                              {story.product}
-                            </p>
-                          </CardContent>
-                          <CardFooter className="pt-4 border-t border-border mt-auto">
-                            <div className="flex justify-between items-center w-full">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                  {story.name.charAt(0)}
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-bold text-sm text-gray-900">{story.name}</span>
-                                  <span className="text-xs text-muted-foreground font-medium">{story.company}</span>
-                                </div>
-                              </div>
-                              <span className="text-xs text-muted-foreground font-medium">{story.location}</span>
-                            </div>
-                          </CardFooter>
-                        </Card>
-                      </motion.div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
       {/* Showcase Photos Section */}
       <section className="py-16 px-4 md:px-8 bg-white border-t border-border">

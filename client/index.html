@@ -13,9 +13,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <meta
       name="description"
-      content="Arizona-made organic compost and soil amendments. Local wholesale supplier of premium bulk compost, worm castings, and potting soil. Serving Arizona landscapers, growers, farms, nurseries, and government projects. Made in Arizona."
+      content="Organic Soil Wholesale by Soil Seed & Water sells Arizona compost, worm castings, potting soil, and mulch for pickup, pallets, super sacks, and qualifying delivery within 300 miles."
     />
-    <title>Arizona-Made Organic Compost | Wholesale Bulk Soil Supplier | Local AZ Compost</title>
+    <title>Organic Soil Wholesale | Phoenix Compost, Soil & Mulch Pickup</title>
     <meta name="keywords" content="Arizona compost, Arizona made soil, local compost Arizona, bulk organic soil, wholesale compost Phoenix, commercial soil supplier Arizona, landscaping soil AZ, worm castings wholesale, dairy compost Arizona, soil amendments Arizona, potting soil bulk, truckload soil delivery, supersack soil, pallets of soil, commercial landscapers, golf course soil, nursery suppliers, Arizona soil wholesaler, HB 2819, state compost requirements" />
     <meta name="robots" content="index, follow" />
     <meta name="author" content="Organic Soil Wholesale" />
@@ -71,41 +71,46 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WholesaleStore",
-        "name": "Organic Soil Wholesale",
-        "description": "Premium organic soil products available in bulk quantities for commercial applications",
+        "@type": ["LocalBusiness", "Store"],
+        "name": "Organic Soil Wholesale by Soil Seed & Water",
+        "alternateName": "Organic Soil Wholesale",
+        "description": "Phoenix organic soil, compost, worm castings, potting soil, and mulch supplier for pickup, pallets, super sacks, and qualifying delivery.",
         "url": "https://organicsoilwholesale.com",
-        "telephone": "(928) 550-1649",
+        "telephone": "(602) 637-0032",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "123 Organic Way",
-          "addressLocality": "Fertile Valley",
+          "streetAddress": "1634 N 19th Ave",
+          "addressLocality": "Phoenix",
           "addressRegion": "AZ",
-          "postalCode": "95000",
+          "postalCode": "85009",
           "addressCountry": "US"
         },
         "geo": {
           "@type": "GeoCoordinates",
-          "latitude": 33.4484,
-          "longitude": -112.074
+          "latitude": 33.4668,
+          "longitude": -112.0997
         },
         "openingHoursSpecification": [
           {
             "@type": "OpeningHoursSpecification",
-            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
             "opens": "08:00",
-            "closes": "17:00"
+            "closes": "13:00"
           },
           {
             "@type": "OpeningHoursSpecification",
-            "dayOfWeek": "Saturday",
-            "opens": "09:00",
-            "closes": "14:00"
+            "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            "opens": "14:00",
+            "closes": "16:00"
           }
         ],
-        "priceRange": "$$$",
+        "priceRange": "$$",
         "paymentAccepted": "Cash, Credit Card, Purchase Order",
-        "areaServed": "Arizona"
+        "areaServed": [
+          "Arizona",
+          "Phoenix",
+          "Delivery available within 300 miles of Phoenix or Congress, Arizona"
+        ]
       }
     </script>
 
@@ -113,39 +118,34 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "Product",
-        "name": "Bulk Organic Soil Amendments",
-        "description": "Premium organic soil amendments and composts available in bulk quantities for commercial applications",
-        "category": "Organic Agriculture Supplies",
-        "brand": {
-          "@type": "Brand",
-          "name": "Organic Soil Wholesale"
-        },
-        "offers": {
-          "@type": "AggregateOffer",
-          "priceCurrency": "USD",
-          "lowPrice": "100",
-          "highPrice": "1000",
-          "offerCount": "10",
-          "offers": [
-            {
-              "@type": "Offer",
-              "itemOffered": {
-                "@type": "Product",
-                "name": "Dairy Compost - Bulk Delivery",
-                "description": "Premium organic dairy compost available in truckload quantities"
-              }
-            },
-            {
-              "@type": "Offer",
-              "itemOffered": {
-                "@type": "Product",
-                "name": "Worm Castings - Pallet of Bags",
-                "description": "Organic worm castings in pallet quantities for commercial applications"
-              }
-            }
-          ]
-        }
+        "@type": "ItemList",
+        "name": "Organic Soil Wholesale pickup products",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "url": "https://organicsoilwholesale.com/products/simons-gold",
+            "name": "Simon's Gold Dairy Compost"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "url": "https://organicsoilwholesale.com/products/mikeys-worm-poop",
+            "name": "Mikey's Worm Poop Worm Castings"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "url": "https://organicsoilwholesale.com/products/soil-craft",
+            "name": "Soil Craft Potting Soil"
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "url": "https://organicsoilwholesale.com/products/natures-blanket-premium",
+            "name": "Nature's Blanket Premium Mulch"
+          }
+        ]
       }
     </script>
   </head>
@@ -155,13 +155,22 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
-    <!-- Exclude ONLY contact card landing pages from phone tracking -->
+    <!-- Keep operational/direct-help pages on the official support line. -->
     <script>
       // Set exclusion attributes immediately before React loads
       (function() {
         const path = window.location.pathname;
-        // Exclude ONLY contact card landing pages (not admin pages)
-        if (path.startsWith('/rep/')) {
+        const excludeFromCallTracking =
+          path.startsWith('/rep/') ||
+          path === '/qr' ||
+          path === '/check-in' ||
+          path === '/yard-map' ||
+          path === '/checkout' ||
+          path === '/order-confirmation' ||
+          path.startsWith('/pay-and-pickup') ||
+          path.startsWith('/drive-through');
+
+        if (excludeFromCallTracking) {
           document.documentElement.setAttribute('data-callrail-ignore', 'true');
           document.documentElement.setAttribute('data-dynamic-number-ignore', 'true');
           document.documentElement.setAttribute('data-call-tracking-ignore', 'true');

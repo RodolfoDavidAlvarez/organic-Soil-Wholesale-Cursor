@@ -13,6 +13,7 @@ type Testimonial = {
   body: string;
   media: string;
   mediaType: "image" | "video";
+  poster?: string;
   mediaFit?: "cover" | "contain";
 };
 
@@ -25,7 +26,7 @@ const TESTIMONIALS: Testimonial[] = [
     product: "Soil Craft",
     title: "Same seed. Same water. Better soil.",
     body: "Both plants were started from the same seeds, same watering, same sunlight. The fuller, healthier plant was grown in your soil. Loving the product.",
-    media: "/images/testimonials/database/client-testimonial-soil-craft-ed9b5952-354d-4c94-9268-5e9948780765.png",
+    media: "/images/testimonials/optimized/client-testimonial-soil-craft-card.jpg",
     mediaType: "image",
     mediaFit: "cover",
   },
@@ -61,7 +62,7 @@ const TESTIMONIALS: Testimonial[] = [
     product: "OMRI Mulch + Compost",
     title: "OMRI certified organic.",
     body: "Customer-facing post showing a fresh lush batch of aged mulch enriched with dairy compost.",
-    media: "/images/testimonials/local/flower-of-the-gods-mulch-post.png",
+    media: "/images/testimonials/optimized/flower-of-the-gods-mulch-post-card.jpg",
     mediaType: "image",
     mediaFit: "contain",
   },
@@ -85,8 +86,9 @@ const TESTIMONIALS: Testimonial[] = [
     product: "Top Soil Blend",
     title: "Top soil delivery in the field.",
     body: "Real delivery video showing product staged and delivered for customer work.",
-    media: "/images/testimonials/database/top-soil-delivery-top-soil-blend-d41c8d06-0140-401b-980f-16333b67f8da.mp4",
+    media: "/images/testimonials/optimized/top-soil-delivery-preview.mp4",
     mediaType: "video",
+    poster: "/images/testimonials/optimized/top-soil-delivery-poster.jpg",
     mediaFit: "cover",
   },
   {
@@ -97,8 +99,9 @@ const TESTIMONIALS: Testimonial[] = [
     product: "Clean Wood Fiber Blend",
     title: "Wood fiber + compost + castings.",
     body: "Clean wood fiber blended with worm castings and dairy compost. Moving proof of bulk material quality.",
-    media: "/images/testimonials/database/pat-bernard-clean-wood-fiber-with-worm-castings-and-dairy-compost-b1291963-bf16-4017-b604-62cb0fe1d25d.mov",
+    media: "/images/testimonials/optimized/clean-wood-fiber-preview.mp4",
     mediaType: "video",
+    poster: "/images/testimonials/optimized/clean-wood-fiber-poster.jpg",
     mediaFit: "cover",
   },
   {
@@ -163,40 +166,107 @@ const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
+function useNearViewport<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [isNear, setIsNear] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsNear(true);
+        }
+      },
+      { rootMargin: "250px 400px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, isNear };
+}
+
 function TestimonialCard({ t }: { t: Testimonial }) {
+  const { ref: cardRef, isNear } = useNearViewport<HTMLDivElement>();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [loadVideo, setLoadVideo] = useState(false);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const play = () => v.play().catch(() => {});
+    if (!isNear || !loadVideo) {
+      v.pause();
+      return;
+    }
+
+    const play = () => {
+      if (!videoRef.current) return;
+      videoRef.current.play().catch(() => {});
+    };
+
     play();
     document.addEventListener("touchstart", play, { once: true });
     return () => document.removeEventListener("touchstart", play);
-  }, []);
+  }, [isNear, loadVideo]);
 
   const fitClass = t.mediaFit === "contain" ? "object-contain bg-stone-100" : "object-cover";
 
   return (
-    <div className="group relative w-[300px] sm:w-[340px] md:w-[380px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgba(38,64,39,0.08)] ring-1 ring-stone-200/60 transition-all duration-300 hover:shadow-[0_16px_50px_rgba(38,64,39,0.18)] hover:-translate-y-1">
+    <div
+      ref={cardRef}
+      onMouseEnter={() => t.mediaType === "video" && setLoadVideo(true)}
+      onFocus={() => t.mediaType === "video" && setLoadVideo(true)}
+      onClick={() => t.mediaType === "video" && setLoadVideo(true)}
+      className="group relative w-[300px] sm:w-[340px] md:w-[380px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgba(38,64,39,0.08)] ring-1 ring-stone-200/60 transition-all duration-300 hover:shadow-[0_16px_50px_rgba(38,64,39,0.18)] hover:-translate-y-1"
+    >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-stone-50">
-        {t.mediaType === "video" ? (
+        {!isNear ? (
+          <div className="h-full w-full animate-pulse bg-gradient-to-br from-stone-100 via-stone-50 to-stone-200" />
+        ) : t.mediaType === "video" && loadVideo ? (
           <video
             ref={videoRef}
             src={t.media}
             className={`h-full w-full ${fitClass}`}
+            poster={t.poster}
             autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
           />
         ) : (
           <OptimizedImage
             src={t.media}
             alt={`${t.name} — ${t.product}`}
             className={`h-full w-full ${fitClass} transition-transform duration-700 group-hover:scale-105`}
+            width={420}
+            q={62}
           />
+        )}
+        {isNear && t.mediaType === "video" && !loadVideo && (
+          <button
+            type="button"
+            className="absolute inset-0 h-full w-full"
+            aria-label={`Play ${t.title}`}
+            onClick={() => setLoadVideo(true)}
+          >
+            <OptimizedImage
+              src={t.poster ?? t.media}
+              alt={`${t.name} — ${t.product}`}
+              className={`h-full w-full ${fitClass} transition-transform duration-700 group-hover:scale-105`}
+              width={420}
+              q={62}
+            />
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="rounded-full bg-black/55 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white shadow-lg ring-1 ring-white/30">
+                Play video
+              </span>
+            </span>
+          </button>
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5 text-white">
@@ -254,6 +324,61 @@ function MarqueeRow({ items, direction, speed }: { items: Testimonial[]; directi
   );
 }
 
+function MobileTestimonialCarousel() {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pauseUntilRef = useRef(0);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const advance = () => {
+      if (Date.now() < pauseUntilRef.current) return;
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-mobile-testimonial-card]"));
+      if (cards.length < 2) return;
+
+      const current = cards.reduce((closest, card, index) => {
+        const distance = Math.abs(card.offsetLeft - scroller.scrollLeft);
+        return distance < closest.distance ? { index, distance } : closest;
+      }, { index: 0, distance: Number.POSITIVE_INFINITY });
+
+      const nextIndex = current.index >= cards.length - 1 ? 0 : current.index + 1;
+      scroller.scrollTo({
+        left: Math.max(cards[nextIndex].offsetLeft - 16, 0),
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    };
+
+    const intervalId = window.setInterval(advance, prefersReducedMotion ? 6500 : 3600);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const pause = () => {
+    pauseUntilRef.current = Date.now() + 6500;
+  };
+
+  return (
+    <div className="md:hidden">
+      <div
+        ref={scrollerRef}
+        onPointerDown={pause}
+        onTouchStart={pause}
+        onWheel={pause}
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ scrollPaddingLeft: "1rem" }}
+      >
+        {TESTIMONIALS.map((t) => (
+          <div key={t.id} data-mobile-testimonial-card className="snap-start">
+            <TestimonialCard t={t} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TestimonialGallery() {
   const half = Math.ceil(TESTIMONIALS.length / 2);
   const topRow = TESTIMONIALS.slice(0, half);
@@ -294,16 +419,8 @@ export default function TestimonialGallery() {
         <MarqueeRow items={bottomRow} direction="right" speed={70} />
       </div>
 
-      {/* Mobile: horizontal scroll-snap carousel */}
-      <div className="md:hidden">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4" style={{ scrollPaddingLeft: "1rem" }}>
-          {TESTIMONIALS.map((t) => (
-            <div key={t.id} className="snap-start">
-              <TestimonialCard t={t} />
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Mobile: auto-advancing scroll-snap carousel */}
+      <MobileTestimonialCarousel />
     </section>
   );
 }

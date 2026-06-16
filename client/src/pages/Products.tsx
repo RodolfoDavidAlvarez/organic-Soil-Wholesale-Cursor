@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useRef, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
+import Autoplay from "embla-carousel-autoplay";
 import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import {
   SPECIALTY_BLENDS,
@@ -11,33 +13,82 @@ import {
   type FeaturedProductSlot,
 } from "@/data/featuredProducts";
 import { PayPickupGrid } from "@/components/PayPickupGrid";
+import { buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
+import { trackEvent } from "@/lib/analytics";
 import { AlertCircle, CheckCircle2, ChevronRight, FileText, Loader2, MapPin, Truck } from "lucide-react";
 
-const PICKUP_FORMATS = [
+const SIZE_FORMATS = [
   {
-    title: "Bags and pallets",
-    description: "Pickup one bag, full pallets, or boxed pallet orders from the Phoenix yard.",
-    image: "/images/pickup-formats/pallet-bag-boxes.jpg",
+    eyebrow: "Small pickup",
+    title: "9 lb bags",
+    description: "Single bags for quick jobs, samples, and light amendments.",
+    image: "/images/size-formats/9lb-single-bag.webp",
   },
   {
+    eyebrow: "Bagged material",
+    title: "1-2 cu ft bags",
+    description: "Clean bagged formats for potting soil, mulch, and amendments.",
+    image: "/images/size-formats/1-5cf-single-bag.webp",
+  },
+  {
+    eyebrow: "Mulch bag",
+    title: "2 cu ft mulch",
+    description: "Single mulch bags for clean landscape pickup orders.",
+    image: "/images/size-formats/2cf-mulch-single-bag.webp",
+  },
+  {
+    eyebrow: "Pallet pickup",
+    title: "Boxed pallets",
+    description: "Palletized bag orders staged for fast yard pickup.",
+    image: "/images/size-formats/boxed-pallet-bags.webp",
+  },
+  {
+    eyebrow: "Stacked bags",
+    title: "Full pallets",
+    description: "Best when you need many bags of the same material.",
+    image: "/images/size-formats/palletized-bags.webp",
+  },
+  {
+    eyebrow: "Large format",
+    title: "Super sacks",
+    description: "Bulk bag format for larger jobs without a loose dump.",
+    image: "/images/size-formats/super-sack.webp",
+  },
+  {
+    eyebrow: "Combined order",
     title: "Mixed truckloads",
-    description: "Combine pallets and super sacks when the order needs more than one format.",
-    image: "/images/pickup-formats/mixed-pallets-totes-truckload.jpg",
+    description: "Combine pallets, super sacks, and boxed orders on one load.",
+    image: "/images/size-formats/mixed-truckload.webp",
   },
   {
-    title: "Bulk delivery",
-    description: "Truckload deliveries are available when your site qualifies by location.",
-    image: "/images/pickup-formats/bulk-walking-floor-delivery.jpg",
+    eyebrow: "Bulk pickup",
+    title: "Loose material",
+    description: "Bulk cubic-yard pickup when loose loading fits the job.",
+    image: "/images/size-formats/bulk-yard-pickup.webp",
+  },
+  {
+    eyebrow: "Delivery",
+    title: "Walking-floor bulk",
+    description: "Truckload delivery for qualifying sites and larger projects.",
+    image: "/images/size-formats/walking-floor-delivery.webp",
   },
 ];
 
 function PickupFormatsSection() {
+  const autoplay = useRef(
+    Autoplay({
+      delay: 3600,
+      stopOnInteraction: false,
+      stopOnMouseEnter: true,
+    })
+  );
+
   return (
     <div className="mt-8 border-t border-stone-200 pt-8 md:mt-10 md:pt-10">
-      <div className="mb-5 flex flex-col justify-between gap-2 md:mb-6 md:flex-row md:items-end">
+      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027]">
-            Pickup and delivery formats
+            Size and delivery formats
           </p>
           <h3 className="font-heading text-xl font-bold tracking-tight text-stone-900 md:text-2xl">
             Choose the format that fits the job.
@@ -47,24 +98,40 @@ function PickupFormatsSection() {
           Start with bagged pickup, then scale up to pallets, super sacks, or truckloads when needed.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {PICKUP_FORMATS.map((format) => (
-          <div key={format.title} className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200">
-            <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
-              <img
-                src={format.image}
-                alt={format.title}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                loading="lazy"
-              />
-            </div>
-            <div className="p-4">
-              <h4 className="font-heading text-base font-bold text-stone-900">{format.title}</h4>
-              <p className="mt-1 text-sm leading-relaxed text-stone-600">{format.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Carousel
+        opts={{
+          align: "start",
+          loop: true,
+          containScroll: "trimSnaps",
+        }}
+        plugins={[autoplay.current]}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-3">
+          {SIZE_FORMATS.map((format) => (
+            <CarouselItem key={format.title} className="basis-[78%] pl-3 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+              <article className="group h-full overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                <div className="relative aspect-[4/3] bg-white">
+                  <img
+                    src={format.image}
+                    alt={format.title}
+                    className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.025]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <div className="border-t border-stone-100 p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#438764]">{format.eyebrow}</p>
+                  <h4 className="mt-1 font-heading text-base font-bold leading-tight text-stone-900">{format.title}</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{format.description}</p>
+                </div>
+              </article>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="left-2 top-[38%] border-stone-200 bg-white/95 shadow-sm" />
+        <CarouselNext className="right-2 top-[38%] border-stone-200 bg-white/95 shadow-sm" />
+      </Carousel>
     </div>
   );
 }
@@ -100,9 +167,21 @@ function DeliveryEligibilityCheck() {
     if (nearest.miles <= 300) {
       setStatus("eligible");
       setMessage(`Delivery likely available. ${sourceLabel} is ${Math.round(nearest.miles)} miles from ${nearest.name}.`);
+      trackEvent("Delivery Eligibility Checked", {
+        result: "eligible",
+        source: sourceLabel === "Your location" ? "geolocation" : "zip",
+        nearest_origin: nearest.name,
+        miles: Math.round(nearest.miles),
+      });
     } else {
       setStatus("outside");
       setMessage(`${sourceLabel} is about ${Math.round(nearest.miles)} miles from ${nearest.name}. Request a quote and we will confirm options.`);
+      trackEvent("Delivery Eligibility Checked", {
+        result: "outside_range",
+        source: sourceLabel === "Your location" ? "geolocation" : "zip",
+        nearest_origin: nearest.name,
+        miles: Math.round(nearest.miles),
+      });
     }
   };
 
@@ -113,6 +192,7 @@ function DeliveryEligibilityCheck() {
     if (cleanZip.length !== 5) {
       setStatus("unknown");
       setMessage("Enter a 5-digit ZIP code.");
+      trackEvent("Delivery Eligibility Checked", { result: "invalid_zip", source: "zip" });
       return;
     }
 
@@ -138,6 +218,7 @@ function DeliveryEligibilityCheck() {
     } catch {
       setStatus("unknown");
       setMessage("We could not verify that ZIP. Request a quote and we will confirm delivery.");
+      trackEvent("Delivery Eligibility Checked", { result: "lookup_failed", source: "zip" });
     }
   };
 
@@ -145,6 +226,7 @@ function DeliveryEligibilityCheck() {
     if (!navigator.geolocation) {
       setStatus("unknown");
       setMessage("Your browser does not allow location checks. Enter your ZIP code instead.");
+      trackEvent("Delivery Eligibility Checked", { result: "geolocation_unavailable", source: "geolocation" });
       return;
     }
 
@@ -160,6 +242,7 @@ function DeliveryEligibilityCheck() {
       () => {
         setStatus("unknown");
         setMessage("Location was not allowed. Enter your ZIP code instead.");
+        trackEvent("Delivery Eligibility Checked", { result: "geolocation_denied", source: "geolocation" });
       },
       { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
     );
@@ -172,8 +255,8 @@ function DeliveryEligibilityCheck() {
           <MapPin className="h-4 w-4" />;
 
   return (
-    <div className="mt-5 flex flex-col gap-3 border-t border-stone-200 pt-4 md:mt-0 md:w-[420px] md:border-l md:border-t-0 md:pl-5 md:pt-0">
-      <div className="flex items-start gap-2">
+    <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm md:flex-row md:flex-wrap md:items-center md:gap-4">
+      <div className="flex min-w-[220px] flex-1 items-start gap-2">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-[#264027]" />
         <div>
           <p className="text-sm font-bold text-stone-900">Pickup today. Delivery when you qualify.</p>
@@ -183,7 +266,7 @@ function DeliveryEligibilityCheck() {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 md:w-[360px]">
         <input
           value={zip}
           onChange={(event) => setZip(event.target.value.replace(/\D/g, "").slice(0, 5))}
@@ -207,7 +290,7 @@ function DeliveryEligibilityCheck() {
         type="button"
         variant="outline"
         onClick={checkCurrentLocation}
-        className="h-10 justify-center gap-2 rounded-lg border-[#264027]/20 bg-white text-sm font-bold text-[#264027] hover:bg-[#264027]/5"
+        className="h-10 justify-center gap-2 rounded-lg border-[#264027]/20 bg-white text-sm font-bold text-[#264027] hover:bg-[#264027]/5 md:w-auto"
       >
         <MapPin className="h-4 w-4" />
         Use my location
@@ -215,7 +298,7 @@ function DeliveryEligibilityCheck() {
 
       {status !== "idle" && (
         <div
-          className={`flex items-start gap-2 text-xs font-medium ${
+          className={`flex w-full items-start gap-2 text-xs font-medium ${
             status === "eligible" ? "text-[#264027]" : status === "checking" || status === "locating" ? "text-stone-600" : "text-amber-800"
           }`}
         >
@@ -297,6 +380,12 @@ const Products = () => {
   const [, navigate] = useLocation();
 
   const openSlot = (slot: FeaturedProductSlot) => {
+    trackEvent("Product Card Clicked", {
+      product_id: slot.productId ?? null,
+      product_slug: slot.slug,
+      product_name: slot.displayTitle,
+      action: "open_product",
+    });
     if (slot.href?.startsWith("#")) {
       const el = document.querySelector(slot.href);
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -310,6 +399,11 @@ const Products = () => {
   };
 
   const requestQuoteForSlot = (slot: FeaturedProductSlot) => {
+    trackEvent("Quote Product Clicked", {
+      product_id: slot.productId ?? null,
+      product_slug: slot.slug,
+      product_name: slot.displayTitle,
+    });
     const params = new URLSearchParams();
     if (slot.productId) params.set("productId", String(slot.productId));
     params.set("product", slot.displayTitle);
@@ -323,31 +417,41 @@ const Products = () => {
         description="Bulk soil products from Soil Seed & Water — dairy compost, worm castings, premium potting blends, amendments, mulch. Pallets, supersacks, truckloads."
         keywords="soil seed and water products, organic soil catalog, wholesale compost, organic mulch, potting soil supplier, dairy compost arizona, worm castings wholesale"
         canonical="https://organicsoilwholesale.com/products"
+        structuredData={[buildLocalBusinessSchema(), buildProductsItemListSchema()]}
       />
 
       {/* Section 1 — Pay & Pick Up (the 4 mains, MOS-driven pricing, slot booking) */}
-      <section id="pay-pickup" className="bg-gradient-to-b from-stone-50 to-white pt-5 pb-12 md:pt-7 md:pb-16">
+      <section id="pay-pickup" className="bg-gradient-to-b from-stone-50 to-white pt-2 pb-[calc(env(safe-area-inset-bottom)+7rem)] md:pt-5 md:pb-12">
         <div className="container mx-auto px-4">
-          <div className="mb-4 flex flex-col justify-between gap-4 md:mb-6 md:flex-row md:items-end">
+          <div className="mb-3 flex flex-col justify-between gap-3 md:mb-4 md:flex-row md:items-end md:gap-4">
             <div>
               <p className="mb-1 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027]">
-                <CheckCircle2 className="h-3 w-3" /> Agave Yard pickup · delivery available
+                <CheckCircle2 className="h-3 w-3" /> Phoenix yard pickup · delivery available
               </p>
-              <h2 className="font-heading text-2xl font-bold leading-tight text-stone-900 md:text-3xl">
-                Welcome to the organic soil paradise.
+              <h2 className="font-heading text-xl font-bold leading-tight text-stone-900 md:hidden">
+                Pay &amp; pick up organic soil products.
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">
-                Anything you need for your garden, project, nursery, or farm.
+              <h2 className="hidden font-heading text-3xl font-bold leading-tight text-stone-900 md:block">
+                Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
+              </h2>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2">
+                Buy the 4 fastest pickup products online, or request bulk pricing for pallets,
+                super sacks, mixed loads, and truckload delivery.
               </p>
-              <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm">
+              <Link
+                href="/yard-map"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320] md:mt-3"
+                aria-label="Open Phoenix yard pickup map"
+              >
                 <MapPin className="h-3.5 w-3.5" />
-                Pickup at Phoenix Agave Yard: 1634 N 19th Ave.
-              </p>
+                Pickup map: 1634 N 19th Ave.
+              </Link>
             </div>
-            <DeliveryEligibilityCheck />
           </div>
 
           <PayPickupGrid />
+
+          <DeliveryEligibilityCheck />
 
           <PickupFormatsSection />
 

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase } from "../supabaseClient.js";
 import Stripe from "stripe";
 import { sendAdminOrderNotification, sendAdminArrivalNotification } from "../services/email.js";
+import { notifyYardTeamOfArrival } from "../services/yardAdminNotify.js";
 import { ProductSyncService } from "../services/productSyncService.js";
 
 const router = Router();
@@ -604,7 +605,23 @@ router.post("/notify-arrival", async (req, res) => {
       return res.status(500).json({ error: "Failed to notify arrival" });
     }
 
-    // Send admin notification email
+    // SMS yard reps + Expo push (MOS) + admin email
+    try {
+      const yardNotify = await notifyYardTeamOfArrival({
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        vehicleInfo: vehicleInfo,
+        notificationId: data.id,
+      });
+      console.log(
+        "Yard team notified (SMS + push):",
+        customerInfo.name,
+        `sms sent=${yardNotify.sms.sent}`,
+      );
+    } catch (notifyError) {
+      console.error("Failed to notify yard team (SMS/push):", notifyError);
+    }
+
     try {
       await sendAdminArrivalNotification({
         customerName: customerInfo.name,
@@ -616,7 +633,6 @@ router.post("/notify-arrival", async (req, res) => {
       console.log("Admin arrival notification email sent for:", customerInfo.name);
     } catch (emailError) {
       console.error("Failed to send admin arrival notification email:", emailError);
-      // Don't fail the request if email fails
     }
 
     res.json({

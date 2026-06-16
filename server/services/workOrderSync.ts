@@ -170,7 +170,7 @@ export async function createWorkOrderFromOswOrder(orderId: number): Promise<numb
       preferred_delivery_time:
         order.preferred_time_start && order.preferred_time_end
           ? `${order.preferred_time_start} - ${order.preferred_time_end}`
-          : null,
+          : order.preferred_time_start || null,
       status: "pending",
       priority: (order.total ?? 0) >= 10000 ? "high" : "normal",
       order_type: isPickup ? "osw_pickup" : "osw_delivery",

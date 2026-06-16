@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PayPickupCard, type PayPickupProduct } from "@/components/PayPickupCard";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY } from "@/config/contact";
 
 /** MOS product ids for the 4 mains. Mirrors myorganicsoil.com lib/products.ts. */
 const MAIN_PRODUCT_IDS = [1000, 1001, 137, 3000] as const;
@@ -45,7 +46,7 @@ type ApiProduct = {
 };
 
 const fetchPublicProducts = async (): Promise<ApiProduct[]> => {
-  const res = await fetch("/api/public/products");
+  const res = await fetch(`/api/public/products?ids=${MAIN_PRODUCT_IDS.join(",")}`);
   if (!res.ok) throw new Error("Failed to load products");
   const body = await res.json();
   if (Array.isArray(body)) return body;
@@ -112,7 +113,7 @@ export function PayPickupGrid({ className }: PayPickupGridProps) {
       <div className={className}>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
           <p className="font-semibold">Couldn&apos;t load pay-and-pickup products.</p>
-          <p className="mt-1 text-sm">Try refreshing, or call (602) 726-7211 to order by phone.</p>
+          <p className="mt-1 text-sm">Try refreshing, or call {CUSTOMER_SUPPORT_PHONE_DISPLAY} to order by phone.</p>
         </div>
       </div>
     );
@@ -121,12 +122,13 @@ export function PayPickupGrid({ className }: PayPickupGridProps) {
   return (
     <div className={className}>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
-        {products.map((p) => (
+        {products.map((p, index) => (
           <PayPickupCard
             key={p.id}
             product={p}
             heroImageOverride={HERO_OVERRIDES[p.id]}
             backdropImageOverride={BACKDROP_OVERRIDES[p.id]}
+            priority={index === 0}
           />
         ))}
       </div>

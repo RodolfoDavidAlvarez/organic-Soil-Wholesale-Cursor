@@ -10,8 +10,8 @@ import { Sprout, MapPin, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react
  * so we can notify them when classes are scheduled.
  */
 
-const SSW_PHONE_DIAL = "+16027267211";
-const SSW_PHONE_DISPLAY = "(602) 726-7211";
+const SSW_PHONE_DIAL = "+16026370032";
+const SSW_PHONE_DISPLAY = "(602) 637-0032";
 const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
   "1634 N 19th Ave, Phoenix AZ 85009"
 )}`;

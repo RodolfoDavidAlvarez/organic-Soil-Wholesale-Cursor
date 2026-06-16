@@ -239,7 +239,7 @@ export default function CRMCapture() {
   // CRM fields
   const [segment, setSegment] = useState('other');
   const [leadSource, setLeadSource] = useState('uscc_2026');
-  const [partnerOwner, setPartnerOwner] = useState(orgConfig.defaultPartner);
+  const [partnerOwner, setPartnerOwner] = useState<Organization>(orgConfig.defaultPartner as Organization);
   const [contextNotes, setContextNotes] = useState('');
 
   // Voice recording
@@ -261,7 +261,7 @@ export default function CRMCapture() {
 
   // Recording timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isRecording) {
       interval = setInterval(() => {
         setRecordingDuration(d => d + 1);
@@ -1202,7 +1202,7 @@ export default function CRMCapture() {
                   {PARTNERS.map((p) => (
                     <button
                       key={p.value}
-                      onClick={() => setPartnerOwner(p.value)}
+                      onClick={() => setPartnerOwner(p.value as Organization)}
                       className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                         partnerOwner === p.value
                           ? `bg-gradient-to-r ${p.color} text-white shadow-lg`

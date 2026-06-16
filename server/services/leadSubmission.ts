@@ -2,7 +2,6 @@ import { supabase } from "../db/supabase.js";
 import { sendAdminLeadNotification, sendCustomerQuoteConfirmation } from "./emailNotifications.js";
 import { forwardToMosLeads } from "./forwardToMosLeads.js";
 import { sendLeadSmsAlert } from "./smsNotifications.js";
-import { forwardToMosLeads } from "./forwardToMosLeads.js";
 
 export interface LeadSubmissionPayload {
   name?: string;

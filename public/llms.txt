@@ -1,0 +1,46 @@
+# Organic Soil Wholesale by Soil Seed & Water
+
+Organic Soil Wholesale by Soil Seed & Water sells organic compost, worm castings, potting soil, and mulch for Arizona gardens, landscapes, farms, nurseries, and commercial projects.
+
+Website: https://organicsoilwholesale.com
+Main buying page: https://organicsoilwholesale.com/products
+Phone: (602) 637-0032
+Pickup address: 1634 N 19th Ave, Phoenix, AZ 85009
+Pickup map: https://organicsoilwholesale.com/yard-map
+
+Receiving hours:
+- Tuesday-Saturday: 8:00 AM-1:00 PM
+- Closed daily: 1:00 PM-2:00 PM
+- Tuesday-Saturday: 2:00 PM-4:00 PM
+
+Service area:
+- Phoenix yard pickup is available for the four main products.
+- Delivery is available when the order and destination qualify.
+- Delivery service area is generally within 300 miles of Phoenix or Congress, Arizona.
+
+Main products:
+- Simon's Gold: dairy compost for soil rebuilding, feeding, organic matter, beds, trees, and planted areas.
+- Mikey's Worm Poop: worm castings for root zones, top dressing, seed starts, garden beds, and soil biology.
+- Soil Craft: ready-to-use potting soil for raised beds, containers, nurseries, gardens, and planting projects.
+- Nature's Blanket Premium: dark mulch for landscape finish, moisture retention, weed suppression, gardens, farms, and commercial properties.
+
+Buying flow:
+- Customers can select a product at /products.
+- Product pages show available sizes and visible prices.
+- Customers can add pickup products to cart and complete checkout.
+- Truckload delivery orders require delivery details and delivery price confirmation.
+- Yard visitors should use /yard-map for Grand Ave south entrance directions.
+
+Important public URLs:
+- https://organicsoilwholesale.com/products
+- https://organicsoilwholesale.com/products/simons-gold
+- https://organicsoilwholesale.com/products/mikeys-worm-poop
+- https://organicsoilwholesale.com/products/soil-craft
+- https://organicsoilwholesale.com/products/natures-blanket-premium
+- https://organicsoilwholesale.com/yard-map
+- https://organicsoilwholesale.com/about
+- https://organicsoilwholesale.com/contact
+- https://organicsoilwholesale.com/faq
+
+Operational pages:
+- /checkout, /qr, /check-in, /pay-and-pickup, and admin or portal pages are operational flows and are not intended as search landing pages.

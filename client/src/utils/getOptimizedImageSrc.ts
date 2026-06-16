@@ -67,6 +67,13 @@ export const getOptimizedImageSrc = (source?: string | null) => {
   if (optimizedByFilename) {
     return queryPart ? `${optimizedByFilename}?${queryPart}` : optimizedByFilename;
   }
+
+  // Keep explicit public asset paths intact. Size/category images are not always
+  // represented in optimizedImages.json, and inventing an optimized path creates
+  // invalid URLs such as /images/optimized/images/sizes/....
+  if (filename.includes("/")) {
+    return getOriginalImageSrc(source);
+  }
   
   // Fallback: try to construct optimized path
   const baseName = filename.toLowerCase()

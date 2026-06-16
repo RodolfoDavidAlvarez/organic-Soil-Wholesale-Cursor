@@ -5,6 +5,7 @@ interface AdminUser {
   email: string;
   full_name?: string;
   role: string;
+  slug?: string;
   permissions?: any;
 }
 
@@ -12,7 +13,7 @@ interface AdminAuthContextType {
   admin: AdminUser | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<AdminUser>;
   signOut: () => Promise<void>;
 }
 
@@ -84,6 +85,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("adminToken", data.token);
         setAdmin(data.admin);
         setError(null);
+        return data.admin;
       } else {
         setError(data.error || "Login failed");
         throw new Error(data.error || "Login failed");
