@@ -38,6 +38,44 @@ async function getResend() {
   return resend;
 }
 
+// Admin-only failure monitor: logs every input failure to system_errors and
+// emails Rodo (rate-limited to once per path per 30 min). Never throws.
+const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
+async function reportFailure({ kind, path, method, status, message }) {
+  try {
+    const db = await getSupabase();
+    const { data: row } = await db
+      .from('system_errors')
+      .insert({ kind, path, method, status, message: String(message || '').slice(0, 500) })
+      .select('id')
+      .single();
+    // Rate-limit: skip the email if we already alerted for this path in the last 30 min.
+    const since = new Date(Date.now() - 30 * 60000).toISOString();
+    const { count } = await db
+      .from('system_errors')
+      .select('id', { count: 'exact', head: true })
+      .eq('path', path)
+      .eq('alerted', true)
+      .gte('created_at', since);
+    if ((count || 0) > 0) return;
+    if (!process.env.RESEND_API_KEY) return;
+    const resendClient = await getResend();
+    await resendClient.emails.send({
+      from: 'OSW Alerts <info@soilseedandwater.com>',
+      to: FAILURE_ALERT_TO,
+      subject: `⚠️ OSW input failure: ${method} ${path} (${status})`,
+      text:
+        `A submission failed on organicsoilwholesale.com.\n\n` +
+        `Type: ${kind}\nEndpoint: ${method} ${path}\nStatus: ${status}\n` +
+        `Error: ${message}\nTime: ${new Date().toISOString()}\n\n` +
+        `Automated admin alert (you only). Further alerts for this endpoint are paused 30 min.`,
+    });
+    if (row?.id) await db.from('system_errors').update({ alerted: true }).eq('id', row.id);
+  } catch (e) {
+    console.error('[reportFailure] non-fatal:', e?.message || e);
+  }
+}
+
 // Segment classification keywords
 const SEGMENT_KEYWORDS = {
   operator: ['compost', 'processor', 'facility', 'operations', 'plant manager', 'composting', 'processing'],
@@ -5187,10 +5225,15 @@ ${pages}
       }
     }
 
-    // 404
+    // 404 — alert admin only when a real submission (POST/PUT/PATCH) hits a
+    // missing route (i.e. a broken input), not GET noise from bots/crawlers.
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && path.startsWith('/api/')) {
+      await reportFailure({ kind: 'unmatched_input', path, method: req.method, status: 404, message: 'No prod route for this input' });
+    }
     return res.status(404).json({ error: 'API endpoint not found', path });
   } catch (error) {
     console.error('API error:', error);
+    await reportFailure({ kind: 'server_error', path, method: req.method, status: 500, message: error?.message || String(error) });
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }
