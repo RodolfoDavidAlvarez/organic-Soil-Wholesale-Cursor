@@ -323,6 +323,110 @@ export default async function handler(req, res) {
       });
     }
 
+    // ============ CREDIT APPLICATION ============
+    // Public B2B credit application (reps share the link). Records to
+    // credit_applications, emails Rodo, and forwards to the sales portal as a lead.
+    if (path === '/api/credit-application/submit' && req.method === 'POST') {
+      const b = req.body || {};
+      if (!b.business_name || !b.contact_name || !b.email) {
+        return res.status(400).json({ error: 'Business name, contact name, and email are required' });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      const nowIso = new Date().toISOString();
+      // 1) Find or create the customer profile (so this plugs into the existing
+      //    admin approve/reject -> credit_limit/payment_terms flow).
+      const profileFields = {
+        full_name: b.contact_name, phone: b.phone || null, company_name: b.business_name,
+        tax_id: b.tax_id || null, account_type: b.business_type || null, application_status: 'submitted',
+      };
+      let customerId;
+      const { data: existingProfile } = await db
+        .from('customer_profiles').select('id').eq('email', b.email).maybeSingle();
+      if (existingProfile) {
+        customerId = existingProfile.id;
+        await db.from('customer_profiles').update(profileFields).eq('id', customerId);
+      } else {
+        const { data: np, error: npErr } = await db
+          .from('customer_profiles')
+          .insert({ email: b.email, is_approved: false, ...profileFields })
+          .select('id').single();
+        if (npErr) { console.error('[credit-application] profile insert failed:', npErr); return res.status(500).json({ error: 'Failed to submit application' }); }
+        customerId = np.id;
+      }
+      // 2) Create the application record the admin reviews.
+      const credit_references = {
+        trade_ref_1: { company: b.trade_ref1, phone: b.trade_ref1_phone },
+        trade_ref_2: { company: b.trade_ref2, phone: b.trade_ref2_phone },
+        bank: { name: b.bank_name, contact: b.bank_contact },
+        requested_credit_limit: b.requested_credit_limit,
+        estimated_monthly_volume: b.estimated_monthly_volume,
+        signature_name: b.signature_name, signature_date: b.signature_date,
+        business_address: { address: b.address, city: b.city, state: b.state, zip: b.zip },
+        website: b.website,
+      };
+      const { data: app, error: appErr } = await db
+        .from('customer_applications')
+        .insert({
+          customer_id: customerId,
+          legal_entity_name: b.business_name,
+          dba_name: b.dba || null,
+          ein_tax_id: b.tax_id || null,
+          business_type: b.business_type || null,
+          years_in_business: b.years_in_business ? (parseInt(b.years_in_business, 10) || null) : null,
+          ops_contact_name: b.contact_name, ops_contact_title: b.contact_title || null,
+          ops_contact_email: b.email, ops_contact_phone: b.phone || null,
+          preferred_payment_terms: b.requested_terms || null,
+          credit_references,
+          status: 'submitted', submitted_at: nowIso, created_at: nowIso,
+        })
+        .select().single();
+      if (appErr) {
+        console.error('[credit-application] application insert failed:', appErr);
+        return res.status(500).json({ error: 'Failed to submit application' });
+      }
+      try {
+        if (process.env.RESEND_API_KEY) {
+          const resendClient = await getResend();
+          await resendClient.emails.send({
+            from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+            to: 'rodolfo@bettersystems.ai',
+            subject: `New Credit Application: ${b.business_name}`,
+            text:
+              `New wholesale credit application.\n\n` +
+              `Business: ${b.business_name}${b.dba ? ` (DBA ${b.dba})` : ''}\n` +
+              `Type: ${b.business_type || '-'}  |  Years: ${b.years_in_business || '-'}  |  Tax ID: ${b.tax_id || '-'}\n` +
+              `Contact: ${b.contact_name}${b.contact_title ? ', ' + b.contact_title : ''}\n` +
+              `Email: ${b.email}  |  Phone: ${b.phone || '-'}\n` +
+              `Requested credit: ${b.requested_credit_limit || '-'}  |  Terms: ${b.requested_terms || '-'}  |  Est. monthly: ${b.estimated_monthly_volume || '-'}\n\n` +
+              `Application ID: ${app.id}`,
+          });
+        }
+      } catch (e) { console.error('[credit-application] email error:', e?.message); }
+      try {
+        const secret = process.env.MOS_LEAD_INGEST_SECRET;
+        if (secret) {
+          await fetch(process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
+            body: JSON.stringify({
+              full_name: b.contact_name, email: b.email, phone: b.phone || undefined, company: b.business_name,
+              message: `Credit application — requested ${b.requested_credit_limit || 'n/a'}, terms ${b.requested_terms || 'n/a'}, est. monthly ${b.estimated_monthly_volume || 'n/a'}`,
+              source: 'osw_credit_application',
+              source_url: 'https://organicsoilwholesale.com/credit-application',
+              source_data: { credit_application_id: app.id },
+            }),
+          });
+        }
+      } catch (e) { console.error('[credit-application] MOS forward error:', e?.message); }
+      return res.json({
+        success: true,
+        message: 'Your credit application has been submitted. We will review it and follow up shortly.',
+        applicationId: app.id,
+      });
+    }
+
     // ============ CRM ENDPOINTS ============
 
     // Analyze business card with Claude Vision (accepts base64 image)

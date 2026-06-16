@@ -24,6 +24,7 @@ const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const MulchDetail = lazy(() => import("@/pages/MulchDetail"));
 const About = lazy(() => import("@/pages/About"));
 const Contact = lazy(() => import("@/pages/Contact"));
+const CreditApplication = lazy(() => import("@/pages/CreditApplication"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const Order = lazy(() => import("@/pages/Order"));
 const SpecialRequest = lazy(() => import("@/pages/SpecialRequest"));
@@ -111,6 +112,9 @@ function Router() {
         <Route path="/products" component={Products} />
         <Route path="/about" component={About} />
         <Route path="/contact" component={Contact} />
+        <Route path="/credit-application" component={CreditApplication} />
+        <Route path="/apply" component={CreditApplication} />
+        <Route path="/account-form" component={CreditApplication} />
         <Route path="/faq" component={FAQ} />
         <Route path="/order" component={Order} />
         <Route path="/special-request" component={SpecialRequest} />
