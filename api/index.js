@@ -420,6 +420,19 @@ export default async function handler(req, res) {
           });
         }
       } catch (e) { console.error('[credit-application] MOS forward error:', e?.message); }
+      // 4) If this came from a "Send Credit App" link in the sales portal
+      //    (?c=<sp_customers.id>), close the loop and mark that contact submitted.
+      try {
+        const refContactId = parseInt(b.ref_contact_id, 10);
+        if (refContactId) {
+          await db.from('sp_customers').update({
+            credit_app_status: 'submitted',
+            credit_app_submitted_at: nowIso,
+            credit_app_application_id: app.id,
+            updated_at: nowIso,
+          }).eq('id', refContactId);
+        }
+      } catch (e) { console.error('[credit-application] contact linkback error:', e?.message); }
       return res.json({
         success: true,
         message: 'Your credit application has been submitted. We will review it and follow up shortly.',

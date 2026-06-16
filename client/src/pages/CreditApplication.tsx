@@ -66,10 +66,11 @@ export default function CreditApplication() {
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);
     try {
+      const refContactId = new URLSearchParams(window.location.search).get("c");
       const res = await fetch("/api/credit-application/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, ref_contact_id: refContactId || undefined }),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
