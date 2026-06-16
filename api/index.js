@@ -335,25 +335,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
       const nowIso = new Date().toISOString();
-      // 1) Find or create the customer profile (so this plugs into the existing
-      //    admin approve/reject -> credit_limit/payment_terms flow).
+      // 1) If this applicant already has a portal account, link to it and refresh
+      //    their info. customer_profiles.id is a FK to auth.users, so a prospect
+      //    WITHOUT a login cannot have a profile yet — they get customer_id=null.
+      //    The application below is self-contained; the admin provisions an account
+      //    at approval time. (This is why anonymous submissions used to 500.)
       const profileFields = {
         full_name: b.contact_name, phone: b.phone || null, company_name: b.business_name,
         tax_id: b.tax_id || null, account_type: b.business_type || null, application_status: 'submitted',
       };
-      let customerId;
+      let customerId = null;
       const { data: existingProfile } = await db
-        .from('customer_profiles').select('id').eq('email', b.email).maybeSingle();
+        .from('customer_profiles').select('id').eq('email', b.email.toLowerCase()).maybeSingle();
       if (existingProfile) {
         customerId = existingProfile.id;
         await db.from('customer_profiles').update(profileFields).eq('id', customerId);
-      } else {
-        const { data: np, error: npErr } = await db
-          .from('customer_profiles')
-          .insert({ email: b.email, is_approved: false, ...profileFields })
-          .select('id').single();
-        if (npErr) { console.error('[credit-application] profile insert failed:', npErr); return res.status(500).json({ error: 'Failed to submit application' }); }
-        customerId = np.id;
       }
       // 2) Create the application record the admin reviews.
       const credit_references = {
@@ -4086,12 +4082,44 @@ ${pages}
       if (!app) return res.status(404).json({ error: 'Application not found' });
       const body = req.body || {};
       await sb.from('customer_applications').update({ status: 'approved', reviewed_at: new Date().toISOString(), notes: body.notes || null }).eq('id', appId);
-      // Update profile fields individually to avoid Supabase partial update issues
-      await sb.from('customer_profiles').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', app.customer_id);
-      await sb.from('customer_profiles').update({ application_status: 'approved' }).eq('id', app.customer_id);
-      if (body.credit_limit) await sb.from('customer_profiles').update({ credit_limit: body.credit_limit }).eq('id', app.customer_id);
-      if (body.payment_terms) await sb.from('customer_profiles').update({ payment_terms: body.payment_terms }).eq('id', app.customer_id);
-      return res.json({ success: true });
+      // Prospects submit with customer_id=null (no portal account yet). On approval,
+      // provision an auth user + profile so net terms / credit limit have a home and
+      // the customer can later log in to order on terms.
+      let customerId = app.customer_id;
+      if (!customerId) {
+        const { data: full } = await sb.from('customer_applications')
+          .select('ops_contact_email, ops_contact_name, ops_contact_phone, legal_entity_name, business_type, ein_tax_id')
+          .eq('id', appId).single();
+        const email = (full?.ops_contact_email || '').toLowerCase();
+        if (email) {
+          const { data: existing } = await sb.from('customer_profiles').select('id').eq('email', email).maybeSingle();
+          if (existing) {
+            customerId = existing.id;
+          } else {
+            try {
+              const { data: createdUser } = await sb.auth.admin.createUser({ email, email_confirm: true });
+              const uid = createdUser?.user?.id;
+              if (uid) {
+                await sb.from('customer_profiles').insert({
+                  id: uid, email, full_name: full?.ops_contact_name || null,
+                  company_name: full?.legal_entity_name || null, phone: full?.ops_contact_phone || null,
+                  tax_id: full?.ein_tax_id || null, account_type: full?.business_type || 'wholesale',
+                  application_status: 'submitted', is_approved: false,
+                });
+                customerId = uid;
+              }
+            } catch (e) { console.error('[approve] account provisioning failed:', e?.message); }
+          }
+          if (customerId) await sb.from('customer_applications').update({ customer_id: customerId }).eq('id', appId);
+        }
+      }
+      if (customerId) {
+        await sb.from('customer_profiles').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', customerId);
+        await sb.from('customer_profiles').update({ application_status: 'approved' }).eq('id', customerId);
+        if (body.credit_limit) await sb.from('customer_profiles').update({ credit_limit: body.credit_limit }).eq('id', customerId);
+        if (body.payment_terms) await sb.from('customer_profiles').update({ payment_terms: body.payment_terms }).eq('id', customerId);
+      }
+      return res.json({ success: true, provisioned_customer_id: customerId || null });
     }
 
     // POST /api/admin/applications/:id/reject
@@ -4105,7 +4133,7 @@ ${pages}
       if (!app) return res.status(404).json({ error: 'Application not found' });
       const body = req.body || {};
       await sb.from('customer_applications').update({ status: 'rejected', reviewed_at: new Date().toISOString(), notes: body.reason || null }).eq('id', appId);
-      await sb.from('customer_profiles').update({ application_status: 'rejected' }).eq('id', app.customer_id);
+      if (app.customer_id) await sb.from('customer_profiles').update({ application_status: 'rejected' }).eq('id', app.customer_id);
       return res.json({ success: true });
     }
 
