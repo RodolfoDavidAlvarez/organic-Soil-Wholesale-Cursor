@@ -1,13 +1,12 @@
 import {
-  getBookableDates,
-  getBookableSlots,
+  computeAsapPickup,
+  formatReadyLabel,
   HOURS_LABEL,
+  isOpenPickupDay,
   MIN_NOTICE_MS,
-  OPEN_DAYS,
   phoenixParts,
-  phoenixWeekday,
   phoenixYmd,
-  validatePickupIso,
+  validateAsapPickupIso,
 } from "../../shared/pickupSchedule.js";
 
 export const PICKUP_TIMEZONE = "America/Phoenix";
@@ -24,10 +23,6 @@ export type PickupOption = {
 
 export type PickupDayHint = "auto" | "today" | "tomorrow";
 
-function slotToIso(ymd: string, startHour: number) {
-  return new Date(`${ymd}T${String(startHour).padStart(2, "0")}:00:00-07:00`).toISOString();
-}
-
 function formatDayLabel(ymd: string, todayYmd: string, tomorrowYmd: string) {
   if (ymd === todayYmd) return "today";
   if (ymd === tomorrowYmd) return "tomorrow";
@@ -35,34 +30,26 @@ function formatDayLabel(ymd: string, todayYmd: string, tomorrowYmd: string) {
   return d.toLocaleDateString("en-US", { weekday: "long", timeZone: PICKUP_TIMEZONE }).toLowerCase();
 }
 
-export function getPickupOptions(maxOptions = 16, forDay: PickupDayHint = "auto"): PickupOption[] {
-  const now = new Date();
-  const todayYmd = phoenixYmd(now);
-  const tomorrowYmd = phoenixYmd(new Date(now.getTime() + 86400000));
-  const earliestMs = Date.now() + MIN_NOTICE_MS;
+/** Voice agent: offer ASAP ready time (restaurant-style). */
+export function getPickupOptions(maxOptions = 1): PickupOption[] {
+  const asap = computeAsapPickup();
+  if (!asap.ok) return [];
 
-  const dates =
-    forDay === "tomorrow"
-      ? [{ ymd: tomorrowYmd, label: "Tomorrow" }]
-      : forDay === "today"
-        ? [{ ymd: todayYmd, label: "Today" }]
-        : getBookableDates({ daysAhead: 14, earliestMs });
+  const parts = phoenixParts(new Date(asap.readyAtIso));
+  const todayYmd = phoenixYmd();
+  const tomorrowYmd = phoenixYmd(new Date(Date.now() + 86400000));
+  const dayLabel = formatDayLabel(parts.ymd, todayYmd, tomorrowYmd);
 
-  const options: PickupOption[] = [];
-  for (const date of dates) {
-    for (const slot of getBookableSlots(date.ymd, earliestMs)) {
-      const pickupAtIso = slotToIso(date.ymd, slot.startHour);
-      const dayLabel = formatDayLabel(date.ymd, todayYmd, tomorrowYmd);
-      options.push({
-        pickupAtIso,
-        azClock: slot.label.split(" – ")[0],
-        dayLabel,
-        label: `${dayLabel} at ${slot.label}`,
-      });
-      if (options.length >= maxOptions) return options;
-    }
-  }
-  return options;
+  const options: PickupOption[] = [
+    {
+      pickupAtIso: asap.readyAtIso,
+      azClock: formatReadyLabel(asap.readyAtIso),
+      dayLabel,
+      label: asap.readyLabel,
+    },
+  ];
+
+  return options.slice(0, maxOptions);
 }
 
 export type PickupValidation =
@@ -70,29 +57,32 @@ export type PickupValidation =
   | { ok: false; reason: string; message: string };
 
 export function validatePickup(pickupAtIso: string): PickupValidation {
-  const result = validatePickupIso(pickupAtIso);
+  const normalized = String(pickupAtIso || "").trim().toLowerCase();
+  if (!normalized || normalized === "asap") {
+    const asap = computeAsapPickup();
+    if (!asap.ok) {
+      return { ok: false, reason: "unavailable", message: asap.message || "Pickup is not available right now." };
+    }
+    return {
+      ok: true,
+      pickupAtIso: asap.readyAtIso,
+      label: asap.readyLabel,
+    };
+  }
+
+  const result = validateAsapPickupIso(pickupAtIso);
   if (!result.ok) {
     return { ok: false, reason: result.reason, message: result.message };
   }
-  const parts = phoenixParts(new Date(result.pickupAtIso));
-  const todayYmd = phoenixYmd();
-  const tomorrowYmd = phoenixYmd(new Date(Date.now() + 86400000));
-  const dayLabel = formatDayLabel(parts.ymd, todayYmd, tomorrowYmd);
-  const hourLabel =
-    parts.hour === 12
-      ? "12 PM"
-      : parts.hour < 12
-        ? `${parts.hour} AM`
-        : `${parts.hour - 12} PM`;
   return {
     ok: true,
     pickupAtIso: result.pickupAtIso,
-    label: `${dayLabel} at ${hourLabel}`,
+    label: result.readyLabel,
   };
 }
 
 export function isVoicePickupDayOpen(date = new Date()) {
-  return OPEN_DAYS.has(phoenixWeekday(phoenixYmd(date)));
+  return isOpenPickupDay(date);
 }
 
-export { HOURS_LABEL };
+export { HOURS_LABEL, MIN_NOTICE_MS };

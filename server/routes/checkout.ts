@@ -4,6 +4,7 @@ import { supabase } from '../db/supabase.js';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
 import { quoteTrucking } from './quoteRequests.js';
+import { computeAsapPickup, formatReadyLabel, validateAsapPickupIso } from '../../shared/pickupSchedule.js';
 
 const router = Router();
 
@@ -29,7 +30,6 @@ router.post('/create-session', async (req, res) => {
     const {
       items,
       customerInfo,
-      pickupTime,
       locationId,
       isQuickOrder,
       discountCode,
@@ -37,9 +37,26 @@ router.post('/create-session', async (req, res) => {
       deliveryAddress,
       pickupLocation,
     } = req.body;
+    let { pickupTime } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'No items to check out' });
+    }
+
+    const isDelivery = fulfillmentType === 'delivery';
+
+    if (!isDelivery) {
+      const asap = computeAsapPickup();
+      if (!asap.ok) {
+        return res.status(400).json({ error: asap.message || 'Could not compute pickup ready time.' });
+      }
+      if (pickupTime) {
+        const pickupCheck = validateAsapPickupIso(pickupTime);
+        if (!pickupCheck.ok) {
+          return res.status(400).json({ error: pickupCheck.message });
+        }
+      }
+      pickupTime = asap.readyAtIso;
     }
 
     // Discount handling — extend here as real codes get added.
@@ -48,7 +65,6 @@ router.post('/create-session', async (req, res) => {
     let discountPercent = 0;
     if (normalizedDiscount === 'TEST') discountPercent = 100;
 
-    const isDelivery = fulfillmentType === 'delivery';
     let truckingQuote: Awaited<ReturnType<typeof quoteTrucking>> | null = null;
     const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
       ? deliveryAddress.preferredDate.trim()
@@ -250,7 +266,7 @@ router.post('/create-session', async (req, res) => {
           total_price_cents: Math.round((item.price || 0) * (item.quantity || 1) * 100),
         })),
         pickup_at: isDelivery ? undefined : (pickupTime || new Date().toISOString()),
-        slot_label: !isDelivery && pickupTime ? formatPickupSlot(pickupTime) : undefined,
+        slot_label: !isDelivery && pickupTime ? formatReadyLabel(pickupTime, { includeDate: true }) : undefined,
         total_cents: 0,
         payment_status: 'paid',
         source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
@@ -568,7 +584,7 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
       })),
       pickup_at: fullOrder.pickup_scheduled_at || new Date().toISOString(),
       slot_label: fullOrder.pickup_scheduled_at
-        ? formatPickupSlot(fullOrder.pickup_scheduled_at)
+        ? formatReadyLabel(fullOrder.pickup_scheduled_at, { includeDate: true })
         : undefined,
       total_cents: Math.round((fullOrder.total_amount || fullOrder.total || 0) * 100),
       payment_status: 'paid',
@@ -577,28 +593,6 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
   }
 
   console.log(`Order ${orderId} successfully paid and inventory reserved`);
-}
-
-/** Format a pickup ISO into a human slot label like "9 AM – 10 AM, Tue May 20"
- *  in Phoenix local time (MST, no DST). Using UTC hours here was the cause of
- *  notifications showing 7 hours off from the actual slot the customer picked. */
-function formatPickupSlot(pickupIso: string): string {
-  try {
-    const d = new Date(pickupIso);
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Phoenix',
-      weekday: 'short', month: 'short', day: 'numeric',
-      hour: 'numeric', hour12: false,
-    }).formatToParts(d);
-    const get = (t: string) => parts.find(p => p.type === t)?.value || '';
-    const hour = Number(get('hour'));
-    const next = (hour + 1) % 24;
-    const ampm = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 || h === 24 ? 'AM' : 'PM'}`;
-    const date = `${get('weekday')} ${get('month')} ${get('day')}`;
-    return `${ampm(hour)} – ${ampm(next)}, ${date}`;
-  } catch {
-    return pickupIso;
-  }
 }
 
 // Handle failed payment

@@ -234,14 +234,13 @@ router.post("/tools/recommend", (req, res) => {
 });
 
 router.post("/tools/get_pickup_options", (req, res) => {
-  const forDay = (req.body?.for_day === "tomorrow" || req.body?.for_day === "today") ? req.body.for_day : "auto";
-  const options = getPickupOptions(16, forDay);
+  const options = getPickupOptions(1);
   res.json({
     timezone: PICKUP_TIMEZONE,
     openHourLocal: OPEN_HOUR_LOCAL,
     closeHourLocal: CLOSE_HOUR_LOCAL,
     minLeadMinutes: MIN_LEAD_MINUTES,
-    forDay,
+    mode: "asap",
     options,
   });
 });

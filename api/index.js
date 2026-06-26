@@ -4902,26 +4902,9 @@ ${pages}
       }
     }
 
-    function formatPickupSlotLabel(pickupIso) {
-      try {
-        const d = new Date(pickupIso);
-        // Phoenix = MST year-round (no DST), fixed UTC-7. Format the hour and
-        // date in Phoenix local so yard reps + customers see the slot they
-        // actually picked, not the UTC translation.
-        const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Phoenix',
-          weekday: 'short', month: 'short', day: 'numeric',
-          hour: 'numeric', hour12: false,
-        }).formatToParts(d);
-        const get = (t) => parts.find(p => p.type === t)?.value || '';
-        const hour = Number(get('hour'));
-        const next = (hour + 1) % 24;
-        const ampm = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 || h === 24 ? 'AM' : 'PM'}`;
-        const date = `${get('weekday')} ${get('month')} ${get('day')}`;
-        return `${ampm(hour)} – ${ampm(next)}, ${date}`;
-      } catch {
-        return pickupIso;
-      }
+    async function formatPickupReadyLabel(pickupIso) {
+      const schedule = await getPickupSchedule();
+      return schedule.formatReadyLabel(pickupIso, { includeDate: true });
     }
 
     // POST /api/checkout/webhook — Stripe webhook for OSW pay-and-pickup orders.
@@ -5019,6 +5002,9 @@ ${pages}
             const dev = await getDeveloperMode();
             const customerEmail = order?.customer_email || order?.email;
             const orderRef = order?.order_number?.slice(0, 8) || orderId;
+            const pickupLabel = order?.pickup_scheduled_at
+              ? await formatPickupReadyLabel(order.pickup_scheduled_at)
+              : null;
             if (customerEmail) {
               await r.emails.send({
                 from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
@@ -5027,7 +5013,7 @@ ${pages}
                 subject: dev.devModeSubject(`Order #${orderRef} confirmed`),
                 html: `<p>Hi ${order?.customer_name || 'there'},</p>
                   <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
-                  <p><strong>Pickup:</strong> ${order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : 'See order details'}<br>
+                  <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
                   <strong>Location:</strong> 1634 N 19th Ave, Phoenix, AZ 85009</p>
                   <p>Please call (602) 637-0032 when you arrive.</p>
                   <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
@@ -5041,7 +5027,7 @@ ${pages}
               html: `<p>New order from ${order?.customer_name || 'customer'} (${order?.phone || ''}).</p>
                 <p>Items: ${(orderItems || []).length}<br>
                 Total: $${((order?.total_amount) || 0).toFixed(2)}<br>
-                Pickup: ${order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : 'TBD'}</p>`,
+                Estimated ready: ${pickupLabel || 'TBD'}</p>`,
             });
           } catch (emailErr) {
             console.error('[checkout webhook] email send failed:', emailErr?.message || emailErr);
@@ -5049,6 +5035,9 @@ ${pages}
 
           // Forward to MOS — delivery vs pickup endpoint chosen inside forwarder.
           const isDeliveryOrder = order?.fulfillment_type === 'delivery';
+          const mosPickupLabel = !isDeliveryOrder && order?.pickup_scheduled_at
+            ? await formatPickupReadyLabel(order.pickup_scheduled_at)
+            : undefined;
           await forwardOswPickupToMos({
             osw_order_id: orderId,
             osw_order_number: order?.order_number || undefined,
@@ -5065,7 +5054,7 @@ ${pages}
             })),
             // pickup-shape fields
             pickup_at: isDeliveryOrder ? null : (order?.pickup_scheduled_at || new Date().toISOString()),
-            slot_label: !isDeliveryOrder && order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : undefined,
+            slot_label: mosPickupLabel,
             // delivery-shape fields
             fulfillment_type: isDeliveryOrder ? 'delivery' : 'pickup',
             delivery_address: isDeliveryOrder ? order?.delivery_address || null : null,
@@ -5107,9 +5096,10 @@ ${pages}
     if (path === '/api/checkout/create-session' && req.method === 'POST') {
       try {
         const {
-          items, customerInfo, pickupTime, locationId, discountCode,
+          items, customerInfo, locationId, discountCode,
           fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation,
         } = req.body || {};
+        let { pickupTime } = req.body || {};
 
         if (!Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ error: 'No items to check out' });
@@ -5123,14 +5113,18 @@ ${pages}
         let truckingQuote = null;
 
         if (!isDelivery) {
-          if (!pickupTime) {
-            return res.status(400).json({ error: 'Pickup time is required.' });
+          const schedule = await getPickupSchedule();
+          const asap = schedule.computeAsapPickup();
+          if (!asap.ok) {
+            return res.status(400).json({ error: asap.message || 'Could not compute pickup ready time.' });
           }
-          const { validatePickupIso } = await getPickupSchedule();
-          const pickupCheck = validatePickupIso(pickupTime);
-          if (!pickupCheck.ok) {
-            return res.status(400).json({ error: pickupCheck.message });
+          if (pickupTime) {
+            const pickupCheck = schedule.validateAsapPickupIso(pickupTime);
+            if (!pickupCheck.ok) {
+              return res.status(400).json({ error: pickupCheck.message });
+            }
           }
+          pickupTime = asap.readyAtIso;
         }
 
         if (isDelivery) {
@@ -5241,6 +5235,9 @@ ${pages}
         if (isFreeOrder) {
           // Fan out to MOS so yard reps see the test order in the iOS portal.
           try {
+            const freeOrderPickupLabel = !isDelivery && pickupTime
+              ? await formatPickupReadyLabel(pickupTime)
+              : undefined;
             await forwardOswPickupToMos({
               osw_order_id: order.id,
               osw_order_number: order.order_number || undefined,
@@ -5257,7 +5254,7 @@ ${pages}
               })),
               // pickup-shape fields
               pickup_at: isDelivery ? null : (pickupTime || new Date().toISOString()),
-              slot_label: !isDelivery && pickupTime ? formatPickupSlotLabel(pickupTime) : undefined,
+              slot_label: freeOrderPickupLabel,
               // delivery-shape fields
               fulfillment_type: isDelivery ? 'delivery' : 'pickup',
               delivery_address: isDelivery ? orderData.delivery_address_json : null,

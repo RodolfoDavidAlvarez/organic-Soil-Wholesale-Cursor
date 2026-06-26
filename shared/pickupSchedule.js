@@ -11,6 +11,9 @@ export const LUNCH_END_HOUR = 14;
 export const OPEN_HOUR = 8;
 export const CLOSE_HOUR = 16;
 export const MIN_NOTICE_MS = 30 * 60 * 1000;
+export const READY_IN_MINUTES = 20;
+export const READY_IN_MS = READY_IN_MINUTES * 60 * 1000;
+export const ASAP_VALIDATION_TOLERANCE_MS = 2 * 60 * 1000;
 export const SAME_DAY_CUTOFF_HOUR = 16;
 export const HOURS_LABEL = 'Tue-Sat, 8 AM-4 PM (closed 1-2 PM)';
 export const PICKUP_ADDRESS = '1634 N 19th Ave, Phoenix, AZ 85009';
@@ -250,4 +253,197 @@ export function validatePickupIso(pickupAtIso) {
   }
 
   return { ok: true, pickupAtIso: requested.toISOString() };
+}
+
+function phoenixLocalMs(ymd, hour, minute = 0) {
+  return Date.parse(
+    `${ymd}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-07:00`,
+  );
+}
+
+function formatClockTime(hour, minute) {
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  const minPart = minute === 0 ? '' : `:${String(minute).padStart(2, '0')}`;
+  return `${h12}${minPart} ${ampm}`;
+}
+
+function formatShortWeekday(ymd) {
+  return new Date(`${ymd}T12:00:00-07:00`).toLocaleDateString('en-US', {
+    weekday: 'short',
+    timeZone: PICKUP_TIMEZONE,
+  });
+}
+
+/**
+ * Normalize a candidate ready timestamp to respect yard hours (Tue–Sat, 8–4, lunch 1–2).
+ * @param {number} candidateMs
+ * @returns {number}
+ */
+export function normalizeAsapReadyMs(candidateMs) {
+  let readyMs = candidateMs;
+
+  for (let i = 0; i < 20; i += 1) {
+    const parts = phoenixParts(new Date(readyMs));
+    const { ymd, hour, minute } = parts;
+    const openPlusPrepMs = phoenixLocalMs(ymd, OPEN_HOUR, READY_IN_MINUTES);
+    const lunchStartMs = phoenixLocalMs(ymd, LUNCH_START_HOUR, 0);
+    const lunchEndMs = phoenixLocalMs(ymd, LUNCH_END_HOUR, 0);
+    const closeMs = phoenixLocalMs(ymd, CLOSE_HOUR, 0);
+
+    if (!isOpenPickupDay(ymd)) {
+      const nextOpen = advanceYmdToOpenDay(addDaysYmd(ymd, 1));
+      readyMs = phoenixLocalMs(nextOpen, OPEN_HOUR, READY_IN_MINUTES);
+      continue;
+    }
+
+    if (readyMs < openPlusPrepMs) {
+      readyMs = openPlusPrepMs;
+      continue;
+    }
+
+    if (readyMs >= lunchStartMs && readyMs < lunchEndMs) {
+      readyMs = lunchEndMs;
+      continue;
+    }
+
+    if (readyMs >= closeMs) {
+      const nextOpen = advanceYmdToOpenDay(addDaysYmd(ymd, 1));
+      readyMs = phoenixLocalMs(nextOpen, OPEN_HOUR, READY_IN_MINUTES);
+      continue;
+    }
+
+    // Guard: hour 13 from phoenixParts edge cases
+    if (hour >= LUNCH_START_HOUR && hour < LUNCH_END_HOUR) {
+      readyMs = lunchEndMs;
+      continue;
+    }
+
+    if (hour >= CLOSE_HOUR) {
+      const nextOpen = advanceYmdToOpenDay(addDaysYmd(ymd, 1));
+      readyMs = phoenixLocalMs(nextOpen, OPEN_HOUR, READY_IN_MINUTES);
+      continue;
+    }
+
+    break;
+  }
+
+  return readyMs;
+}
+
+/**
+ * Restaurant-style ASAP pickup ready time.
+ * @param {number} [nowMs]
+ * @returns {{ ok: true, readyAtIso: string, readyLabel: string, status: 'asap' | 'scheduled' } | { ok: false, reason: string, message: string }}
+ */
+export function computeAsapPickup(nowMs = Date.now()) {
+  const readyMs = normalizeAsapReadyMs(nowMs + READY_IN_MS);
+  const readyAtIso = new Date(readyMs).toISOString();
+  const parts = phoenixParts(new Date(readyMs));
+  const todayYmd = phoenixYmd(new Date(nowMs));
+  const naiveAsapMs = nowMs + READY_IN_MS;
+  const yardOpenNow = isOpenPickupDay(todayYmd) && (() => {
+    const nowParts = phoenixParts(new Date(nowMs));
+    const openMs = phoenixLocalMs(todayYmd, OPEN_HOUR, 0);
+    const lunchStart = phoenixLocalMs(todayYmd, LUNCH_START_HOUR, 0);
+    const lunchEnd = phoenixLocalMs(todayYmd, LUNCH_END_HOUR, 0);
+    const close = phoenixLocalMs(todayYmd, CLOSE_HOUR, 0);
+    const t = nowMs;
+    return t >= openMs && t < lunchStart || t >= lunchEnd && t < close;
+  })();
+
+  const status =
+    yardOpenNow &&
+    Math.abs(readyMs - naiveAsapMs) < 60 * 1000 &&
+    parts.ymd === todayYmd
+      ? 'asap'
+      : 'scheduled';
+
+  return {
+    ok: true,
+    readyAtIso,
+    readyLabel: formatReadyLabel(readyAtIso, { nowMs, status }),
+    status,
+  };
+}
+
+/**
+ * @param {string} readyAtIso
+ * @param {{ nowMs?: number, status?: 'asap' | 'scheduled', includeDate?: boolean }} [opts]
+ */
+export function formatReadyLabel(readyAtIso, opts = {}) {
+  const { nowMs = Date.now(), status, includeDate = false } = opts;
+  try {
+    const readyMs = new Date(readyAtIso).getTime();
+    const parts = phoenixParts(new Date(readyMs));
+    const todayYmd = phoenixYmd(new Date(nowMs));
+    const tomorrowYmd = phoenixYmd(new Date(nowMs + 86400000));
+    const clock = formatClockTime(parts.hour, parts.minute);
+    const resolvedStatus =
+      status ??
+      (Math.abs(readyMs - (nowMs + READY_IN_MS)) < 60 * 1000 && parts.ymd === todayYmd
+        ? 'asap'
+        : 'scheduled');
+
+    let label =
+      resolvedStatus === 'asap'
+        ? 'Ready in about 20 minutes'
+        : parts.ymd === todayYmd
+          ? `Ready around ${clock}`
+          : parts.ymd === tomorrowYmd
+            ? `Ready tomorrow ~${clock}`
+            : `Ready ${formatShortWeekday(parts.ymd)} ~${clock}`;
+
+    if (includeDate) {
+      const datePart = new Date(`${parts.ymd}T12:00:00-07:00`).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        timeZone: PICKUP_TIMEZONE,
+      });
+      if (resolvedStatus === 'asap') {
+        return `Ready in about 20 minutes, ${datePart}`;
+      }
+      return `Ready ~${clock}, ${datePart}`;
+    }
+
+    return label;
+  } catch {
+    return readyAtIso;
+  }
+}
+
+/**
+ * Validate client-supplied ASAP ready time (optional — server should recompute at checkout).
+ * @returns {{ ok: true, pickupAtIso: string, readyLabel: string } | { ok: false, reason: string, message: string }}
+ */
+export function validateAsapPickupIso(pickupAtIso, nowMs = Date.now()) {
+  if (!pickupAtIso || typeof pickupAtIso !== 'string') {
+    return { ok: false, reason: 'missing', message: 'Pickup ready time is required.' };
+  }
+
+  const requested = new Date(pickupAtIso);
+  if (Number.isNaN(requested.getTime())) {
+    return { ok: false, reason: 'invalid_date', message: 'That pickup time is not valid.' };
+  }
+
+  const expected = computeAsapPickup(nowMs);
+  if (!expected.ok) {
+    return expected;
+  }
+
+  const diff = Math.abs(requested.getTime() - new Date(expected.readyAtIso).getTime());
+  if (diff > ASAP_VALIDATION_TOLERANCE_MS) {
+    return {
+      ok: false,
+      reason: 'stale_ready_time',
+      message: 'Pickup ready time expired — please refresh and try again.',
+    };
+  }
+
+  return {
+    ok: true,
+    pickupAtIso: expected.readyAtIso,
+    readyLabel: expected.readyLabel,
+  };
 }

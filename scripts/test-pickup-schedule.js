@@ -1,16 +1,15 @@
 /**
- * Local pickup schedule test checklist (plan cases 1-7).
+ * ASAP pickup schedule tests.
  * Run: node scripts/test-pickup-schedule.js
  */
 import {
-  getBookableDates,
-  getBookableSlots,
-  isOpenPickupDay,
+  computeAsapPickup,
+  formatReadyLabel,
+  normalizeAsapReadyMs,
   phoenixParts,
-  phoenixWeekday,
   phoenixYmd,
-  validatePickupIso,
-  MIN_NOTICE_MS,
+  validateAsapPickupIso,
+  READY_IN_MS,
 } from '../shared/pickupSchedule.js';
 
 let passed = 0;
@@ -46,61 +45,61 @@ function withMockNow(iso, fn) {
   }
 }
 
-// Case 1: Tuesday ~9:30 AM Phoenix — Today visible; slots 10-11, 11-12, 2-3, 3-4
+function readyParts(nowIso) {
+  return withMockNow(nowIso, () => {
+    const result = computeAsapPickup();
+    const parts = phoenixParts(new Date(result.readyAtIso));
+    return { result, parts };
+  });
+}
+
+// Case 1: Tuesday 9:30 AM Phoenix → ready ~9:50 AM
 withMockNow('2026-06-30T16:30:00.000Z', () => {
-  const ymd = phoenixYmd();
-  assert('Case 1: Tuesday', phoenixWeekday(ymd) === 2, ymd);
-  const dates = getBookableDates({ daysAhead: 7, earliestMs: Date.now() + MIN_NOTICE_MS });
-  assert('Case 1: Today in dates', dates[0]?.label === 'Today');
-  const slots = getBookableSlots(ymd, Date.now() + MIN_NOTICE_MS).map((s) => s.label);
-  assert('Case 1: slot labels', JSON.stringify(slots) === JSON.stringify(['10 AM – 11 AM', '11 AM – 12 PM', '2 PM – 3 PM', '3 PM – 4 PM']), slots.join(', '));
+  const { result, parts } = readyParts('2026-06-30T16:30:00.000Z');
+  assert('Case 1: Tuesday ASAP status', result.status === 'asap', result.status);
+  assert('Case 1: ready ~9:50 AM', parts.hour === 9 && parts.minute === 50, `${parts.hour}:${parts.minute}`);
+  assert('Case 1: label mentions 20 minutes', result.readyLabel.includes('20 minutes'));
 });
 
-// Case 2: Sunday — no Today; first day is Tuesday
+// Case 2: Tuesday 12:50 PM → ready bumps past lunch to 2:00 PM
+withMockNow('2026-06-30T19:50:00.000Z', () => {
+  const { parts } = readyParts('2026-06-30T19:50:00.000Z');
+  assert('Case 2: lunch bump to 2 PM', parts.hour === 14 && parts.minute === 0, `${parts.hour}:${parts.minute}`);
+});
+
+// Case 3: Tuesday 3:50 PM → ready next open day ~8:20 AM
+withMockNow('2026-06-30T22:50:00.000Z', () => {
+  const { result, parts } = readyParts('2026-06-30T22:50:00.000Z');
+  assert('Case 3: scheduled status after close', result.status === 'scheduled', result.status);
+  assert('Case 3: next day ready', parts.ymd === '2026-07-01' && parts.hour === 8 && parts.minute === 20, `${parts.ymd} ${parts.hour}:${parts.minute}`);
+});
+
+// Case 4: Sunday order → ready Tue ~8:20 AM
 withMockNow('2026-06-28T17:00:00.000Z', () => {
-  const dates = getBookableDates({ daysAhead: 7, earliestMs: Date.now() + MIN_NOTICE_MS });
-  assert('Case 2: not Sunday bookable', !isOpenPickupDay(phoenixYmd()));
-  assert('Case 2: no Today', dates.every((d) => d.label !== 'Today'));
-  assert('Case 2: first open day Tue', phoenixWeekday(dates[0]?.ymd) === 2, dates[0]?.ymd);
+  const { parts } = readyParts('2026-06-28T17:00:00.000Z');
+  assert('Case 4: Sunday → Tuesday', parts.ymd === '2026-06-30' && parts.hour === 8 && parts.minute === 20, `${parts.ymd} ${parts.hour}:${parts.minute}`);
 });
 
-// Case 3: Monday — no Monday in date list
-withMockNow('2026-06-29T17:00:00.000Z', () => {
-  const dates = getBookableDates({ daysAhead: 7, earliestMs: Date.now() + MIN_NOTICE_MS });
-  assert('Case 3: Monday closed', phoenixWeekday(phoenixYmd()) === 1);
-  assert('Case 3: no Monday dates', dates.every((d) => phoenixWeekday(d.ymd) !== 1));
+// Case 5: validateAsapPickupIso accepts fresh client time
+withMockNow('2026-06-30T16:30:00.000Z', () => {
+  const asap = computeAsapPickup();
+  const ok = validateAsapPickupIso(asap.readyAtIso);
+  assert('Case 5: valid ASAP ISO accepted', ok.ok === true);
 });
 
-// Case 4: Saturday — appears with full slot grid (mock Fri evening so Sat has slots)
-withMockNow('2026-07-03T04:00:00.000Z', () => {
-  const sat = '2026-07-04';
-  assert('Case 4: Saturday open', isOpenPickupDay(sat));
-  const slots = getBookableSlots(sat, Date.now() + MIN_NOTICE_MS).map((s) => s.label);
-  assert('Case 4: six slots', slots.length === 6, slots.join(', '));
+// Case 6: stale client time rejected
+withMockNow('2026-06-30T16:30:00.000Z', () => {
+  const stale = new Date(Date.now() + READY_IN_MS + 10 * 60 * 1000).toISOString();
+  const bad = validateAsapPickupIso(stale);
+  assert('Case 6: stale ISO rejected', !bad.ok && bad.reason === 'stale_ready_time', bad.reason);
 });
 
-// Case 5: 12:30 PM — no 1 PM slot; 2 PM earliest afternoon
-withMockNow('2026-06-30T19:30:00.000Z', () => {
-  const ymd = phoenixYmd();
-  const slots = getBookableSlots(ymd, Date.now() + MIN_NOTICE_MS).map((s) => s.startHour);
-  assert('Case 5: no lunch slot', !slots.includes(13));
-  assert('Case 5: 2 PM included', slots.includes(14));
+// Case 7: formatReadyLabel with date for emails
+withMockNow('2026-06-30T16:30:00.000Z', () => {
+  const asap = computeAsapPickup();
+  const label = formatReadyLabel(asap.readyAtIso, { includeDate: true });
+  assert('Case 7: email label has date', label.includes('Jun') || label.includes('20 minutes'));
 });
-
-// Case 6: 3:45 PM — no same-day slots
-withMockNow('2026-06-30T22:45:00.000Z', () => {
-  const ymd = phoenixYmd();
-  const slots = getBookableSlots(ymd, Date.now() + MIN_NOTICE_MS);
-  assert('Case 6: no same-day slots after 3:45 PM', slots.length === 0);
-  const dates = getBookableDates({ daysAhead: 3, earliestMs: Date.now() + MIN_NOTICE_MS });
-  assert('Case 6: earliest not today', dates[0]?.ymd !== ymd, dates[0]?.ymd);
-});
-
-// Case 7: invalid pickupTime rejected
-const bad = validatePickupIso('2026-06-30T13:00:00-07:00');
-assert('Case 7: lunch rejected', !bad.ok && bad.reason === 'outside_hours', bad.reason);
-const missing = validatePickupIso('');
-assert('Case 7: missing rejected', !missing.ok);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

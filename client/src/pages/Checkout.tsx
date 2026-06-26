@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import { PickupSlotPicker, type PickupSelection } from "@/components/PickupSlotPicker";
+import { PickupReadyTime, type PickupReadySelection } from "@/components/PickupReadyTime";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
@@ -48,8 +48,8 @@ const Checkout: React.FC = () => {
     [pickupSiteId],
   );
 
-  // Pickup state
-  const [slot, setSlot] = useState<PickupSelection | null>(null);
+  // Pickup state (ASAP ready time — auto-computed)
+  const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(null);
 
   // Delivery state
   const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "", state: "AZ", zip: "" });
@@ -145,8 +145,8 @@ const Checkout: React.FC = () => {
       setError("Your cart is empty");
       return;
     }
-    if (fulfillment === "pickup" && !slot) {
-      setError("Pick a pickup slot first");
+    if (fulfillment === "pickup" && !pickupReady) {
+      setError("Confirm pickup ready time");
       setActiveStep("timing");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -200,7 +200,8 @@ const Checkout: React.FC = () => {
             marketingOptIn: true,
           },
           // Pickup-only fields
-          pickupTime: fulfillment === "pickup" ? slot?.pickupAt : null,
+          pickupMode: fulfillment === "pickup" ? "asap" : null,
+          pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
           // Delivery-only fields
           fulfillmentType: fulfillment,
           deliveryAddress: fulfillment === "delivery"
@@ -243,7 +244,8 @@ const Checkout: React.FC = () => {
           orderId: data.orderId,
           confirmationCode: data.confirmationCode,
           items: payItems.length,
-          pickupTime: fulfillment === "pickup" ? slot?.pickupAt : null,
+          pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
+          pickupReadyLabel: fulfillment === "pickup" ? pickupReady?.readyLabel : null,
           fulfillment,
           deliveryZip: fulfillment === "delivery" ? deliveryAddress.zip : null,
           deliveryDate: fulfillment === "delivery" ? deliveryDate || null : null,
@@ -305,7 +307,7 @@ const Checkout: React.FC = () => {
       : `Pay ${fmt(total)}`;
 
   const timingComplete = fulfillment === "pickup"
-    ? Boolean(slot)
+    ? Boolean(pickupReady)
     : Boolean(
         deliveryQuote &&
         deliveryAddress.zip &&
@@ -316,7 +318,7 @@ const Checkout: React.FC = () => {
 
   const stepMeta: Array<{ key: CheckoutStep; label: string; complete: boolean }> = [
     { key: "fulfillment", label: fulfillment === "pickup" ? selectedPickupSite.shortLabel : "Delivery", complete: true },
-    { key: "timing", label: fulfillment === "pickup" ? "Slot" : "Address", complete: timingComplete },
+    { key: "timing", label: fulfillment === "pickup" ? "Ready" : "Address", complete: timingComplete },
     { key: "customer", label: "Details", complete: customerComplete },
     { key: "review", label: "Pay", complete: false },
   ];
@@ -334,7 +336,7 @@ const Checkout: React.FC = () => {
     if (!timingComplete) {
       setError(
         fulfillment === "pickup"
-          ? "Pick a pickup slot first"
+          ? "Confirm pickup ready time"
           : "Finish delivery price and address first"
       );
       return;
@@ -355,7 +357,7 @@ const Checkout: React.FC = () => {
 
   const sideCtaLabel =
     activeStep === "fulfillment" ? "Continue"
-      : activeStep === "timing" ? (fulfillment === "pickup" ? "Confirm pickup slot" : "Confirm delivery")
+      : activeStep === "timing" ? (fulfillment === "pickup" ? "Confirm ready time" : "Confirm delivery")
         : activeStep === "customer" ? "Review and pay"
           : ctaLabel;
   const sideCtaDisabled =
@@ -646,7 +648,7 @@ const Checkout: React.FC = () => {
                 <CardHeader className="px-4 py-3 sm:px-5">
                   <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
                     <Calendar className="h-4 w-4 text-[#b38a58]" />
-                    Choose your pickup slot
+                    When will your order be ready?
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0 sm:px-5">
@@ -657,7 +659,7 @@ const Checkout: React.FC = () => {
                       <span className="block text-xs text-stone-500">{selectedPickupSite.addressLine}</span>
                     </span>
                   </p>
-                  <PickupSlotPicker value={slot} onChange={setSlot} />
+                  <PickupReadyTime value={pickupReady} onChange={setPickupReady} />
                 </CardContent>
               </Card>
             ) : (
@@ -970,7 +972,7 @@ const Checkout: React.FC = () => {
                 ? "Order will be placed without payment."
                 : fulfillment === "delivery"
                   ? "Secure Stripe checkout. We'll call to schedule delivery after payment."
-                  : "Secure Stripe checkout. Ready at your selected pickup slot."}
+                  : "Secure Stripe checkout. We'll have your order ready at the time shown above."}
             </p>
           </div>
         </div>

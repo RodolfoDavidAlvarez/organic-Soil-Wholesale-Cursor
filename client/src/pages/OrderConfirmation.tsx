@@ -16,6 +16,7 @@ interface OrderDetails {
   confirmationCode?: string;
   items: number;
   pickupTime?: string | null;
+  pickupReadyLabel?: string | null;
   /** 'pickup' | 'delivery' (older orders may not have this) */
   fulfillment?: 'pickup' | 'delivery';
   deliveryZip?: string | null;
@@ -88,7 +89,8 @@ const OrderConfirmation: React.FC = () => {
     });
   };
 
-  const pickupTimeLabel = formatPickupTime(orderDetails.pickupTime);
+  const pickupTimeLabel =
+    orderDetails.pickupReadyLabel || formatPickupTime(orderDetails.pickupTime);
 
   return (
     <>
@@ -150,7 +152,7 @@ const OrderConfirmation: React.FC = () => {
 
             {!isDelivery && pickupTimeLabel && (
               <div className="flex justify-between items-center">
-                <span className="text-stone-600">Pickup Time</span>
+                <span className="text-stone-600">Estimated ready</span>
                 <span className="font-medium text-green-700">{pickupTimeLabel}</span>
               </div>
             )}
