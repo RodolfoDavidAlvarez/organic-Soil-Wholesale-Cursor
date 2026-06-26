@@ -3,8 +3,14 @@
  *
  * Testing (OSW_PICKUP_NOTIFY_TESTING=true): Rodo only — use while validating checkout.
  * Production Phoenix (locationId 1): Rodo + Sabrina + Kash (YARD_ADMIN_PHONES).
- * Production Congress (locationId 2): Rodo only.
+ * Production Congress (locationId 2): Rodo + Kerry (logistics at Congress plant).
  */
+
+export const PICKUP_NOTIFY_KERRY = {
+  name: 'Kerry',
+  phone: '+19288303304',
+  email: 'kcooper@soilseedandwater.com',
+};
 
 export const PICKUP_NOTIFY_RODO = {
   phone: '+19285501649',
@@ -18,7 +24,10 @@ export const PICKUP_TEAM = {
     { name: 'Sabrina', phone: '+15204796360', email: 'sabrina@soilseedandwater.com' },
     { name: 'Kash', phone: '+16025387999', email: 'kash@soilseedandwater.com' },
   ],
-  congress: [{ name: 'Rodolfo', phone: '+19285501649', email: 'ralvarez@soilseedandwater.com' }],
+  congress: [
+    { name: 'Rodolfo', phone: '+19285501649', email: 'ralvarez@soilseedandwater.com' },
+    PICKUP_NOTIFY_KERRY,
+  ],
 };
 
 export function isPickupNotifyTesting() {
@@ -39,7 +48,10 @@ export function getPickupNotifySmsPhones(locationId = 1) {
   }
 
   if (getPickupLocationKey(locationId) === 'congress') {
-    return rodo ? [rodo] : [];
+    const raw = process.env.CONGRESS_NOTIFY_PHONES || '';
+    const fromEnv = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (fromEnv.length) return [...new Set(fromEnv)];
+    return PICKUP_TEAM.congress.map((p) => p.phone);
   }
 
   const raw = process.env.YARD_ADMIN_PHONES || '';
@@ -55,7 +67,7 @@ export function getPickupNotifyEmails(locationId = 1) {
   }
 
   if (getPickupLocationKey(locationId) === 'congress') {
-    return [PICKUP_NOTIFY_RODO.email];
+    return PICKUP_TEAM.congress.map((p) => p.email);
   }
 
   return PICKUP_TEAM.phoenix.map((p) => p.email);

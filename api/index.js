@@ -138,21 +138,208 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
       Location: ${pickupLocation || 'Phoenix HQ'}<br>
       Items: ${itemCount}<br>
       Total: $${totalDollars.toFixed(2)}</p>`;
-    await Promise.all(
-      adminEmails.map((to) =>
-        r.emails.send({
+    const results = await Promise.allSettled(
+      adminEmails.map(async (to) => {
+        const result = await r.emails.send({
           from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
           replyTo: 'ralvarez@soilseedandwater.com',
           to,
           subject,
           html,
-        }),
-      ),
+        });
+        if (result?.error) {
+          throw new Error(result.error.message || JSON.stringify(result.error));
+        }
+        return result;
+      }),
     );
-    console.log(`[pickup-order-alert] admin email sent to ${adminEmails.join(', ')}`);
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.error(`[pickup-order-alert] email to ${adminEmails[i]} failed:`, result.reason?.message || result.reason);
+      }
+    });
+    const sent = results.filter((r) => r.status === 'fulfilled').length;
+    console.log(`[pickup-order-alert] admin email sent to ${sent}/${adminEmails.length}: ${adminEmails.join(', ')}`);
   } catch (emailErr) {
     console.error('[pickup-order-alert] admin email failed:', emailErr?.message || emailErr);
   }
+}
+
+async function formatPickupReadyLabel(pickupIso) {
+  const schedule = await getPickupSchedule();
+  return schedule.formatReadyLabel(pickupIso, { includeDate: true });
+}
+
+async function forwardOswPickupToMos(payload) {
+  const dev = await getDeveloperMode();
+  if (!dev.shouldForwardToMos()) {
+    console.log('[dev-mode] MOS forward skipped for order', payload?.osw_order_id);
+    return { skipped: true, reason: 'developer_mode' };
+  }
+  const secret = process.env.MOS_LEAD_INGEST_SECRET;
+  const isDelivery = payload?.source === 'osw_pay_delivery' || payload?.fulfillment_type === 'delivery';
+  const endpoint = isDelivery
+    ? (process.env.MOS_DELIVERY_INGEST_URL || 'https://myorganicsoil.com/api/delivery-orders')
+    : (process.env.MOS_PICKUP_INGEST_URL || 'https://myorganicsoil.com/api/pickup-orders');
+  const tag = isDelivery ? 'mos-delivery-forward' : 'mos-pickup-forward';
+
+  if (!secret) {
+    console.warn(`[${tag}] MOS_LEAD_INGEST_SECRET not set — skipping`);
+    return { skipped: true };
+  }
+  if (!payload?.customer_name || !payload?.customer_phone || !payload?.items?.length) {
+    console.warn(`[${tag}] missing required fields — skipping`);
+    return { skipped: true };
+  }
+  try {
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      const level = r.status === 404 && isDelivery ? 'warn' : 'error';
+      console[level](`[${tag}] order ${payload.osw_order_id} → ${r.status}: ${text.slice(0, 200)}`);
+      return { ok: false, status: r.status };
+    }
+    console.log(`[${tag}] order ${payload.osw_order_id} → OK`);
+    return { ok: true };
+  } catch (err) {
+    console.error(`[${tag}] network error:`, err?.message || err);
+    return { ok: false, error: String(err?.message || err) };
+  }
+}
+
+/** Mark OSW checkout order paid, notify team, forward to MOS. Idempotent if already paid. */
+async function fulfillOswCheckoutOrder(orderId, session = null) {
+  const db = await getSupabase();
+  const { data: existing } = await db.from('orders').select('payment_status').eq('id', orderId).single();
+  const alreadyPaid = existing?.payment_status === 'paid';
+
+  if (!alreadyPaid) {
+    await db
+      .from('orders')
+      .update({
+        status: 'paid',
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        stripe_payment_intent_id: session?.payment_intent || null,
+      })
+      .eq('id', orderId);
+  }
+
+  const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
+  if (!order) return { ok: false, reason: 'order_not_found' };
+
+  const { data: orderItems } = await db
+    .from('order_items')
+    .select('product_id, quantity, unit_price, total_price, size_option')
+    .eq('order_id', orderId);
+
+  if (!alreadyPaid && Array.isArray(orderItems)) {
+    const locationId = order.location_id || 1;
+    for (const item of orderItems) {
+      const { data: inv } = await db
+        .from('inventory')
+        .select('id, quantity_available, quantity_reserved')
+        .eq('product_id', item.product_id)
+        .eq('location_id', locationId)
+        .eq('size_option', item.size_option)
+        .single();
+      if (inv) {
+        await db.from('inventory').update({
+          quantity_available: inv.quantity_available - item.quantity,
+          quantity_reserved: (inv.quantity_reserved || 0) + item.quantity,
+        }).eq('id', inv.id);
+      }
+      await db.from('order_items').update({
+        status: 'reserved',
+        reserved_at: new Date().toISOString(),
+      }).eq('order_id', orderId).eq('product_id', item.product_id);
+    }
+  }
+
+  if (alreadyPaid) {
+    return { ok: true, alreadyPaid: true, order };
+  }
+
+  const isDeliveryOrder = order?.fulfillment_type === 'delivery';
+  let pickupLabel = null;
+  try {
+    const r = await getResend();
+    const dev = await getDeveloperMode();
+    const customerEmail = order?.customer_email || order?.email;
+    const orderRef = order?.order_number?.slice(0, 8) || orderId;
+    pickupLabel = order?.pickup_scheduled_at
+      ? await formatPickupReadyLabel(order.pickup_scheduled_at)
+      : null;
+    if (customerEmail) {
+      const custResult = await r.emails.send({
+        from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+        replyTo: 'ralvarez@soilseedandwater.com',
+        to: dev.resolveCustomerEmail(customerEmail),
+        subject: dev.devModeSubject(`Order #${orderRef} confirmed`),
+        html: `<p>Hi ${order?.customer_name || 'there'},</p>
+          <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
+          <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
+          <strong>Location:</strong> ${order?.pickup_location || '1634 N 19th Ave, Phoenix, AZ 85009'}</p>
+          <p>Please call (602) 637-0032 when you arrive.</p>
+          <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
+      });
+      if (custResult?.error) {
+        console.error('[checkout fulfill] customer email error:', custResult.error);
+      }
+    }
+  } catch (emailErr) {
+    console.error('[checkout fulfill] email send failed:', emailErr?.message || emailErr);
+  }
+
+  if (!isDeliveryOrder) {
+    try {
+      await sendNewPickupOrderAlerts({
+        order,
+        orderItems,
+        pickupLabel,
+        locationId: order?.location_id,
+      });
+    } catch (alertErr) {
+      console.error('[checkout fulfill] pickup alerts failed:', alertErr?.message || alertErr);
+    }
+  }
+
+  const mosPickupLabel = !isDeliveryOrder && order?.pickup_scheduled_at
+    ? (pickupLabel || await formatPickupReadyLabel(order.pickup_scheduled_at))
+    : undefined;
+  await forwardOswPickupToMos({
+    osw_order_id: orderId,
+    osw_order_number: order?.order_number || undefined,
+    customer_name: order?.customer_name || order?.business_name || 'Customer',
+    customer_phone: order?.phone || '',
+    customer_email: order?.customer_email || order?.email || undefined,
+    items: (orderItems || []).map((item) => ({
+      product_id: item.product_id,
+      product_name: 'Product',
+      size_option: item.size_option || '',
+      quantity: item.quantity || 1,
+      unit_price_cents: Math.round((item.unit_price || 0) * 100),
+      total_price_cents: Math.round((item.total_price || 0) * 100),
+    })),
+    pickup_at: isDeliveryOrder ? null : (order?.pickup_scheduled_at || new Date().toISOString()),
+    slot_label: mosPickupLabel,
+    fulfillment_type: isDeliveryOrder ? 'delivery' : 'pickup',
+    delivery_address: isDeliveryOrder ? order?.delivery_address || null : null,
+    truck_type: isDeliveryOrder ? order?.delivery_truck_type || null : null,
+    origin_yard: isDeliveryOrder ? order?.delivery_origin_yard || null : null,
+    miles_round_trip: isDeliveryOrder ? order?.delivery_miles || null : null,
+    hours_round_trip: isDeliveryOrder ? order?.delivery_hours || null : null,
+    trucking_fee_cents: isDeliveryOrder ? order?.trucking_fee_cents || 0 : 0,
+    total_cents: Math.round(((order?.total_amount) || (order?.total) || 0) * 100),
+    payment_status: 'paid',
+    source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
+  });
+
+  return { ok: true, order };
 }
 
 // Admin-only failure monitor: logs every input failure to system_errors and
@@ -4615,6 +4802,9 @@ ${pages}
             } catch (emailErr) {
               console.error('Deposit confirmation email error:', emailErr);
             }
+          } else if (orderId) {
+            // OSW pay-and-pickup checkout (Stripe often sends all events here)
+            await fulfillOswCheckoutOrder(parseInt(String(orderId), 10), session);
           }
         }
 
@@ -4956,58 +5146,6 @@ ${pages}
 
     // ========== PAY & PICKUP CHECKOUT ==========
 
-    // Forward an OSW pay-and-pickup order to the MOS sales portal so yard reps
-    // get a push notification in the iOS app. Fire-and-await (Vercel kills
-    // fire-and-forget); MOS failures are logged but never bubble up.
-    async function forwardOswPickupToMos(payload) {
-      const dev = await getDeveloperMode();
-      if (!dev.shouldForwardToMos()) {
-        console.log('[dev-mode] MOS forward skipped for order', payload?.osw_order_id);
-        return { skipped: true, reason: 'developer_mode' };
-      }
-      const secret = process.env.MOS_LEAD_INGEST_SECRET;
-      // Route by source: 'osw_pay_delivery' → delivery-orders, else pickup-orders.
-      const isDelivery = payload?.source === 'osw_pay_delivery' || payload?.fulfillment_type === 'delivery';
-      const endpoint = isDelivery
-        ? (process.env.MOS_DELIVERY_INGEST_URL || 'https://myorganicsoil.com/api/delivery-orders')
-        : (process.env.MOS_PICKUP_INGEST_URL  || 'https://myorganicsoil.com/api/pickup-orders');
-      const tag = isDelivery ? 'mos-delivery-forward' : 'mos-pickup-forward';
-
-      if (!secret) {
-        console.warn(`[${tag}] MOS_LEAD_INGEST_SECRET not set — skipping`);
-        return { skipped: true };
-      }
-      if (!payload?.customer_name || !payload?.customer_phone || !payload?.items?.length) {
-        console.warn(`[${tag}] missing required fields — skipping`);
-        return { skipped: true };
-      }
-      try {
-        const r = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
-          body: JSON.stringify(payload),
-        });
-        if (!r.ok) {
-          const text = await r.text().catch(() => '');
-          // 404 is expected during the rollout window before MOS implements
-          // /api/delivery-orders. Log it but don't surface as a hard error.
-          const level = r.status === 404 && isDelivery ? 'warn' : 'error';
-          console[level](`[${tag}] order ${payload.osw_order_id} → ${r.status}: ${text.slice(0, 200)}`);
-          return { ok: false, status: r.status };
-        }
-        console.log(`[${tag}] order ${payload.osw_order_id} → OK`);
-        return { ok: true };
-      } catch (err) {
-        console.error(`[${tag}] network error:`, err?.message || err);
-        return { ok: false, error: String(err?.message || err) };
-      }
-    }
-
-    async function formatPickupReadyLabel(pickupIso) {
-      const schedule = await getPickupSchedule();
-      return schedule.formatReadyLabel(pickupIso, { includeDate: true });
-    }
-
     // POST /api/checkout/webhook — Stripe webhook for OSW pay-and-pickup orders.
     // On `checkout.session.completed`: mark order paid, reserve inventory, send
     // confirmation emails, and forward to the MOS sales portal so yard reps see
@@ -5055,124 +5193,7 @@ ${pages}
             return res.json({ received: true, note: 'deposit — handled elsewhere' });
           }
 
-          // Mark order paid
-          await db
-            .from('orders')
-            .update({
-              status: 'paid',
-              payment_status: 'paid',
-              paid_at: new Date().toISOString(),
-              stripe_payment_intent_id: session.payment_intent || null,
-            })
-            .eq('id', orderId);
-
-          // Pull order + items for downstream
-          const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
-          const { data: orderItems } = await db
-            .from('order_items')
-            .select('product_id, quantity, unit_price, total_price, size_option')
-            .eq('order_id', orderId);
-
-          // Reserve inventory (best-effort)
-          if (Array.isArray(orderItems) && order) {
-            const locationId = order.location_id || 1;
-            for (const item of orderItems) {
-              const { data: inv } = await db
-                .from('inventory')
-                .select('id, quantity_available, quantity_reserved')
-                .eq('product_id', item.product_id)
-                .eq('location_id', locationId)
-                .eq('size_option', item.size_option)
-                .single();
-              if (inv) {
-                await db.from('inventory').update({
-                  quantity_available: inv.quantity_available - item.quantity,
-                  quantity_reserved: (inv.quantity_reserved || 0) + item.quantity,
-                }).eq('id', inv.id);
-              }
-              await db.from('order_items').update({
-                status: 'reserved',
-                reserved_at: new Date().toISOString(),
-              }).eq('order_id', orderId).eq('product_id', item.product_id);
-            }
-          }
-
-          // Send confirmation emails (customer + admin) via Resend
-          const isDeliveryOrder = order?.fulfillment_type === 'delivery';
-          let pickupLabel = null;
-          try {
-            const r = await getResend();
-            const dev = await getDeveloperMode();
-            const customerEmail = order?.customer_email || order?.email;
-            const orderRef = order?.order_number?.slice(0, 8) || orderId;
-            pickupLabel = order?.pickup_scheduled_at
-              ? await formatPickupReadyLabel(order.pickup_scheduled_at)
-              : null;
-            if (customerEmail) {
-              await r.emails.send({
-                from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
-                replyTo: 'ralvarez@soilseedandwater.com',
-                to: dev.resolveCustomerEmail(customerEmail),
-                subject: dev.devModeSubject(`Order #${orderRef} confirmed`),
-                html: `<p>Hi ${order?.customer_name || 'there'},</p>
-                  <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
-                  <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
-                  <strong>Location:</strong> ${order?.pickup_location || '1634 N 19th Ave, Phoenix, AZ 85009'}</p>
-                  <p>Please call (602) 637-0032 when you arrive.</p>
-                  <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
-              });
-            }
-          } catch (emailErr) {
-            console.error('[checkout webhook] email send failed:', emailErr?.message || emailErr);
-          }
-
-          if (!isDeliveryOrder) {
-            try {
-              await sendNewPickupOrderAlerts({
-                order,
-                orderItems,
-                pickupLabel,
-                locationId: order?.location_id,
-              });
-            } catch (alertErr) {
-              console.error('[checkout webhook] pickup alerts failed:', alertErr?.message || alertErr);
-            }
-          }
-
-          // Forward to MOS — delivery vs pickup endpoint chosen inside forwarder.
-          const mosPickupLabel = !isDeliveryOrder && order?.pickup_scheduled_at
-            ? (pickupLabel || await formatPickupReadyLabel(order.pickup_scheduled_at))
-            : undefined;
-          await forwardOswPickupToMos({
-            osw_order_id: orderId,
-            osw_order_number: order?.order_number || undefined,
-            customer_name: order?.customer_name || order?.business_name || 'Customer',
-            customer_phone: order?.phone || '',
-            customer_email: order?.customer_email || order?.email || undefined,
-            items: (orderItems || []).map((item) => ({
-              product_id: item.product_id,
-              product_name: 'Product',
-              size_option: item.size_option || '',
-              quantity: item.quantity || 1,
-              unit_price_cents: Math.round((item.unit_price || 0) * 100),
-              total_price_cents: Math.round((item.total_price || 0) * 100),
-            })),
-            // pickup-shape fields
-            pickup_at: isDeliveryOrder ? null : (order?.pickup_scheduled_at || new Date().toISOString()),
-            slot_label: mosPickupLabel,
-            // delivery-shape fields
-            fulfillment_type: isDeliveryOrder ? 'delivery' : 'pickup',
-            delivery_address: isDeliveryOrder ? order?.delivery_address || null : null,
-            truck_type: isDeliveryOrder ? order?.delivery_truck_type || null : null,
-            origin_yard: isDeliveryOrder ? order?.delivery_origin_yard || null : null,
-            miles_round_trip: isDeliveryOrder ? order?.delivery_miles || null : null,
-            hours_round_trip: isDeliveryOrder ? order?.delivery_hours || null : null,
-            trucking_fee_cents: isDeliveryOrder ? order?.trucking_fee_cents || 0 : 0,
-            // shared
-            total_cents: Math.round(((order?.total_amount) || (order?.total) || 0) * 100),
-            payment_status: 'paid',
-            source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
-          });
+          await fulfillOswCheckoutOrder(orderId, session);
         } else if (event.type === 'payment_intent.payment_failed') {
           const pi = event.data?.object;
           const { data: order } = await db
@@ -5192,6 +5213,39 @@ ${pages}
       } catch (err) {
         console.error('[checkout webhook] error:', err);
         return res.status(500).json({ error: 'Webhook processing failed' });
+      }
+    }
+
+    // POST /api/checkout/confirm-paid — client fallback when Stripe webhook is delayed/missed
+    if (path === '/api/checkout/confirm-paid' && req.method === 'POST') {
+      try {
+        const { orderId, sessionId } = req.body || {};
+        const id = parseInt(String(orderId || ''), 10);
+        if (!id) return res.status(400).json({ error: 'orderId required' });
+
+        const { data: order } = await db.from('orders').select('*').eq('id', id).single();
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (order.payment_status === 'paid') {
+          return res.json({ ok: true, alreadyPaid: true });
+        }
+
+        const Stripe = (await import('stripe')).default;
+        const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+          httpClient: Stripe.createFetchHttpClient(),
+        });
+        const sid = sessionId || order.stripe_checkout_session_id;
+        if (!sid) return res.status(400).json({ error: 'No Stripe session for this order' });
+
+        const session = await stripeClient.checkout.sessions.retrieve(String(sid));
+        if (session.payment_status !== 'paid') {
+          return res.json({ ok: false, pending: true, paymentStatus: session.payment_status });
+        }
+
+        const result = await fulfillOswCheckoutOrder(id, session);
+        return res.json(result);
+      } catch (err) {
+        console.error('[checkout confirm-paid] error:', err?.message || err);
+        return res.status(500).json({ error: 'Failed to confirm order payment' });
       }
     }
 

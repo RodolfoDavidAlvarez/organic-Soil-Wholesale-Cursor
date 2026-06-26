@@ -30,6 +30,20 @@ const OrderConfirmation: React.FC = () => {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order_id');
+    const sessionId = params.get('session_id');
+    if (orderId) {
+      fetch('/api/checkout/confirm-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: Number(orderId),
+          sessionId: sessionId || undefined,
+        }),
+      }).catch(() => {});
+    }
+
     // Prefer localStorage (set by Checkout right before navigation). If that
     // didn't survive (private mode, tab swap, hard refresh), fall back to the
     // order_id from the URL query so we still show something useful instead of
