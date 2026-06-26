@@ -239,9 +239,9 @@ const OrderConfirmation: React.FC = () => {
             Phoenix yard hours
           </h3>
           <div className="text-sm text-stone-700 space-y-1">
-            <p>Monday - Friday: 7:00 AM - 5:00 PM</p>
-            <p>Saturday: 8:00 AM - 2:00 PM</p>
-            <p>Sunday: Closed</p>
+            <p>Tuesday - Saturday: 8:00 AM - 4:00 PM</p>
+            <p>Closed daily 1:00 PM - 2:00 PM (lunch)</p>
+            <p>Sunday & Monday: Closed</p>
           </div>
         </div>
       </div>

@@ -13,6 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, ShoppingCart, Trash2, Plus, Minus, AlertCircle, Zap, Clock } from 'lucide-react';
 import PortalLayout from './PortalLayout';
+import { HOURS_LABEL, PICKUP_SLOTS } from '@shared/pickupSchedule.js';
+
+const DEFAULT_SLOT_LABELS = PICKUP_SLOTS.map((s) => s.label);
 
 interface SchedulingData {
   earliest_date: string;
@@ -299,7 +302,7 @@ const NewOrder = () => {
               <div className="rounded-lg bg-primary/5 border border-primary/10 p-3.5">
                 <p className="text-sm text-foreground/80">
                   <strong>1634 N 19th Ave, Phoenix, AZ 85009</strong><br />
-                  <span className="text-muted-foreground text-xs">Mon-Fri, 7:00 AM - 2:00 PM</span>
+                  <span className="text-muted-foreground text-xs">{HOURS_LABEL}</span>
                 </p>
               </div>
             )}
@@ -366,7 +369,7 @@ const NewOrder = () => {
                     required
                     className="min-h-[44px]"
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">Mon-Fri only.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Pickup available Tue-Sat only.</p>
                 </>
               )}
             </div>
@@ -377,7 +380,7 @@ const NewOrder = () => {
                 <Select value={preferredTimeStart} onValueChange={setPreferredTimeStart}>
                   <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Any" /></SelectTrigger>
                   <SelectContent>
-                    {(availableTimeSlots.length > 0 ? availableTimeSlots : ['7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM']).map((t) => (
+                    {(availableTimeSlots.length > 0 ? availableTimeSlots : DEFAULT_SLOT_LABELS).map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
@@ -388,7 +391,7 @@ const NewOrder = () => {
                 <Select value={preferredTimeEnd} onValueChange={setPreferredTimeEnd}>
                   <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Any" /></SelectTrigger>
                   <SelectContent>
-                    {(availableTimeSlots.length > 0 ? availableTimeSlots : ['7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM']).map((t) => (
+                    {(availableTimeSlots.length > 0 ? availableTimeSlots : DEFAULT_SLOT_LABELS).map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>

@@ -38,6 +38,14 @@ async function getResend() {
   return resend;
 }
 
+let pickupScheduleModule = null;
+async function getPickupSchedule() {
+  if (!pickupScheduleModule) {
+    pickupScheduleModule = await import('../shared/pickupSchedule.js');
+  }
+  return pickupScheduleModule;
+}
+
 // Admin-only failure monitor: logs every input failure to system_errors and
 // emails Rodo (rate-limited to once per path per 30 min). Never throws.
 const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
@@ -4189,7 +4197,7 @@ ${pages}
           const orderRef = order.order_number?.slice(0, 8) || order.id;
           const statusMessages = {
             approved: { subject: `Order #${orderRef} Approved`, body: `Great news! Your order #${orderRef} has been approved and is being prepared.` },
-            ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Mon-Fri, 7:00 AM - 2:00 PM.` },
+            ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Tue-Sat, 8:00 AM - 4:00 PM (closed 1-2 PM).` },
             out_for_delivery: { subject: `Order #${orderRef} Out for Delivery`, body: `Your order #${orderRef} is on its way! Call (602) 637-0032 with questions.` },
             completed: { subject: `Order #${orderRef} Completed`, body: `Your order #${orderRef} has been completed. Thank you for your business!` },
           };
@@ -4263,15 +4271,14 @@ ${pages}
       const sb = await getSupabase();
       const body = req.body || {};
       const productSlugs = body.product_slugs || [];
+      const { getAvailableDatesForProducts } = await getPickupSchedule();
 
-      // Get product availability info
       let products = [];
       if (productSlugs.length > 0) {
         const { data } = await sb.from('products').select('slug, name, pickup_lead_days, is_yard_available').in('slug', productSlugs);
         products = data || [];
       }
 
-      // Calculate earliest date
       const maxLeadDays = products.length > 0
         ? Math.max(...products.map(p => p.pickup_lead_days || 7))
         : 7;
@@ -4279,34 +4286,7 @@ ${pages}
       const hasYardItems = products.some(p => p.is_yard_available);
       const allYardAvailable = products.length > 0 && products.every(p => p.is_yard_available);
 
-      // Calculate earliest business day
-      const now = new Date();
-      const cutoffHour = 14; // 2 PM MST cutoff
-      const mstHour = now.getUTCHours() - 7; // MST = UTC-7
-
-      let leadDays = maxLeadDays;
-      // If all items are yard-available and it's before cutoff, next business day
-      if (allYardAvailable && mstHour < cutoffHour) {
-        leadDays = 1;
-      }
-
-      const earliest = new Date(now);
-      earliest.setDate(earliest.getDate() + leadDays);
-      // Skip weekends
-      while (earliest.getDay() === 0 || earliest.getDay() === 6) {
-        earliest.setDate(earliest.getDate() + 1);
-      }
-
-      // Generate available dates for the next 30 days (weekdays only)
-      const dates = [];
-      const d = new Date(earliest);
-      for (let i = 0; i < 30; i++) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-          dates.push(d.toISOString().split('T')[0]);
-        }
-        d.setDate(d.getDate() + 1);
-        if (dates.length >= 20) break;
-      }
+      const schedule = getAvailableDatesForProducts({ allYardAvailable, maxLeadDays });
 
       const productAvailability = products.map(p => ({
         slug: p.slug,
@@ -4316,41 +4296,21 @@ ${pages}
       }));
 
       return res.json({
-        earliest_date: earliest.toISOString().split('T')[0],
-        available_dates: dates,
-        max_lead_days: maxLeadDays,
-        all_yard_available: allYardAvailable,
+        ...schedule,
         has_yard_items: hasYardItems,
         products: productAvailability,
       });
     }
 
-    // POST /api/portal/scheduling/time-slots — returns 30-min slots for a date
+    // POST /api/portal/scheduling/time-slots — returns hourly pickup slots for a date
     if (path === '/api/portal/scheduling/time-slots' && req.method === 'POST') {
       const body = req.body || {};
       const date = body.date;
+      const { getTimeSlotsForDate } = await getPickupSchedule();
 
       if (!date) return res.status(400).json({ error: 'Date is required' });
 
-      const d = new Date(date + 'T12:00:00');
-      if (d.getDay() === 0 || d.getDay() === 6) {
-        return res.json({ slots: [], message: 'No pickup/delivery on weekends' });
-      }
-
-      // Mon-Fri 7 AM - 2 PM, 30-min slots
-      const slots = [];
-      for (let hour = 7; hour < 14; hour++) {
-        for (let min = 0; min < 60; min += 30) {
-          const h = hour > 12 ? hour - 12 : hour;
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          const label = `${h}:${min.toString().padStart(2, '0')} ${ampm}`;
-          slots.push({ time: label, available: true });
-        }
-      }
-      // Add 2:00 PM as last slot
-      slots.push({ time: '2:00 PM', available: true });
-
-      return res.json({ date, slots });
+      return res.json(getTimeSlotsForDate(date));
     }
 
     // ========== PRODUCT AVAILABILITY (Admin) ==========
@@ -4581,7 +4541,7 @@ ${pages}
           subject: `Order #${orderRef} Ready for Pickup`,
           html: `<p>Hi ${order.customer_name || 'there'},</p>
             <p>Your order #${orderRef} is ready for pickup!</p>
-            <p><strong>Pickup Location:</strong><br>1634 N 19th Ave, Phoenix, AZ 85009<br>Mon-Fri, 7:00 AM - 2:00 PM</p>
+            <p><strong>Pickup Location:</strong><br>1634 N 19th Ave, Phoenix, AZ 85009<br>Tue-Sat, 8:00 AM - 4:00 PM (closed 1-2 PM)</p>
             <p>Please bring a valid ID when picking up your order.</p>
             <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
         },
@@ -4622,7 +4582,7 @@ ${pages}
             const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
             const smsMessages = {
               approved: `SSW: Order #${orderRef} approved! We're preparing it now.`,
-              ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. Mon-Fri 7AM-2PM.`,
+              ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. Tue-Sat 8AM-4PM (closed 1-2PM).`,
               out_for_delivery: `SSW: Order #${orderRef} is out for delivery! Call (602) 637-0032 with questions.`,
               completed: `SSW: Order #${orderRef} completed. Thanks for your business!`,
             };
@@ -5136,6 +5096,18 @@ ${pages}
         // ---- Delivery (optional). Re-quote server-side so client price can't be trusted. ----
         const isDelivery = fulfillmentType === 'delivery';
         let truckingQuote = null;
+
+        if (!isDelivery) {
+          if (!pickupTime) {
+            return res.status(400).json({ error: 'Pickup time is required.' });
+          }
+          const { validatePickupIso } = await getPickupSchedule();
+          const pickupCheck = validatePickupIso(pickupTime);
+          if (!pickupCheck.ok) {
+            return res.status(400).json({ error: pickupCheck.message });
+          }
+        }
+
         if (isDelivery) {
           if (!deliveryAddress?.zip || !/^\d{5}$/.test(String(deliveryAddress.zip).trim())) {
             return res.status(400).json({ error: 'Delivery ZIP is required (5 digits)' });
