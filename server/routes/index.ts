@@ -55,6 +55,11 @@ export function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  app.get("/api/site-config", async (_req, res) => {
+    const { getDevSiteConfig } = await import("../../shared/developerMode.js");
+    res.json(getDevSiteConfig());
+  });
+
   // Register route modules
   app.use("/api/public/products", publicProductRoutes);
   app.use("/api/pay-and-pickup", payAndPickupRoutes);

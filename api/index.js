@@ -46,6 +46,14 @@ async function getPickupSchedule() {
   return pickupScheduleModule;
 }
 
+let developerModeModule = null;
+async function getDeveloperMode() {
+  if (!developerModeModule) {
+    developerModeModule = await import('../shared/developerMode.js');
+  }
+  return developerModeModule;
+}
+
 // Admin-only failure monitor: logs every input failure to system_errors and
 // emails Rodo (rate-limited to once per path per 30 min). Never throws.
 const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
@@ -272,6 +280,12 @@ export default async function handler(req, res) {
     // Health check
     if (path === '/api/health') {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+
+    // Public site flags (developer mode banner on checkout, etc.)
+    if (path === '/api/site-config' && req.method === 'GET') {
+      const dev = await getDeveloperMode();
+      return res.json(dev.getDevSiteConfig());
     }
 
     const db = await getSupabase();
@@ -883,17 +897,17 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         notificationId: data.id,
       };
 
-      // SMS → Sabrina, Kash, Rodolfo (YARD_ADMIN_PHONES env)
-      const yardPhones = (process.env.YARD_ADMIN_PHONES || process.env.RODO_PHONE || '')
-        .split(',').map((s) => s.trim()).filter(Boolean);
-      const smsBody = [
+      // SMS → yard admins (Rodo only when OSW_DEVELOPER_MODE is on)
+      const dev = await getDeveloperMode();
+      const yardPhones = dev.getYardAdminPhones();
+      const smsBody = dev.devModeSmsBody([
         'CUSTOMER AT YARD — needs rep',
         arrivalDetails.customerName,
         arrivalDetails.customerPhone,
         arrivalDetails.vehicleInfo,
         '',
         '1634 N 19th Ave · go meet them at the gate',
-      ].join('\n');
+      ].join('\n'));
 
       if (yardPhones.length && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
         // Direct REST call — the twilio npm package is not a dependency of this project.
@@ -4204,12 +4218,13 @@ ${pages}
           const msg = statusMessages[body.status];
           if (msg) {
             try {
+              const dev = await getDeveloperMode();
               const r = await getResend();
               await r.emails.send({
                 from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
                 replyTo: 'ralvarez@soilseedandwater.com',
-                to: customerEmail,
-                subject: msg.subject,
+                to: dev.resolveCustomerEmail(customerEmail),
+                subject: dev.devModeSubject(msg.subject),
                 html: `<p>Hi ${order.customer_name || 'there'},</p><p>${msg.body}</p><p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
               });
               notificationSent = true;
@@ -4566,17 +4581,21 @@ ${pages}
 
       try {
         const r = await getResend();
+        const dev = await getDeveloperMode();
         await r.emails.send({
           from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
           replyTo: 'ralvarez@soilseedandwater.com',
-          to: customerEmail,
-          subject: template.subject,
+          to: dev.resolveCustomerEmail(customerEmail),
+          subject: dev.devModeSubject(template.subject),
           html: template.html,
         });
 
         // Send SMS if opted in
         const { data: profile } = await sb.from('customer_profiles').select('sms_opt_in, phone').eq('id', order.customer_profile_id).single();
-        if (profile?.sms_opt_in && profile?.phone) {
+        const smsTo = profile?.sms_opt_in && profile?.phone
+          ? dev.resolveCustomerSmsPhone(profile.phone.startsWith('+') ? profile.phone : `+1${profile.phone.replace(/\D/g, '')}`)
+          : null;
+        if (smsTo) {
           try {
             const twilio = (await import('twilio')).default;
             const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -4588,9 +4607,9 @@ ${pages}
             };
             if (smsMessages[status]) {
               await twilioClient.messages.create({
-                body: smsMessages[status],
+                body: dev.devModeSmsBody(smsMessages[status]),
                 from: process.env.TWILIO_PHONE_NUMBER,
-                to: profile.phone.startsWith('+') ? profile.phone : `+1${profile.phone.replace(/\D/g, '')}`,
+                to: smsTo,
               });
             }
           } catch (smsErr) {
@@ -4840,6 +4859,11 @@ ${pages}
     // get a push notification in the iOS app. Fire-and-await (Vercel kills
     // fire-and-forget); MOS failures are logged but never bubble up.
     async function forwardOswPickupToMos(payload) {
+      const dev = await getDeveloperMode();
+      if (!dev.shouldForwardToMos()) {
+        console.log('[dev-mode] MOS forward skipped for order', payload?.osw_order_id);
+        return { skipped: true, reason: 'developer_mode' };
+      }
       const secret = process.env.MOS_LEAD_INGEST_SECRET;
       // Route by source: 'osw_pay_delivery' → delivery-orders, else pickup-orders.
       const isDelivery = payload?.source === 'osw_pay_delivery' || payload?.fulfillment_type === 'delivery';
@@ -4992,14 +5016,15 @@ ${pages}
           // Send confirmation emails (customer + admin) via Resend
           try {
             const r = await getResend();
+            const dev = await getDeveloperMode();
             const customerEmail = order?.customer_email || order?.email;
             const orderRef = order?.order_number?.slice(0, 8) || orderId;
             if (customerEmail) {
               await r.emails.send({
                 from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
                 replyTo: 'ralvarez@soilseedandwater.com',
-                to: customerEmail,
-                subject: `Order #${orderRef} confirmed`,
+                to: dev.resolveCustomerEmail(customerEmail),
+                subject: dev.devModeSubject(`Order #${orderRef} confirmed`),
                 html: `<p>Hi ${order?.customer_name || 'there'},</p>
                   <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
                   <p><strong>Pickup:</strong> ${order?.pickup_scheduled_at ? formatPickupSlotLabel(order.pickup_scheduled_at) : 'See order details'}<br>
@@ -5083,7 +5108,7 @@ ${pages}
       try {
         const {
           items, customerInfo, pickupTime, locationId, discountCode,
-          fulfillmentType, deliveryAddress, deliveryQuote,
+          fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation,
         } = req.body || {};
 
         if (!Array.isArray(items) || items.length === 0) {
@@ -5135,6 +5160,7 @@ ${pages}
           // Semi-truck access: only call out the negative case. Customer opted out
           // of the pre-checked semi-access question, so we MUST call before dispatch.
           isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room - call before dispatching.' : null,
+          !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
           customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
         ].filter(Boolean).join('\n');
 
@@ -5160,6 +5186,7 @@ ${pages}
           total: totalCents,
           total_amount: totalDollars,
           location_id: checkoutLocationId,
+          pickup_location: !isDelivery ? (pickupLocation || null) : null,
           customer_name: customerInfo?.name || null,
           customer_email: customerInfo?.email || null,
           business_name: customerInfo?.company || customerInfo?.name || null,

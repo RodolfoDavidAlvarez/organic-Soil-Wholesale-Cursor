@@ -11,6 +11,7 @@ import { PickupSlotPicker, type PickupSelection } from "@/components/PickupSlotP
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight,
@@ -20,6 +21,7 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 type Fulfillment = "pickup" | "delivery";
 type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
+type PickupSiteId = (typeof PICKUP_LOCATIONS)[number]["id"];
 
 const DELIVERY_WINDOWS = [
   "Morning (8 AM - 12 PM)",
@@ -40,6 +42,11 @@ const Checkout: React.FC = () => {
 
   // Fulfillment
   const [fulfillment, setFulfillment] = useState<Fulfillment>(() => hasTruckloadItem ? "delivery" : "pickup");
+  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("phoenix");
+  const selectedPickupSite = useMemo(
+    () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
+    [pickupSiteId],
+  );
 
   // Pickup state
   const [slot, setSlot] = useState<PickupSelection | null>(null);
@@ -62,6 +69,16 @@ const Checkout: React.FC = () => {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [activeStep, setActiveStep] = useState<CheckoutStep>("fulfillment");
+  const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/site-config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.developerMode && data?.label) setDevModeLabel(data.label);
+      })
+      .catch(() => {});
+  }, []);
 
   // Discount
   const [discountInput, setDiscountInput] = useState("");
@@ -201,7 +218,10 @@ const Checkout: React.FC = () => {
             : null,
           // Echo for audit; server re-quotes truly
           deliveryQuote: fulfillment === "delivery" ? deliveryQuote : null,
-          locationId: 1,
+          locationId: fulfillment === "pickup" ? selectedPickupSite.locationId : 1,
+          pickupLocation: fulfillment === "pickup"
+            ? `${selectedPickupSite.name} — ${selectedPickupSite.addressLine}`
+            : null,
           isQuickOrder: true,
           discountCode: appliedDiscount?.code || null,
         }),
@@ -295,7 +315,7 @@ const Checkout: React.FC = () => {
   const customerComplete = Boolean(name.trim() && phone.trim() && customerCategory);
 
   const stepMeta: Array<{ key: CheckoutStep; label: string; complete: boolean }> = [
-    { key: "fulfillment", label: fulfillment === "pickup" ? "Pickup" : "Delivery", complete: true },
+    { key: "fulfillment", label: fulfillment === "pickup" ? selectedPickupSite.shortLabel : "Delivery", complete: true },
     { key: "timing", label: fulfillment === "pickup" ? "Slot" : "Address", complete: timingComplete },
     { key: "customer", label: "Details", complete: customerComplete },
     { key: "review", label: "Pay", complete: false },
@@ -391,6 +411,12 @@ const Checkout: React.FC = () => {
         </div>
       </div>
 
+      {devModeLabel && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-center text-sm font-medium text-amber-950">
+          {devModeLabel}
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="container mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_390px] xl:gap-10">
           <div className="min-w-0 space-y-4 sm:space-y-5 lg:order-1">
@@ -473,7 +499,7 @@ const Checkout: React.FC = () => {
                       Pickup
                     </div>
                     <span className="text-[11px] font-medium leading-tight text-stone-500">
-                      {hasTruckloadItem ? "Truckload orders require delivery" : "Free · 1634 N 19th Ave, Phoenix"}
+                      {hasTruckloadItem ? "Truckload orders require delivery" : "Free · Phoenix or Congress"}
                     </span>
                   </button>
                   <button
@@ -496,6 +522,37 @@ const Checkout: React.FC = () => {
                     <span className="text-[11px] font-medium text-stone-500">Quoted by ZIP</span>
                   </button>
                 </div>
+                {fulfillment === "pickup" && !hasTruckloadItem && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                      Pickup location
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {PICKUP_LOCATIONS.map((loc) => (
+                        <button
+                          key={loc.id}
+                          type="button"
+                          onClick={() => {
+                            setPickupSiteId(loc.id);
+                            trackEvent("Checkout Pickup Location Selected", {
+                              pickup_site: loc.id,
+                              location_id: loc.locationId,
+                            });
+                          }}
+                          className={cn(
+                            "flex min-h-[68px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
+                            pickupSiteId === loc.id
+                              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
+                              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
+                          )}
+                        >
+                          <span className="text-sm font-bold leading-tight">{loc.shortLabel}</span>
+                          <span className="text-[11px] font-medium leading-snug text-stone-500">{loc.addressLine}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>}
 
@@ -593,6 +650,13 @@ const Checkout: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0 sm:px-5">
+                  <p className="mb-3 flex items-start gap-2 rounded-lg bg-stone-50 px-3 py-2.5 text-sm leading-snug text-stone-600">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#264027]" />
+                    <span>
+                      Pickup at <span className="font-semibold text-stone-800">{selectedPickupSite.shortLabel}</span>
+                      <span className="block text-xs text-stone-500">{selectedPickupSite.addressLine}</span>
+                    </span>
+                  </p>
                   <PickupSlotPicker value={slot} onChange={setSlot} />
                 </CardContent>
               </Card>
@@ -769,7 +833,7 @@ const Checkout: React.FC = () => {
                   Order summary
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 p-4">
+              <CardContent className="space-y-3 px-4 pb-4 pt-6">
                 {payItems.map((item) => (
                   <div key={`summary-${item.productId}-${item.format}`} className="grid grid-cols-[58px_1fr_auto] gap-3">
                     {item.imageUrl ? (

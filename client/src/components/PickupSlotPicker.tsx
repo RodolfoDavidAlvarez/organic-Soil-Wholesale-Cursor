@@ -28,8 +28,6 @@ export function PickupSlotPicker({
   daysAhead = 7,
   className,
 }: PickupSlotPickerProps) {
-  const todayYmd = phoenixYmd();
-  const tomorrowYmd = phoenixYmd(new Date(Date.now() + 86400000));
   const earliestPickupMs = Date.now() + MIN_NOTICE_MS;
 
   const dates = useMemo(
@@ -38,7 +36,7 @@ export function PickupSlotPicker({
   );
 
   const [selectedDate, setSelectedDate] = useState<string>(
-    value?.pickupDate ?? dates[0]?.ymd ?? todayYmd,
+    value?.pickupDate ?? dates[0]?.ymd ?? phoenixYmd(),
   );
 
   useEffect(() => {

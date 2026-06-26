@@ -35,6 +35,7 @@ router.post('/create-session', async (req, res) => {
       discountCode,
       fulfillmentType,
       deliveryAddress,
+      pickupLocation,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -89,6 +90,7 @@ router.post('/create-session', async (req, res) => {
       // Semi-truck access: only call out the negative case. Customer opted out
       // of the pre-checked semi-access question, so we MUST call before dispatch.
       isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room — call before dispatching.' : null,
+      !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
       customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
     ].filter(Boolean).join('\n');
 
@@ -149,6 +151,7 @@ router.post('/create-session', async (req, res) => {
       total: totalCents,
       total_amount: totalDollars,
       location_id: checkoutLocationId,
+      pickup_location: !isDelivery && pickupLocation ? pickupLocation : null,
       customer_name: customerInfo.name || customerInfo.businessName || null,
       customer_email: customerInfo.email || null,
       notes: customerNotes || null,

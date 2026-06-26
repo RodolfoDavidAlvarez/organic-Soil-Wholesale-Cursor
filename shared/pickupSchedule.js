@@ -15,6 +15,26 @@ export const SAME_DAY_CUTOFF_HOUR = 16;
 export const HOURS_LABEL = 'Tue-Sat, 8 AM-4 PM (closed 1-2 PM)';
 export const PICKUP_ADDRESS = '1634 N 19th Ave, Phoenix, AZ 85009';
 
+/** Matches OSW Sales Portal + plant locations reference */
+export const PICKUP_LOCATIONS = [
+  {
+    id: 'phoenix',
+    locationId: 1,
+    name: 'Phoenix Distribution Center',
+    shortLabel: 'Phoenix HQ',
+    addressLine: '1634 N 19th Ave, Phoenix, AZ 85009',
+    pickupLocationLabel: 'Phoenix Warehouse',
+  },
+  {
+    id: 'congress',
+    locationId: 2,
+    name: 'Congress Processing Plant',
+    shortLabel: 'Congress, AZ',
+    addressLine: '18980 Stanton Rd, Congress, AZ 85332',
+    pickupLocationLabel: 'Congress Plant',
+  },
+];
+
 export const PICKUP_SLOTS = SLOT_START_HOURS.map((startHour) => ({
   startHour,
   label: formatSlotLabel(startHour),
