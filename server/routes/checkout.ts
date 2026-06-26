@@ -4,7 +4,7 @@ import { supabase } from '../db/supabase.js';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
 import { quoteTrucking } from './quoteRequests.js';
-import { computeAsapPickup, formatReadyLabel, validateAsapPickupIso } from '../../shared/pickupSchedule.js';
+import { formatReadyLabel, resolveCheckoutPickupTime } from '../../shared/pickupSchedule.js';
 
 const router = Router();
 
@@ -37,7 +37,7 @@ router.post('/create-session', async (req, res) => {
       deliveryAddress,
       pickupLocation,
     } = req.body;
-    let { pickupTime } = req.body;
+    let { pickupTime, pickupMode } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'No items to check out' });
@@ -46,17 +46,11 @@ router.post('/create-session', async (req, res) => {
     const isDelivery = fulfillmentType === 'delivery';
 
     if (!isDelivery) {
-      const asap = computeAsapPickup();
-      if (!asap.ok) {
-        return res.status(400).json({ error: asap.message || 'Could not compute pickup ready time.' });
+      const resolved = resolveCheckoutPickupTime({ pickupMode, pickupTime });
+      if (!resolved.ok) {
+        return res.status(400).json({ error: resolved.message });
       }
-      if (pickupTime) {
-        const pickupCheck = validateAsapPickupIso(pickupTime);
-        if (!pickupCheck.ok) {
-          return res.status(400).json({ error: pickupCheck.message });
-        }
-      }
-      pickupTime = asap.readyAtIso;
+      pickupTime = resolved.pickupAtIso;
     }
 
     // Discount handling — extend here as real codes get added.

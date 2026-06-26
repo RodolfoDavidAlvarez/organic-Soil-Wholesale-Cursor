@@ -4,6 +4,11 @@
  * Toggle via OSW_DEVELOPER_MODE=true (Vercel env or local .env).
  */
 
+import {
+  getPickupNotifySmsPhones,
+  isPickupNotifyTesting,
+} from './pickupNotifications.js';
+
 export const DEV_ADMIN_EMAIL = 'ralvarez@soilseedandwater.com';
 
 export function isOswDeveloperMode() {
@@ -44,13 +49,11 @@ export function devModeSmsBody(body) {
   return isOswDeveloperMode() ? `[DEV TEST] ${body}` : body;
 }
 
-/** Yard admin SMS fan-out — Rodo only in dev mode. */
-export function getYardAdminPhones() {
-  const raw = process.env.YARD_ADMIN_PHONES || '';
-  const all = raw.split(',').map((p) => p.trim()).filter(Boolean);
-  if (isOswDeveloperMode()) {
+/** Yard admin SMS fan-out — respects testing mode, dev mode, and pickup location. */
+export function getYardAdminPhones(locationId = 1) {
+  if (isPickupNotifyTesting() || isOswDeveloperMode()) {
     const rodo = process.env.RODO_PHONE;
-    return rodo ? [rodo] : all.slice(0, 1);
+    return rodo ? [rodo] : [];
   }
-  return all;
+  return getPickupNotifySmsPhones(locationId);
 }

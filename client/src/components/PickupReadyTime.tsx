@@ -1,33 +1,49 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   computeAsapPickup,
   HOURS_LABEL,
 } from "@shared/pickupSchedule.js";
+import { PickupSlotPicker, type PickupSelection } from "@/components/PickupSlotPicker";
+
+export type PickupTimingMode = "asap" | "schedule";
 
 export type PickupReadySelection = {
+  pickupMode: PickupTimingMode;
   readyAt: string;
   readyLabel: string;
   status: "asap" | "scheduled";
+  /** Set when pickupMode === 'schedule' */
+  slotLabel?: string;
 };
 
 interface PickupReadyTimeProps {
   value: PickupReadySelection | null;
   onChange: (selection: PickupReadySelection | null) => void;
   className?: string;
-  /** Refresh computed ready time on an interval (ms). 0 = no refresh. */
   refreshMs?: number;
 }
 
 type AsapResult = ReturnType<typeof computeAsapPickup>;
 
-function toSelection(result: AsapResult): PickupReadySelection | null {
+function asapSelection(result: AsapResult): PickupReadySelection | null {
   if (!result.ok) return null;
   return {
+    pickupMode: "asap",
     readyAt: result.readyAtIso,
     readyLabel: result.readyLabel,
     status: result.status,
+  };
+}
+
+function scheduleSelection(slot: PickupSelection): PickupReadySelection {
+  return {
+    pickupMode: "schedule",
+    readyAt: slot.pickupAt,
+    readyLabel: `Pickup ${slot.slotLabel}`,
+    status: "scheduled",
+    slotLabel: slot.slotLabel,
   };
 }
 
@@ -37,45 +53,107 @@ export function PickupReadyTime({
   className,
   refreshMs = 60_000,
 }: PickupReadyTimeProps) {
+  const [mode, setMode] = useState<PickupTimingMode>(value?.pickupMode ?? "asap");
   const [tick, setTick] = useState(0);
+  const [scheduleSlot, setScheduleSlot] = useState<PickupSelection | null>(
+    value?.pickupMode === "schedule" && value.readyAt
+      ? {
+          pickupDate: value.readyAt.slice(0, 10),
+          slotLabel: value.slotLabel ?? value.readyLabel,
+          pickupAt: value.readyAt,
+        }
+      : null,
+  );
 
-  const computed = useMemo(() => computeAsapPickup(), [tick]);
+  const computedAsap = useMemo(() => computeAsapPickup(), [tick]);
 
   useEffect(() => {
-    const selection = toSelection(computed);
+    if (mode !== "asap") return;
+    const selection = asapSelection(computedAsap);
     if (!selection) return;
-    if (value?.readyAt !== selection.readyAt || value?.readyLabel !== selection.readyLabel) {
+    if (
+      value?.pickupMode !== "asap" ||
+      value.readyAt !== selection.readyAt ||
+      value.readyLabel !== selection.readyLabel
+    ) {
       onChange(selection);
     }
-  }, [computed, onChange, value?.readyAt, value?.readyLabel]);
+  }, [computedAsap, mode, onChange, value?.pickupMode, value?.readyAt, value?.readyLabel]);
 
   useEffect(() => {
-    if (!refreshMs) return undefined;
+    if (mode !== "schedule") return;
+    if (scheduleSlot) {
+      onChange(scheduleSelection(scheduleSlot));
+    } else {
+      onChange(null);
+    }
+  }, [mode, scheduleSlot, onChange]);
+
+  useEffect(() => {
+    if (!refreshMs || mode !== "asap") return undefined;
     const id = window.setInterval(() => setTick((t) => t + 1), refreshMs);
     return () => window.clearInterval(id);
-  }, [refreshMs]);
+  }, [refreshMs, mode]);
 
-  const display = value ?? toSelection(computed);
+  const displayAsap = value?.pickupMode === "asap" ? value : asapSelection(computedAsap);
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="rounded-xl border border-[#264027]/20 bg-[#264027]/5 px-4 py-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#264027]/10">
-            <Clock className="h-5 w-5 text-[#264027]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-bold leading-snug text-stone-900">
-              {display?.readyLabel ?? "Calculating ready time…"}
-            </p>
-            <p className="mt-1 text-sm leading-snug text-stone-600">
-              {display?.status === "asap"
-                ? "We'll start preparing your order as soon as you pay."
-                : "Your order will be prepared for pickup at the next available window."}
-            </p>
+    <div className={cn("space-y-4", className)}>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("asap")}
+          className={cn(
+            "flex min-h-[52px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
+            mode === "asap"
+              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
+              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
+          )}
+        >
+          <span className="flex items-center gap-1.5 text-sm font-bold">
+            <Clock className="h-4 w-4" /> ASAP
+          </span>
+          <span className="text-[11px] font-medium text-stone-500">Ready in ~20 min</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("schedule")}
+          className={cn(
+            "flex min-h-[52px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
+            mode === "schedule"
+              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
+              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
+          )}
+        >
+          <span className="flex items-center gap-1.5 text-sm font-bold">
+            <Calendar className="h-4 w-4" /> Schedule
+          </span>
+          <span className="text-[11px] font-medium text-stone-500">Pick a time slot</span>
+        </button>
+      </div>
+
+      {mode === "asap" ? (
+        <div className="rounded-xl border border-[#264027]/20 bg-[#264027]/5 px-4 py-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#264027]/10">
+              <Clock className="h-5 w-5 text-[#264027]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-bold leading-snug text-stone-900">
+                {displayAsap?.readyLabel ?? "Calculating ready time…"}
+              </p>
+              <p className="mt-1 text-sm leading-snug text-stone-600">
+                {displayAsap?.status === "asap"
+                  ? "We'll start preparing your order as soon as you pay."
+                  : "Your order will be prepared for the next available window."}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <PickupSlotPicker value={scheduleSlot} onChange={setScheduleSlot} />
+      )}
+
       <p className="text-xs text-stone-500">{HOURS_LABEL}</p>
     </div>
   );

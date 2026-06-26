@@ -200,7 +200,7 @@ const Checkout: React.FC = () => {
             marketingOptIn: true,
           },
           // Pickup-only fields
-          pickupMode: fulfillment === "pickup" ? "asap" : null,
+          pickupMode: fulfillment === "pickup" ? (pickupReady?.pickupMode ?? "asap") : null,
           pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
           // Delivery-only fields
           fulfillmentType: fulfillment,

@@ -447,3 +447,50 @@ export function validateAsapPickupIso(pickupAtIso, nowMs = Date.now()) {
     readyLabel: expected.readyLabel,
   };
 }
+
+/**
+ * Checkout pickup time — ASAP (default) or scheduled slot within business hours.
+ * @returns {{ ok: true, pickupAtIso: string, pickupMode: 'asap' | 'schedule', readyLabel?: string } | { ok: false, reason: string, message: string }}
+ */
+export function resolveCheckoutPickupTime({
+  pickupMode = 'asap',
+  pickupTime = null,
+  nowMs = Date.now(),
+} = {}) {
+  const mode = pickupMode === 'schedule' ? 'schedule' : 'asap';
+
+  if (mode === 'schedule') {
+    if (!pickupTime) {
+      return { ok: false, reason: 'missing', message: 'Please choose a pickup slot.' };
+    }
+    const check = validatePickupIso(pickupTime);
+    if (!check.ok) {
+      return { ok: false, reason: check.reason, message: check.message };
+    }
+    const parts = phoenixParts(new Date(check.pickupAtIso));
+    const slot = PICKUP_SLOTS.find((s) => s.startHour === parts.hour);
+    return {
+      ok: true,
+      pickupAtIso: check.pickupAtIso,
+      pickupMode: 'schedule',
+      readyLabel: slot ? `Pickup ${slot.label}` : formatReadyLabel(check.pickupAtIso, { nowMs }),
+    };
+  }
+
+  const asap = computeAsapPickup(nowMs);
+  if (!asap.ok) {
+    return asap;
+  }
+  if (pickupTime) {
+    const stale = validateAsapPickupIso(pickupTime, nowMs);
+    if (!stale.ok) {
+      return { ok: false, reason: stale.reason, message: stale.message };
+    }
+  }
+  return {
+    ok: true,
+    pickupAtIso: asap.readyAtIso,
+    pickupMode: 'asap',
+    readyLabel: asap.readyLabel,
+  };
+}

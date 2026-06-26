@@ -9,6 +9,7 @@ import {
   phoenixParts,
   phoenixYmd,
   validateAsapPickupIso,
+  resolveCheckoutPickupTime,
   READY_IN_MS,
 } from '../shared/pickupSchedule.js';
 
@@ -99,6 +100,15 @@ withMockNow('2026-06-30T16:30:00.000Z', () => {
   const asap = computeAsapPickup();
   const label = formatReadyLabel(asap.readyAtIso, { includeDate: true });
   assert('Case 7: email label has date', label.includes('Jun') || label.includes('20 minutes'));
+});
+
+// Case 8: scheduled slot within business hours
+withMockNow('2026-06-30T16:30:00.000Z', () => {
+  const resolved = resolveCheckoutPickupTime({
+    pickupMode: 'schedule',
+    pickupTime: '2026-06-30T10:00:00-07:00',
+  });
+  assert('Case 8: schedule mode accepted', resolved.ok === true, resolved.message);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

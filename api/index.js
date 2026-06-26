@@ -54,6 +54,107 @@ async function getDeveloperMode() {
   return developerModeModule;
 }
 
+let pickupNotificationsModule = null;
+async function getPickupNotifications() {
+  if (!pickupNotificationsModule) {
+    pickupNotificationsModule = await import('../shared/pickupNotifications.js');
+  }
+  return pickupNotificationsModule;
+}
+
+/** SMS + admin email when a paid pickup order lands (checkout webhook / free test order). */
+async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locationId }) {
+  const notify = await getPickupNotifications();
+  const dev = await getDeveloperMode();
+  const locId = locationId ?? order?.location_id ?? 1;
+  const orderRef = order?.order_number?.slice(0, 8) || String(order?.id || '');
+  const itemCount = Array.isArray(orderItems) ? orderItems.length : 0;
+  const totalDollars = Number(order?.total_amount ?? order?.total ?? 0);
+  const pickupLocation = order?.pickup_location || null;
+  const smsBody = dev.devModeSmsBody(
+    notify.formatNewPickupOrderSms({
+      customerName: order?.customer_name || order?.business_name || 'Customer',
+      customerPhone: order?.phone || '',
+      orderRef,
+      readyLabel: pickupLabel,
+      pickupLocation,
+      totalDollars,
+      itemCount,
+      testing: notify.isPickupNotifyTesting(),
+    }),
+  );
+
+  const phones = notify.getPickupNotifySmsPhones(locId);
+  if (
+    phones.length &&
+    process.env.TWILIO_ACCOUNT_SID &&
+    process.env.TWILIO_AUTH_TOKEN &&
+    process.env.TWILIO_PHONE_NUMBER
+  ) {
+    const twilioAuth = Buffer.from(
+      `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`,
+    ).toString('base64');
+    const smsResults = await Promise.allSettled(
+      phones.map(async (to) => {
+        const resp = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${twilioAuth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              To: to,
+              From: process.env.TWILIO_PHONE_NUMBER,
+              Body: smsBody,
+            }).toString(),
+          },
+        );
+        if (!resp.ok) {
+          const t = await resp.text().catch(() => '');
+          throw new Error(`Twilio ${resp.status}: ${t.slice(0, 120)}`);
+        }
+      }),
+    );
+    const smsSent = smsResults.filter((r) => r.status === 'fulfilled').length;
+    smsResults.forEach((r) => {
+      if (r.status === 'rejected') {
+        console.error('[pickup-order-alert] SMS failed:', r.reason?.message || r.reason);
+      }
+    });
+    console.log(`[pickup-order-alert] SMS sent to ${smsSent}/${phones.length} recipient(s)`);
+  } else {
+    console.warn('[pickup-order-alert] Twilio or notify phones not configured — skipping SMS');
+  }
+
+  try {
+    const r = await getResend();
+    const adminEmails = notify.getPickupNotifyEmails(locId);
+    const subject = dev.devModeSubject(`New OSW pickup order #${orderRef}`);
+    const html = `<p><strong>New pickup order</strong> #${orderRef}</p>
+      <p>Customer: ${order?.customer_name || order?.business_name || 'Customer'} (${order?.phone || ''})<br>
+      Estimated ready: ${pickupLabel || 'TBD'}<br>
+      Location: ${pickupLocation || 'Phoenix HQ'}<br>
+      Items: ${itemCount}<br>
+      Total: $${totalDollars.toFixed(2)}</p>`;
+    await Promise.all(
+      adminEmails.map((to) =>
+        r.emails.send({
+          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+          replyTo: 'ralvarez@soilseedandwater.com',
+          to,
+          subject,
+          html,
+        }),
+      ),
+    );
+    console.log(`[pickup-order-alert] admin email sent to ${adminEmails.join(', ')}`);
+  } catch (emailErr) {
+    console.error('[pickup-order-alert] admin email failed:', emailErr?.message || emailErr);
+  }
+}
+
 // Admin-only failure monitor: logs every input failure to system_errors and
 // emails Rodo (rate-limited to once per path per 30 min). Never throws.
 const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
@@ -4997,12 +5098,14 @@ ${pages}
           }
 
           // Send confirmation emails (customer + admin) via Resend
+          const isDeliveryOrder = order?.fulfillment_type === 'delivery';
+          let pickupLabel = null;
           try {
             const r = await getResend();
             const dev = await getDeveloperMode();
             const customerEmail = order?.customer_email || order?.email;
             const orderRef = order?.order_number?.slice(0, 8) || orderId;
-            const pickupLabel = order?.pickup_scheduled_at
+            pickupLabel = order?.pickup_scheduled_at
               ? await formatPickupReadyLabel(order.pickup_scheduled_at)
               : null;
             if (customerEmail) {
@@ -5014,29 +5117,31 @@ ${pages}
                 html: `<p>Hi ${order?.customer_name || 'there'},</p>
                   <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
                   <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
-                  <strong>Location:</strong> 1634 N 19th Ave, Phoenix, AZ 85009</p>
+                  <strong>Location:</strong> ${order?.pickup_location || '1634 N 19th Ave, Phoenix, AZ 85009'}</p>
                   <p>Please call (602) 637-0032 when you arrive.</p>
                   <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
               });
             }
-            await r.emails.send({
-              from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
-              replyTo: 'ralvarez@soilseedandwater.com',
-              to: ['ralvarez@soilseedandwater.com'],
-              subject: `New pay & pickup order #${orderRef}`,
-              html: `<p>New order from ${order?.customer_name || 'customer'} (${order?.phone || ''}).</p>
-                <p>Items: ${(orderItems || []).length}<br>
-                Total: $${((order?.total_amount) || 0).toFixed(2)}<br>
-                Estimated ready: ${pickupLabel || 'TBD'}</p>`,
-            });
           } catch (emailErr) {
             console.error('[checkout webhook] email send failed:', emailErr?.message || emailErr);
           }
 
+          if (!isDeliveryOrder) {
+            try {
+              await sendNewPickupOrderAlerts({
+                order,
+                orderItems,
+                pickupLabel,
+                locationId: order?.location_id,
+              });
+            } catch (alertErr) {
+              console.error('[checkout webhook] pickup alerts failed:', alertErr?.message || alertErr);
+            }
+          }
+
           // Forward to MOS — delivery vs pickup endpoint chosen inside forwarder.
-          const isDeliveryOrder = order?.fulfillment_type === 'delivery';
           const mosPickupLabel = !isDeliveryOrder && order?.pickup_scheduled_at
-            ? await formatPickupReadyLabel(order.pickup_scheduled_at)
+            ? (pickupLabel || await formatPickupReadyLabel(order.pickup_scheduled_at))
             : undefined;
           await forwardOswPickupToMos({
             osw_order_id: orderId,
@@ -5099,7 +5204,7 @@ ${pages}
           items, customerInfo, locationId, discountCode,
           fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation,
         } = req.body || {};
-        let { pickupTime } = req.body || {};
+        let { pickupTime, pickupMode } = req.body || {};
 
         if (!Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ error: 'No items to check out' });
@@ -5114,17 +5219,11 @@ ${pages}
 
         if (!isDelivery) {
           const schedule = await getPickupSchedule();
-          const asap = schedule.computeAsapPickup();
-          if (!asap.ok) {
-            return res.status(400).json({ error: asap.message || 'Could not compute pickup ready time.' });
+          const resolved = schedule.resolveCheckoutPickupTime({ pickupMode, pickupTime });
+          if (!resolved.ok) {
+            return res.status(400).json({ error: resolved.message });
           }
-          if (pickupTime) {
-            const pickupCheck = schedule.validateAsapPickupIso(pickupTime);
-            if (!pickupCheck.ok) {
-              return res.status(400).json({ error: pickupCheck.message });
-            }
-          }
-          pickupTime = asap.readyAtIso;
+          pickupTime = resolved.pickupAtIso;
         }
 
         if (isDelivery) {
@@ -5267,6 +5366,14 @@ ${pages}
               payment_status: 'paid',
               source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
             });
+            if (!isDelivery) {
+              await sendNewPickupOrderAlerts({
+                order: { ...order, pickup_location: pickupLocation, location_id: checkoutLocationId },
+                orderItems: items,
+                pickupLabel: freeOrderPickupLabel,
+                locationId: checkoutLocationId,
+              });
+            }
           } catch (e) {
             console.error('[free-order MOS forward] failed:', e?.message || e);
           }
