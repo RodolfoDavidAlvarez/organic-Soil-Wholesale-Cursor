@@ -237,6 +237,16 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     .select('product_id, quantity, unit_price, total_price, size_option')
     .eq('order_id', orderId);
 
+  const trackedValue = Number(order?.total_amount || 0)
+    || Number(order?.total || 0)
+    || (Array.isArray(orderItems)
+      ? orderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
+      : 0);
+  const trackingPayload = {
+    value: trackedValue,
+    items: Array.isArray(orderItems) ? orderItems : [],
+  };
+
   if (!alreadyPaid && Array.isArray(orderItems)) {
     const locationId = order.location_id || 1;
     for (const item of orderItems) {
@@ -261,7 +271,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
   }
 
   if (alreadyPaid) {
-    return { ok: true, alreadyPaid: true, order };
+    return { ok: true, alreadyPaid: true, order, ...trackingPayload };
   }
 
   const isDeliveryOrder = order?.fulfillment_type === 'delivery';
@@ -339,7 +349,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
   });
 
-  return { ok: true, order };
+  return { ok: true, order, ...trackingPayload };
 }
 
 // Admin-only failure monitor: logs every input failure to system_errors and

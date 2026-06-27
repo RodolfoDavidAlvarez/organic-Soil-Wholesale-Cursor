@@ -10,6 +10,7 @@ import {
   PHOENIX_YARD_ADDRESS,
   PHOENIX_YARD_DIRECTIONS_URL,
 } from '@/config/contact';
+import { type EcommerceItem, trackEcommerceEvent, trackPhoneClick } from '@/lib/analytics';
 
 interface OrderDetails {
   orderId: string;
@@ -20,10 +21,17 @@ interface OrderDetails {
   /** 'pickup' | 'delivery' (older orders may not have this) */
   fulfillment?: 'pickup' | 'delivery';
   deliveryZip?: string | null;
+  orderItems?: EcommerceItem[];
+  value?: number;
+  productSubtotal?: number;
+  deliveryFee?: number;
+  paymentConfirmed?: boolean;
+  freeOrder?: boolean;
 }
 
 const PHOENIX_YARD_PHONE_DISPLAY = CUSTOMER_SUPPORT_PHONE_DISPLAY;
 const PHOENIX_YARD_PHONE_TEL = CUSTOMER_SUPPORT_PHONE_TEL;
+const PURCHASE_TRACKED_PREFIX = 'osw-purchase-tracked:';
 
 const OrderConfirmation: React.FC = () => {
   const [, navigate] = useLocation();
@@ -33,6 +41,62 @@ const OrderConfirmation: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order_id');
     const sessionId = params.get('session_id');
+
+    const trackPurchaseOnce = (details: OrderDetails) => {
+      if (!details.orderId) return;
+      if (!details.value || details.value <= 0) return;
+      const storageKey = `${PURCHASE_TRACKED_PREFIX}${details.orderId}`;
+      if (sessionStorage.getItem(storageKey)) return;
+      sessionStorage.setItem(storageKey, '1');
+
+      trackEcommerceEvent('purchase', {
+        transaction_id: details.orderId,
+        value: Number(details.value || 0),
+        items: details.orderItems || [],
+        fulfillment: details.fulfillment || 'pickup',
+        delivery_zip: details.deliveryZip || undefined,
+        pickup_sales_channel: 'osw_yard',
+      });
+    };
+
+    const mergeConfirmedOrder = (payload: any, fallback: OrderDetails): OrderDetails => {
+      const order = payload?.order;
+      const orderItems = Array.isArray(payload?.items)
+        ? payload.items.map((item: any) => ({
+            item_id: item.product_id || item.item_id || 'unknown',
+            item_name: item.product_name || item.name || 'Organic Soil Wholesale product',
+            item_variant: item.size_option || item.item_variant || '',
+            item_category: order?.fulfillment_type || fallback.fulfillment || 'pickup',
+            price: Number(item.unit_price || item.price || 0),
+            quantity: Number(item.quantity || 1),
+          }))
+        : fallback.orderItems;
+
+      return {
+        ...fallback,
+        orderId: String(order?.id || fallback.orderId),
+        confirmationCode: order?.confirmation_code || fallback.confirmationCode,
+        fulfillment: order?.fulfillment_type || fallback.fulfillment,
+        deliveryZip: order?.delivery_zip || fallback.deliveryZip,
+        value: Number(payload?.value ?? order?.total_amount ?? fallback.value ?? 0),
+        orderItems,
+        paymentConfirmed: true,
+      };
+    };
+
+    const savedOrder = localStorage.getItem('lastOrder');
+    let fallbackOrder: OrderDetails | null = null;
+    if (savedOrder) {
+      try {
+        fallbackOrder = JSON.parse(savedOrder);
+      } catch {
+        fallbackOrder = null;
+      }
+    }
+    if (!fallbackOrder && orderId) {
+      fallbackOrder = { orderId, items: 0 };
+    }
+
     if (orderId) {
       fetch('/api/checkout/confirm-paid', {
         method: 'POST',
@@ -41,32 +105,32 @@ const OrderConfirmation: React.FC = () => {
           orderId: Number(orderId),
           sessionId: sessionId || undefined,
         }),
-      }).catch(() => {});
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => {
+          if (!fallbackOrder) return;
+          const confirmed = payload?.ok ? mergeConfirmedOrder(payload, fallbackOrder) : fallbackOrder;
+          setOrderDetails(confirmed);
+          if (payload?.ok || confirmed.paymentConfirmed || confirmed.freeOrder) {
+            trackPurchaseOnce(confirmed);
+          }
+        })
+        .catch(() => {
+          if (fallbackOrder) {
+            setOrderDetails(fallbackOrder);
+            if (fallbackOrder.paymentConfirmed || fallbackOrder.freeOrder) {
+              trackPurchaseOnce(fallbackOrder);
+            }
+          }
+        });
     }
 
-    // Prefer localStorage (set by Checkout right before navigation). If that
-    // didn't survive (private mode, tab swap, hard refresh), fall back to the
-    // order_id from the URL query so we still show something useful instead of
-    // a blank "No order found" page.
-    const savedOrder = localStorage.getItem('lastOrder');
-    if (savedOrder) {
-      try {
-        setOrderDetails(JSON.parse(savedOrder));
-      } catch {
-        setOrderDetails(null);
-      }
+    if (fallbackOrder) {
+      setOrderDetails(fallbackOrder);
       // NOTE: do NOT remove from localStorage — keep it so a page refresh after
       // checkout still shows the confirmation instead of "No order found".
       return;
     }
-    // Fallback to URL-driven minimal view
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const orderId = params.get('order_id');
-      if (orderId) {
-        setOrderDetails({ orderId, items: 0 });
-      }
-    } catch {}
   }, []);
 
   if (!orderDetails) {
@@ -219,7 +283,10 @@ const OrderConfirmation: React.FC = () => {
           <Button
             size="lg"
             className="w-full min-h-[48px]"
-            onClick={() => { window.location.href = PHOENIX_YARD_PHONE_TEL; }}
+            onClick={() => {
+              trackPhoneClick({ location: 'order_confirmation', phone_href: PHOENIX_YARD_PHONE_TEL });
+              window.location.href = PHOENIX_YARD_PHONE_TEL;
+            }}
           >
             <Phone className="w-5 h-5 mr-2" />
             Call {PHOENIX_YARD_PHONE_DISPLAY}

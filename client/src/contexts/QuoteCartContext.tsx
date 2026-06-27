@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
-import { trackEvent } from "@/lib/analytics";
+import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 
 export type CartItem = {
   productId: number;
@@ -77,6 +77,12 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
       quantity: newItem.quantity,
       unit_price: newItem.unitPrice,
       mode: newItem.mode ?? "quote",
+    });
+    trackEcommerceEvent("add_to_cart", {
+      value: newItem.unitPrice * newItem.quantity,
+      items: [cartItemToEcommerceItem(newItem)],
+      mode: newItem.mode ?? "quote",
+      pickup_sales_channel: "osw_yard",
     });
   }, []);
 

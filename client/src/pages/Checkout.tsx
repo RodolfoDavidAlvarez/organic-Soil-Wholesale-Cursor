@@ -10,7 +10,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { PickupReadyTime, type PickupReadySelection } from "@/components/PickupReadyTime";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { cn } from "@/lib/utils";
-import { trackEvent } from "@/lib/analytics";
+import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
@@ -132,6 +132,7 @@ const Checkout: React.FC = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const ecommerceItems = payItems.map(cartItemToEcommerceItem);
     trackEvent("Checkout Submit Attempted", {
       fulfillment,
       item_count: payItems.length,
@@ -139,6 +140,14 @@ const Checkout: React.FC = () => {
       delivery_fee: deliveryFee,
       total,
       step: activeStep,
+    });
+    trackEcommerceEvent("begin_checkout", {
+      value: total,
+      items: ecommerceItems,
+      fulfillment,
+      product_subtotal: productSubtotal,
+      delivery_fee: deliveryFee,
+      pickup_sales_channel: "osw_yard",
     });
 
     if (payItems.length === 0) {
@@ -244,6 +253,12 @@ const Checkout: React.FC = () => {
           orderId: data.orderId,
           confirmationCode: data.confirmationCode,
           items: payItems.length,
+          orderItems: ecommerceItems,
+          value: total,
+          productSubtotal,
+          deliveryFee,
+          paymentConfirmed: data.free === true,
+          freeOrder: data.free === true,
           pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
           pickupReadyLabel: fulfillment === "pickup" ? pickupReady?.readyLabel : null,
           fulfillment,

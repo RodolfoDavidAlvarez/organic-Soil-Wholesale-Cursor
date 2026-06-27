@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 
 // const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e"; // Deprecated - using internal API now
 
@@ -137,6 +138,15 @@ const Contact = () => {
       }
 
       const result = await response.json();
+      trackEvent("Contact Form Submitted", {
+        source: "contact_page",
+        subject: data.subject,
+      });
+      trackEcommerceEvent("generate_lead", {
+        lead_type: "contact_form",
+        source: "contact_page",
+        pickup_sales_channel: "osw_yard",
+      });
 
       toast({
         title: "Message Sent",

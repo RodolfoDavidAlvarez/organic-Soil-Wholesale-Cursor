@@ -16,7 +16,7 @@ import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, trackPhoneClick } from "@/lib/analytics";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Products = lazy(() => import("@/pages/Products"));
@@ -225,6 +225,18 @@ function App() {
               : "marketing",
     });
   }, [isAdminPanel, isCheckoutFlow, isPayAndPickup, isProductFlow, location]);
+
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target.closest('a[href^="tel:"]') : null;
+      if (!target) return;
+      const href = target.getAttribute("href") || "";
+      trackPhoneClick({ location, phone_href: href });
+    };
+
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [location]);
 
   return (
     <QueryClientProvider client={queryClient}>

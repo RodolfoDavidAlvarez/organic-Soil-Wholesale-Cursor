@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 
 const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e";
 
@@ -215,6 +216,17 @@ const BulkOrderForm = ({ onClose }: BulkOrderFormProps) => {
         console.log("Webhook request successful!", {
           status: response.status,
           responseText,
+        });
+        trackEvent("Bulk Order Request Submitted", {
+          source: "bulk_order_form",
+          product: formValues.productName,
+          quantity: formValues.quantity,
+        });
+        trackEcommerceEvent("generate_lead", {
+          lead_type: "bulk_order_request",
+          source: "bulk_order_form",
+          product: formValues.productName,
+          pickup_sales_channel: "osw_yard",
         });
 
         toast({

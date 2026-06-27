@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { getPayPickupProductDescription } from "@/data/payPickupCopy";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
-import { trackEvent } from "@/lib/analytics";
+import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft,
   Leaf,
@@ -802,6 +802,15 @@ const ProductDetail = () => {
       product_name: product.displayTitle,
       category: product.category,
       pay_online: canPayOnline,
+    });
+    trackEcommerceEvent("view_item", {
+      items: [{
+        item_id: product.id,
+        item_name: product.displayTitle,
+        item_category: product.category,
+      }],
+      pay_online: canPayOnline,
+      pickup_sales_channel: "osw_yard",
     });
   }, [product?.id]);
 
