@@ -18,6 +18,7 @@ const COMMERCE_EVENTS = new Set<EcommerceEvent>(["view_item", "add_to_cart", "be
 declare global {
   interface Window {
     dataLayer?: Array<Record<string, unknown>>;
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
@@ -66,6 +67,16 @@ const pushDataLayerEvent = (name: string, properties?: AnalyticsProperties) => {
   }
 };
 
+const sendGa4Event = (event: EcommerceEvent, payload: AnalyticsProperties) => {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+
+  try {
+    window.gtag("event", event, payload);
+  } catch {
+    // GA4 must never block checkout, check-in, or cart actions.
+  }
+};
+
 export const trackEcommerceEvent = (
   event: EcommerceEvent,
   properties?: AnalyticsProperties & {
@@ -89,6 +100,8 @@ export const trackEcommerceEvent = (
   if (typeof window === "undefined") return;
 
   try {
+    sendGa4Event(event, payload);
+
     window.dataLayer = window.dataLayer || [];
     if (COMMERCE_EVENTS.has(event)) {
       window.dataLayer.push({ ecommerce: null });
