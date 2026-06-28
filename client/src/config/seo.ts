@@ -71,7 +71,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     name: "Nature's Blanket Premium",
     category: "Premium Dark Mulch",
     slug: "natures-blanket-premium",
-    description: "Dark premium mulch for clean landscape finishes, moisture retention, weed suppression, farms, gardens, and commercial properties.",
+    description: "Premium healthy soil mulch made with wood fiber, worm castings, and dairy compost for clean landscape finish, moisture retention, weed suppression, gardens, farms, and commercial properties.",
     image: "/images/optimized/natures-blanket-bag-studio.jpg",
     offers: [
       { name: "2 cu ft Bag", price: 10.99 },

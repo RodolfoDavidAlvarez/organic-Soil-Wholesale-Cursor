@@ -524,7 +524,7 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
     ],
   },
   3000: {
-    highlights: ["Reduces moisture loss", "Helps suppress weeds", "Protects roots from heat"],
+    highlights: ["Worm castings + dairy compost", "Helps suppress weeds", "Healthy soil mulch"],
     usageSteps: [
       "Spread evenly over clean landscape beds at a depth of about 2-3 inches.",
       "Keep mulch pulled slightly away from trunks, stems, and crowns to protect plant health.",
@@ -540,11 +540,14 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "Commercial beds",
       "Weed suppression",
     ],
-    note: "Use it when you want a clean finished bed, better moisture retention, cooler roots, reduced weed pressure, and long-lasting soil cover.",
+    note: "Use it when you want the best all-around healthy soil mulch: premium wood fiber blended with worm castings and dairy compost for cleaner beds, moisture retention, cooler roots, and long-lasting soil cover.",
     seoKeywords: [
       "organic mulch",
       "premium mulch",
       "wood fiber mulch",
+      "worm castings mulch",
+      "dairy compost mulch",
+      "healthy soil mulch",
       "landscape mulch Phoenix",
       "mulch for garden beds",
       "weed suppression mulch",

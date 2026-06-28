@@ -154,7 +154,7 @@ export const MULCH_PRODUCTS: FeaturedProductSlot[] = [
     bagImage: "/images/optimized/natures-blanket-bag-studio.jpg",
     textureImage: "/images/optimized/mulch-texture-hand.jpg",
     blurb:
-      "Premium dark mulch enriched with dairy compost. Holds moisture, suppresses weeds, finishes any landscape job.",
+      "Premium dark mulch enriched with worm castings and dairy compost for healthy soil cover, moisture retention, weed suppression, and clean landscape finish.",
     sizes: ["2 CF bag", "Tote", "Bulk yards"],
   },
 ];
