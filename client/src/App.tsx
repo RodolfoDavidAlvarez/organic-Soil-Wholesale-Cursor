@@ -29,7 +29,7 @@ const FAQ = lazy(() => import("@/pages/FAQ"));
 const Order = lazy(() => import("@/pages/Order"));
 const SpecialRequest = lazy(() => import("@/pages/SpecialRequest"));
 const Landscapers = lazy(() => import("@/pages/Landscapers"));
-const Wholesale = lazy(() => import("@/pages/Wholesale"));
+const Distributors = lazy(() => import("@/pages/Distributors"));
 const Nurseries = lazy(() => import("@/pages/Nurseries"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
@@ -119,7 +119,8 @@ function Router() {
         <Route path="/order" component={Order} />
         <Route path="/special-request" component={SpecialRequest} />
         <Route path="/landscapers" component={Landscapers} />
-        <Route path="/wholesale" component={Wholesale} />
+        <Route path="/distributors" component={Distributors} />
+        <Route path="/wholesale" component={Distributors} />
         <Route path="/nurseries" component={Nurseries} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
