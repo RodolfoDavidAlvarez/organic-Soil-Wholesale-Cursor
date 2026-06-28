@@ -1353,10 +1353,33 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       };
     };
 
+    const blockedProductImages = {
+      3000: new Set(['/uploads/products/3000/gallery-1/1764113182186-ohei8u.webp']),
+    };
+
+    const normalizeProductImagePath = (url) => {
+      if (typeof url !== 'string') return '';
+      const clean = url.trim().toLowerCase().replace(/\?.*$/, '').replace(/#.*$/, '');
+      if (!clean) return '';
+      try {
+        return new URL(clean, 'https://organicsoilwholesale.com').pathname.toLowerCase();
+      } catch {
+        return clean.startsWith('/') ? clean : `/${clean}`;
+      }
+    };
+
+    const filterBlockedProductImages = (productId, images) => {
+      if (!Array.isArray(images)) return images;
+      const blocked = blockedProductImages[Number(productId)];
+      if (!blocked) return images;
+      return images.filter((url) => !blocked.has(normalizeProductImagePath(url)));
+    };
+
     const normalizeProductRow = (p) => {
       if (!p) return p;
       const rawSizes = Array.isArray(p.size_price_options) ? p.size_price_options : [];
       const normalizedSizes = rawSizes.map(normalizeSizeOption).filter(Boolean);
+      const additionalImages = filterBlockedProductImages(p.id, p.additional_images ?? p.additionalImages);
       return {
         ...p,
         // Provide both camelCase and snake_case so existing clients keep working
@@ -1364,6 +1387,8 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         sizePriceOptions: normalizedSizes,
         imageUrl: p.image_url ?? p.imageUrl ?? null,
         texturePhotoUrl: p.texture_photo_url ?? p.texturePhotoUrl ?? null,
+        additional_images: additionalImages,
+        additionalImages,
         productType: p.product_type ?? p.productType ?? p.name,
         displayTitle: p.display_title ?? p.displayTitle ?? p.name,
       };

@@ -173,6 +173,10 @@ const GALLERY_DUPLICATE_GROUPS: Record<number, Record<string, string>> = {
   },
 };
 
+const BLOCKED_GALLERY_IMAGES: Record<number, Set<string>> = {
+  3000: new Set(["/uploads/products/3000/gallery-1/1764113182186-ohei8u.webp"]),
+};
+
 const normalizedGalleryUrl = (url: string) => {
   const clean = url.trim().toLowerCase().replace(/\?.*$/, "").replace(/#.*$/, "");
   if (!clean) return "";
@@ -185,6 +189,10 @@ const normalizedGalleryUrl = (url: string) => {
   } catch {
     return clean;
   }
+};
+
+const isBlockedGalleryImage = (productId: number, url: string) => {
+  return BLOCKED_GALLERY_IMAGES[productId]?.has(normalizedGalleryUrl(url)) ?? false;
 };
 
 const galleryDedupeKey = (productId: number, url: string) => {
@@ -686,6 +694,7 @@ const ProductDetail = () => {
     const heroBagOverride = HERO_BAG_PHOTO[product.id];
     [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
       .filter((u): u is string => Boolean(u?.trim()))
+      .filter((url) => !isBlockedGalleryImage(product.id, url))
       .forEach((url) => {
         const key = galleryDedupeKey(product.id, url);
         if (!seen.has(key)) { seen.add(key); items.push({ type: "image", url: url.trim() }); }
