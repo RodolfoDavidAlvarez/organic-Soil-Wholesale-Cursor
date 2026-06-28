@@ -3754,7 +3754,7 @@ ${pages}
     const AIRTABLE_EMAIL_BASE_ID = "appBLlRW7MOx0qdlu";
     const AIRTABLE_EMAIL_TABLE_ID = "tblmofFGmkN2dZ4GB";
 
-    // POST /api/unsubscribe - Unsubscribe an email
+    // POST /api/unsubscribe - Unsubscribe an email (sp_customers + Airtable sync)
     if (path === '/api/unsubscribe' && req.method === 'POST') {
       const { email, reason } = req.body || {};
 
@@ -3765,119 +3765,52 @@ ${pages}
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[Unsubscribe] Processing request for:', normalizedEmail);
 
-      // Find the contact in Airtable
-      const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}?filterByFormula=LOWER({Email})="${normalizedEmail}"&maxRecords=1`;
-
-      const searchResponse = await fetch(searchUrl, {
-        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-      });
-
-      if (!searchResponse.ok) {
-        console.error('[Unsubscribe] Airtable search failed:', await searchResponse.text());
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      const searchData = await searchResponse.json();
-      const records = searchData.records || [];
-
-      if (records.length === 0) {
-        // Email not found - still return success (don't reveal if email exists)
-        console.log('[Unsubscribe] Email not found in database:', normalizedEmail);
+      try {
+        const db = await getSupabase();
+        const { unsubscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
+        await unsubscribeNewsletterContact(db, normalizedEmail, reason);
+        console.log('[Unsubscribe] Successfully unsubscribed:', normalizedEmail);
         return res.json({ success: true, message: 'Unsubscribed successfully' });
+      } catch (e) {
+        console.error('[Unsubscribe] Error:', e?.message || e);
+        return res.status(500).json({ error: 'Failed to update subscription status' });
       }
-
-      const recordId = records[0].id;
-
-      // Update the contact - mark as unsubscribed
-      const updateUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}/${recordId}`;
-
-      const updateFields = {
-        Subscribed: false,
-        "Unsubscribed Date": new Date().toISOString().split("T")[0],
-      };
-
-      // Add unsubscribe reason to Notes if provided
-      if (reason && reason.trim()) {
-        const existingNotes = records[0].fields?.Notes || "";
-        const timestamp = new Date().toISOString();
-        updateFields.Notes = `${existingNotes}\n\n[Unsubscribed ${timestamp}]\nReason: ${reason.trim()}`.trim();
-      }
-
-      const updateResponse = await fetch(updateUrl, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fields: updateFields }),
-      });
-
-      if (!updateResponse.ok) {
-        const errorText = await updateResponse.text();
-        console.error('[Unsubscribe] Airtable update failed:', errorText);
-
-        // If Subscribed field doesn't exist, try without it
-        if (errorText.includes("UNKNOWN_FIELD_NAME")) {
-          console.log('[Unsubscribe] Retrying without Subscribed field...');
-          const retryFields = {
-            "Unsubscribed Date": new Date().toISOString().split("T")[0],
-          };
-          if (reason && reason.trim()) {
-            const existingNotes = records[0].fields?.Notes || "";
-            const timestamp = new Date().toISOString();
-            retryFields.Notes = `${existingNotes}\n\n[Unsubscribed ${timestamp}]\nReason: ${reason.trim()}`.trim();
-          }
-
-          const retryResponse = await fetch(updateUrl, {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ fields: retryFields }),
-          });
-
-          if (!retryResponse.ok) {
-            console.error('[Unsubscribe] Retry also failed:', await retryResponse.text());
-            return res.status(500).json({ error: 'Failed to update subscription status' });
-          }
-        } else {
-          return res.status(500).json({ error: 'Failed to update subscription status' });
-        }
-      }
-
-      console.log('[Unsubscribe] Successfully unsubscribed:', normalizedEmail);
-      return res.json({ success: true, message: 'Unsubscribed successfully' });
     }
 
-    // GET /api/unsubscribe/status/:email - Check subscription status
+    // GET /api/unsubscribe/status/:email - Check subscription status (sp_customers)
     const unsubStatusMatch = path.match(/^\/api\/unsubscribe\/status\/(.+)$/);
     if (unsubStatusMatch && req.method === 'GET') {
       const email = decodeURIComponent(unsubStatusMatch[1]).toLowerCase().trim();
+      const db = await getSupabase();
+      const { data: customer } = await db
+        .from('sp_customers')
+        .select('newsletter_subscribed, newsletter_unsubscribed_at')
+        .ilike('email', email)
+        .maybeSingle();
 
-      const searchUrl = `https://api.airtable.com/v0/${AIRTABLE_EMAIL_BASE_ID}/${AIRTABLE_EMAIL_TABLE_ID}?filterByFormula=LOWER({Email})="${email}"&maxRecords=1`;
-
-      const response = await fetch(searchUrl, {
-        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-      });
-
-      if (!response.ok) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      const data = await response.json();
-      const records = data.records || [];
-
-      if (records.length === 0) {
+      if (!customer) {
         return res.json({ found: false });
       }
 
-      const record = records[0];
       return res.json({
         found: true,
-        subscribed: record.fields?.Subscribed !== false,
-        unsubscribedDate: record.fields?.["Unsubscribed Date"] || null,
+        subscribed: customer.newsletter_subscribed !== false,
+        unsubscribedDate: customer.newsletter_unsubscribed_at || null,
+        source: 'sp_customers',
       });
+    }
+
+    // POST /api/resend/webhook — newsletter opens/clicks → sp_customers + email_events
+    if (path === '/api/resend/webhook' && req.method === 'POST') {
+      try {
+        const db = await getSupabase();
+        const { handleResendNewsletterWebhook } = await import('../shared/newsletterEngagement.js');
+        await handleResendNewsletterWebhook(db, req.body);
+        return res.json({ received: true });
+      } catch (e) {
+        console.error('[Resend Webhook] Error:', e?.message || e);
+        return res.status(200).json({ received: true, error: 'Processing error' });
+      }
     }
 
     // ============ CUSTOMER AUTH ENDPOINTS ============
