@@ -155,7 +155,7 @@ const fmt = (n: number): string => {
 const HERO_BAG_PHOTO: Record<number, string> = {
   1000: "/images/optimized/dansgold9lbs-1.jpg",
   1001: "/images/optimized/mikeys-worm-poop9lbs.jpg",
-  137: "/images/optimized/soil-craft-bag-studio.jpg",
+  137: "/images/optimized/rgg9lbs.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 

@@ -66,7 +66,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     displayTitle: "Soil Craft",
     productName: "Premium Potting Soil",
     tagline: "Ready to grow. Out of the bag.",
-    heroImage: "/images/optimized/soil-craft-bag-studio.jpg",
+    heroImage: "/images/optimized/rgg9lbs.jpg",
     thumbnailImage: "/images/optimized/soil-craft-bestfor.jpg",
     altImages: [
       { src: "/images/optimized/soil-craft-bestfor.jpg", label: "Best for" },

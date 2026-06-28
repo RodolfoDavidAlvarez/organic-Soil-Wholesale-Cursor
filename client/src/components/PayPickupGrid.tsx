@@ -11,7 +11,7 @@ const MAIN_PRODUCT_IDS = [1000, 1001, 137, 3000] as const;
 const HERO_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/dansgold9lbs-1.jpg",       // Simon's Gold (Dairy Compost)
   1001: "/images/optimized/mikeys-worm-poop9lbs.jpg", // Mikey's Worm Poop
-  137: "/images/optimized/soil-craft-bag-studio.jpg", // Soil Craft
+  137: "/images/optimized/rgg9lbs.jpg", // Soil Craft
   3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Premium Mulch — closest bag studio
 };
 

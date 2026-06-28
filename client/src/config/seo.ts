@@ -59,7 +59,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     category: "Premium Potting Soil",
     slug: "soil-craft",
     description: "Ready-to-use organic potting soil for raised beds, containers, nurseries, gardens, and planting projects.",
-    image: "/images/optimized/soil-craft-bag-studio.jpg",
+    image: "/images/optimized/rgg9lbs.jpg",
     offers: [
       { name: "1.5 cu ft Bag", price: 15.99 },
       { name: "Super Sack (2.2 cu yd)", price: 359.78 },

@@ -10,7 +10,7 @@ const CORE_FOUR = [
     size: "1.5 cu ft bag",
     msrp: "$15.99",
     cost: "$8.00",
-    image: "soil-craft-bag-studio.jpg",
+    image: "rgg9lbs.jpg",
   },
   {
     name: "Nature's Blanket Premium",
