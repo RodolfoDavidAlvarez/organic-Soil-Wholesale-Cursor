@@ -65,9 +65,11 @@ Google Ads:
 - Negative keywords were empty during audit.
 
 Ads conversion actions:
-- `Phone Call`: active, had 5 conversions.
-- `Form Capture`: primary but no recent conversions.
-- `Purchase`: needs attention, 0 conversions.
+- `Phone Call`: active, primary, 5 conversions in the visible last-30-day window.
+- `Form Capture`: active, primary, 1 conversion in the visible last-30-day window.
+- `Purchase`: there are two purchase actions:
+  - `Purchase`: website source, secondary, awaiting conversions, 0 conversions.
+  - `Soil Seed & Water (web) purchase`: GA4 source, primary, included in account-level goals, 0 conversions, currently `Misconfigured`.
 
 GA4:
 - Property label observed: `Soil Seed & Water Wholesale`.
@@ -104,7 +106,7 @@ The current most important work is:
 
 ## Code Tracking Implemented 2026-06-27
 
-Implemented in the OSW website code, not deployed yet:
+Implemented in the OSW website code and deployed to production:
 - Standard `dataLayer` events now fire alongside Vercel Analytics.
 - `view_item` fires on product detail pages with product ID, name, category, and OSW yard channel.
 - `add_to_cart` fires when a product is added with item, quantity, unit price, and value.
@@ -126,32 +128,49 @@ Local verification completed:
 - Verified `purchase` on `/order-confirmation` with fake local order data, value `$12.46`, and no real payment.
 - Verified false-conversion guard: an unconfirmed saved order did not fire `purchase`; a confirmed/free saved order did fire `purchase`.
 
+Live bundle verification:
+- Production HTML includes GTM `GTM-MRVDQ73P`.
+- Production HTML includes GA4 fallback `G-RFRTHKGL0X`.
+- Production JS bundle contains `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, and `phone_click`.
+
 Important:
-- This is code-side tracking only until deployed.
-- After deploy, verify the same events in GA4 DebugView and Google Tag Assistant on `organicsoilwholesale.com`.
-- Then mark/import the right GA4 events into Google Ads.
+- A real GA4 `purchase` has not yet been proven post-deploy because Supabase showed 0 orders in the last 48 hours during the 2026-06-29 check.
+- Do not create fake production purchases just to make GA4/Ads look healthy.
+- Next valid proof is the first real paid OSW checkout after deployment, then check GA4 Realtime/DebugView and Google Ads conversion action status.
 
-## Google Ads / GA4 Setup Still Needed
+## Google Ads / GA4 Verification - 2026-06-29
 
-In GA4:
-- Link GA4 property `Soil Seed & Water Wholesale` to Google Ads account `122-325-9690`.
-- Mark or create key events for:
-  - `purchase`
-  - `generate_lead`
-  - `phone_click`
-- Keep `purchase` as the main business conversion.
+Verified in Google Ads Chrome session:
+- Account: `122-325-9690 Soil Seed and Water`.
+- Google Ads has a GA4-imported conversion action: `Soil Seed & Water (web) purchase`.
+- That GA4 purchase action is `Primary` and included in account-level goals.
+- Status is `Misconfigured`.
+- Google's detail says conversions have not been recorded within the last 7 days due to a data-source issue.
+- Given the production code was recently fixed and Supabase had no post-deploy paid orders, the next step is to wait for or run a legitimate paid checkout, then verify the event in GA4 and Ads.
+
+Still verify in GA4:
+- Confirm the correct GA4 property for OSW uses measurement ID `G-RFRTHKGL0X`.
+- The Chrome GA session initially opened a different/default no-data property with measurement ID `G-FXJVZJY9KS`; do not use that property to judge OSW.
+- Confirm `purchase`, `generate_lead`, and `phone_click` are marked as key events in the OSW GA4 property.
 
 In Google Ads:
-- Import GA4 `purchase` as the primary conversion.
-- Import `generate_lead` and `phone_click` as secondary conversions first.
-- Do not switch bidding fully to conversions until live events are observed.
+- GA4 `purchase` is already imported as a primary conversion action, but misconfigured until live purchase data is recorded.
+- Keep `Phone Call` and `Form Capture` active while purchase tracking proves out.
+- Do not switch bidding fully to conversions until live purchase and lead events are observed.
 - Keep current budget around `$30-$40/day` during verification.
 - After 7-14 days of clean conversion data, test `$50/day`.
 
-Recommended campaign structure next:
+Recommended campaign structure next, pending Alexander/client approval:
 - Campaign 1: Phoenix pickup intent for soil, compost, mulch, worm castings.
 - Campaign 2: Landscaper/contractor local bulk pickup.
 - Campaign 3 later: nursery/farm/high-volume leads, if budget allows.
+
+Current campaign snapshot from 2026-06-29:
+- One Search campaign: `Soil Seed and Water | Wholesale | Search`.
+- Budget: `$32.00/day`.
+- Bid strategy: `Maximize clicks`.
+- Status: enabled, eligible limited, limited by budget, missing enough relevant keywords.
+- Visible last-30-day window: 377 clicks, 6,652 impressions, 5.67% CTR, $680.81 cost, 6 conversions, 1.59% conversion rate, $113.47 cost/conv.
 
 ## Negative Keyword Guidance
 

@@ -1,5 +1,19 @@
 # Project-Specific Instructions
 
+## Current OSW Handoff Snapshot - 2026-06-29
+
+- Production deploy path: push GitHub branch `main-clean`; Vercel project `organic-soil-wholesale` deploys production from that branch. Do not run `vercel --prod` from a dirty tree.
+- Main business goal: local Organic Soil Wholesale pickup orders at the Phoenix yard, plus qualified phone/form leads.
+- Paid pickup products: Simon's Gold, Mikey's Worm Poop, Soil Craft, Nature's Blanket Premium.
+- Tracking files to inspect first:
+  - `client/index.html` for GTM `GTM-MRVDQ73P` and GA4 fallback `G-RFRTHKGL0X`.
+  - `client/src/lib/analytics.ts` for Vercel Analytics, `dataLayer`, GA4 ecommerce events, and phone/lead events.
+  - `client/src/pages/Checkout.tsx` for `begin_checkout`.
+  - `client/src/pages/OrderConfirmation.tsx` for guarded `purchase`.
+  - `OSW_GOOGLE_ADS_HANDOFF_2026-06-27.md` for Google Ads/GA4 audit notes.
+- Latest Ads finding: Google Ads account `122-325-9690` has GA4-imported `Soil Seed & Water (web) purchase` as Primary, but it is `Misconfigured` because no conversions have been recorded in the last 7 days. Supabase showed no OSW orders in the last 48 hours during the 2026-06-29 check, so a real post-deploy `purchase` still needs proof.
+- Do not create fake production purchases just to satisfy Ads/GA. Verify with the next legitimate paid checkout.
+
 ## Official Public Phone Number
 
 - Use **(602) 637-0032** as the official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
