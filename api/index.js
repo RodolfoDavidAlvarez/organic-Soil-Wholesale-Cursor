@@ -85,6 +85,221 @@ function formatPickupLineItems(order, orderItems) {
   });
 }
 
+function formatMoney(value) {
+  return `$${(Number(value) || 0).toFixed(2)}`;
+}
+
+function formatPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  const last10 = digits.length > 10 ? digits.slice(-10) : digits;
+  if (last10.length !== 10) return value || '';
+  return `(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`;
+}
+
+function pickupLocationDetails(order) {
+  const raw = String(order?.pickup_location || '').toLowerCase();
+  if (raw.includes('congress')) {
+    return {
+      name: 'Congress Processing Plant',
+      address1: '18980 Stanton Rd',
+      address2: 'Congress, AZ 85332',
+    };
+  }
+  return {
+    name: order?.pickup_location || 'Phoenix Yard',
+    address1: '1634 N 19th Ave',
+    address2: 'Phoenix, AZ 85009',
+  };
+}
+
+function buildPickupOrderEmail({ order, orderItems, pickupLabel, testing = false }) {
+  const orderRef = order?.order_number?.slice(0, 8) || String(order?.id || '');
+  const totalDollars = Number(order?.total_amount ?? order?.total ?? 0);
+  const customerName = order?.customer_name || order?.business_name || 'Customer';
+  const customerEmail = order?.customer_email || order?.email || '';
+  const customerPhone = formatPhone(order?.phone || order?.customer_phone || '');
+  const location = pickupLocationDetails(order);
+  const formattedItems = formatPickupLineItems(order, orderItems);
+  const primaryItem = formattedItems[0];
+  const itemCount = formattedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const itemSummary = primaryItem
+    ? `${itemCount || primaryItem.quantity} ${primaryItem.productName}`
+    : 'pickup order';
+  const readyLabel = pickupLabel || 'Confirm ready time';
+  const statusLabel = String(order?.payment_status || order?.status || 'paid').replace(/_/g, ' ').toUpperCase();
+
+  const itemRows = formattedItems.length
+    ? formattedItems.map((item) => `
+      <div style="padding:16px 0;border-bottom:1px solid #e3ddcf;">
+        <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#817867;font-weight:800;margin-bottom:6px;">Qty ${escapeHtml(item.quantity)}</div>
+        <div style="font-size:22px;line-height:1.15;color:#172318;font-weight:900;">${escapeHtml(item.productName)}</div>
+        ${item.size ? `<div style="font-size:17px;line-height:1.35;color:#5d5548;margin-top:4px;">${escapeHtml(item.size)}</div>` : ''}
+        <div style="font-size:20px;color:#172318;font-weight:900;margin-top:8px;">${formatMoney(item.total)}</div>
+      </div>
+    `).join('')
+    : `<div style="font-size:18px;color:#172318;">${escapeHtml(itemSummary)}</div>`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f3ee;font-family:Arial,Helvetica,sans-serif;color:#172318;">
+    <div style="display:none;max-height:0;overflow:hidden;">Paid pickup order received. Prepare ${escapeHtml(itemSummary)} for customer pickup.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3ee;margin:0;padding:0;">
+      <tr>
+        <td align="center" style="padding:18px 12px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border:1px solid #ded8ca;border-radius:22px;overflow:hidden;">
+            <tr>
+              <td style="background:#b8dabc;padding:28px 28px 24px;">
+                <div style="font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#394b38;font-weight:900;">Organic Soil Wholesale</div>
+                <div style="font-size:38px;line-height:1.05;color:#172318;font-weight:900;margin-top:12px;">New paid pickup order</div>
+                <div style="font-size:20px;line-height:1.35;color:#394b38;margin-top:12px;">Order #${escapeHtml(orderRef)} · ${escapeHtml(location.name)} · Ready ${escapeHtml(readyLabel)}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#20231f;padding:24px 28px;">
+                ${testing ? '<div style="display:inline-block;margin:0 8px 10px 0;padding:9px 14px;border-radius:999px;background:#3a3105;border:1px solid #6b5a11;color:#f4d36a;font-size:14px;font-weight:900;letter-spacing:.08em;">TEST EMAIL</div>' : ''}
+                <div style="display:inline-block;margin:0 8px 10px 0;padding:9px 14px;border-radius:999px;background:#18331d;border:1px solid #315f37;color:#caefcf;font-size:14px;font-weight:900;letter-spacing:.08em;">${escapeHtml(statusLabel)} · ${formatMoney(totalDollars)}</div>
+                <div style="margin-top:16px;padding:20px;border-radius:18px;background:#fbfbf7;border:1px solid #ded8ca;">
+                  <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#817867;font-weight:900;">Do this now</div>
+                  <div style="font-size:26px;line-height:1.2;color:#172318;font-weight:900;margin-top:8px;">Prepare ${escapeHtml(itemSummary)} for customer pickup.</div>
+                  <div style="margin-top:14px;">
+                    <span style="display:inline-block;margin:0 8px 8px 0;padding:9px 12px;border-radius:999px;background:#e7f6df;border:1px solid #c7dfbd;color:#214822;font-size:14px;font-weight:800;">Payment verified</span>
+                    <span style="display:inline-block;margin:0 8px 8px 0;padding:9px 12px;border-radius:999px;background:#fff3d9;border:1px solid #ead293;color:#6b4b0a;font-size:14px;font-weight:800;">Print attached receipt</span>
+                    <span style="display:inline-block;margin:0 8px 8px 0;padding:9px 12px;border-radius:999px;background:#e8f0fb;border:1px solid #c8d6e8;color:#253e5d;font-size:14px;font-weight:800;">Place with order</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                <div style="padding:0 0 22px;border-bottom:1px solid #ded8ca;">
+                  <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#817867;font-weight:900;">Pickup</div>
+                  <div style="font-size:34px;line-height:1.05;color:#172318;font-weight:900;margin-top:8px;">${escapeHtml(readyLabel)}</div>
+                  <div style="font-size:20px;line-height:1.35;color:#50493e;margin-top:8px;">${escapeHtml(location.name)}<br>${escapeHtml(location.address1)}<br>${escapeHtml(location.address2)}</div>
+                </div>
+
+                <div style="padding:22px 0;border-bottom:1px solid #ded8ca;">
+                  <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#817867;font-weight:900;">Customer</div>
+                  <div style="font-size:28px;line-height:1.15;color:#172318;font-weight:900;margin-top:8px;">${escapeHtml(customerName)}</div>
+                  ${customerPhone ? `<div style="font-size:18px;color:#50493e;margin-top:8px;">Phone: <strong>${escapeHtml(customerPhone)}</strong></div>` : ''}
+                  ${customerEmail ? `<div style="font-size:18px;color:#50493e;margin-top:6px;">Email: <a href="mailto:${escapeHtml(customerEmail)}" style="color:#1757a6;">${escapeHtml(customerEmail)}</a></div>` : ''}
+                </div>
+
+                <div style="padding:22px 0 0;">
+                  <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#817867;font-weight:900;">Order items</div>
+                  ${itemRows}
+                </div>
+
+                <div style="padding:18px 0 0;">
+                  <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#817867;font-weight:900;">Order total</div>
+                  <div style="font-size:34px;color:#172318;font-weight:900;margin-top:6px;">${formatMoney(totalDollars)}</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f4f3ee;padding:22px 28px;color:#5d5548;font-size:14px;line-height:1.5;">
+                Receipt PDF is attached for letter-size printing. Customer support: <strong>(602) 637-0032</strong>.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function wrapPdfText(text, maxChars) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    if ((line + ' ' + word).trim().length > maxChars && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = `${line} ${word}`.trim();
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function pdfEscape(text) {
+  return String(text ?? '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
+  const formattedItems = formatPickupLineItems(order, orderItems);
+  const location = pickupLocationDetails(order);
+  const orderRef = order?.order_number?.slice(0, 8) || String(order?.id || '');
+  const totalDollars = Number(order?.total_amount ?? order?.total ?? 0);
+  const customerName = order?.customer_name || order?.business_name || 'Customer';
+  const customerPhone = formatPhone(order?.phone || order?.customer_phone || '');
+  const customerEmail = order?.customer_email || order?.email || '';
+  const lines = [
+    { text: 'Organic Soil Wholesale', size: 20, font: 'F2' },
+    { text: 'Pickup Receipt', size: 16, font: 'F2' },
+    { text: `Order #${orderRef}`, size: 11, font: 'F1' },
+    { text: `Status: ${String(order?.payment_status || 'paid').toUpperCase()}    Total: ${formatMoney(totalDollars)}`, size: 12, font: 'F2' },
+    { text: ' ', size: 8, font: 'F1' },
+    { text: 'Customer', size: 12, font: 'F2' },
+    { text: customerName, size: 12, font: 'F1' },
+    ...(customerPhone ? [{ text: customerPhone, size: 11, font: 'F1' }] : []),
+    ...(customerEmail ? [{ text: customerEmail, size: 11, font: 'F1' }] : []),
+    { text: ' ', size: 8, font: 'F1' },
+    { text: 'Pickup', size: 12, font: 'F2' },
+    { text: pickupLabel || 'Confirm ready time', size: 12, font: 'F1' },
+    { text: location.name, size: 11, font: 'F1' },
+    { text: location.address1, size: 11, font: 'F1' },
+    { text: location.address2, size: 11, font: 'F1' },
+    { text: ' ', size: 8, font: 'F1' },
+    { text: 'Items', size: 12, font: 'F2' },
+  ];
+  formattedItems.forEach((item) => {
+    wrapPdfText(`${item.quantity} x ${item.productName}${item.size ? ` - ${item.size}` : ''} - ${formatMoney(item.total)}`, 70)
+      .forEach((text) => lines.push({ text, size: 11, font: 'F1' }));
+  });
+  lines.push(
+    { text: ' ', size: 8, font: 'F1' },
+    { text: `TOTAL ${formatMoney(totalDollars)}`, size: 16, font: 'F2' },
+    { text: ' ', size: 8, font: 'F1' },
+    { text: 'Please place this receipt with the customer order.', size: 11, font: 'F1' },
+    { text: 'Customer support: (602) 637-0032', size: 11, font: 'F2' },
+  );
+
+  let y = 750;
+  const commands = ['BT'];
+  lines.forEach((line) => {
+    const size = line.size || 11;
+    commands.push(`/${line.font || 'F1'} ${size} Tf`);
+    commands.push(`1 0 0 1 54 ${y} Tm (${pdfEscape(line.text)}) Tj`);
+    y -= Math.max(size + 6, 15);
+  });
+  commands.push('ET');
+  const stream = commands.join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((obj, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return Buffer.from(pdf);
+}
+
 async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locationId }) {
   const notify = await getPickupNotifications();
   const dev = await getDeveloperMode();
@@ -95,11 +310,6 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
   const itemSummary = formattedItems.length
     ? formattedItems.map((item) => `${item.quantity}x ${item.productName}${item.size ? ` (${item.size})` : ''}`).join('; ')
     : `${itemCount} item${itemCount === 1 ? '' : 's'}`;
-  const itemsHtml = formattedItems.length
-    ? `<ul style="margin:8px 0 0;padding-left:18px;">${formattedItems.map((item) => (
-      `<li><strong>${escapeHtml(item.quantity)}x ${escapeHtml(item.productName)}</strong>${item.size ? ` — ${escapeHtml(item.size)}` : ''}${item.total ? ` — $${item.total.toFixed(2)}` : ''}</li>`
-    )).join('')}</ul>`
-    : `<span>${escapeHtml(itemSummary)}</span>`;
   const totalDollars = Number(order?.total_amount ?? order?.total ?? 0);
   const pickupLocation = order?.pickup_location || null;
   const smsBody = dev.devModeSmsBody(
@@ -162,14 +372,16 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
   try {
     const r = await getResend();
     const adminEmails = notify.getPickupNotifyEmails(locId);
-    const subject = dev.devModeSubject(`New OSW pickup order #${orderRef}`);
-    const html = `<p><strong>New pickup order</strong> #${orderRef}</p>
-      <p>Customer: ${order?.customer_name || order?.business_name || 'Customer'} (${order?.phone || ''})<br>
-      Estimated ready: ${pickupLabel || 'TBD'}<br>
-      Location: ${pickupLocation || 'Phoenix HQ'}<br>
-      Total: $${totalDollars.toFixed(2)}</p>
-      <p><strong>Items</strong></p>
-      ${itemsHtml}`;
+    const customerName = order?.customer_name || order?.business_name || 'Customer';
+    const location = pickupLocationDetails(order);
+    const subject = dev.devModeSubject(`New Pick Order | ${customerName} | ${location.name} pickup ${pickupLabel || ''}`.trim());
+    const html = buildPickupOrderEmail({
+      order,
+      orderItems,
+      pickupLabel,
+      testing: notify.isPickupNotifyTesting(),
+    });
+    const receiptPdf = buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel });
     const results = await Promise.allSettled(
       adminEmails.map(async (to) => {
         const result = await r.emails.send({
@@ -178,6 +390,10 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
           to,
           subject,
           html,
+          attachments: [{
+            filename: `OSW-Pickup-Receipt-${orderRef}.pdf`,
+            content: receiptPdf.toString('base64'),
+          }],
         });
         if (result?.error) {
           throw new Error(result.error.message || JSON.stringify(result.error));
@@ -196,6 +412,8 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
     console.error('[pickup-order-alert] admin email failed:', emailErr?.message || emailErr);
   }
 }
+
+export { buildPickupOrderEmail, buildPickupReceiptPdfBuffer, formatPickupLineItems };
 
 async function formatPickupReadyLabel(pickupIso) {
   const schedule = await getPickupSchedule();
