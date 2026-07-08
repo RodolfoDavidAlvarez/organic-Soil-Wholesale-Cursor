@@ -236,46 +236,122 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   const customerName = order?.customer_name || order?.business_name || 'Customer';
   const customerPhone = formatPhone(order?.phone || order?.customer_phone || '');
   const customerEmail = order?.customer_email || order?.email || '';
-  const lines = [
-    { text: 'Organic Soil Wholesale', size: 20, font: 'F2' },
-    { text: 'Pickup Receipt', size: 16, font: 'F2' },
-    { text: `Order #${orderRef}`, size: 11, font: 'F1' },
-    { text: `Status: ${String(order?.payment_status || 'paid').toUpperCase()}    Total: ${formatMoney(totalDollars)}`, size: 12, font: 'F2' },
-    { text: ' ', size: 8, font: 'F1' },
-    { text: 'Customer', size: 12, font: 'F2' },
-    { text: customerName, size: 12, font: 'F1' },
-    ...(customerPhone ? [{ text: customerPhone, size: 11, font: 'F1' }] : []),
-    ...(customerEmail ? [{ text: customerEmail, size: 11, font: 'F1' }] : []),
-    { text: ' ', size: 8, font: 'F1' },
-    { text: 'Pickup', size: 12, font: 'F2' },
-    { text: pickupLabel || 'Confirm ready time', size: 12, font: 'F1' },
-    { text: location.name, size: 11, font: 'F1' },
-    { text: location.address1, size: 11, font: 'F1' },
-    { text: location.address2, size: 11, font: 'F1' },
-    { text: ' ', size: 8, font: 'F1' },
-    { text: 'Items', size: 12, font: 'F2' },
-  ];
-  formattedItems.forEach((item) => {
-    wrapPdfText(`${item.quantity} x ${item.productName}${item.size ? ` - ${item.size}` : ''} - ${formatMoney(item.total)}`, 70)
-      .forEach((text) => lines.push({ text, size: 11, font: 'F1' }));
-  });
-  lines.push(
-    { text: ' ', size: 8, font: 'F1' },
-    { text: `TOTAL ${formatMoney(totalDollars)}`, size: 16, font: 'F2' },
-    { text: ' ', size: 8, font: 'F1' },
-    { text: 'Please place this receipt with the customer order.', size: 11, font: 'F1' },
-    { text: 'Customer support: (602) 637-0032', size: 11, font: 'F2' },
-  );
+  const paidAt = order?.paid_at ? new Date(order.paid_at) : null;
+  const paidLabel = paidAt && !Number.isNaN(paidAt.getTime())
+    ? new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'America/Phoenix',
+      timeZoneName: 'short',
+    }).format(paidAt)
+    : 'Payment received';
 
-  let y = 750;
-  const commands = ['BT'];
-  lines.forEach((line) => {
-    const size = line.size || 11;
-    commands.push(`/${line.font || 'F1'} ${size} Tf`);
-    commands.push(`1 0 0 1 54 ${y} Tm (${pdfEscape(line.text)}) Tj`);
-    y -= Math.max(size + 6, 15);
+  const commands = [];
+  const setColor = (r, g, b) => commands.push(`${r} ${g} ${b} rg ${r} ${g} ${b} RG`);
+  const rect = (x, y, w, h, fill = false) => commands.push(`${x} ${y} ${w} ${h} re ${fill ? 'f' : 'S'}`);
+  const text = (value, x, y, size = 11, font = 'F1', align = 'left') => {
+    const safe = pdfEscape(value);
+    const approxWidth = String(value || '').length * size * 0.52;
+    const tx = align === 'right' ? x - approxWidth : align === 'center' ? x - approxWidth / 2 : x;
+    commands.push('BT');
+    commands.push(`/${font} ${size} Tf`);
+    commands.push(`1 0 0 1 ${tx.toFixed(2)} ${y.toFixed(2)} Tm (${safe}) Tj`);
+    commands.push('ET');
+  };
+
+  setColor(0.96, 0.95, 0.91);
+  rect(0, 0, 612, 792, true);
+  setColor(1, 1, 1);
+  rect(54, 48, 504, 696, true);
+  setColor(0.1, 0.23, 0.13);
+  text('SOIL SEED & WATER', 306, 700, 24, 'F2', 'center');
+  setColor(0.43, 0.38, 0.31);
+  text('Organic Soil Wholesale Pickup Receipt', 306, 678, 12, 'F1', 'center');
+  setColor(0.77, 0.71, 0.61);
+  commands.push('54 660 m 558 660 l S');
+
+  const details = [
+    ['Receipt / Order', `#${orderRef}`],
+    ['Customer', customerName],
+    ['Phone', customerPhone || '-'],
+    ['Email', customerEmail || '-'],
+    ['Paid at', paidLabel],
+    ['Pickup ready', pickupLabel || 'Confirm ready time'],
+  ];
+  let y = 620;
+  details.forEach(([label, value], index) => {
+    setColor(index % 2 === 0 ? 0.99 : 0.97, index % 2 === 0 ? 0.98 : 0.96, index % 2 === 0 ? 0.95 : 0.92);
+    rect(62, y - 8, 488, 28, true);
+    setColor(0.87, 0.83, 0.75);
+    rect(62, y - 8, 488, 28, false);
+    setColor(0.27, 0.25, 0.21);
+    text(label, 72, y, 11, 'F1');
+    setColor(0, 0, 0);
+    text(value, 540, y, 11, index === 0 ? 'F2' : 'F1', 'right');
+    y -= 28;
   });
-  commands.push('ET');
+
+  setColor(0.1, 0.23, 0.13);
+  rect(62, 426, 488, 34, true);
+  setColor(1, 1, 1);
+  text('PAID - CARD PAYMENT RECEIVED', 306, 438, 16, 'F2', 'center');
+
+  setColor(0.1, 0.23, 0.13);
+  text('Pickup Location', 62, 398, 14, 'F2');
+  setColor(0.25, 0.23, 0.19);
+  text(`${location.name} - ${location.address1}, ${location.address2}`, 62, 378, 11, 'F1');
+
+  setColor(0.1, 0.23, 0.13);
+  text('Items', 62, 348, 14, 'F2');
+  setColor(0.91, 0.88, 0.81);
+  rect(62, 312, 488, 28, true);
+  setColor(0.27, 0.25, 0.21);
+  text('Qty', 76, 322, 10, 'F2');
+  text('Product', 116, 322, 10, 'F2');
+  text('Size', 252, 322, 10, 'F2');
+  text('Unit', 446, 322, 10, 'F2', 'right');
+  text('Total', 540, 322, 10, 'F2', 'right');
+  setColor(0.86, 0.82, 0.74);
+  rect(62, 312, 488, 28, false);
+
+  let itemY = 286;
+  formattedItems.forEach((item) => {
+    const unit = (Number(item.total) || 0) / (Number(item.quantity) || 1);
+    setColor(0.99, 0.98, 0.95);
+    rect(62, itemY - 8, 488, 30, true);
+    setColor(0.86, 0.82, 0.74);
+    rect(62, itemY - 8, 488, 30, false);
+    setColor(0, 0, 0);
+    text(String(item.quantity), 86, itemY, 11, 'F1', 'center');
+    text(item.productName, 116, itemY, 11, 'F1');
+    text(item.size || '-', 252, itemY, 11, 'F1');
+    text(formatMoney(unit), 446, itemY, 11, 'F1', 'right');
+    text(formatMoney(item.total), 540, itemY, 11, 'F1', 'right');
+    itemY -= 30;
+  });
+
+  const totalsY = Math.min(itemY - 20, 230);
+  setColor(0, 0, 0);
+  text('Subtotal', 72, totalsY, 12, 'F1');
+  text(formatMoney(totalDollars), 540, totalsY, 12, 'F1', 'right');
+  text('Tax', 72, totalsY - 28, 12, 'F1');
+  text(formatMoney(0), 540, totalsY - 28, 12, 'F1', 'right');
+  setColor(0.1, 0.23, 0.13);
+  commands.push(`62 ${totalsY - 42} m 550 ${totalsY - 42} l S`);
+  setColor(0, 0, 0);
+  text('Total Paid', 72, totalsY - 62, 13, 'F2');
+  text(formatMoney(totalDollars), 540, totalsY - 62, 13, 'F2', 'right');
+
+  setColor(0.77, 0.71, 0.61);
+  commands.push('54 92 m 558 92 l S');
+  setColor(0.25, 0.23, 0.19);
+  text('Questions? Call or text Soil Seed & Water at (602) 637-0032.', 62, 72, 11, 'F1');
+  text('Thank you for choosing Organic Soil Wholesale.', 62, 56, 11, 'F1');
+
   const stream = commands.join('\n');
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
