@@ -111,7 +111,7 @@ const Home = () => {
       name: "Client Testimonial",
       company: "Phoenix grower",
       location: "Phoenix, AZ",
-      product: "Soil Craft",
+      product: "Garden soil trial",
       title: "Same seed. Same water. Better soil.",
       body: "Both plants were started from the same seeds with the same watering and sunlight. The fuller, healthier plant was grown in your soil. I am loving your product so far.",
       image: "/images/testimonials/soil-craft-spring-crop.jpg",

@@ -1817,6 +1817,9 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         if (error.code === 'PGRST116') return res.status(404).json({ error: 'Product not found' });
         throw error;
       }
+      if (!data?.is_catalog_enabled || data?.product_status !== 'active') {
+        return res.status(404).json({ error: 'Product not found' });
+      }
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
       return res.json(normalizeProductRow(data));
     }

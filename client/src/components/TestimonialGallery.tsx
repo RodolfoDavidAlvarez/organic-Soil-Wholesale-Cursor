@@ -23,7 +23,7 @@ const TESTIMONIALS: Testimonial[] = [
     name: "Phoenix Grower",
     company: "Home Garden Trial",
     location: "Phoenix, AZ",
-    product: "Soil Craft",
+    product: "Garden soil trial",
     title: "Same seed. Same water. Better soil.",
     body: "Both plants were started from the same seeds, same watering, same sunlight. The fuller, healthier plant was grown in your soil. Loving the product.",
     media: "/images/testimonials/optimized/client-testimonial-soil-craft-card.jpg",
