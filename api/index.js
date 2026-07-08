@@ -149,6 +149,7 @@ function buildPickupOrderEmail({ order, orderItems, pickupLabel, testing = false
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border:1px solid #ded8ca;border-radius:22px;overflow:hidden;">
             <tr>
               <td style="background:#b8dabc;padding:28px 28px 24px;">
+                <img src="https://organicsoilwholesale.com/email-assets/ssw-logo.png" alt="Soil Seed & Water" width="150" style="display:block;width:150px;max-width:150px;height:auto;margin:0 0 18px 0;">
                 <div style="font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#394b38;font-weight:900;">Organic Soil Wholesale</div>
                 <div style="font-size:38px;line-height:1.05;color:#172318;font-weight:900;margin-top:12px;">New paid pickup order</div>
                 <div style="font-size:20px;line-height:1.35;color:#394b38;margin-top:12px;">Order #${escapeHtml(orderRef)} · ${escapeHtml(location.name)} · Ready ${escapeHtml(readyLabel)}</div>
@@ -228,7 +229,27 @@ function pdfEscape(text) {
   return String(text ?? '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }
 
-function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
+async function getReceiptLogoImage() {
+  try {
+    const [{ existsSync, readFileSync }, { resolve }, sharpModule] = await Promise.all([
+      import('fs'),
+      import('path'),
+      import('sharp'),
+    ]);
+    const logoPath = resolve(process.cwd(), 'client/public/email-assets/ssw-logo.png');
+    if (!existsSync(logoPath)) return null;
+    const sharp = sharpModule.default;
+    const image = sharp(readFileSync(logoPath)).flatten({ background: '#ffffff' });
+    const meta = await image.metadata();
+    const buffer = await image.jpeg({ quality: 88, mozjpeg: true }).toBuffer();
+    return { buffer, width: meta.width || 2083, height: meta.height || 729 };
+  } catch (err) {
+    console.warn('[pickup-receipt] logo embed skipped:', err?.message || err);
+    return null;
+  }
+}
+
+async function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   const formattedItems = formatPickupLineItems(order, orderItems);
   const location = pickupLocationDetails(order);
   const orderRef = order?.order_number?.slice(0, 8) || String(order?.id || '');
@@ -249,6 +270,7 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
       timeZoneName: 'short',
     }).format(paidAt)
     : 'Payment received';
+  const logo = await getReceiptLogoImage();
 
   const commands = [];
   const setColor = (r, g, b) => commands.push(`${r} ${g} ${b} rg ${r} ${g} ${b} RG`);
@@ -263,16 +285,20 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
     commands.push('ET');
   };
 
-  setColor(0.96, 0.95, 0.91);
-  rect(0, 0, 612, 792, true);
   setColor(1, 1, 1);
-  rect(54, 48, 504, 696, true);
-  setColor(0.1, 0.23, 0.13);
-  text('SOIL SEED & WATER', 306, 700, 24, 'F2', 'center');
+  rect(0, 0, 612, 792, true);
+  if (logo) {
+    const logoWidth = 190;
+    const logoHeight = logoWidth * (logo.height / logo.width);
+    commands.push(`q ${logoWidth} 0 0 ${logoHeight.toFixed(2)} ${(306 - logoWidth / 2).toFixed(2)} 704 cm /Im1 Do Q`);
+  } else {
+    setColor(0.1, 0.23, 0.13);
+    text('SOIL SEED & WATER', 306, 718, 24, 'F2', 'center');
+  }
   setColor(0.43, 0.38, 0.31);
-  text('Organic Soil Wholesale Pickup Receipt', 306, 678, 12, 'F1', 'center');
-  setColor(0.77, 0.71, 0.61);
-  commands.push('54 660 m 558 660 l S');
+  text('Organic Soil Wholesale Pickup Receipt', 306, 684, 12, 'F1', 'center');
+  setColor(0.1, 0.23, 0.13);
+  commands.push('54 666 m 558 666 l S');
 
   const details = [
     ['Receipt / Order', `#${orderRef}`],
@@ -284,10 +310,8 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   ];
   let y = 620;
   details.forEach(([label, value], index) => {
-    setColor(index % 2 === 0 ? 0.99 : 0.97, index % 2 === 0 ? 0.98 : 0.96, index % 2 === 0 ? 0.95 : 0.92);
-    rect(62, y - 8, 488, 28, true);
-    setColor(0.87, 0.83, 0.75);
-    rect(62, y - 8, 488, 28, false);
+    setColor(0.86, 0.84, 0.78);
+    commands.push(`62 ${y - 10} m 550 ${y - 10} l S`);
     setColor(0.27, 0.25, 0.21);
     text(label, 72, y, 11, 'F1');
     setColor(0, 0, 0);
@@ -296,8 +320,7 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   });
 
   setColor(0.1, 0.23, 0.13);
-  rect(62, 426, 488, 34, true);
-  setColor(1, 1, 1);
+  rect(62, 426, 488, 34, false);
   text('PAID - CARD PAYMENT RECEIVED', 306, 438, 16, 'F2', 'center');
 
   setColor(0.1, 0.23, 0.13);
@@ -307,7 +330,7 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
 
   setColor(0.1, 0.23, 0.13);
   text('Items', 62, 348, 14, 'F2');
-  setColor(0.91, 0.88, 0.81);
+  setColor(0.98, 0.98, 0.96);
   rect(62, 312, 488, 28, true);
   setColor(0.27, 0.25, 0.21);
   text('Qty', 76, 322, 10, 'F2');
@@ -321,8 +344,6 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   let itemY = 286;
   formattedItems.forEach((item) => {
     const unit = (Number(item.total) || 0) / (Number(item.quantity) || 1);
-    setColor(0.99, 0.98, 0.95);
-    rect(62, itemY - 8, 488, 30, true);
     setColor(0.86, 0.82, 0.74);
     rect(62, itemY - 8, 488, 30, false);
     setColor(0, 0, 0);
@@ -353,27 +374,33 @@ function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   text('Thank you for choosing Organic Soil Wholesale.', 62, 56, 11, 'F1');
 
   const stream = commands.join('\n');
+  const resources = logo
+    ? '/Font << /F1 4 0 R /F2 5 0 R >> /XObject << /Im1 7 0 R >>'
+    : '/Font << /F1 4 0 R /F2 5 0 R >>';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << ${resources} >> /Contents 6 0 R >>`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
     `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
   ];
+  if (logo) {
+    objects.push(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.buffer.length} >>\nstream\n${logo.buffer.toString('binary')}\nendstream`);
+  }
   let pdf = '%PDF-1.4\n';
   const offsets = [0];
   objects.forEach((obj, index) => {
-    offsets.push(Buffer.byteLength(pdf));
+    offsets.push(Buffer.byteLength(pdf, 'binary'));
     pdf += `${index + 1} 0 obj\n${obj}\nendobj\n`;
   });
-  const xrefOffset = Buffer.byteLength(pdf);
+  const xrefOffset = Buffer.byteLength(pdf, 'binary');
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
   offsets.slice(1).forEach((offset) => {
     pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
   });
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-  return Buffer.from(pdf);
+  return Buffer.from(pdf, 'binary');
 }
 
 async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locationId }) {
@@ -457,7 +484,7 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
       pickupLabel,
       testing: notify.isPickupNotifyTesting(),
     });
-    const receiptPdf = buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel });
+    const receiptPdf = await buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel });
     const results = await Promise.allSettled(
       adminEmails.map(async (to) => {
         const result = await r.emails.send({
