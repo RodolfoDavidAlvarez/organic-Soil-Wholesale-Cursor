@@ -14,7 +14,7 @@ import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/
 import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
-  Calendar, User as UserIcon, MapPin, Truck, ArrowRight,
+  Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation,
 } from "lucide-react";
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
@@ -546,26 +546,50 @@ const Checkout: React.FC = () => {
                     </p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {PICKUP_LOCATIONS.map((loc) => (
-                        <button
+                        <div
                           key={loc.id}
-                          type="button"
-                          onClick={() => {
-                            setPickupSiteId(loc.id);
-                            trackEvent("Checkout Pickup Location Selected", {
-                              pickup_site: loc.id,
-                              location_id: loc.locationId,
-                            });
-                          }}
                           className={cn(
-                            "flex min-h-[68px] flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2.5 text-left transition touch-manipulation",
+                            "overflow-hidden rounded-xl border transition",
                             pickupSiteId === loc.id
-                              ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
-                              : "border-stone-200 bg-white text-stone-700 hover:border-stone-400",
+                              ? "border-[#264027] bg-[#264027]/10 shadow-[inset_0_0_0_1px_#264027]"
+                              : "border-stone-200 bg-white hover:border-stone-400",
                           )}
                         >
-                          <span className="text-sm font-bold leading-tight">{loc.shortLabel}</span>
-                          <span className="text-[11px] font-medium leading-snug text-stone-500">{loc.addressLine}</span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPickupSiteId(loc.id);
+                              trackEvent("Checkout Pickup Location Selected", {
+                                pickup_site: loc.id,
+                                location_id: loc.locationId,
+                              });
+                            }}
+                            className={cn(
+                              "flex min-h-[68px] w-full flex-col items-start justify-center gap-0.5 px-3 py-2.5 text-left touch-manipulation",
+                              pickupSiteId === loc.id ? "text-[#264027]" : "text-stone-700",
+                            )}
+                          >
+                            <span className="text-sm font-bold leading-tight">{loc.shortLabel}</span>
+                            <span className="text-[11px] font-medium leading-snug text-stone-500">{loc.addressLine}</span>
+                          </button>
+                          <a
+                            href={loc.directionsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
+                              trackEvent("Checkout Pickup Directions", { pickup_site: loc.id });
+                            }}
+                            className={cn(
+                              "flex min-h-[40px] items-center justify-center gap-1.5 border-t px-3 py-2 text-xs font-semibold transition touch-manipulation",
+                              pickupSiteId === loc.id
+                                ? "border-[#264027]/20 bg-[#264027]/5 text-[#264027] hover:bg-[#264027]/10"
+                                : "border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100",
+                            )}
+                          >
+                            <Navigation className="h-3.5 w-3.5" />
+                            Directions &amp; distance
+                          </a>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -667,13 +691,27 @@ const Checkout: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0 sm:px-5">
-                  <p className="mb-3 flex items-start gap-2 rounded-lg bg-stone-50 px-3 py-2.5 text-sm leading-snug text-stone-600">
+                  <div className="mb-3 flex items-start gap-2 rounded-lg bg-stone-50 px-3 py-2.5 text-sm leading-snug text-stone-600">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#264027]" />
-                    <span>
-                      Pickup at <span className="font-semibold text-stone-800">{selectedPickupSite.shortLabel}</span>
-                      <span className="block text-xs text-stone-500">{selectedPickupSite.addressLine}</span>
-                    </span>
-                  </p>
+                    <div className="min-w-0 flex-1">
+                      <p>
+                        Pickup at <span className="font-semibold text-stone-800">{selectedPickupSite.shortLabel}</span>
+                        <span className="block text-xs text-stone-500">{selectedPickupSite.addressLine}</span>
+                      </p>
+                      <a
+                        href={selectedPickupSite.directionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          trackEvent("Checkout Pickup Directions", { pickup_site: selectedPickupSite.id });
+                        }}
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
+                      >
+                        <Navigation className="h-3.5 w-3.5" />
+                        Get directions &amp; distance
+                      </a>
+                    </div>
+                  </div>
                   <PickupReadyTime value={pickupReady} onChange={setPickupReady} />
                 </CardContent>
               </Card>

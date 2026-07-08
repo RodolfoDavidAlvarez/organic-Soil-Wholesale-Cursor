@@ -6,11 +6,11 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 
 const CORE_FOUR = [
   {
-    name: "Soil Craft",
-    size: "1.5 cu ft bag",
-    msrp: "$15.99",
-    cost: "$8.00",
-    image: "rgg9lbs.jpg",
+    name: "PlantPal",
+    size: "1 cu ft bag",
+    msrp: "$10.99",
+    cost: "$5.50",
+    image: "plantpal10lbs.jpg",
   },
   {
     name: "Nature's Blanket Premium",

@@ -903,9 +903,9 @@ export default function PayAndPickup() {
         description={
           isDirectCheckIn
             ? "At the Phoenix yard? Notify a Soil Seed & Water representative, check in for an existing order, or order and pick up."
-            : "Scan, order online, and pick up at the Phoenix yard. Dairy compost, worm castings, Soil Craft potting blend, Nature's Blanket Premium mulch."
+            : "Scan, order online, and pick up at the Phoenix yard. Dairy compost, worm castings, PlantPal nursery mix, Nature's Blanket Premium mulch."
         }
-        keywords="pay and pickup soil, organic soil phoenix pickup, dairy compost pickup, worm castings pickup, soil craft pickup"
+        keywords="pay and pickup soil, organic soil phoenix pickup, dairy compost pickup, worm castings pickup, plantpal pickup"
         canonical={isDirectCheckIn ? "https://organicsoilwholesale.com/check-in" : "https://organicsoilwholesale.com/qr"}
         robots="noindex, nofollow"
       />

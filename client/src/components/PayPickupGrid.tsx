@@ -5,13 +5,13 @@ import { PayPickupCard, type PayPickupProduct } from "@/components/PayPickupCard
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY } from "@/config/contact";
 
 /** MOS product ids for the 4 mains. Mirrors myorganicsoil.com lib/products.ts. */
-const MAIN_PRODUCT_IDS = [1000, 1001, 137, 3000] as const;
+const MAIN_PRODUCT_IDS = [1000, 1001, 111, 3000] as const;
 
 /** Branded 9lb / 1CF studio bag photos — beat AI lifestyle on the pay tile. */
 const HERO_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/dansgold9lbs-1.jpg",       // Simon's Gold (Dairy Compost)
   1001: "/images/optimized/mikeys-worm-poop9lbs.jpg", // Mikey's Worm Poop
-  137: "/images/optimized/rgg9lbs.jpg", // Soil Craft
+  111: "/images/optimized/plantpal10lbs.jpg", // PlantPal
   3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Premium Mulch — closest bag studio
 };
 
@@ -19,7 +19,7 @@ const HERO_OVERRIDES: Record<number, string> = {
 const BACKDROP_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bestfor.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bestfor.jpg",
-  137: "/images/optimized/soil-craft-bestfor.jpg",
+  111: "/images/optimized/plantpal-bestfor.jpg",
   3000: "/images/optimized/natures-blanket-premium-bestfor.jpg",
 };
 

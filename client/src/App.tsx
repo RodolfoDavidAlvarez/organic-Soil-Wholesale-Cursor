@@ -19,6 +19,7 @@ import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
 
 const Home = lazy(() => import("@/pages/Home"));
+const Pickup = lazy(() => import("@/pages/Pickup"));
 const Products = lazy(() => import("@/pages/Products"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const MulchDetail = lazy(() => import("@/pages/MulchDetail"));
@@ -107,6 +108,7 @@ function Router() {
     <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
         <Route path="/products/:slug" component={ProductDetail} />
         <Route path="/products" component={Products} />

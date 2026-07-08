@@ -21,9 +21,9 @@ const MENU_PRODUCTS = [
     path: "/products/mikeys-worm-poop",
   },
   {
-    name: "Soil Craft",
-    type: "Premium Potting Soil",
-    path: "/products/soil-craft",
+    name: "PlantPal",
+    type: "All-Stage Nursery Mix",
+    path: "/products/plantpal",
   },
   {
     name: "Nature's Blanket Premium",

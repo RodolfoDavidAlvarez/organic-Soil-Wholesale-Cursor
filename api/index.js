@@ -1760,11 +1760,28 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         'pay_and_pickup_display_order', 'pay_and_pickup_hero_image',
         'product_status', 'npk', 'certifications',
       ].join(', ');
-      const { data, error } = await db
+      const idsParam = String(req.query?.ids || '').trim();
+      const requestedIds = idsParam
+        ? idsParam.split(',')
+            .map((id) => Number(id.trim()))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        : [];
+      const payAndPickupOnly = String(req.query?.payAndPickup || '').toLowerCase() === 'true';
+
+      let query = db
         .from('products')
         .select(slimColumns)
         .eq('is_catalog_enabled', true)
-        .eq('product_status', 'active')
+        .eq('product_status', 'active');
+
+      if (requestedIds.length) {
+        query = query.in('id', requestedIds);
+      }
+      if (payAndPickupOnly) {
+        query = query.eq('is_pay_and_pickup_enabled', true);
+      }
+
+      const { data, error } = await query
         .order('catalog_display_order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
       if (error) throw error;

@@ -14,7 +14,8 @@ import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { getPayPickupProductDescription } from "@/data/payPickupCopy";
+import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
@@ -155,7 +156,7 @@ const fmt = (n: number): string => {
 const HERO_BAG_PHOTO: Record<number, string> = {
   1000: "/images/optimized/dansgold9lbs-1.jpg",
   1001: "/images/optimized/mikeys-worm-poop9lbs.jpg",
-  137: "/images/optimized/rgg9lbs.jpg",
+  111: "/images/optimized/plantpal10lbs.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
@@ -195,6 +196,24 @@ const isBlockedGalleryImage = (productId: number, url: string) => {
   return BLOCKED_GALLERY_IMAGES[productId]?.has(normalizedGalleryUrl(url)) ?? false;
 };
 
+const guideImageDedupeKey = (url: string) => {
+  const normalized = normalizedGalleryUrl(url);
+  if (!normalized) return "";
+  if (normalized.includes("plantpal-bag-in-context")) return "plantpal-bag-in-context";
+  if (normalized.includes("plantpal-with-veggies")) return "plantpal-with-veggies";
+  return normalized.replace(/-2(?=\.(jpg|jpeg|webp|png)$)/, "");
+};
+
+const uniqueGuideImages = (images: string[]) => {
+  const seen = new Set<string>();
+  return images.filter((url) => {
+    const key = guideImageDedupeKey(url);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const galleryDedupeKey = (productId: number, url: string) => {
   const normalized = normalizedGalleryUrl(url);
   return GALLERY_DUPLICATE_GROUPS[productId]?.[normalized] ?? normalized;
@@ -219,9 +238,9 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
     Tote: { price: 150 },
     "Truckload (~24 tons)": { price: 720 },
   },
-  137: {
-    "1CF Bag": { price: 15.99 },
-    "Truckload (22 pallets)": { price: 5400 },
+  111: {
+    "1CF Bag": { price: 10.99 },
+    "Truckload (22 pallets)": { price: 4896.05 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -230,13 +249,22 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
 
 const normalizeProductId = (productId?: number | string) => Number(productId);
 
+const isPlantPalOrSoilCraftBag = (productId?: number | string) => {
+  const id = normalizeProductId(productId);
+  return id === 137 || id === 111;
+};
+
 const categoryLabel = (size: string, productId?: number | string) => {
   const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return id === 137 ? "1.5 cu ft Bag" : "40 lb Bag (1 cu ft)";
+  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag";
-  if (size.includes("Tote")) return id === 137 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
-  if (size.includes("Truckload") || size.includes("Bulk")) return id === 137 || id === 3000 ? "Truckload (~90 cu yd)" : "Truckload (~24 tons)";
+  if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
+  if (size.includes("Truckload") || size.includes("Bulk")) {
+    if (id === 137 || id === 3000) return "Truckload (~90 cu yd)";
+    if (id === 111) return "Truckload (22 pallets)";
+    return "Truckload (~24 tons)";
+  }
   return size;
 };
 
@@ -254,9 +282,15 @@ const isDairyCompostBulkTier = (productId: number, size: string) =>
 
 const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
 
-const palletSizeForBag = (size: string) => {
+const palletSizeForBag = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
-  if (size.includes("1CF")) return { size: "Pallet (50 x 1CF)", qty: 50, cartLabel: "Pallet of 1CF Bags" };
+  if (size.includes("1CF")) {
+    return {
+      size: "Pallet (50 x 1CF)",
+      qty: 50,
+      cartLabel: isPlantPalOrSoilCraftBag(productId) ? "Pallet of 1.5 cu ft Bags" : "Pallet of 1CF Bags",
+    };
+  }
   if (size.includes("2CF")) return { size: "Pallet (25 x 2CF)", qty: 25, cartLabel: "Pallet of 2CF Bags" };
   return null;
 };
@@ -264,7 +298,7 @@ const palletSizeForBag = (size: string) => {
 const singleCartLabelForSize = (size: string, productId?: number | string) => {
   const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return id === 137 ? "1.5 cu ft Bag" : "1CF Bag";
+  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag" : "1CF Bag";
   if (size.includes("2CF")) return "2CF Bag";
   return categoryLabel(size, productId);
 };
@@ -285,7 +319,9 @@ const shouldHidePayPickupTier = (productId: number | string, size: string) => {
 
 const schemaTierLabel = (size: string, productId?: number | string) => {
   if (size.startsWith("Pallet") && size.includes("9lb")) return "Pallet of 9 lb Bags";
-  if (size.startsWith("Pallet") && size.includes("1CF")) return "Pallet of 1 cu ft Bags";
+  if (size.startsWith("Pallet") && size.includes("1CF")) {
+    return isPlantPalOrSoilCraftBag(productId) ? "Pallet of 1.5 cu ft bags" : "Pallet of 1 cu ft bags";
+  }
   if (size.startsWith("Pallet") && size.includes("2CF")) return "Pallet of 2 cu ft Bags";
   return categoryLabel(size, productId);
 };
@@ -340,7 +376,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
             : key.includes("Truckload")
             ? tier.size.includes("24") ? "24 tons" : "90 cubic yards"
             : key.includes("Super Sack")
-              ? product.id === 137 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
+              ? product.id === 137 || product.id === 111 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
               : "one bag",
           cartLabel: dairyBulk
             ? "Bulk Dairy Compost (tons)"
@@ -371,7 +407,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
     const unitPrice = category.choices.find((choice) => choice.kind === "single")?.displayPrice;
     const price = tier.qty && unitPrice ? tier.qty * unitPrice : priceForTier(product.id, tier).price;
-    const palletMeta = palletSizeForBag(tier.size);
+    const palletMeta = palletSizeForBag(tier.size, product.id);
 
     category.choices.unshift({
       ...tier,
@@ -387,7 +423,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const single = category.choices.find((choice) => choice.kind === "single");
     if (!single || category.choices.some((choice) => choice.kind === "pallet")) return;
 
-    const palletMeta = palletSizeForBag(single.size);
+    const palletMeta = palletSizeForBag(single.size, product.id);
     if (!palletMeta) return;
 
     category.choices.unshift({
@@ -419,7 +455,8 @@ const usageSteps = (usage?: string) =>
     : [];
 
 const PRODUCT_DETAIL_CONTENT: Record<number, {
-  highlights: string[];
+  includes?: string[];
+  benefits?: string[];
   usageSteps: string[];
   bestFor: string[];
   note: string;
@@ -427,7 +464,6 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
   guideImages: string[];
 }> = {
   1000: {
-    highlights: ["Improves soil structure", "Supports water conservation", "Slow-release organic matter"],
     usageSteps: [
       "Mix with existing soil or potting soil when planting to improve organic matter and soil structure.",
       "Top dress beds, trees, and planted areas with a light layer, then water thoroughly.",
@@ -462,7 +498,6 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
     ],
   },
   1001: {
-    highlights: ["Feeds root zones naturally", "Helps retain moisture", "Supports stronger soil biology"],
     usageSteps: [
       "Mix into potting soil, raised beds, or garden soil to add concentrated worm castings near the root zone.",
       "Top dress plants lightly during the growing season, then water in to activate nutrients.",
@@ -496,8 +531,42 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "/images/product-guides/mikeys-worm-poop-04.webp",
     ],
   },
+  111: {
+    usageSteps: [
+      "Use PlantPal directly in pots and containers — no mixing required.",
+      "Fill containers or transplant nursery stock into PlantPal as your all-stage growing medium.",
+      "Water thoroughly after planting and maintain regular moisture while roots establish.",
+    ],
+    bestFor: [
+      "Nurseries",
+      "Home gardeners",
+      "Container growers",
+      "Seed starts",
+      "Propagation",
+      "Indoor plants",
+      "Patio planters",
+      "Vegetables and herbs",
+    ],
+    note: "Built for nurseries and container growers who need a balanced all-stage mix with strong root development.",
+    seoKeywords: [
+      "nursery potting mix",
+      "all stage potting soil",
+      "PlantPal",
+      "container gardening soil",
+      "seed starter mix",
+      "propagation soil",
+      "organic potting mix Phoenix",
+      "nursery mix Arizona",
+    ],
+    guideImages: [
+      "/images/optimized/plantpal10lbs.jpg",
+      "/images/optimized/plantpal-bestfor.jpg",
+      "/images/optimized/plantpal-lifestyle.jpg",
+    ],
+  },
   137: {
-    highlights: ["Ready-to-use planting soil", "Supports root development", "Balanced for containers and beds"],
+    includes: ["Dairy compost", "Worm castings", "Perlite", "Peat-free coir"],
+    benefits: ["Ready-to-use planting soil", "Supports root development", "Balanced for containers and beds"],
     usageSteps: [
       "Fill containers, raised beds, or planting holes with Soil Craft as a ready-to-use growing medium.",
       "Plant directly into the blend; no extra amendments are needed for most everyday garden and container uses.",
@@ -532,7 +601,6 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
     ],
   },
   3000: {
-    highlights: ["Worm castings + dairy compost", "Helps suppress weeds", "Healthy soil mulch"],
     usageSteps: [
       "Spread evenly over clean landscape beds at a depth of about 2-3 inches.",
       "Keep mulch pulled slightly away from trunks, stems, and crowns to protect plant health.",
@@ -600,6 +668,7 @@ const priorityAudiences = (items: string[]) => {
 const PRODUCT_AUDIENCE_FALLBACKS: Record<number, string[]> = {
   1000: PRODUCT_DETAIL_CONTENT[1000].bestFor,
   1001: PRODUCT_DETAIL_CONTENT[1001].bestFor,
+  111: PRODUCT_DETAIL_CONTENT[111].bestFor,
   137: PRODUCT_DETAIL_CONTENT[137].bestFor,
   3000: [
     ...PRODUCT_DETAIL_CONTENT[3000].bestFor,
@@ -657,7 +726,7 @@ const fetchProduct = async (identifier: string): Promise<Product> => {
   return normalizeProduct(await response.json());
 };
 
-const PAY_PICKUP_PRODUCT_IDS = new Set([1000, 1001, 137, 3000]);
+const PAY_PICKUP_PRODUCT_IDS = new Set([1000, 1001, 111, 3000]);
 
 // ---------------------------------------------------------------------------
 // Component
@@ -719,7 +788,10 @@ const ProductDetail = () => {
   const [isGuideGalleryOpen, setIsGuideGalleryOpen] = useState(false);
   const [activeGuideImageIndex, setActiveGuideImageIndex] = useState(0);
   const activeGalleryItem = galleryItems[activeGalleryIndex];
-  const guideImages = productDetailContent?.guideImages ?? [];
+  const guideImages = useMemo(
+    () => uniqueGuideImages(productDetailContent?.guideImages ?? []),
+    [productDetailContent?.guideImages],
+  );
   const activeGuideImage = guideImages[activeGuideImageIndex];
 
   const openGalleryAt = useCallback((index: number) => {
@@ -791,6 +863,55 @@ const ProductDetail = () => {
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
 
+  const pricingSummary = useMemo(() => {
+    if (!product) return null;
+
+    if (selectedChoice && selectedCategory) {
+      const formatLine = needsChoice
+        ? `${selectedCategory.label} · ${selectedChoice.displayLabel}`
+        : selectedCategory.label;
+      return {
+        key: `choice-${selectedChoice.size}-${quantity}`,
+        eyebrow: "Your selection",
+        price: fmt(selectedChoice.displayPrice),
+        unitSuffix: selectedChoice.unit?.replace(/^per\s/i, "") ?? "",
+        subtitle: formatLine,
+        detail: selectedChoice.subLabel || selectedChoice.cartLabel,
+        totalLine:
+          quantity > 1 ? `${quantity} × ${fmt(selectedChoice.displayPrice)} = ${fmt(selectedTotal)}` : undefined,
+      };
+    }
+
+    if (selectedCategory) {
+      return {
+        key: `category-${selectedCategory.key}`,
+        eyebrow: needsChoice ? "Selected size" : "Your selection",
+        price: selectedCategory.priceLabel,
+        subtitle: selectedCategory.label,
+        detail: needsChoice ? "Choose pallet or single format below" : undefined,
+      };
+    }
+
+    if (msrpPreview?.msrp) {
+      return {
+        key: "overview",
+        eyebrow: "Starts at",
+        price: fmt(msrpPreview.msrp),
+        subtitle: categoryLabel(msrpPreview.size, product.id),
+      };
+    }
+
+    return null;
+  }, [
+    msrpPreview,
+    needsChoice,
+    product,
+    quantity,
+    selectedCategory,
+    selectedChoice,
+    selectedTotal,
+  ]);
+
   // Reset gallery index on product change
   useEffect(() => {
     setActiveGalleryIndex(0);
@@ -799,15 +920,15 @@ const ProductDetail = () => {
     setQuantity(1);
   }, [product?.id]);
 
-  // NOTE: We intentionally do NOT auto-scroll to #buy on load. Customer should
-  // see the product hero photo first, then scroll to sizes at their own pace.
-  // Strip the hash so it doesn't sit in the URL bar awkwardly.
   useEffect(() => {
     if (!product) return;
     if (window.location.hash === "#buy") {
-      try { window.history.replaceState(null, "", window.location.pathname); } catch {}
+      window.setTimeout(() => {
+        document.getElementById("buy")?.scrollIntoView({ block: "start" });
+      }, 0);
+    } else {
+      window.scrollTo(0, 0);
     }
-    window.scrollTo(0, 0);
     trackEvent("Product Detail Viewed", {
       product_id: product.id,
       product_slug: product.slug,
@@ -1114,33 +1235,44 @@ const ProductDetail = () => {
                       </p>
                     )}
 
-                    {productDetailContent?.highlights.length ? (
-                      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                        {productDetailContent.highlights.map((highlight) => (
-                          <div key={highlight} className="flex min-h-[44px] items-center gap-2 rounded-xl border border-primary/10 bg-primary/5 px-3 py-2">
-                            <Check className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
-                            <span className="text-xs font-semibold leading-snug text-primary">
-                              {highlight}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {/* MSRP preview */}
-                    {msrpPreview?.msrp && (
-                      <div className="mt-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          Starts at
-                        </p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl sm:text-3xl font-bold text-primary">
-                            {fmt(msrpPreview.msrp)}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            / {categoryLabel(msrpPreview.size, product.id)}
-                          </span>
+                    {(() => {
+                      const payPickupContent = product ? getPayPickupProductContent(product.id) : undefined;
+                      const includes = payPickupContent?.includes ?? productDetailContent?.includes ?? [];
+                      const benefits = payPickupContent?.benefits ?? productDetailContent?.benefits ?? [];
+                      if (includes.length === 0 && benefits.length === 0) return null;
+                      return (
+                        <div className="mt-4">
+                          <PayPickupProductFacts includes={includes} benefits={benefits} variant="detail" />
                         </div>
+                      );
+                    })()}
+
+                    {/* Dynamic pricing — overview until a size/format is chosen */}
+                    {pricingSummary && (
+                      <div
+                        key={pricingSummary.key}
+                        className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3 transition-all duration-200"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {pricingSummary.eyebrow}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="text-2xl font-bold text-primary sm:text-3xl">
+                            {pricingSummary.price}
+                          </span>
+                          {pricingSummary.unitSuffix ? (
+                            <span className="text-sm text-muted-foreground">/ {pricingSummary.unitSuffix}</span>
+                          ) : null}
+                        </div>
+                        {pricingSummary.subtitle ? (
+                          <p className="mt-1 text-sm font-semibold text-foreground">{pricingSummary.subtitle}</p>
+                        ) : null}
+                        {pricingSummary.detail ? (
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{pricingSummary.detail}</p>
+                        ) : null}
+                        {pricingSummary.totalLine ? (
+                          <p className="mt-2 text-sm font-semibold text-primary">{pricingSummary.totalLine}</p>
+                        ) : null}
                       </div>
                     )}
 
@@ -1244,10 +1376,9 @@ const ProductDetail = () => {
                               </span>
                             )}
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected size</p>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Package size</p>
                               <p className="text-sm font-bold text-foreground">{selectedCategory.label}</p>
                             </div>
-                            <p className="shrink-0 text-sm font-bold text-primary">{selectedCategory.priceLabel}</p>
                           </div>
 
                           {needsChoice && (
@@ -1345,9 +1476,15 @@ const ProductDetail = () => {
                               </div>
                               <div className="text-right">
                                 <p className="text-xs text-muted-foreground">
-                                  {selectedChoice ? `${quantity}x ${selectedChoice.cartLabel}` : "Choose a format"}
+                                  {selectedChoice
+                                    ? quantity > 1
+                                      ? `${quantity} × ${selectedChoice.cartLabel}`
+                                      : selectedChoice.cartLabel
+                                    : "Choose a format"}
                                 </p>
-                                <p className="mt-0.5 text-2xl font-bold text-primary">{selectedChoice ? fmt(selectedTotal) : "$0.00"}</p>
+                                {selectedChoice && quantity > 1 ? (
+                                  <p className="mt-0.5 text-xl font-bold text-primary">{fmt(selectedTotal)}</p>
+                                ) : null}
                               </div>
                             </div>
                           </div>

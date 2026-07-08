@@ -294,7 +294,7 @@ export default function ProductShowcase({ products, loading = false, onProductSe
               <div className="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-gray-100">
                 {/* Best Seller + Certification badges */}
                 <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-wrap gap-1.5 max-w-[85%]">
-                  {(product.name === "Simon's Gold" || product.name === "Soil Craft" || product.name === "Mikey's Worm Poop") && (
+                  {(product.name === "Simon's Gold" || product.name === "PlantPal" || product.name === "Mikey's Worm Poop") && (
                     <Badge className="bg-amber-500 text-white shadow border-0 rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-black/10">
                       <Star className="h-2.5 w-2.5 mr-1 fill-current" />
                       Best Seller

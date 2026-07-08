@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { CheckCircle2, Flame, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPayPickupProductDescription } from "@/data/payPickupCopy";
+import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 
 export interface PayPickupProductSize {
   key: string;
@@ -53,9 +54,9 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
     Tote: { price: 150 },
     "Truckload (~24 tons)": { price: 720 },
   },
-  137: {
-    "1CF Bag": { price: 15.99 },
-    "Truckload (22 pallets)": { price: 5400 },
+  111: {
+    "1CF Bag": { price: 10.99 },
+    "Truckload (22 pallets)": { price: 4896.05 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -78,24 +79,6 @@ const getStartingPrice = (product: PayPickupProduct) => {
   return firstSingle ? displayPriceFor(product.id, firstSingle).priceLabel : null;
 };
 
-const PRODUCT_SIZE_SUMMARIES: Record<number, string[]> = {
-  1000: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "truckload (~24 tons)"],
-  1001: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)"],
-  137: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "truckload (~90 cu yd)"],
-  3000: ["2 cu ft bag (~60 lb)", "super sack (2.2 cu yd)", "truckload (~90 cu yd)"],
-};
-
-const STARTING_PRICE_CONTEXT: Record<number, string> = {
-  1000: "for a 9 lb bag",
-  1001: "for a 9 lb bag",
-  137: "for a 1.5 cu ft bag (~50 lb)",
-  3000: "for a 2 cu ft bag (~60 lb)",
-};
-
-/** Seasonal badges. Empty for now — re-introduce when we have a system-wide
- *  seasonality model so we're not flagging a single product as a one-off. */
-const PRODUCT_SEASONAL_BADGES: Record<number, string> = {};
-
 const sizeCategoryLabel = (key: string) => {
   if (!key) return "";
   if (key.includes("9lb")) return "9 lb bag";
@@ -107,8 +90,8 @@ const sizeCategoryLabel = (key: string) => {
 };
 
 const getSizeCategories = (product: PayPickupProduct) => {
-  const summary = PRODUCT_SIZE_SUMMARIES[Number(product.id)];
-  if (summary) return summary;
+  const summary = getPayPickupProductContent(product.id)?.sizeSummaries;
+  if (summary?.length) return summary;
 
   const categories = product.sizes
     .filter((size) => !(size.key ?? "").startsWith("Pallet"))
@@ -117,6 +100,10 @@ const getSizeCategories = (product: PayPickupProduct) => {
 
   return Array.from(new Set(categories));
 };
+
+/** Seasonal badges. Empty for now — re-introduce when we have a system-wide
+ *  seasonality model so we're not flagging a single product as a one-off. */
+const PRODUCT_SEASONAL_BADGES: Record<number, string> = {};
 
 export function PayPickupCard({ product, heroImageOverride, backdropImageOverride, className, priority = false, buyButtonVariant = "brand" }: PayPickupCardProps) {
   const [, navigate] = useLocation();
@@ -141,7 +128,11 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
   const textureImage = product.texturePhotoUrl;
   const startingPrice = getStartingPrice(product);
   const sizeCategories = getSizeCategories(product);
-  const description = getPayPickupProductDescription(product.id, "Open the product page to view available sizes, pricing, pickup, and quote options.");
+  const cardContent = getPayPickupProductContent(product.id);
+  const description = getPayPickupProductDescription(
+    product.id,
+    "Open the product page to view available sizes, pricing, pickup, and quote options.",
+  );
 
   return (
     <div
@@ -220,14 +211,26 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
           </div>
         </div>
 
-        <p className="mt-3 hidden text-sm leading-relaxed text-stone-600 md:block md:min-h-[88px]">
+        <p className="mt-3 hidden text-sm leading-relaxed text-stone-600 md:block">
           {description}
         </p>
+
+        {cardContent && cardContent.includes.length > 0 && (
+          <div className="mt-2 md:mt-3">
+            <PayPickupProductFacts
+              includes={cardContent.includes}
+              benefits={cardContent.benefits}
+              variant="card"
+              className="[&_ul]:hidden [&_ul]:md:block"
+            />
+          </div>
+        )}
 
         <div className="mt-2 space-y-1 text-sm md:mt-3">
           {startingPrice && (
             <p className="text-sm font-semibold leading-snug text-[#264027]">
-              Starts at {startingPrice} {STARTING_PRICE_CONTEXT[product.id] ?? ""}
+              Starts at {startingPrice}{" "}
+              {getPayPickupProductContent(product.id)?.startingPriceContext ?? ""}
             </p>
           )}
           {sizeCategories.length > 0 && (
