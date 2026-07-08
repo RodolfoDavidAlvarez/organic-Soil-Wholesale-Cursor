@@ -63,12 +63,43 @@ async function getPickupNotifications() {
 }
 
 /** SMS + admin email when a paid pickup order lands (checkout webhook / free test order). */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatPickupLineItems(order, orderItems) {
+  const jsonItems = Array.isArray(order?.order_items) ? order.order_items : [];
+  const rows = Array.isArray(orderItems) ? orderItems : [];
+  return rows.map((item, index) => {
+    const source = jsonItems[index] || {};
+    const quantity = Number(item.quantity ?? source.quantity ?? 1) || 1;
+    const productName = item.product_name || item.name || source.product_name || source.name || `Product #${item.product_id || source.product_id || ''}`.trim();
+    const size = item.size_option || item.sizeOption || source.size_option || source.size || '';
+    const total = Number(item.total_price ?? source.total ?? ((item.price ?? item.unit_price ?? source.price ?? 0) * quantity)) || 0;
+    return { quantity, productName, size, total };
+  });
+}
+
 async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locationId }) {
   const notify = await getPickupNotifications();
   const dev = await getDeveloperMode();
   const locId = locationId ?? order?.location_id ?? 1;
   const orderRef = order?.order_number?.slice(0, 8) || String(order?.id || '');
   const itemCount = Array.isArray(orderItems) ? orderItems.length : 0;
+  const formattedItems = formatPickupLineItems(order, orderItems);
+  const itemSummary = formattedItems.length
+    ? formattedItems.map((item) => `${item.quantity}x ${item.productName}${item.size ? ` (${item.size})` : ''}`).join('; ')
+    : `${itemCount} item${itemCount === 1 ? '' : 's'}`;
+  const itemsHtml = formattedItems.length
+    ? `<ul style="margin:8px 0 0;padding-left:18px;">${formattedItems.map((item) => (
+      `<li><strong>${escapeHtml(item.quantity)}x ${escapeHtml(item.productName)}</strong>${item.size ? ` — ${escapeHtml(item.size)}` : ''}${item.total ? ` — $${item.total.toFixed(2)}` : ''}</li>`
+    )).join('')}</ul>`
+    : `<span>${escapeHtml(itemSummary)}</span>`;
   const totalDollars = Number(order?.total_amount ?? order?.total ?? 0);
   const pickupLocation = order?.pickup_location || null;
   const smsBody = dev.devModeSmsBody(
@@ -136,8 +167,9 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
       <p>Customer: ${order?.customer_name || order?.business_name || 'Customer'} (${order?.phone || ''})<br>
       Estimated ready: ${pickupLabel || 'TBD'}<br>
       Location: ${pickupLocation || 'Phoenix HQ'}<br>
-      Items: ${itemCount}<br>
-      Total: $${totalDollars.toFixed(2)}</p>`;
+      Total: $${totalDollars.toFixed(2)}</p>
+      <p><strong>Items</strong></p>
+      ${itemsHtml}`;
     const results = await Promise.allSettled(
       adminEmails.map(async (to) => {
         const result = await r.emails.send({
