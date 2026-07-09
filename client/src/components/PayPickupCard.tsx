@@ -56,7 +56,6 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
   },
   111: {
     "1CF Bag": { price: 10.99 },
-    "Truckload (22 pallets)": { price: 4896.05 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -85,6 +84,7 @@ const sizeCategoryLabel = (key: string) => {
   if (key.includes("1CF")) return "40 lb bag (1 cu ft)";
   if (key.includes("2CF")) return "2 cu ft bag";
   if (key.includes("Tote")) return "super sack";
+  if (key.includes("Bulk Pickup")) return "bulk pickup";
   if (key.includes("Truckload") || key.includes("Bulk")) return "truckload";
   return key;
 };

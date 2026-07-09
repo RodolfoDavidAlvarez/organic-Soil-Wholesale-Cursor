@@ -33,13 +33,15 @@ export function PayPickupProductFacts({
           >
             Includes
           </p>
-          <div className={cn("flex flex-wrap gap-1.5", isDetail && "gap-2")}>
+          <div className={cn("flex flex-wrap gap-1.5", isDetail && "gap-2 lg:gap-x-4 lg:gap-y-1")}>
             {includes.map((item) => (
               <span
                 key={item}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full border border-[#264027]/15 bg-[#264027]/5 font-semibold text-[#264027]",
-                  isDetail ? "px-3 py-1.5 text-xs" : "px-2 py-0.5 text-[11px]",
+                  isDetail
+                    ? "px-3 py-1.5 text-xs lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:text-sm lg:font-medium lg:text-stone-600"
+                    : "px-2 py-0.5 text-[11px]",
                 )}
               >
                 <CheckCircle2 className={cn("shrink-0", isDetail ? "h-3.5 w-3.5" : "h-3 w-3")} strokeWidth={2.5} />
@@ -51,7 +53,7 @@ export function PayPickupProductFacts({
       )}
 
       {benefits.length > 0 && (
-        <ul className={cn("space-y-1.5", isDetail && "sm:grid sm:grid-cols-2 sm:gap-x-4 sm:space-y-0")}>
+        <ul className={cn("space-y-1.5", isDetail && "sm:grid sm:grid-cols-2 sm:gap-x-4 sm:space-y-0 lg:grid-cols-3")}>
           {benefits.map((item) => (
             <li
               key={item}

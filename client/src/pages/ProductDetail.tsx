@@ -224,11 +224,13 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "Pallet (144 x 9lb)": "/images/sizes/9lb-pallet.jpg",
   "1CF Bag": "/images/sizes/1cf-bag-single.png",
   "Pallet (50 x 1CF)": "/images/sizes/1cf-pallet.jpg",
+  "Pallet (40 x 1CF)": "/images/sizes/1cf-pallet.jpg",
   "2CF Bag": "/images/sizes/2cf-bag-single.png",
   "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
   Tote: "/images/sizes/2-2cy-tote.png",
   "Truckload (~24 tons)": "/images/sizes/truckload.png",
   "Truckload (22 pallets)": "/images/sizes/truckload.png",
+  "Truckload (~60 cu yd)": "/images/sizes/truckload.png",
   "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
 };
 
@@ -240,7 +242,6 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
   },
   111: {
     "1CF Bag": { price: 10.99 },
-    "Truckload (22 pallets)": { price: 4896.05 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -260,9 +261,10 @@ const categoryLabel = (size: string, productId?: number | string) => {
   if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag";
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
+  if (size.includes("Bulk Pickup")) return "Bulk Pickup (per cu yd)";
   if (size.includes("Truckload") || size.includes("Bulk")) {
     if (id === 137 || id === 3000) return "Truckload (~90 cu yd)";
-    if (id === 111) return "Truckload (22 pallets)";
+    if (id === 111) return "Truckload (~60 cu yd)";
     return "Truckload (~24 tons)";
   }
   return size;
@@ -285,11 +287,12 @@ const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
 const palletSizeForBag = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
   if (size.includes("1CF")) {
-    return {
-      size: "Pallet (50 x 1CF)",
-      qty: 50,
-      cartLabel: isPlantPalOrSoilCraftBag(productId) ? "Pallet of 1.5 cu ft Bags" : "Pallet of 1CF Bags",
-    };
+    // PlantPal / Soil Craft ship 1.5 cu ft bags at 40 per pallet (V4 pricing sheet);
+    // standard 1CF bags stay at 50 per pallet.
+    if (isPlantPalOrSoilCraftBag(productId)) {
+      return { size: "Pallet (40 x 1CF)", qty: 40, cartLabel: "Pallet of 1.5 cu ft Bags" };
+    }
+    return { size: "Pallet (50 x 1CF)", qty: 50, cartLabel: "Pallet of 1CF Bags" };
   }
   if (size.includes("2CF")) return { size: "Pallet (25 x 2CF)", qty: 25, cartLabel: "Pallet of 2CF Bags" };
   return null;
@@ -359,27 +362,40 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const pricing = priceForTier(product.id, tier);
     const key = categoryLabel(tier.size, product.id);
     const dairyBulk = isDairyCompostBulkTier(product.id, tier.size);
+    const bulkPickup = tier.size.includes("Bulk Pickup");
     const displayPrice = dairyBulk ? dairyCompostTonPrice(pricing.price) : pricing.price;
     categoryMap.set(key, {
       key,
       label: key,
       price: displayPrice,
-      priceLabel: dairyBulk ? `$${displayPrice.toFixed(2)}/ton` : pricing.priceLabel,
+      priceLabel: dairyBulk
+        ? `$${displayPrice.toFixed(2)}/ton`
+        : bulkPickup
+        ? `$${displayPrice.toFixed(2)}/cu yd`
+        : pricing.priceLabel,
       image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
       choices: [
         {
           ...tier,
           kind: tier.size.includes("Truckload") || tier.size.includes("Bulk") ? "bulk" : "single",
-          displayLabel: dairyBulk ? "Bulk tons" : key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
+          displayLabel: dairyBulk
+            ? "Bulk tons"
+            : bulkPickup
+            ? "Bulk cubic yards"
+            : key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
           subLabel: dairyBulk
             ? "24 tons per walking-floor truckload"
+            : bulkPickup
+            ? "loose bulk, pick up in Congress, AZ"
             : key.includes("Truckload")
-            ? tier.size.includes("24") ? "24 tons" : "90 cubic yards"
+            ? tier.size.includes("24") ? "24 tons" : tier.size.includes("60") ? "~60 cubic yards" : "90 cubic yards"
             : key.includes("Super Sack")
               ? product.id === 137 || product.id === 111 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
               : "one bag",
           cartLabel: dairyBulk
             ? "Bulk Dairy Compost (tons)"
+            : bulkPickup
+            ? "Bulk Pickup (cu yd)"
             : key.includes("Truckload") || key.includes("Super Sack")
             ? key
             : singleCartLabelForSize(tier.size, product.id),
@@ -1071,10 +1087,10 @@ const ProductDetail = () => {
         structuredData={productStructuredData}
       />
 
-      <section className="bg-muted/20 py-2 sm:py-8 lg:py-10" aria-label="Product details">
-        <div className="container mx-auto px-3 sm:px-4 max-w-6xl">
+      <section className="bg-muted/20 py-2 sm:py-8 lg:py-4" aria-label="Product details">
+        <div className="container mx-auto px-3 sm:px-4 max-w-6xl xl:max-w-7xl">
           {/* Back */}
-          <Button variant="ghost" className="mb-2 h-10 min-h-[40px] rounded-lg px-2 text-muted-foreground hover:text-foreground touch-manipulation sm:mb-4 sm:h-11 sm:min-h-[44px] sm:px-3" asChild>
+          <Button variant="ghost" className="mb-2 h-10 min-h-[40px] rounded-lg px-2 text-muted-foreground hover:text-foreground touch-manipulation sm:mb-4 sm:h-11 sm:min-h-[44px] sm:px-3 lg:hidden" asChild>
             <Link href="/products">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Products
@@ -1106,12 +1122,12 @@ const ProductDetail = () => {
               {/* HERO: Image + Product Info                                    */}
               {/* ============================================================ */}
               <div className="overflow-hidden rounded-2xl border bg-white shadow-sm sm:rounded-3xl">
-                <div className="flex flex-col lg:grid lg:grid-cols-2">
+                <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
                   {/* Image gallery */}
                   <div className="bg-gradient-to-b from-white to-stone-50 p-3 sm:p-4 lg:self-start">
                     <div className="flex flex-col gap-3 lg:flex-row-reverse">
                       <div
-                        className="group relative h-[245px] rounded-xl bg-white sm:h-[390px] md:cursor-pointer lg:h-[600px] lg:flex-1"
+                        className="group relative h-[245px] rounded-xl bg-white sm:h-[390px] md:cursor-pointer lg:h-[460px] lg:flex-1"
                         role={galleryItems.length > 0 ? "button" : undefined}
                         tabIndex={galleryItems.length > 0 ? 0 : -1}
                         onClick={openHeroGallery}
@@ -1203,7 +1219,15 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Product Info */}
-                  <div className="flex flex-col justify-start p-4 sm:p-6 lg:p-8">
+                  <div className="flex flex-col justify-start p-4 sm:p-6 lg:p-6">
+                    {/* Desktop back link — the standalone back-button row above the card is hidden at lg */}
+                    <Link
+                      href="/products"
+                      className="mb-2 hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground lg:inline-flex"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back to Products
+                    </Link>
                     {/* Badges */}
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge className="bg-primary text-primary-foreground border-0 text-xs">
@@ -1224,7 +1248,7 @@ const ProductDetail = () => {
                     </div>
 
                     {/* Name */}
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold tracking-tight text-foreground">
+                    <h1 className="text-2xl sm:text-3xl lg:text-3xl font-heading font-bold tracking-tight text-foreground">
                       {product.displayTitle}
                     </h1>
 
@@ -1241,7 +1265,7 @@ const ProductDetail = () => {
                       const benefits = payPickupContent?.benefits ?? productDetailContent?.benefits ?? [];
                       if (includes.length === 0 && benefits.length === 0) return null;
                       return (
-                        <div className="mt-4">
+                        <div className="mt-4 lg:mt-3">
                           <PayPickupProductFacts includes={includes} benefits={benefits} variant="detail" />
                         </div>
                       );
@@ -1251,13 +1275,13 @@ const ProductDetail = () => {
                     {pricingSummary && (
                       <div
                         key={pricingSummary.key}
-                        className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3 transition-all duration-200"
+                        className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3 transition-all duration-200 lg:mt-3 lg:flex lg:flex-wrap lg:items-baseline lg:gap-x-3 lg:gap-y-1 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-1"
                       >
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                           {pricingSummary.eyebrow}
                         </p>
-                        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                          <span className="text-2xl font-bold text-primary sm:text-3xl">
+                        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 lg:mt-0">
+                          <span className="text-2xl font-bold text-primary sm:text-3xl lg:text-3xl">
                             {pricingSummary.price}
                           </span>
                           {pricingSummary.unitSuffix ? (
@@ -1265,21 +1289,27 @@ const ProductDetail = () => {
                           ) : null}
                         </div>
                         {pricingSummary.subtitle ? (
-                          <p className="mt-1 text-sm font-semibold text-foreground">{pricingSummary.subtitle}</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground lg:mt-0">{pricingSummary.subtitle}</p>
                         ) : null}
                         {pricingSummary.detail ? (
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{pricingSummary.detail}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground lg:mt-0">{pricingSummary.detail}</p>
                         ) : null}
                         {pricingSummary.totalLine ? (
-                          <p className="mt-2 text-sm font-semibold text-primary">{pricingSummary.totalLine}</p>
+                          <p className="mt-2 text-sm font-semibold text-primary lg:mt-0 lg:w-full">{pricingSummary.totalLine}</p>
                         ) : null}
                       </div>
                     )}
 
-                    <div id="buy" className="mt-5 scroll-mt-24 rounded-2xl border border-border/70 bg-stone-50/60 p-3 sm:bg-transparent sm:p-0 sm:border-0">
-                      <div className="mb-3 flex flex-col gap-3 rounded-xl border border-border/70 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div id="buy" className="mt-5 scroll-mt-24 rounded-2xl border border-border/70 bg-stone-50/60 p-3 sm:bg-transparent sm:p-0 sm:border-0 lg:mt-4">
+                      <div
+                        className={cn(
+                          "mb-3 flex flex-col gap-3 rounded-xl border border-border/70 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:mb-2 lg:p-2.5",
+                          // Step 1 on desktop: bare label row — the size cards speak for themselves
+                          !selectedCategory && "lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+                        )}
+                      >
                         <div className="min-w-0">
-                          <div className="mb-1.5 flex items-center gap-2">
+                          <div className="mb-1.5 flex items-center gap-2 lg:mb-1">
                             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
                               {selectedCategory ? "Step 2" : "Step 1"}
                             </span>
@@ -1287,10 +1317,10 @@ const ProductDetail = () => {
                               {selectedCategory ? "Purchase type" : "Choose size"}
                             </p>
                           </div>
-                          <p className="text-base font-bold leading-tight text-foreground">
+                          <p className={cn("text-base font-bold leading-tight text-foreground", !selectedCategory && "lg:hidden")}>
                             {selectedCategory ? `How do you want ${selectedCategory.label}?` : "Select the product package"}
                           </p>
-                          <p className="mt-1 text-sm leading-snug text-muted-foreground">
+                          <p className="mt-1 text-sm leading-snug text-muted-foreground lg:hidden">
                             {selectedCategory
                               ? "Choose single, pallet, super sack, or truckload when available."
                               : "Start with the package size, then pick the buying format if needed."}
@@ -1314,7 +1344,7 @@ const ProductDetail = () => {
 
                       {!selectedCategory && sizeCategories.length > 0 && (
                         <div className="mt-3 space-y-3">
-                          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                             {sizeCategories.map((category) => (
                               <button
                                 key={category.key}
@@ -1332,7 +1362,7 @@ const ProductDetail = () => {
                                 }}
                                 className="group flex min-h-[178px] flex-col overflow-hidden rounded-xl border border-border bg-white text-left shadow-sm transition hover:border-primary hover:shadow-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation sm:min-h-0"
                               >
-                                <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto">
+                                <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto lg:aspect-auto lg:h-20">
                                   {category.image ? (
                                     <OptimizedImage
                                       src={category.image}
@@ -1358,7 +1388,7 @@ const ProductDetail = () => {
                           </div>
                           <Button
                             size="lg"
-                            className="min-h-[46px] w-full rounded-xl font-semibold shadow-none touch-manipulation"
+                            className="min-h-[46px] w-full rounded-xl font-semibold shadow-none touch-manipulation lg:hidden"
                             disabled
                           >
                             {canPayOnline ? <ShoppingCart className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
@@ -1368,8 +1398,8 @@ const ProductDetail = () => {
                       )}
 
                       {selectedCategory && (
-                        <div className="mt-3 space-y-3">
-                          <div className="flex items-center gap-3 border-y border-border/70 py-3">
+                        <div className="mt-3 space-y-3 lg:space-y-2.5">
+                          <div className="flex items-center gap-3 border-y border-border/70 py-3 lg:hidden">
                             {selectedCategory.image && (
                               <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-border/70">
                                 <OptimizedImage src={selectedCategory.image} alt="" className="h-full w-full object-cover" />
@@ -1406,13 +1436,13 @@ const ProductDetail = () => {
                                         });
                                       }}
                                       className={cn(
-                                        "group flex min-h-[188px] flex-col overflow-hidden rounded-xl border bg-white text-left transition touch-manipulation sm:min-h-0",
+                                        "group flex min-h-[188px] flex-col overflow-hidden rounded-xl border bg-white text-left transition touch-manipulation sm:min-h-0 lg:flex-row lg:items-center",
                                         isSelected
                                           ? "border-primary ring-2 ring-primary/30 shadow-md"
                                           : "border-border hover:border-primary hover:shadow-sm"
                                       )}
                                     >
-                                      <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto">
+                                      <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto lg:aspect-auto lg:h-20 lg:w-24">
                                         {choiceImage ? (
                                           <OptimizedImage
                                             src={choiceImage}
@@ -1450,7 +1480,7 @@ const ProductDetail = () => {
                             </div>
                           )}
 
-                          <div className="border-t border-border/70 pt-3">
+                          <div className="border-t border-border/70 pt-3 lg:pt-2.5">
                             <div className="flex items-end justify-between gap-3">
                               <div>
                                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantity</p>
@@ -1493,7 +1523,7 @@ const ProductDetail = () => {
                             <div className="grid gap-2 sm:grid-cols-2">
                               <Button
                                 size="lg"
-                                className="min-h-[48px] rounded-xl font-semibold shadow-md touch-manipulation sm:col-span-2"
+                                className="min-h-[48px] rounded-xl font-semibold shadow-md touch-manipulation sm:col-span-2 lg:col-span-1"
                                 disabled={!selectedChoice}
                                 onClick={() => addSelectionToCart()}
                               >
@@ -1503,7 +1533,7 @@ const ProductDetail = () => {
                               <Button
                                 size="lg"
                                 variant="outline"
-                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation sm:col-span-2"
+                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation sm:col-span-2 lg:col-span-1"
                                 disabled={!selectedChoice}
                                 onClick={() => addSelectionToCart("checkout")}
                               >

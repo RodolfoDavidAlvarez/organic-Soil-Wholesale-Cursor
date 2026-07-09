@@ -35,7 +35,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     includes: ["Dairy compost", "Worm castings", "SK Microsource", "Pumice", "8-3-1 granules"],
     benefits: ["All-stage nursery mix", "Balanced organic nutrition", "Ready out of the bag"],
     startingPriceContext: "for a 1.5 cu ft bag (~50 lb)",
-    sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "truckload (22 pallets)"],
+    sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~60 cu yd)"],
   },
   3000: {
     description:
