@@ -262,7 +262,7 @@ const categoryLabel = (size: string, productId?: number | string) => {
   if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag";
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
-  if (size.includes("Bulk Pickup")) return "Bulk Pickup (per cu yd)";
+  if (size.includes("Bulk Pickup")) return id === 1000 || id === 1001 ? "Bulk Pickup (per ton)" : "Bulk Pickup (per cu yd)";
   if (size.includes("Truckload") || size.includes("Bulk")) {
     if (id === 137 || id === 3000) return "Truckload (~90 cu yd)";
     if (id === 111) return "Truckload (~60 cu yd)";
@@ -286,6 +286,15 @@ const isDairyCompostBulkTier = (productId: number, size: string) =>
   productId === 1000 && /truckload/i.test(size);
 
 const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
+
+/** V4 sheet unit equivalents — compost & castings sell per ton (Congress scale),
+ *  potting soil & mulch per cu yd; always show the other unit for reference. */
+const BULK_PICKUP_EQUIVALENTS: Record<number, string> = {
+  1000: "about $18 per cu yd",
+  1001: "about $120 per cu yd",
+  111: "about $90 per ton",
+  3000: "about $60 per ton",
+};
 
 const palletSizeForBag = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
@@ -366,6 +375,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const key = categoryLabel(tier.size, product.id);
     const dairyBulk = isDairyCompostBulkTier(product.id, tier.size);
     const bulkPickup = tier.size.includes("Bulk Pickup");
+    const bulkTon = bulkPickup && /ton/i.test(tier.unit);
     const displayPrice = dairyBulk ? dairyCompostTonPrice(pricing.price) : pricing.price;
     categoryMap.set(key, {
       key,
@@ -374,7 +384,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       priceLabel: dairyBulk
         ? `$${displayPrice.toFixed(2)}/ton`
         : bulkPickup
-        ? `$${displayPrice.toFixed(2)}/cu yd`
+        ? `$${displayPrice.toFixed(2)}/${bulkTon ? "ton" : "cu yd"}`
         : pricing.priceLabel,
       image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
       choices: [
@@ -384,12 +394,12 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
           displayLabel: dairyBulk
             ? "Bulk tons"
             : bulkPickup
-            ? "Bulk cubic yards"
+            ? bulkTon ? "Bulk tons" : "Bulk cubic yards"
             : key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
           subLabel: dairyBulk
             ? "24 tons per walking-floor truckload"
             : bulkPickup
-            ? "loose bulk, pick up in Congress, AZ"
+            ? BULK_PICKUP_EQUIVALENTS[product.id] ?? "loose bulk, weighed at pickup"
             : key.includes("Truckload")
             ? tier.size.includes("24") ? "24 tons" : tier.size.includes("60") ? "~60 cubic yards" : "90 cubic yards"
             : key.includes("Super Sack")
@@ -398,7 +408,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
           cartLabel: dairyBulk
             ? "Bulk Dairy Compost (tons)"
             : bulkPickup
-            ? "Bulk Pickup (cu yd)"
+            ? bulkTon ? "Bulk Pickup (tons)" : "Bulk Pickup (cu yd)"
             : key.includes("Truckload") || key.includes("Super Sack")
             ? key
             : singleCartLabelForSize(tier.size, product.id),
@@ -1480,6 +1490,18 @@ const ProductDetail = () => {
                                   );
                                 })}
                               </div>
+                            </div>
+                          )}
+
+                          {selectedCategory.key.includes("Bulk Pickup") && (
+                            <div className="rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5">
+                              <p className="text-xs font-bold uppercase tracking-wider text-primary">Where you&apos;ll pick up</p>
+                              <p className="mt-1 text-sm leading-snug text-stone-700">
+                                <span className="font-semibold">Congress plant</span> — same-day, 6 AM - 2 PM, weighed on our scale
+                                <span className="text-stone-400"> · </span>
+                                <span className="font-semibold">Phoenix yard</span> — by appointment, 12-ton max
+                              </p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">You&apos;ll choose your pickup location at checkout.</p>
                             </div>
                           )}
 
