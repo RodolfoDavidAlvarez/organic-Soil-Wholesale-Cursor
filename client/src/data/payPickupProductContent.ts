@@ -19,7 +19,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     includes: ["Composted dairy manure"],
     benefits: ["Slow-release organic matter", "Improves soil structure", "Supports water conservation"],
     startingPriceContext: "for a 9 lb bag",
-    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "truckload (~24 tons)"],
+    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "bulk pickup (per cu yd)", "truckload (~24 tons)"],
   },
   1001: {
     description:
@@ -27,7 +27,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     includes: ["Premium worm castings"],
     benefits: ["Feeds root zones naturally", "Helps retain moisture", "Supports stronger soil biology"],
     startingPriceContext: "for a 9 lb bag",
-    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)"],
+    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "bulk pickup (per cu yd)"],
   },
   111: {
     description:
@@ -48,7 +48,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
       "Keeps root zones cooler",
     ],
     startingPriceContext: "for a 2 cu ft bag (~60 lb)",
-    sizeSummaries: ["2 cu ft bag (~60 lb)", "super sack (2.2 cu yd)", "truckload (~90 cu yd)"],
+    sizeSummaries: ["2 cu ft bag (~60 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~90 cu yd)"],
   },
 };
 

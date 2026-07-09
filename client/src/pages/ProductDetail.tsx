@@ -280,8 +280,10 @@ const priceForTier = (productId: number, tier: PriceTier) => {
   };
 };
 
+// Only the walking-floor truckload gets per-ton conversion; "Bulk Pickup"
+// (per cu yd at the Congress scale) prices as-is.
 const isDairyCompostBulkTier = (productId: number, size: string) =>
-  productId === 1000 && /truckload|bulk/i.test(size);
+  productId === 1000 && /truckload/i.test(size);
 
 const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
 
@@ -312,7 +314,7 @@ const imageForChoice = (choice: SizeChoice, fallback: string) => {
 };
 
 const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {
-  1001: ["truckload", "bulk"],
+  1001: ["truckload"],
 };
 
 const shouldHidePayPickupTier = (productId: number | string, size: string) => {
