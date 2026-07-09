@@ -103,12 +103,12 @@ const About = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-8">
-              <Link href="/contact">
-                <Button className="bg-primary hover:bg-primary-light text-white">Contact Us</Button>
-              </Link>
               <Link href="/products">
+                <Button className="bg-primary hover:bg-primary-light text-white">Shop Products</Button>
+              </Link>
+              <Link href="/contact">
                 <Button variant="outline" className="bg-white text-primary border border-primary hover:bg-neutral-50">
-                  Explore Products
+                  Contact Us
                 </Button>
               </Link>
             </div>
@@ -245,7 +245,7 @@ const About = () => {
           <p className="text-lg text-neutral-800 max-w-3xl mx-auto mb-8">
             Become a wholesale partner today and discover the difference that premium organic soil products can make for your growing operation.
           </p>
-          <Link href="/contact">
+          <Link href="/distributors">
             <Button size="lg" className="bg-primary hover:bg-primary-light text-white">
               Become a Wholesale Partner
             </Button>

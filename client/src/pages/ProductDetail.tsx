@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
+import TrustStrip from "@/components/TrustStrip";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
@@ -1661,6 +1662,8 @@ const ProductDetail = () => {
                   </Card>
                 );
               })()}
+
+              <TrustStrip page={`/products/${product.slug}`} />
 
               {/* ============================================================ */}
               {/* BOTTOM CTA                                                    */}

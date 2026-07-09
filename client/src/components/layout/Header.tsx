@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -218,6 +219,40 @@ const Header = () => {
                     <span>Bulk quote catalog</span>
                     <ArrowRight className="h-4 w-4" />
                   </DropdownMenuItem>
+                  <div className="h-px w-full bg-border my-1"></div>
+                  <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    For your business
+                  </div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      trackEvent("Segment Link Clicked", { segment: "landscapers", source: "header" });
+                      setLocation("/landscapers");
+                    }}
+                    className="cursor-pointer rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-200 hover:bg-primary/5 hover:text-primary"
+                  >
+                    Landscapers
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      trackEvent("Segment Link Clicked", { segment: "nurseries", source: "header" });
+                      setLocation("/nurseries");
+                    }}
+                    className="cursor-pointer rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-200 hover:bg-primary/5 hover:text-primary"
+                  >
+                    Nurseries
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      trackEvent("Segment Link Clicked", { segment: "distributors", source: "header" });
+                      setLocation("/distributors");
+                    }}
+                    className="cursor-pointer rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-200 hover:bg-primary/5 hover:text-primary"
+                  >
+                    Distributors & Retail
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -393,6 +428,36 @@ const Header = () => {
                           >
                             <span>Bulk quote catalog</span>
                             <ArrowRight className="h-4 w-4" />
+                          </div>
+                        </Link>
+                        <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          For your business
+                        </div>
+                        <Link
+                          key="/landscapers"
+                          href="/landscapers"
+                          onClick={() => trackEvent("Segment Link Clicked", { segment: "landscapers", source: "header_mobile" })}
+                        >
+                          <div className="rounded-md px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-primary/5 hover:text-primary">
+                            Landscapers
+                          </div>
+                        </Link>
+                        <Link
+                          key="/nurseries"
+                          href="/nurseries"
+                          onClick={() => trackEvent("Segment Link Clicked", { segment: "nurseries", source: "header_mobile" })}
+                        >
+                          <div className="rounded-md px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-primary/5 hover:text-primary">
+                            Nurseries
+                          </div>
+                        </Link>
+                        <Link
+                          key="/distributors"
+                          href="/distributors"
+                          onClick={() => trackEvent("Segment Link Clicked", { segment: "distributors", source: "header_mobile" })}
+                        >
+                          <div className="rounded-md px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-primary/5 hover:text-primary">
+                            Distributors & Retail
                           </div>
                         </Link>
                       </div>
