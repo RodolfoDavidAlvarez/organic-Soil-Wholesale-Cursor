@@ -11,7 +11,7 @@ import { PickupReadyTime, type PickupReadySelection } from "@/components/PickupR
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
-import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
+import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation,
@@ -39,10 +39,23 @@ const Checkout: React.FC = () => {
     () => payItems.some((item) => item.format.toLowerCase().includes("truckload")),
     [payItems]
   );
+  // Loose-bulk tonnage in the cart — cu yd items estimated at 50 lb/cf.
+  // Phoenix loads loose bulk by appointment only, capped at PHOENIX_BULK_MAX_TONS.
+  const bulkPickupTons = useMemo(
+    () =>
+      payItems.reduce((sum, item) => {
+        const format = item.format.toLowerCase();
+        if (!format.includes("bulk")) return sum;
+        return sum + (format.includes("ton") ? item.quantity : item.quantity * TONS_PER_CU_YD);
+      }, 0),
+    [payItems]
+  );
+  const hasBulkItem = bulkPickupTons > 0;
+  const phoenixBulkOverLimit = bulkPickupTons > PHOENIX_BULK_MAX_TONS;
 
   // Fulfillment
   const [fulfillment, setFulfillment] = useState<Fulfillment>(() => hasTruckloadItem ? "delivery" : "pickup");
-  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("phoenix");
+  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("congress");
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
     [pickupSiteId],
@@ -152,6 +165,12 @@ const Checkout: React.FC = () => {
 
     if (payItems.length === 0) {
       setError("Your cart is empty");
+      return;
+    }
+    if (fulfillment === "pickup" && selectedPickupSite.id === "phoenix" && phoenixBulkOverLimit) {
+      setError(`Loose bulk pickups at Phoenix are limited to ${PHOENIX_BULK_MAX_TONS} tons (~17 cu yd). Pick up bulk at the Congress plant or choose delivery.`);
+      setActiveStep("fulfillment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (fulfillment === "pickup" && !pickupReady) {
@@ -516,7 +535,7 @@ const Checkout: React.FC = () => {
                       Pickup
                     </div>
                     <span className="text-[11px] font-medium leading-tight text-stone-500">
-                      {hasTruckloadItem ? "Truckload orders require delivery" : "Free · Phoenix or Congress"}
+                      {hasTruckloadItem ? "Truckload orders require delivery" : "Free · Congress or Phoenix"}
                     </span>
                   </button>
                   <button
@@ -571,6 +590,16 @@ const Checkout: React.FC = () => {
                           >
                             <span className="text-sm font-bold leading-tight">{loc.shortLabel}</span>
                             <span className="text-[11px] font-medium leading-snug text-stone-500">{loc.addressLine}</span>
+                            {loc.pickupNote && (
+                              <span
+                                className={cn(
+                                  "mt-0.5 text-[11px] font-bold leading-snug",
+                                  pickupSiteId === loc.id ? "text-[#264027]" : "text-stone-600",
+                                )}
+                              >
+                                {loc.pickupNote}
+                              </span>
+                            )}
                           </button>
                           <a
                             href={loc.directionsUrl}
@@ -712,6 +741,19 @@ const Checkout: React.FC = () => {
                       </a>
                     </div>
                   </div>
+                  {selectedPickupSite.id === "phoenix" && hasBulkItem && (phoenixBulkOverLimit ? (
+                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-snug text-red-900">
+                      <span className="font-bold">This bulk load is over the Phoenix limit of {PHOENIX_BULK_MAX_TONS} tons (~17 cu yd).</span>{" "}
+                      Pick up bulk at the Congress plant (same-day, 6 AM - 2 PM) or choose delivery.
+                    </div>
+                  ) : (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
+                      <span className="font-bold">Loose bulk at Phoenix is by appointment</span>, usually
+                      scheduled about 1 week out (max {PHOENIX_BULK_MAX_TONS} tons / ~17 cu yd). Choose a
+                      preferred time below and we will confirm your exact date by text. Bags, pallets, and
+                      super sacks load at your scheduled time without the wait.
+                    </div>
+                  ))}
                   <PickupReadyTime value={pickupReady} onChange={setPickupReady} />
                 </CardContent>
               </Card>

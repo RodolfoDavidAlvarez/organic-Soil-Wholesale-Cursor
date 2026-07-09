@@ -16,23 +16,18 @@ export const READY_IN_MS = READY_IN_MINUTES * 60 * 1000;
 export const ASAP_VALIDATION_TOLERANCE_MS = 2 * 60 * 1000;
 export const SAME_DAY_CUTOFF_HOUR = 16;
 export const HOURS_LABEL = 'Tue-Sat, 8 AM-4 PM (closed 1-2 PM)';
-export const PICKUP_ADDRESS = '1634 N 19th Ave, Phoenix, AZ 85009';
+export const PICKUP_ADDRESS = '18980 Stanton Rd, Congress, AZ 85332';
 
 export function pickupDirectionsUrl(addressLine) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressLine)}`;
 }
 
-/** Matches OSW Sales Portal + plant locations reference */
+/** Matches OSW Sales Portal + plant locations reference.
+ *  2026-07-08 (KPI Strategic Meeting Jul 7): Congress Processing Plant is the
+ *  primary pickup site (truck scale on site, Kerry Cooper onsite contact,
+ *  pickup 6 AM - 2 PM). Phoenix yard pickup is BY APPOINTMENT ONLY, scheduled
+ *  about 1 week out. Congress is listed first = checkout default. */
 export const PICKUP_LOCATIONS = [
-  {
-    id: 'phoenix',
-    locationId: 1,
-    name: 'Phoenix Distribution Center',
-    shortLabel: 'Phoenix HQ',
-    addressLine: '1634 N 19th Ave, Phoenix, AZ 85009',
-    pickupLocationLabel: 'Phoenix Warehouse',
-    directionsUrl: pickupDirectionsUrl('1634 N 19th Ave, Phoenix, AZ 85009'),
-  },
   {
     id: 'congress',
     locationId: 2,
@@ -40,9 +35,33 @@ export const PICKUP_LOCATIONS = [
     shortLabel: 'Congress, AZ',
     addressLine: '18980 Stanton Rd, Congress, AZ 85332',
     pickupLocationLabel: 'Congress Plant',
-    directionsUrl: pickupDirectionsUrl('18980 Stanton Rd, Congress, AZ 85332'),
+    // Remote site — navigate by exact pin (34°10'42.1"N 112°47'18.2"W), the
+    // street address geocodes unreliably. Pin per _reference/plant-locations.md
+    directionsUrl: pickupDirectionsUrl('34.178361,-112.788389'),
+    mapsShortUrl: 'https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA',
+    pickupNote: 'Same-day pickup · 6 AM - 2 PM',
+  },
+  {
+    id: 'phoenix',
+    locationId: 1,
+    name: 'Phoenix Distribution Center',
+    shortLabel: 'Phoenix, AZ',
+    addressLine: '1634 N 19th Ave, Phoenix, AZ 85009',
+    pickupLocationLabel: 'Phoenix Warehouse',
+    // Exact pin 33°28'04.6"N 112°06'03.4"W per _reference/plant-locations.md
+    directionsUrl: pickupDirectionsUrl('33.467944,-112.100944'),
+    // Bags/pallets/totes load normally. LOOSE BULK at Phoenix needs the wheel
+    // loader coordinated (~1 week out), is capped at 12 tons (~17 cu yd at
+    // 50 lb/cf), and is limited to dairy compost + mulch (soil and worm
+    // castings coming). Congress handles any bulk size same-day on the scale.
+    pickupNote: 'Bags, pallets & totes · loose bulk by appointment',
   },
 ];
+
+/** Phoenix loose-bulk pickup cap: 12 tons. Cu yd estimated at 50 lb/cf
+ *  (1 cu yd = 27 cf × 50 lb = 1,350 lb ≈ 0.675 ton → ~17 cu yd max). */
+export const PHOENIX_BULK_MAX_TONS = 12;
+export const TONS_PER_CU_YD = 0.675;
 
 export const PICKUP_SLOTS = SLOT_START_HOURS.map((startHour) => ({
   startHour,

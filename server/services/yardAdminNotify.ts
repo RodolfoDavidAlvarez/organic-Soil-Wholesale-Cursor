@@ -38,7 +38,7 @@ export function formatYardArrivalSms(details: YardArrivalDetails): string {
   if (details.vehicleInfo) {
     lines.push(details.vehicleInfo);
   }
-  lines.push("", "1634 N 19th Ave · go meet them at the gate");
+  lines.push("", "Congress Processing Plant, 18980 Stanton Rd · go meet them at the scale");
   return lines.join("\n");
 }
 

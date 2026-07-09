@@ -800,7 +800,6 @@ export const OrderForm: React.FC = () => {
                     className="w-full rounded-md border border-gray-300 px-3 py-2"
                   >
                     <option value="">Select a location</option>
-                    <option value="phoenix">Phoenix, AZ</option>
                     <option value="congress">Congress, AZ</option>
                     <option value="vicksburg">Vicksburg, AZ (Bulk Only: Dairy Compost)</option>
                   </select>

@@ -58,9 +58,8 @@ export async function sendSms({ to, body }: SendSmsArgs): Promise<SendSmsResult>
 }
 
 export const PICKUP_ADDRESS_LINES = [
-  "1634 N 19th Ave",
-  "Phoenix, AZ 85009",
-  "Enter through 19th Avenue gate",
+  "Congress Processing Plant",
+  "18980 Stanton Rd, Congress, AZ 85332",
 ];
 
 export function formatPickupConfirmationSms(args: {

@@ -426,7 +426,7 @@ const Products = () => {
           <div className="mb-3 flex flex-col justify-between gap-3 md:mb-4 md:flex-row md:items-end md:gap-4">
             <div>
               <p className="mb-1 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027]">
-                <CheckCircle2 className="h-3 w-3" /> Phoenix yard pickup · delivery available
+                <CheckCircle2 className="h-3 w-3" /> Pickup &amp; delivery across Arizona
               </p>
               <h2 className="font-heading text-xl font-bold leading-tight text-stone-900 md:hidden">
                 Pay &amp; pick up organic soil products.
@@ -438,14 +438,26 @@ const Products = () => {
                 Buy the 4 fastest pickup products online, or request bulk pricing for pallets,
                 super sacks, mixed loads, and truckload delivery.
               </p>
-              <Link
-                href="/yard-map"
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320] md:mt-3"
-                aria-label="Open Phoenix yard pickup map"
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                Pickup map: 1634 N 19th Ave.
-              </Link>
+              <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3">
+                <a
+                  href="https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320]"
+                  aria-label="Open Congress plant location in Google Maps"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Congress plant pickup · 6 AM - 2 PM
+                </a>
+                <Link
+                  href="/yard-map"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm transition hover:bg-[#264027]/5"
+                  aria-label="Phoenix yard pickup by appointment"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Phoenix yard · by appointment
+                </Link>
+              </div>
             </div>
           </div>
 

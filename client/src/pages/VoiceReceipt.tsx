@@ -23,9 +23,9 @@ type VoiceOrder = {
 };
 
 const PICKUP_ADDRESS = {
-  street: "1634 N 19th Ave",
-  city: "Phoenix, AZ 85009",
-  entry: "Enter through the 19th Avenue gate",
+  street: "18980 Stanton Rd",
+  city: "Congress, AZ 85332",
+  entry: "Congress Processing Plant, check in at the scale",
 };
 
 function formatCurrency(amount: number) {

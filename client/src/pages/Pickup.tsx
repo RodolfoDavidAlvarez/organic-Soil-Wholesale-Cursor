@@ -300,8 +300,8 @@ export default function Pickup() {
   return (
     <>
       <SEO
-        title="Organic Soil Pickup in Phoenix"
-        description="Buy organic soil, compost, worm castings, and mulch online. Pick up at the Organic Soil Wholesale Phoenix yard at 1634 N 19th Ave."
+        title="Organic Soil Pickup in Arizona"
+        description="Buy organic soil, compost, worm castings, and mulch online. Pick up at the Organic Soil Wholesale Congress Processing Plant, 18980 Stanton Rd, Congress, AZ."
         keywords="organic soil pickup phoenix, compost near me, worm castings phoenix, mulch pickup phoenix, potting soil pickup"
         canonical={absoluteUrl("/pickup")}
         structuredData={[buildLocalBusinessSchema(), buildProductsItemListSchema()]}
@@ -313,13 +313,13 @@ export default function Pickup() {
             <div>
               <p className="inline-flex items-center gap-2 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
                 <PackageCheck className="h-4 w-4" />
-                Organic Soil Pickup in Phoenix
+                Organic Soil Pickup in Arizona
               </p>
               <h1 className="mt-4 max-w-4xl font-heading text-4xl font-black leading-[1.05] text-stone-950 md:text-6xl">
-                Buy organic soil, compost, worm castings, and mulch online. Pick up at our Phoenix yard.
+                Buy organic soil, compost, worm castings, and mulch online. Pick up at our Congress, AZ plant.
               </h1>
               <p className="mt-4 max-w-2xl text-lg font-medium leading-relaxed text-stone-700">
-                Pay online. Pick up at 1634 N 19th Ave. Choose bags, pallets, super sacks, or bulk pickup.
+                Pay online. Same-day pickup at our Congress, AZ plant (18980 Stanton Rd, 6 AM - 2 PM), or Phoenix by appointment. Choose bags, pallets, super sacks, or bulk pickup.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Button asChild className="h-12 rounded-lg bg-[#264027] px-6 text-base font-black hover:bg-[#1f3320]">
