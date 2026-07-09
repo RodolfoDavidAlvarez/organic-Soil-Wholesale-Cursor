@@ -30,7 +30,10 @@ import {
   CreditCard,
   Compass,
   Star,
+  Phone,
 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { useEffect, useState } from "react";
 import { productsData } from "@/data/productData";
 import { useLocation } from "wouter";
@@ -470,18 +473,27 @@ const Home = () => {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button
                   size="lg"
-                  onClick={() => navigate("/products")}
+                  onClick={() => {
+                    trackEvent("Hero CTA Clicked", { cta: "shop_products" });
+                    navigate("/products");
+                  }}
                   className="h-14 gap-2 bg-[#d6c1a0] px-8 text-base font-semibold text-stone-900 shadow-lg hover:bg-[#c4a878]"
                 >
-                  Get a Bulk Quote <ArrowRight className="h-5 w-5" />
+                  Shop Soil Products <ArrowRight className="h-5 w-5" />
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => navigate("/products")}
+                  asChild
                   className="h-14 gap-2 border-white/30 bg-white/5 px-8 text-base font-semibold text-white backdrop-blur hover:bg-white/15 hover:text-white"
                 >
-                  Browse Products
+                  <a
+                    href={CUSTOMER_SUPPORT_PHONE_TEL}
+                    onClick={() => trackEvent("Hero CTA Clicked", { cta: "call" })}
+                  >
+                    <Phone className="h-5 w-5" />
+                    Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+                  </a>
                 </Button>
               </div>
               <div className="mt-10 grid grid-cols-3 gap-6 border-t border-white/15 pt-6 text-sm text-stone-300">

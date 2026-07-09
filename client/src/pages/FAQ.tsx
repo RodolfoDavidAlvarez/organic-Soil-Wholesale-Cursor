@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Link } from "wouter";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { Button } from "@/components/ui/button";
 
 const FAQ = () => {
@@ -87,6 +88,12 @@ const FAQ = () => {
                 Contact Our Support Team
               </Button>
             </Link>
+            <p className="text-sm text-neutral-700">
+              Fastest: call{" "}
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-semibold text-primary hover:underline">
+                {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+              </a>
+            </p>
           </div>
         </div>
 
@@ -107,8 +114,13 @@ const FAQ = () => {
               <p className="text-neutral-700 mb-4">
                 Expert advice on maximizing your growing potential with our organic soil products.
               </p>
-              <a href="#" className="text-primary hover:underline font-medium">
-                Read Our Blog →
+              <a
+                href="https://weareufe.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Visit Our Education Platform →
               </a>
             </div>
 

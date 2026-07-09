@@ -15,6 +15,7 @@ import {
 import { PayPickupGrid } from "@/components/PayPickupGrid";
 import { buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
 import { trackEvent } from "@/lib/analytics";
+import TrustStrip from "@/components/TrustStrip";
 import { AlertCircle, CheckCircle2, ChevronRight, FileText, Loader2, MapPin, Truck } from "lucide-react";
 
 const SIZE_FORMATS = [
@@ -423,9 +424,10 @@ const Products = () => {
       {/* Section 1 — Pay & Pick Up (the 4 mains, MOS-driven pricing, slot booking) */}
       <section id="pay-pickup" className="bg-gradient-to-b from-stone-50 to-white pt-2 pb-[calc(env(safe-area-inset-bottom)+7rem)] md:pt-5 md:pb-12">
         <div className="container mx-auto px-4">
-          <div className="mb-3 flex flex-col justify-between gap-3 md:mb-4 md:flex-row md:items-end md:gap-4">
+          <div className="mb-2 flex flex-col justify-between gap-3 md:mb-4 md:flex-row md:items-end md:gap-4">
             <div>
-              <p className="mb-1 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027]">
+              {/* Mobile: heading only — first product card must be visible without scrolling */}
+              <p className="mb-1 hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#264027] md:inline-flex">
                 <CheckCircle2 className="h-3 w-3" /> Pickup &amp; delivery across Arizona
               </p>
               <h2 className="font-heading text-xl font-bold leading-tight text-stone-900 md:hidden">
@@ -434,38 +436,50 @@ const Products = () => {
               <h2 className="hidden font-heading text-3xl font-bold leading-tight text-stone-900 md:block">
                 Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
               </h2>
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2">
+              <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2 md:block">
                 Buy the 4 fastest pickup products online, or request bulk pricing for pallets,
                 super sacks, mixed loads, and truckload delivery.
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3">
-                <a
-                  href="https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320]"
-                  aria-label="Open Congress plant location in Google Maps"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  Congress plant pickup · 6 AM - 2 PM
-                </a>
-                <Link
-                  href="/yard-map"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm transition hover:bg-[#264027]/5"
-                  aria-label="Phoenix yard pickup by appointment"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  Phoenix yard · by appointment
-                </Link>
-              </div>
             </div>
           </div>
 
           <PayPickupGrid />
 
+          {/* Pickup logistics — shown after the products, where they're relevant */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:mt-4">
+            <a
+              href="https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("Pickup Pill Clicked", { location: "congress" })}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#264027] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1f3320]"
+              aria-label="Open Congress plant location in Google Maps"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Congress plant pickup · 6 AM - 2 PM
+            </a>
+            <Link
+              href="/yard-map"
+              onClick={() => trackEvent("Pickup Pill Clicked", { location: "phoenix_yard" })}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm transition hover:bg-[#264027]/5"
+              aria-label="Phoenix yard — loose bulk pickup by appointment"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Phoenix yard · bulk by appointment
+            </Link>
+            <Link
+              href="/pickup"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-stone-600 underline-offset-2 hover:text-stone-900 hover:underline"
+            >
+              Pickup details →
+            </Link>
+          </div>
+
           <DeliveryEligibilityCheck />
 
           <PickupFormatsSection />
+
+          <TrustStrip className="mt-6" page="/products" />
 
           <p className="mt-4 text-center text-xs text-stone-500 md:hidden">
             Need bulk or specialty? <a href="#request-quote" className="font-semibold text-stone-700 underline">Request a quote</a>.

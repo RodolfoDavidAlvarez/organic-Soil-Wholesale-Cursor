@@ -9,6 +9,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Trash2, ShoppingBag, Plus } from "lucide-react";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
+import { trackEvent, trackEcommerceEvent } from "@/lib/analytics";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const fmt = (n: number): string => {
   if (n >= 1000) return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
@@ -157,6 +159,12 @@ export const SimpleOrderForm: React.FC = () => {
 
       clearCart();
       setShowThankYou(true);
+      trackEvent("Quote Request Submitted", { source: "order_page", product_count: productRows.length });
+      trackEcommerceEvent("generate_lead", {
+        lead_type: "quote_form",
+        source: "order_page",
+        pickup_sales_channel: "osw_yard",
+      });
       toast({ title: "Quote Request Submitted", description: "We'll contact you shortly with pricing." });
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -186,7 +194,18 @@ export const SimpleOrderForm: React.FC = () => {
         </p>
         <div className="space-y-4">
           <p className="text-sm text-gray-500">Reference: #{Date.now().toString().slice(-6)}</p>
-          <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button asChild className="bg-green-600 hover:bg-green-700">
+              <Link href="/products">Browse pickup products</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL}>Need it today? Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}</a>
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Same-day pickup at our Congress, AZ plant, 6 AM - 2 PM.
+          </p>
+          <Button onClick={resetForm} variant="ghost" className="text-gray-500">
             Submit Another Request
           </Button>
         </div>
