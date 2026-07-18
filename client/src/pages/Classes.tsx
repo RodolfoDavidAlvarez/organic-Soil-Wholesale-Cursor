@@ -1,6 +1,7 @@
 import { useState } from "react";
 import SEO from "@/components/layout/SEO";
 import { Sprout, MapPin, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { PHOENIX_YARD_DIRECTIONS_URL } from "@/config/contact";
 
 /**
  * /classes — Garden Classes landing page.
@@ -12,9 +13,7 @@ import { Sprout, MapPin, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react
 
 const SSW_PHONE_DIAL = "+16026370032";
 const SSW_PHONE_DISPLAY = "(602) 637-0032";
-const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-  "1634 N 19th Ave, Phoenix AZ 85009"
-)}`;
+const PHOENIX_DIRECTIONS_URL = PHOENIX_YARD_DIRECTIONS_URL;
 
 type FormState =
   | { status: "idle" }

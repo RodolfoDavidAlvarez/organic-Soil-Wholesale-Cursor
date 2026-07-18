@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Organic Soil Wholesale Phoenix yard entrance map</title>
+  <desc id="desc">Enter from the south gate on Grand Avenue, drive straight north beside the Soil Seed and Water office, make a ninety-degree left turn, and continue west to Organic Soil Wholesale pickup and loading.</desc>
+  <defs>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#17261a" flood-opacity="0.14"/>
+    </filter>
+    <marker id="routeArrow" markerWidth="28" markerHeight="28" refX="24" refY="14" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L28,14 L0,28 Z" fill="#2d6845"/>
+    </marker>
+    <marker id="northArrow" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L18,9 L0,18 Z" fill="#23452e"/>
+    </marker>
+    <pattern id="parking" width="58" height="58" patternUnits="userSpaceOnUse">
+      <path d="M0 0V58" stroke="#c6b99f" stroke-width="2" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#f7f3ea"/>
+
+  <!-- Yard and property, matching the supplied aerial orientation -->
+  <path d="M240 0H1600V1000H1180L680 485Z" fill="#e5dac4"/>
+  <path d="M310 60H1530V910H1205L725 425Z" fill="#eee6d7" stroke="#b9a278" stroke-width="5"/>
+  <path d="M405 95H1490V865H1228L775 405Z" fill="url(#parking)" opacity="0.75"/>
+
+  <!-- Grand Avenue and railroad -->
+  <path d="M-150 20L155 0L1245 1000H845Z" fill="#626764"/>
+  <path d="M105 0L1190 1000" stroke="#e6ad42" stroke-width="15" opacity="0.95"/>
+  <path d="M30 5L1110 1000" stroke="#f7f3ea" stroke-width="5" stroke-dasharray="46 30" opacity="0.92"/>
+  <path d="M-170 195L670 1000" stroke="#474b48" stroke-width="30"/>
+  <path d="M-152 172L690 980" stroke="#d9cfbf" stroke-width="5" stroke-dasharray="18 15"/>
+  <text x="110" y="255" transform="rotate(43 110 255)" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800" letter-spacing="2">GRAND AVENUE</text>
+  <text x="26" y="425" transform="rotate(43 26 425)" fill="#e9e5dc" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">PHOENIX–WICKENBURG HIGHWAY</text>
+  <text x="55" y="765" transform="rotate(43 55 765)" fill="#5d5b53" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800">RAILROAD</text>
+
+  <!-- Buildings based on supplied aerial -->
+  <rect x="1050" y="425" width="265" height="390" rx="10" fill="#fff" stroke="#405943" stroke-width="5" filter="url(#shadow)"/>
+  <rect x="1080" y="465" width="205" height="116" rx="7" fill="#dbe7d8"/>
+  <text x="1182" y="505" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">SOIL SEED &amp; WATER</text>
+  <text x="1182" y="537" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">OFFICE</text>
+  <text x="1182" y="646" text-anchor="middle" fill="#566157" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="800">CHECK-IN</text>
+
+  <rect x="1325" y="710" width="205" height="155" rx="10" fill="#cbc7bd" stroke="#837e72" stroke-width="4"/>
+  <text x="1427" y="775" text-anchor="middle" fill="#4e4b45" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800">AGAVE</text>
+  <text x="1427" y="803" text-anchor="middle" fill="#4e4b45" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800">ENVIRONMENTAL</text>
+
+  <!-- Pickup zone -->
+  <rect x="475" y="185" width="420" height="155" rx="16" fill="#fff" stroke="#23452e" stroke-width="5" filter="url(#shadow)"/>
+  <rect x="505" y="215" width="360" height="44" rx="7" fill="#23452e"/>
+  <text x="685" y="245" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="900" letter-spacing="0.8">ORGANIC SOIL WHOLESALE</text>
+  <text x="685" y="302" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="900">PICKUP &amp; LOADING</text>
+
+  <!-- Exact route: straight north, then a clear 90-degree left turn -->
+  <path d="M1110 930L1030 842L1018 430Q1018 365 953 365H390L285 285" fill="none" stroke="#fff" stroke-width="39" stroke-linecap="round" stroke-linejoin="round" opacity="0.98"/>
+  <path d="M1110 930L1030 842L1018 430Q1018 365 953 365H390L285 285" fill="none" stroke="#2d6845" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#routeArrow)"/>
+
+  <!-- Route steps -->
+  <g filter="url(#shadow)">
+    <circle cx="1030" cy="695" r="27" fill="#fff" stroke="#2d6845" stroke-width="6"/>
+    <text x="1030" y="704" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900">1</text>
+    <rect x="760" y="646" width="235" height="86" rx="13" fill="#fff" stroke="#d8cfbf" stroke-width="3"/>
+    <text x="878" y="681" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="900">DRIVE STRAIGHT</text>
+    <text x="878" y="710" text-anchor="middle" fill="#6a655b" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700">along the office</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <circle cx="1013" cy="365" r="27" fill="#fff" stroke="#2d6845" stroke-width="6"/>
+    <text x="1013" y="374" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900">2</text>
+    <rect x="1048" y="325" width="260" height="82" rx="13" fill="#fff" stroke="#d8cfbf" stroke-width="3"/>
+    <text x="1178" y="359" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="900">TURN LEFT 90°</text>
+    <text x="1178" y="388" text-anchor="middle" fill="#6a655b" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700">across the yard</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <circle cx="520" cy="365" r="27" fill="#fff" stroke="#2d6845" stroke-width="6"/>
+    <text x="520" y="374" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900">3</text>
+    <rect x="380" y="397" width="310" height="80" rx="13" fill="#fff" stroke="#d8cfbf" stroke-width="3"/>
+    <text x="535" y="431" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="900">FOLLOW TO PICKUP</text>
+    <text x="535" y="459" text-anchor="middle" fill="#6a655b" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700">loading is on your left</text>
+  </g>
+
+  <!-- Entry pin -->
+  <g filter="url(#shadow)">
+    <path d="M1138 902C1138 858 1080 858 1080 902C1080 931 1109 965 1109 965C1109 965 1138 931 1138 902Z" fill="#b5864f" stroke="#fff" stroke-width="6"/>
+    <circle cx="1109" cy="902" r="10" fill="#fff"/>
+    <rect x="1190" y="850" width="330" height="102" rx="15" fill="#fff" stroke="#b5864f" stroke-width="4"/>
+    <text x="1355" y="889" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="900">ENTER HERE</text>
+    <text x="1355" y="923" text-anchor="middle" fill="#6a604e" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">South gate on Grand Avenue</text>
+  </g>
+
+  <!-- Header -->
+  <g filter="url(#shadow)">
+    <rect x="965" y="46" width="565" height="190" rx="22" fill="#fff" stroke="#23452e" stroke-width="5"/>
+    <text x="1248" y="88" text-anchor="middle" fill="#b5864f" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="900" letter-spacing="3">PHOENIX YARD PICKUP</text>
+    <text x="1248" y="132" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="35" font-weight="900">Enter from Grand Avenue</text>
+    <text x="1248" y="173" text-anchor="middle" fill="#4e594f" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="800">1634 N 19th Ave · Phoenix, AZ 85009</text>
+    <text x="1248" y="207" text-anchor="middle" fill="#746b5b" font-family="Arial, Helvetica, sans-serif" font-size="17">Entrance: 33.467333, -112.101250</text>
+  </g>
+
+  <!-- North and scale note -->
+  <g transform="translate(1450 275)">
+    <path d="M0 52V0" stroke="#23452e" stroke-width="6" marker-end="url(#northArrow)"/>
+    <text x="0" y="80" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="900">NORTH</text>
+  </g>
+  <text x="1520" y="982" text-anchor="end" fill="#756f63" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="800">ILLUSTRATED ROUTE · NOT TO SCALE</text>
+</svg>

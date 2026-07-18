@@ -1,32 +1,32 @@
 /**
  * OSW pickup schedule — single source of truth (America/Phoenix).
- * Open Tue-Sat 8 AM-4 PM, closed 1-2 PM lunch, same-day with 30 min notice.
+ * Bulk pickup rules: Congress can be ready in about 30 minutes. Phoenix is
+ * appointment-only and must be scheduled about 1 week ahead.
  */
 
 export const PICKUP_TIMEZONE = 'America/Phoenix';
-export const OPEN_DAYS = new Set([2, 3, 4, 5, 6]); // Tue-Sat
-export const SLOT_START_HOURS = [8, 9, 10, 11, 14, 15];
-export const LUNCH_START_HOUR = 13;
+export const OPEN_DAYS = new Set([1, 2, 3, 4, 5]); // Mon-Fri
+export const SLOT_START_HOURS = [6, 7, 8, 9, 10, 11, 12, 13];
+export const LUNCH_START_HOUR = 14;
 export const LUNCH_END_HOUR = 14;
-export const OPEN_HOUR = 8;
-export const CLOSE_HOUR = 16;
+export const OPEN_HOUR = 6;
+export const CLOSE_HOUR = 14;
 export const MIN_NOTICE_MS = 30 * 60 * 1000;
-export const READY_IN_MINUTES = 20;
+export const READY_IN_MINUTES = 30;
 export const READY_IN_MS = READY_IN_MINUTES * 60 * 1000;
 export const ASAP_VALIDATION_TOLERANCE_MS = 2 * 60 * 1000;
-export const SAME_DAY_CUTOFF_HOUR = 16;
-export const HOURS_LABEL = 'Tue-Sat, 8 AM-4 PM (closed 1-2 PM)';
+export const SAME_DAY_CUTOFF_HOUR = 14;
+export const HOURS_LABEL = 'Mon-Fri, 6 AM-2 PM';
 export const PICKUP_ADDRESS = '18980 Stanton Rd, Congress, AZ 85332';
 
 export function pickupDirectionsUrl(addressLine) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressLine)}`;
 }
 
-/** Matches OSW Sales Portal + plant locations reference.
- *  2026-07-08 (KPI Strategic Meeting Jul 7): Congress Processing Plant is the
- *  primary pickup site (truck scale on site, Kerry Cooper onsite contact,
- *  pickup 6 AM - 2 PM). Phoenix yard pickup is BY APPOINTMENT ONLY, scheduled
- *  about 1 week out. Congress is listed first = checkout default. */
+/** Public pickup locations.
+ *  Congress Processing Plant has the truck scale and handles bulk pickup.
+ *  Phoenix handles bags, pallets, and totes normally; loose bulk there is by
+ *  appointment only. */
 export const PICKUP_LOCATIONS = [
   {
     id: 'congress',
@@ -39,27 +39,31 @@ export const PICKUP_LOCATIONS = [
     // street address geocodes unreliably. Pin per _reference/plant-locations.md
     directionsUrl: pickupDirectionsUrl('34.178361,-112.788389'),
     mapsShortUrl: 'https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA',
-    pickupNote: 'Same-day pickup · 6 AM - 2 PM',
+    pickupNote: 'Bulk pickup by scale · ready in about 30 min',
+    minLeadDays: 0,
+    allowAsap: true,
+    bulkMinLeadDays: 0,
+    bulkAllowAsap: true,
   },
   {
     id: 'phoenix',
     locationId: 1,
-    name: 'Phoenix Distribution Center',
+    name: 'Phoenix Yard',
     shortLabel: 'Phoenix, AZ',
     addressLine: '1634 N 19th Ave, Phoenix, AZ 85009',
-    pickupLocationLabel: 'Phoenix Warehouse',
-    // Exact pin 33°28'04.6"N 112°06'03.4"W per _reference/plant-locations.md
-    directionsUrl: pickupDirectionsUrl('33.467944,-112.100944'),
-    // Bags/pallets/totes load normally. LOOSE BULK at Phoenix needs the wheel
-    // loader coordinated (~1 week out), is capped at 12 tons (~17 cu yd at
-    // 50 lb/cf), and is limited to dairy compost + mulch (soil and worm
-    // castings coming). Congress handles any bulk size same-day on the scale.
+    pickupLocationLabel: 'Phoenix Yard',
+    // Exact customer entrance pin: 33°28'02.4"N 112°06'04.5"W.
+    directionsUrl: pickupDirectionsUrl('33.467333,-112.101250'),
     pickupNote: 'Bags, pallets & totes · loose bulk by appointment',
+    minLeadDays: 0,
+    allowAsap: true,
+    bulkMinLeadDays: 7,
+    bulkAllowAsap: false,
   },
 ];
 
-/** Phoenix loose-bulk pickup cap: 12 tons. Cu yd estimated at 50 lb/cf
- *  (1 cu yd = 27 cf × 50 lb = 1,350 lb ≈ 0.675 ton → ~17 cu yd max). */
+/** Cu yd estimated at 50 lb/cf
+ *  (1 cu yd = 27 cf × 50 lb = 1,350 lb ≈ 0.675 ton). */
 export const PHOENIX_BULK_MAX_TONS = 12;
 export const TONS_PER_CU_YD = 0.675;
 
@@ -75,7 +79,6 @@ function formatSlotLabel(startHour) {
     if (h < 12) return `${h} AM`;
     return `${h - 12} PM`;
   };
-  if (startHour === 11) return '11 AM – 12 PM';
   return `${fmt(startHour)} – ${fmt(endHour)}`;
 }
 
@@ -200,7 +203,7 @@ export function getAvailableDatesForProducts({
 
 export function getTimeSlotsForDate(dateYmd) {
   if (!isOpenPickupDay(dateYmd)) {
-    return { slots: [], message: 'Pickup available Tue-Sat only' };
+    return { slots: [], message: 'Pickup available Mon-Fri only' };
   }
   const earliestMs = Date.now() + MIN_NOTICE_MS;
   const slots = getBookableSlots(dateYmd, earliestMs).map((slot) => ({
@@ -412,7 +415,7 @@ export function formatReadyLabel(readyAtIso, opts = {}) {
 
     let label =
       resolvedStatus === 'asap'
-        ? 'Ready in about 20 minutes'
+        ? 'Ready in about 30 minutes'
         : parts.ymd === todayYmd
           ? `Ready around ${clock}`
           : parts.ymd === tomorrowYmd
@@ -427,7 +430,7 @@ export function formatReadyLabel(readyAtIso, opts = {}) {
         timeZone: PICKUP_TIMEZONE,
       });
       if (resolvedStatus === 'asap') {
-        return `Ready in about 20 minutes, ${datePart}`;
+        return `Ready in about 30 minutes, ${datePart}`;
       }
       return `Ready ~${clock}, ${datePart}`;
     }
@@ -481,8 +484,18 @@ export function resolveCheckoutPickupTime({
   pickupMode = 'asap',
   pickupTime = null,
   nowMs = Date.now(),
+  allowAsap = true,
+  minLeadDays = 0,
 } = {}) {
   const mode = pickupMode === 'schedule' ? 'schedule' : 'asap';
+
+  if (mode === 'asap' && allowAsap === false) {
+    return {
+      ok: false,
+      reason: 'schedule_required',
+      message: 'Please schedule this pickup in advance.',
+    };
+  }
 
   if (mode === 'schedule') {
     if (!pickupTime) {
@@ -491,6 +504,14 @@ export function resolveCheckoutPickupTime({
     const check = validatePickupIso(pickupTime);
     if (!check.ok) {
       return { ok: false, reason: check.reason, message: check.message };
+    }
+    const minLeadMs = minLeadDays * 24 * 60 * 60 * 1000;
+    if (minLeadMs > 0 && new Date(check.pickupAtIso).getTime() < nowMs + minLeadMs) {
+      return {
+        ok: false,
+        reason: 'lead_days',
+        message: `Please choose a pickup slot at least ${minLeadDays} days out.`,
+      };
     }
     const parts = phoenixParts(new Date(check.pickupAtIso));
     const slot = PICKUP_SLOTS.find((s) => s.startHour === parts.hour);

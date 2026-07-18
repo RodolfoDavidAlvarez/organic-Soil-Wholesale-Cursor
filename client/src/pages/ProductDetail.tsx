@@ -1497,9 +1497,9 @@ const ProductDetail = () => {
                             <div className="rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5">
                               <p className="text-xs font-bold uppercase tracking-wider text-primary">Where you&apos;ll pick up</p>
                               <p className="mt-1 text-sm leading-snug text-stone-700">
-                                <span className="font-semibold">Congress plant</span> — same-day, 6 AM - 2 PM, weighed on our scale
+                                <span className="font-semibold">Congress plant</span> — ready in about 30 min, 6 AM - 2 PM, weighed on our scale
                                 <span className="text-stone-400"> · </span>
-                                <span className="font-semibold">Phoenix yard</span> — by appointment, 12-ton max
+                                <span className="font-semibold">Phoenix yard</span> — schedule about 1 week ahead, 12-ton max
                               </p>
                               <p className="mt-0.5 text-xs text-muted-foreground">You&apos;ll choose your pickup location at checkout.</p>
                             </div>

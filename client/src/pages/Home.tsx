@@ -33,7 +33,7 @@ import {
   Phone,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
-import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL, PHOENIX_YARD_DIRECTIONS_URL, PHOENIX_YARD_ENTRANCE_COORDINATES } from "@/config/contact";
 import { useEffect, useState } from "react";
 import { productsData } from "@/data/productData";
 import { useLocation } from "wouter";
@@ -190,9 +190,10 @@ const Home = () => {
     { name: "Phoenix, AZ", zip: "85001", deliverable: true, coordinates: { lat: 33.4484, lng: -112.074 } },
   ];
 
-  const PHOENIX_COORDINATES = { lat: 33.467944, lng: -112.100944 };
+  const [phoenixLat, phoenixLng] = PHOENIX_YARD_ENTRANCE_COORDINATES.split(",");
+  const PHOENIX_COORDINATES = { lat: Number(phoenixLat), lng: Number(phoenixLng) };
   const PHOENIX_MAP_EMBED_URL = `https://www.google.com/maps?q=${PHOENIX_COORDINATES.lat},${PHOENIX_COORDINATES.lng}&z=13&output=embed`;
-  const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("1634 N 19th Ave, Phoenix AZ 85009")}`;
+  const PHOENIX_DIRECTIONS_URL = PHOENIX_YARD_DIRECTIONS_URL;
 
   // Size categories data
   const sizeCategories = [

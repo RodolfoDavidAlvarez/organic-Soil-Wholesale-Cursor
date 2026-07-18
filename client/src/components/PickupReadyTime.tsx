@@ -23,6 +23,9 @@ interface PickupReadyTimeProps {
   onChange: (selection: PickupReadySelection | null) => void;
   className?: string;
   refreshMs?: number;
+  allowAsap?: boolean;
+  minLeadDays?: number;
+  scheduleHelpText?: string;
 }
 
 type AsapResult = ReturnType<typeof computeAsapPickup>;
@@ -52,8 +55,11 @@ export function PickupReadyTime({
   onChange,
   className,
   refreshMs = 60_000,
+  allowAsap = true,
+  minLeadDays = 0,
+  scheduleHelpText,
 }: PickupReadyTimeProps) {
-  const [mode, setMode] = useState<PickupTimingMode>(value?.pickupMode ?? "asap");
+  const [mode, setMode] = useState<PickupTimingMode>(allowAsap ? (value?.pickupMode ?? "asap") : "schedule");
   const [tick, setTick] = useState(0);
   const [scheduleSlot, setScheduleSlot] = useState<PickupSelection | null>(
     value?.pickupMode === "schedule" && value.readyAt
@@ -66,6 +72,13 @@ export function PickupReadyTime({
   );
 
   const computedAsap = useMemo(() => computeAsapPickup(), [tick]);
+
+  useEffect(() => {
+    if (!allowAsap && mode !== "schedule") {
+      setMode("schedule");
+      onChange(null);
+    }
+  }, [allowAsap, mode, onChange]);
 
   useEffect(() => {
     if (mode !== "asap") return;
@@ -99,7 +112,8 @@ export function PickupReadyTime({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="grid grid-cols-2 gap-2">
+      <div className={cn("grid gap-2", allowAsap ? "grid-cols-2" : "grid-cols-1")}>
+        {allowAsap && (
         <button
           type="button"
           onClick={() => setMode("asap")}
@@ -113,8 +127,9 @@ export function PickupReadyTime({
           <span className="flex items-center gap-1.5 text-sm font-bold">
             <Clock className="h-4 w-4" /> ASAP
           </span>
-          <span className="text-[11px] font-medium text-stone-500">Ready in ~20 min</span>
+          <span className="text-[11px] font-medium text-stone-500">Ready in ~30 min</span>
         </button>
+        )}
         <button
           type="button"
           onClick={() => setMode("schedule")}
@@ -128,7 +143,9 @@ export function PickupReadyTime({
           <span className="flex items-center gap-1.5 text-sm font-bold">
             <Calendar className="h-4 w-4" /> Schedule
           </span>
-          <span className="text-[11px] font-medium text-stone-500">Pick a time slot</span>
+          <span className="text-[11px] font-medium text-stone-500">
+            {minLeadDays > 0 ? `At least ${minLeadDays} days out` : "Pick a time slot"}
+          </span>
         </button>
       </div>
 
@@ -151,7 +168,14 @@ export function PickupReadyTime({
           </div>
         </div>
       ) : (
-        <PickupSlotPicker value={scheduleSlot} onChange={setScheduleSlot} />
+        <>
+          {scheduleHelpText && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-medium leading-snug text-amber-900">
+              {scheduleHelpText}
+            </p>
+          )}
+          <PickupSlotPicker value={scheduleSlot} onChange={setScheduleSlot} minLeadDays={minLeadDays} />
+        </>
       )}
 
       <p className="text-xs text-stone-500">{HOURS_LABEL}</p>

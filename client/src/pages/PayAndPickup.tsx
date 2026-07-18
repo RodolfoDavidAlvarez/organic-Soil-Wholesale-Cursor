@@ -16,6 +16,7 @@ import {
   CHECKIN_PHONE_DIAL,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_DIAL,
+  PHOENIX_YARD_DIRECTIONS_URL,
 } from "@/config/contact";
 import { trackEvent } from "@/lib/analytics";
 
@@ -46,9 +47,7 @@ import { trackEvent } from "@/lib/analytics";
 const MOS_API_BASE = "https://myorganicsoil.com";
 const SSW_PHONE_DIAL = CUSTOMER_SUPPORT_PHONE_DIAL;
 const SSW_PHONE_DISPLAY = CUSTOMER_SUPPORT_PHONE_DISPLAY;
-const PHOENIX_DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-  "1634 N 19th Ave, Phoenix AZ 85009"
-)}`;
+const PHOENIX_DIRECTIONS_URL = PHOENIX_YARD_DIRECTIONS_URL;
 
 type View = "welcome" | "arrival" | "arrivalOptions" | "repNotify" | "order" | "checkin";
 
@@ -903,9 +902,9 @@ export default function PayAndPickup() {
         description={
           isDirectCheckIn
             ? "At the Phoenix yard? Notify a Soil Seed & Water representative, check in for an existing order, or order and pick up."
-            : "Scan, order online, and pick up at the Phoenix yard. Dairy compost, worm castings, PlantPal nursery mix, Nature's Blanket Premium mulch."
+            : "Scan, order online, and pick up. Bulk pickup will ask Congress or Phoenix at checkout."
         }
-        keywords="pay and pickup soil, organic soil phoenix pickup, dairy compost pickup, worm castings pickup, plantpal pickup"
+        keywords="pay and pickup soil, organic soil pickup, dairy compost pickup, worm castings pickup, plantpal pickup"
         canonical={isDirectCheckIn ? "https://organicsoilwholesale.com/check-in" : "https://organicsoilwholesale.com/qr"}
         robots="noindex, nofollow"
       />

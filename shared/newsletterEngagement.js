@@ -14,6 +14,62 @@ function normalizeEmail(to) {
   return raw?.toLowerCase?.().trim() || null;
 }
 
+export async function subscribeNewsletterContact(supabase, { email, name, phone, customerCategory, source = 'website_newsletter_signup' }) {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedName = String(name || '').trim().slice(0, 120);
+  const normalizedPhone = String(phone || '').trim().slice(0, 30);
+  const normalizedCustomerCategory = String(customerCategory || '').trim().slice(0, 60);
+  const now = new Date().toISOString();
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('sp_customers')
+    .select('id, full_name, newsletter_subscribed, newsletter_unsubscribed_at, newsletter_verification_status, newsletter_source, newsletter_notes')
+    .ilike('email', normalizedEmail)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
+
+  if (existing) {
+    const optedOut = existing.newsletter_subscribed === false
+      || Boolean(existing.newsletter_unsubscribed_at)
+      || ['Bounced', 'Complained'].includes(existing.newsletter_verification_status);
+
+    if (optedOut) return { status: 'opted_out' };
+
+    const patch = {
+      newsletter_subscribed: true,
+      newsletter_source: existing.newsletter_source || source,
+      newsletter_notes: `${existing.newsletter_notes || ''}\n\n[Website opt-in ${now}]\nSource: ${source}\nConsent: explicit checkbox`.trim(),
+      updated_at: now,
+    };
+    if (!existing.full_name && normalizedName) patch.full_name = normalizedName;
+    if (normalizedPhone) patch.phone = normalizedPhone;
+    if (normalizedCustomerCategory) patch.newsletter_contact_type = normalizedCustomerCategory;
+
+    const { error } = await supabase.from('sp_customers').update(patch).eq('id', existing.id);
+    if (error) throw error;
+    return { status: 'subscribed', existing: true };
+  }
+
+  const { error } = await supabase.from('sp_customers').insert({
+    full_name: normalizedName || normalizedEmail.split('@')[0],
+    email: normalizedEmail,
+    phone: normalizedPhone || null,
+    source: 'email_marketing',
+    stage: 'lead',
+    newsletter_subscribed: true,
+    newsletter_label: 'Newsletter',
+    newsletter_source: source,
+    newsletter_contact_type: normalizedCustomerCategory || null,
+    newsletter_verification_status: 'Self-subscribed',
+    newsletter_notes: `[Website opt-in ${now}]\nSource: ${source}\nConsent: explicit checkbox`,
+    created_at: now,
+    updated_at: now,
+  });
+  if (error) throw error;
+  return { status: 'subscribed', existing: false };
+}
+
 function newsletterIdFromTags(tags) {
   const list = tags || [];
   const tag = list.find((t) => t.name === 'newsletter_id' || t.name === 'campaign');

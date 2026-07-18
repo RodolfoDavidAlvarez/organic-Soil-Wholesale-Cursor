@@ -40,7 +40,6 @@ const Checkout: React.FC = () => {
     [payItems]
   );
   // Loose-bulk tonnage in the cart — cu yd items estimated at 50 lb/cf.
-  // Phoenix loads loose bulk by appointment only, capped at PHOENIX_BULK_MAX_TONS.
   const bulkPickupTons = useMemo(
     () =>
       payItems.reduce((sum, item) => {
@@ -51,7 +50,6 @@ const Checkout: React.FC = () => {
     [payItems]
   );
   const hasBulkItem = bulkPickupTons > 0;
-  const phoenixBulkOverLimit = bulkPickupTons > PHOENIX_BULK_MAX_TONS;
 
   // Fulfillment
   const [fulfillment, setFulfillment] = useState<Fulfillment>(() => hasTruckloadItem ? "delivery" : "pickup");
@@ -60,6 +58,8 @@ const Checkout: React.FC = () => {
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
     [pickupSiteId],
   );
+  const isPhoenixBulkPickup = hasBulkItem && selectedPickupSite.id === "phoenix";
+  const phoenixBulkOverLimit = hasBulkItem && selectedPickupSite.id === "phoenix" && bulkPickupTons > PHOENIX_BULK_MAX_TONS;
 
   // Pickup state (ASAP ready time — auto-computed)
   const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(null);
@@ -167,8 +167,8 @@ const Checkout: React.FC = () => {
       setError("Your cart is empty");
       return;
     }
-    if (fulfillment === "pickup" && selectedPickupSite.id === "phoenix" && phoenixBulkOverLimit) {
-      setError(`Loose bulk pickups at Phoenix are limited to ${PHOENIX_BULK_MAX_TONS} tons (~17 cu yd). Pick up bulk at the Congress plant or choose delivery.`);
+    if (phoenixBulkOverLimit) {
+      setError(`Phoenix bulk pickup is limited to ${PHOENIX_BULK_MAX_TONS} tons. Choose Congress pickup or delivery.`);
       setActiveStep("fulfillment");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -535,7 +535,7 @@ const Checkout: React.FC = () => {
                       Pickup
                     </div>
                     <span className="text-[11px] font-medium leading-tight text-stone-500">
-                      {hasTruckloadItem ? "Truckload orders require delivery" : "Free · Congress or Phoenix"}
+                      {hasTruckloadItem ? "Truckload orders require delivery" : "Choose Congress or Phoenix"}
                     </span>
                   </button>
                   <button
@@ -578,6 +578,7 @@ const Checkout: React.FC = () => {
                             type="button"
                             onClick={() => {
                               setPickupSiteId(loc.id);
+                              setPickupReady(null);
                               trackEvent("Checkout Pickup Location Selected", {
                                 pickup_site: loc.id,
                                 location_id: loc.locationId,
@@ -741,20 +742,40 @@ const Checkout: React.FC = () => {
                       </a>
                     </div>
                   </div>
-                  {selectedPickupSite.id === "phoenix" && hasBulkItem && (phoenixBulkOverLimit ? (
-                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-snug text-red-900">
-                      <span className="font-bold">This bulk load is over the Phoenix limit of {PHOENIX_BULK_MAX_TONS} tons (~17 cu yd).</span>{" "}
-                      Pick up bulk at the Congress plant (same-day, 6 AM - 2 PM) or choose delivery.
-                    </div>
-                  ) : (
+                  {hasBulkItem && selectedPickupSite.id === "congress" && (
                     <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
-                      <span className="font-bold">Loose bulk at Phoenix is by appointment</span>, usually
-                      scheduled about 1 week out (max {PHOENIX_BULK_MAX_TONS} tons / ~17 cu yd). Choose a
-                      preferred time below and we will confirm your exact date by text. Bags, pallets, and
-                      super sacks load at your scheduled time without the wait.
+                      <span className="font-bold">Congress bulk pickup</span> is weighed on the scale and can be
+                      ready in about 30 minutes during pickup hours.
                     </div>
-                  ))}
-                  <PickupReadyTime value={pickupReady} onChange={setPickupReady} />
+                  )}
+                  {isPhoenixBulkPickup && (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
+                      <span className="font-bold">Phoenix bulk pickup</span> is by appointment only and must be
+                      scheduled about 1 week ahead{phoenixBulkOverLimit ? ` (max ${PHOENIX_BULK_MAX_TONS} tons).` : "."}
+                    </div>
+                  )}
+                  {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
+                    <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
+                      <span className="font-bold">Phoenix pickup</span> is available for bags, pallets, and totes.
+                    </div>
+                  )}
+                  {phoenixBulkOverLimit && (
+                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-snug text-red-900">
+                      This Phoenix bulk load is over the {PHOENIX_BULK_MAX_TONS}-ton limit. Choose Congress pickup or delivery.
+                    </div>
+                  )}
+                  <PickupReadyTime
+                    key={selectedPickupSite.id}
+                    value={pickupReady}
+                    onChange={setPickupReady}
+                    allowAsap={isPhoenixBulkPickup ? selectedPickupSite.bulkAllowAsap !== false : selectedPickupSite.allowAsap !== false}
+                    minLeadDays={isPhoenixBulkPickup ? selectedPickupSite.bulkMinLeadDays ?? 7 : selectedPickupSite.minLeadDays ?? 0}
+                    scheduleHelpText={
+                      isPhoenixBulkPickup
+                        ? "Phoenix bulk pickup needs loader coordination. Pick a slot at least 1 week out."
+                        : undefined
+                    }
+                  />
                 </CardContent>
               </Card>
             ) : (

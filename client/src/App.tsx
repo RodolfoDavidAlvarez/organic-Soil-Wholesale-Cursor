@@ -53,6 +53,7 @@ const GrokAssistant = lazy(() => import("@/pages/GrokAssistant"));
 const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
+const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -147,6 +148,7 @@ function Router() {
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
+        <Route path="/newsletter" component={NewsletterSignup} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />

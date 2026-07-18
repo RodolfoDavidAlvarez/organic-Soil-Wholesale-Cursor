@@ -260,7 +260,7 @@ function DeliveryEligibilityCheck() {
       <div className="flex min-w-[220px] flex-1 items-start gap-2">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-[#264027]" />
         <div>
-          <p className="text-sm font-bold text-stone-900">Pickup today. Delivery when you qualify.</p>
+          <p className="text-sm font-bold text-stone-900">Bulk pickup. Delivery when you qualify.</p>
           <p className="mt-0.5 text-xs leading-relaxed text-stone-600">
             Delivery is available within 300 miles of Phoenix or Congress, Arizona.
           </p>
@@ -421,7 +421,7 @@ const Products = () => {
         structuredData={[buildLocalBusinessSchema(), buildProductsItemListSchema()]}
       />
 
-      {/* Section 1 — Pay & Pick Up (the 4 mains, MOS-driven pricing, slot booking) */}
+      {/* Section 1 — bulk pickup + delivery (MOS-driven pricing, slot booking) */}
       <section id="pay-pickup" className="bg-gradient-to-b from-stone-50 to-white pt-2 pb-[calc(env(safe-area-inset-bottom)+7rem)] md:pt-5 md:pb-12">
         <div className="container mx-auto px-4">
           <div className="mb-2 flex flex-col justify-between gap-3 md:mb-4 md:flex-row md:items-end md:gap-4">
@@ -431,14 +431,14 @@ const Products = () => {
                 <CheckCircle2 className="h-3 w-3" /> Pickup &amp; delivery across Arizona
               </p>
               <h2 className="font-heading text-xl font-bold leading-tight text-stone-900 md:hidden">
-                Pay &amp; pick up organic soil products.
+                Order organic soil products.
               </h2>
               <h2 className="hidden font-heading text-3xl font-bold leading-tight text-stone-900 md:block">
                 Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
               </h2>
               <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2 md:block">
-                Buy the 4 fastest pickup products online, or request bulk pricing for pallets,
-                super sacks, mixed loads, and truckload delivery.
+                Buy online. Bulk pickup asks Congress or Phoenix at checkout. Pallets,
+                super sacks, mixed loads, and truckloads can also be quoted.
               </p>
             </div>
           </div>
@@ -456,17 +456,12 @@ const Products = () => {
               aria-label="Open Congress plant location in Google Maps"
             >
               <MapPin className="h-3.5 w-3.5" />
-              Congress plant pickup · 6 AM - 2 PM
+              Congress bulk · ready in ~30 min
             </a>
-            <Link
-              href="/yard-map"
-              onClick={() => trackEvent("Pickup Pill Clicked", { location: "phoenix_yard" })}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm transition hover:bg-[#264027]/5"
-              aria-label="Phoenix yard — loose bulk pickup by appointment"
-            >
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm">
               <MapPin className="h-3.5 w-3.5" />
-              Phoenix yard · bulk by appointment
-            </Link>
+              Phoenix bags, pallets & totes · bulk by appointment
+            </span>
             <Link
               href="/pickup"
               className="inline-flex items-center gap-1 text-xs font-semibold text-stone-600 underline-offset-2 hover:text-stone-900 hover:underline"

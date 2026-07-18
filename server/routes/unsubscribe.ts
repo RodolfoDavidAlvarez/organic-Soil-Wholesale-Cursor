@@ -80,7 +80,9 @@ async function unsubscribeInAirtable(normalizedEmail: string, reason?: string) {
 
 router.post("/", async (req, res) => {
   try {
-    const { email, reason }: UnsubscribeRequest = req.body;
+    const body = (req.body || {}) as UnsubscribeRequest & { "List-Unsubscribe"?: string };
+    const email = body.email || String(req.query.email || "");
+    const reason = body.reason || (body["List-Unsubscribe"] === "One-Click" ? "One-click unsubscribe" : undefined);
     if (!email) return res.status(400).json({ error: "Email is required" });
 
     const normalizedEmail = email.toLowerCase().trim();

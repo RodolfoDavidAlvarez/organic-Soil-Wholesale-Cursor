@@ -4145,16 +4145,89 @@ ${pages}
       return res.json({ success: true, deleted: ids.length });
     }
 
-    // ============ UNSUBSCRIBE ENDPOINTS ============
+    // ============ NEWSLETTER SUBSCRIBE / UNSUBSCRIBE ENDPOINTS ============
 
     // Airtable configuration for Email Marketing 2026
     const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
     const AIRTABLE_EMAIL_BASE_ID = "appBLlRW7MOx0qdlu";
     const AIRTABLE_EMAIL_TABLE_ID = "tblmofFGmkN2dZ4GB";
 
+    // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
+    if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
+      const { email, name, phone, customerCategory, consent, website, source } = req.body || {};
+      const normalizedEmail = String(email || '').toLowerCase().trim();
+      const normalizedPhone = String(phone || '').trim();
+      const normalizedCustomerCategory = String(customerCategory || '').trim();
+      const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
+
+      // Honeypot fields are silently accepted so bots do not learn how to bypass them.
+      if (website) return res.json({ success: true });
+      if (!consent) return res.status(400).json({ error: 'Please confirm that you want to receive emails.' });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 254) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      if (normalizedPhone.replace(/\D/g, '').length < 10 || normalizedPhone.length > 30) {
+        return res.status(400).json({ error: 'Please enter a valid phone number.' });
+      }
+      if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
+        return res.status(400).json({ error: 'Please select the option that best describes you.' });
+      }
+
+      try {
+        const db = await getSupabase();
+        const { subscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
+        const result = await subscribeNewsletterContact(db, {
+          email: normalizedEmail,
+          name,
+          phone: normalizedPhone,
+          customerCategory: normalizedCustomerCategory,
+          source: String(source || 'website_newsletter_signup').slice(0, 100),
+        });
+
+        if (result.status === 'opted_out') {
+          return res.status(409).json({
+            error: 'This address has a previous opt-out. Please contact us if you would like us to review it.',
+          });
+        }
+
+        // Notification delivery is intentionally independent from the opt-in transaction.
+        try {
+          const r = await getResend();
+          const { getNewsletterAdminRecipients, sendNewsletterAdminNotifications } = await import('../shared/newsletterNotifications.js');
+          const recipients = getNewsletterAdminRecipients();
+          const notificationResults = await sendNewsletterAdminNotifications({
+            resend: r,
+            recipients,
+            subscriber: {
+              email: normalizedEmail,
+              name,
+              phone: normalizedPhone,
+              customerCategory: normalizedCustomerCategory,
+              source: String(source || 'website_newsletter_signup').slice(0, 100),
+              subscribedAt: new Date().toISOString(),
+            },
+          });
+          notificationResults.forEach((notificationResult, index) => {
+            if (notificationResult.status === 'rejected') {
+              console.error(`[Newsletter Subscribe] Admin notification to ${recipients[index]?.email} failed:`, notificationResult.reason?.message || notificationResult.reason);
+            }
+          });
+        } catch (notificationError) {
+          console.error('[Newsletter Subscribe] Admin notification error:', notificationError?.message || notificationError);
+        }
+
+        return res.json({ success: true, message: "You're subscribed." });
+      } catch (e) {
+        console.error('[Newsletter Subscribe] Error:', e?.message || e);
+        return res.status(500).json({ error: 'We could not save your subscription. Please try again.' });
+      }
+    }
+
     // POST /api/unsubscribe - Unsubscribe an email (sp_customers + Airtable sync)
     if (path === '/api/unsubscribe' && req.method === 'POST') {
-      const { email, reason } = req.body || {};
+      const body = req.body || {};
+      const email = body.email || url.searchParams.get('email');
+      const reason = body.reason || (body['List-Unsubscribe'] === 'One-Click' ? 'One-click unsubscribe' : undefined);
 
       if (!email) {
         return res.status(400).json({ error: 'Email is required' });

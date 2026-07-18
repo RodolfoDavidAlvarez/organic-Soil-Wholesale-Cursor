@@ -5,8 +5,8 @@ Organic Soil Wholesale by Soil Seed & Water sells organic compost, worm castings
 Website: https://organicsoilwholesale.com
 Main buying page: https://organicsoilwholesale.com/products
 Phone: (602) 637-0032
-Pickup address: 1634 N 19th Ave, Phoenix, AZ 85009
-Pickup map: https://organicsoilwholesale.com/yard-map
+Primary bulk pickup address: 18980 Stanton Rd, Congress, AZ 85332
+Congress pickup map: https://maps.app.goo.gl/TkrzEwmyxXqPeNGeA
 
 Receiving hours:
 - Tuesday-Saturday: 8:00 AM-1:00 PM
@@ -14,7 +14,10 @@ Receiving hours:
 - Tuesday-Saturday: 2:00 PM-4:00 PM
 
 Service area:
-- Phoenix yard pickup is available for the four main products.
+- Bulk pickup customers choose Congress or Phoenix at checkout.
+- Congress bulk pickup is best for scale/weighed orders and can be ready in about 30 minutes during pickup hours.
+- Phoenix pickup is available for bags, pallets, and totes.
+- Phoenix loose bulk pickup is by appointment only and should be scheduled about 1 week ahead.
 - Delivery is available when the order and destination qualify.
 - Delivery service area is generally within 300 miles of Phoenix or Congress, Arizona.
 
@@ -29,7 +32,7 @@ Buying flow:
 - Product pages show available sizes and visible prices.
 - Customers can add pickup products to cart and complete checkout.
 - Truckload delivery orders require delivery details and delivery price confirmation.
-- Yard visitors should use /yard-map for Grand Ave south entrance directions.
+- Congress pickup customers should use the Congress plant map pin. Phoenix loose bulk pickup requires a scheduled appointment.
 
 Important public URLs:
 - https://organicsoilwholesale.com/products
@@ -38,7 +41,6 @@ Important public URLs:
 - https://organicsoilwholesale.com/products/mikeys-worm-poop
 - https://organicsoilwholesale.com/products/plantpal
 - https://organicsoilwholesale.com/products/natures-blanket-premium
-- https://organicsoilwholesale.com/yard-map
 - https://organicsoilwholesale.com/about
 - https://organicsoilwholesale.com/contact
 - https://organicsoilwholesale.com/faq

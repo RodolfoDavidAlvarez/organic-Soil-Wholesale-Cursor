@@ -4,7 +4,13 @@ import { supabase } from '../db/supabase.js';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
 import { quoteTrucking } from './quoteRequests.js';
-import { formatReadyLabel, resolveCheckoutPickupTime } from '../../shared/pickupSchedule.js';
+import {
+  formatReadyLabel,
+  PHOENIX_BULK_MAX_TONS,
+  PICKUP_LOCATIONS,
+  resolveCheckoutPickupTime,
+  TONS_PER_CU_YD,
+} from '../../shared/pickupSchedule.js';
 
 const router = Router();
 
@@ -44,9 +50,30 @@ router.post('/create-session', async (req, res) => {
     }
 
     const isDelivery = fulfillmentType === 'delivery';
+    const checkoutLocationId = locationId || 1;
+    const pickupSite = PICKUP_LOCATIONS.find((loc: any) => loc.locationId === checkoutLocationId)
+      || PICKUP_LOCATIONS.find((loc: any) => typeof pickupLocation === 'string' && pickupLocation.toLowerCase().includes(loc.id))
+      || PICKUP_LOCATIONS[0];
+    const bulkPickupTons = items.reduce((sum: number, item: any) => {
+      const size = String(item.sizeOption || '').toLowerCase();
+      const unit = String(item.unit || '').toLowerCase();
+      if (!size.includes('bulk')) return sum;
+      return sum + (unit.includes('ton') || size.includes('ton') ? Number(item.quantity || 0) : Number(item.quantity || 0) * TONS_PER_CU_YD);
+    }, 0);
+    const isPhoenixBulkPickup = pickupSite?.id === 'phoenix' && bulkPickupTons > 0;
 
     if (!isDelivery) {
-      const resolved = resolveCheckoutPickupTime({ pickupMode, pickupTime });
+      if (isPhoenixBulkPickup && bulkPickupTons > PHOENIX_BULK_MAX_TONS) {
+        return res.status(400).json({
+          error: `Phoenix bulk pickup is limited to ${PHOENIX_BULK_MAX_TONS} tons. Choose Congress pickup or delivery.`,
+        });
+      }
+      const resolved = resolveCheckoutPickupTime({
+        pickupMode,
+        pickupTime,
+        allowAsap: isPhoenixBulkPickup ? pickupSite?.bulkAllowAsap !== false : pickupSite?.allowAsap !== false,
+        minLeadDays: isPhoenixBulkPickup ? pickupSite?.bulkMinLeadDays || 7 : pickupSite?.minLeadDays || 0,
+      });
       if (!resolved.ok) {
         return res.status(400).json({ error: resolved.message });
       }
@@ -103,9 +130,6 @@ router.post('/create-session', async (req, res) => {
       !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
       customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
     ].filter(Boolean).join('\n');
-
-    // Use the provided locationId or default to Phoenix (1)
-    const checkoutLocationId = locationId || 1;
 
     // Validate inventory availability — skipped on TEST discount so QA flows don't
     // get blocked by zero inventory rows in dev.

@@ -19,6 +19,8 @@ interface PickupSlotPickerProps {
   onChange: (selection: PickupSelection | null) => void;
   /** how many days ahead to offer; default 7 */
   daysAhead?: number;
+  /** minimum lead time in days; Phoenix bulk uses 7 */
+  minLeadDays?: number;
   className?: string;
 }
 
@@ -26,9 +28,10 @@ export function PickupSlotPicker({
   value,
   onChange,
   daysAhead = 7,
+  minLeadDays = 0,
   className,
 }: PickupSlotPickerProps) {
-  const earliestPickupMs = Date.now() + MIN_NOTICE_MS;
+  const earliestPickupMs = Date.now() + Math.max(MIN_NOTICE_MS, minLeadDays * 24 * 60 * 60 * 1000);
 
   const dates = useMemo(
     () => getBookableDates({ daysAhead, earliestMs: earliestPickupMs }),

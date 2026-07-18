@@ -3,7 +3,7 @@ import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL, PHOENIX_YARD_ADDRESS, PHOENIX_YARD_DIRECTIONS_URL } from "@/config/contact";
 import { buildLocalBusinessSchema, buildYardMapSchema } from "@/config/seo";
-import { ArrowLeft, CheckCircle2, ExternalLink, MapPin, Navigation, Phone, Truck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ExternalLink, Navigation, Phone } from "lucide-react";
 
 const YardMap = () => {
   return (
@@ -65,60 +65,14 @@ const YardMap = () => {
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
               <div className="border-b border-stone-100 p-4">
                 <p className="text-sm font-bold text-stone-900">Yard entrance flow</p>
-                <p className="mt-1 text-xs text-stone-500">Simplified map for pickup traffic. Follow the pink route.</p>
+                <p className="mt-1 text-xs text-stone-500">Simplified map for pickup traffic. Follow the green route.</p>
               </div>
               <div className="bg-[#f7f4ee] p-3 md:p-5">
-                <svg viewBox="0 0 760 560" role="img" aria-label="Map showing Grand Ave south entrance to Organic Soil Wholesale yard" className="h-auto w-full rounded-xl bg-[#efe9dc] shadow-inner">
-                  <defs>
-                    <marker id="arrow" markerHeight="10" markerWidth="10" orient="auto" refX="8" refY="3">
-                      <path d="M0,0 L0,6 L9,3 z" fill="#e735c8" />
-                    </marker>
-                  </defs>
-
-                  <rect x="0" y="0" width="760" height="560" fill="#efe9dc" />
-                  <rect x="510" y="0" width="210" height="560" fill="#d9d4ca" />
-                  <rect x="535" y="0" width="64" height="560" fill="#b9b7b1" />
-                  <rect x="562" y="0" width="10" height="560" fill="#f7f4ee" opacity="0.75" />
-                  <text x="612" y="270" transform="rotate(90 612 270)" className="fill-stone-700 text-[22px] font-bold">N 19th Ave</text>
-
-                  <path d="M110 560 L430 0" stroke="#b7a992" strokeWidth="96" />
-                  <path d="M138 560 L455 0" stroke="#9f9688" strokeWidth="46" />
-                  <path d="M161 560 L478 0" stroke="#f2eee8" strokeWidth="4" opacity="0.8" />
-                  <text x="213" y="400" transform="rotate(-57 213 400)" className="fill-stone-800 text-[24px] font-bold">Grand Ave</text>
-
-                  <rect x="314" y="150" width="198" height="285" rx="12" fill="#dfd3bf" stroke="#c5bcae" strokeWidth="3" />
-                  <text x="338" y="180" className="fill-stone-700 text-[18px] font-bold">Organic Soil Wholesale Yard</text>
-                  <rect x="414" y="310" width="72" height="54" rx="6" fill="#c9c0b1" />
-                  <rect x="332" y="220" width="72" height="42" rx="6" fill="#c9c0b1" />
-                  <rect x="432" y="210" width="54" height="78" rx="6" fill="#c9c0b1" />
-
-                  <circle cx="324" cy="360" r="17" fill="#264027" />
-                  <Truck x="311" y="347" width="26" height="26" color="white" strokeWidth="2.4" />
-                  <text x="257" y="397" className="fill-stone-900 text-[17px] font-bold">Check-in / loading</text>
-
-                  <path
-                    d="M170 480 C210 420 242 365 294 334 C326 315 344 294 349 248"
-                    fill="none"
-                    stroke="#e735c8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="8"
-                    markerEnd="url(#arrow)"
-                  />
-                  <path d="M236 366 L294 334" stroke="#e735c8" strokeWidth="8" strokeLinecap="round" />
-                  <path d="M350 252 L350 200 L405 200" stroke="#e735c8" strokeWidth="8" strokeLinecap="round" markerEnd="url(#arrow)" />
-
-                  <circle cx="185" cy="463" r="18" fill="#e735c8" />
-                  <text x="128" y="449" className="fill-stone-950 text-[15px] font-bold">Grand Ave</text>
-                  <text x="122" y="468" className="fill-stone-950 text-[15px] font-bold">south entrance</text>
-
-                  <g>
-                    <rect x="30" y="28" width="245" height="86" rx="16" fill="white" opacity="0.94" />
-                    <MapPin x="50" y="47" width="24" height="24" color="#438764" strokeWidth="2.5" />
-                    <text x="84" y="57" className="fill-stone-950 text-[18px] font-bold">Use Grand Ave entrance</text>
-                    <text x="84" y="84" className="fill-stone-600 text-[15px]">Follow pink arrows to check-in.</text>
-                  </g>
-                </svg>
+                <img
+                  src="/email-assets/phoenix-yard-entrance-map-v2.png"
+                  alt="Illustrated route map showing the Grand Avenue south entrance, yard lane, Organic Soil Wholesale pickup and loading area, and north exit"
+                  className="h-auto w-full rounded-xl bg-[#efe9dc] shadow-inner"
+                />
               </div>
             </div>
           </div>
