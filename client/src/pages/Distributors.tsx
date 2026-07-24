@@ -10,28 +10,28 @@ const CORE_FOUR = [
     size: "1 cu ft bag",
     msrp: "$10.99",
     cost: "$5.50",
-    image: "plantpal10lbs.jpg",
+    image: "/images/optimized/plantpal-bag-context.jpg",
   },
   {
     name: "Nature's Blanket Premium",
     size: "2 cu ft bag",
     msrp: "$10.99",
     cost: "$5.50",
-    image: "natures-blanket-bag-studio.jpg",
+    image: "/images/optimized/natures-blanket-bag-studio.jpg",
   },
   {
     name: "Mikey's Worm Poop",
     size: "9 lb bag",
     msrp: "$18.10",
     cost: "$9.05",
-    image: "mikeys-worm-poop9lbs.jpg",
+    image: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   },
   {
     name: "Simon's Gold",
     size: "9 lb bag",
     msrp: "$12.46",
     cost: "$6.23",
-    image: "dansgold9lbs-1.jpg",
+    image: "/images/optimized/simons-gold-bag-context.jpg",
   },
 ] as const;
 

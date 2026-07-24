@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
+import {
+  cartFlatbedSpots,
+  fullLoadDiscountAmount,
+  hasFullFlatbedDiscount,
+} from "@/lib/flatbedSpots";
 
 export type CartItem = {
   productId: number;
@@ -26,6 +31,12 @@ type QuoteCartContextValue = {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  /** Flatbed spots across all cart lines (pallets / totes / 22-pallet truckloads). */
+  flatbedSpots: number;
+  /** True when spots === 22 (full single flatbed → 10% product discount). */
+  hasFullFlatbedDiscount: boolean;
+  /** Dollar amount of the full-flatbed product discount (0 if not full). */
+  fullFlatbedDiscountAmount: number;
   isDrawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
@@ -108,6 +119,9 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
 
   const totalItems = useMemo(() => items.length, [items]);
   const totalPrice = useMemo(() => items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [items]);
+  const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
+  const fullFlatbedDiscount = useMemo(() => hasFullFlatbedDiscount(flatbedSpots), [flatbedSpots]);
+  const fullFlatbedDiscountAmount = useMemo(() => fullLoadDiscountAmount(items), [items]);
 
   const openDrawer = useCallback(() => {
     setIsDrawerOpen(true);
@@ -117,7 +131,21 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <QuoteCartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isDrawerOpen, openDrawer, closeDrawer }}
+      value={{
+        items,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        totalItems,
+        totalPrice,
+        flatbedSpots,
+        hasFullFlatbedDiscount: fullFlatbedDiscount,
+        fullFlatbedDiscountAmount,
+        isDrawerOpen,
+        openDrawer,
+        closeDrawer,
+      }}
     >
       {children}
     </QuoteCartContext.Provider>

@@ -36,6 +36,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     tagline: "The flagship. 60,000 tons a year.",
     heroImage: "/images/optimized/simons-gold-bestfor.jpg",
     thumbnailImage: "/images/optimized/simons-gold-lifestyle.jpg",
+    bagImage: "/images/optimized/simons-gold-bag-context.jpg",
     altImages: [
       { src: "/images/optimized/compost-texture-look.jpg", label: "Texture" },
       { src: "/images/optimized/simons-gold-lifestyle.jpg", label: "In use" },
@@ -52,6 +53,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     tagline: "Pure vermicompost. Microbial powerhouse.",
     heroImage: "/images/optimized/mikeys-worm-poop-bestfor.jpg",
     thumbnailImage: "/images/optimized/mikeys-worm-poop-bestfor.jpg",
+    bagImage: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
     altImages: [
       { src: "/images/optimized/worm-castting-product-texture.jpg", label: "Texture" },
       { src: "/images/optimized/mikeys-worm-poop-lifestyle.jpg", label: "In use" },
@@ -69,14 +71,14 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     tagline: "Seed to sale. Out of the bag.",
     heroImage: "/images/optimized/plantpal-bestfor.jpg",
     thumbnailImage: "/images/optimized/plantpal-lifestyle.jpg",
-    bagImage: "/images/optimized/plantpal10lbs.jpg",
+    bagImage: "/images/optimized/plantpal-bag-context.jpg",
     altImages: [
       { src: "/images/optimized/plantpal-with-veggies.jpg", label: "In use" },
-      { src: "/images/optimized/plantpal-bag-in-context.jpg", label: "Bag" },
+      { src: "/images/optimized/plantpal-bag-context.jpg", label: "Bag" },
     ],
     blurb:
-      "All-stage nursery potting mix with dairy compost, worm castings, coconut coir, and perlite. Seed starter, propagation, containers, and patio planters.",
-    sizes: ["1 CF bag", "Tote / Super Sack", "Truckload"],
+      "All-stage nursery potting mix with dairy compost, worm castings, clean wood fiber, calcium, and zinc sulfate. Seed starter, propagation, containers, and patio planters.",
+    sizes: ["1.5 cu ft bag", "Tote / Super Sack", "Bulk pickup", "Truckload"],
     badge: "Nursery mix",
   },
   {

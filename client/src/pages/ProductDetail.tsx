@@ -3,7 +3,6 @@ import { useRoute, Link } from "wouter";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -17,9 +16,14 @@ import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import TrustStrip from "@/components/TrustStrip";
+import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
+import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
+import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
+import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
+import { cartFlatbedSpots, FLATBED_CAPACITY, spotsForFormat } from "@/lib/flatbedSpots";
 import {
   ArrowLeft,
   Leaf,
@@ -33,10 +37,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Play,
-  ShieldCheck,
   ImagePlus,
   Phone,
   X,
+  MapPin,
+  ExternalLink,
+  Download,
+  Clock,
+  Truck,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -96,6 +104,10 @@ type SizeChoice = PriceTier & {
   subLabel: string;
   cartLabel: string;
   displayPrice: number;
+  /** Strikethrough list price when a volume discount applies */
+  compareAtPrice?: number;
+  badge?: string;
+  secondaryPriceLabel?: string;
 };
 
 type SizeCategory = {
@@ -103,9 +115,16 @@ type SizeCategory = {
   label: string;
   price: number;
   priceLabel: string;
+  secondaryPriceLabel?: string;
   image: string;
   choices: SizeChoice[];
 };
+
+/** Volume incentive: pallet vs buying the same bags individually. */
+const PALLET_VOLUME_DISCOUNT = 0.1;
+
+const applyPalletDiscount = (listPrice: number) =>
+  Number((listPrice * (1 - PALLET_VOLUME_DISCOUNT)).toFixed(2));
 
 type Product = {
   id: number;
@@ -153,12 +172,26 @@ const fmt = (n: number): string => {
 
 /** Hero bag photo per main pay-and-pickup product. Mirrors the HERO_OVERRIDES
  *  map in PayPickupGrid.tsx so the cart line item shows the SAME photo the
- *  customer just tapped on the list. Update both maps together. */
+ *  customer just tapped on the list. Update both maps together.
+ *  Bag-in-context (Graphic 3) for bagged amendments; 2 CF studio bag for mulch. */
 const HERO_BAG_PHOTO: Record<number, string> = {
-  1000: "/images/optimized/dansgold9lbs-1.jpg",
-  1001: "/images/optimized/mikeys-worm-poop9lbs.jpg",
-  111: "/images/optimized/plantpal10lbs.jpg",
+  1000: "/images/optimized/simons-gold-bag-context.jpg",
+  1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
+  111: "/images/optimized/plantpal-bag-context.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+};
+
+/** New Graphics 2.0 lifestyle / use-case shots — inserted right after the hero bag. */
+const NEW_GRAPHICS_2_GALLERY: Record<number, string[]> = {
+  1000: [
+    "/images/optimized/simons-gold-new-graphics-2-uses.jpg",
+    "/images/optimized/simons-gold-new-graphics-2-lifestyle.jpg",
+  ],
+  1001: [
+    "/images/optimized/mikeys-worm-new-graphics-2-uses.jpg",
+    "/images/optimized/mikeys-worm-new-graphics-2-lifestyle.jpg",
+  ],
+  111: ["/images/optimized/plantpal-new-graphics-2-lifestyle.jpg"],
 };
 
 const GALLERY_DUPLICATE_GROUPS: Record<number, Record<string, string>> = {
@@ -200,7 +233,9 @@ const isBlockedGalleryImage = (productId: number, url: string) => {
 const guideImageDedupeKey = (url: string) => {
   const normalized = normalizedGalleryUrl(url);
   if (!normalized) return "";
-  if (normalized.includes("plantpal-bag-in-context")) return "plantpal-bag-in-context";
+  if (normalized.includes("plantpal-bag-in-context") || normalized.includes("plantpal-bag-context")) {
+    return "plantpal-bag-context";
+  }
   if (normalized.includes("plantpal-with-veggies")) return "plantpal-with-veggies";
   return normalized.replace(/-2(?=\.(jpg|jpeg|webp|png)$)/, "");
 };
@@ -230,7 +265,7 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
   Tote: "/images/sizes/2-2cy-tote.png",
   "Truckload (~24 tons)": "/images/sizes/truckload.png",
-  "Truckload (22 pallets)": "/images/sizes/truckload.png",
+  "Truckload (22 pallets)": "/images/size-formats/mixed-truckload.webp",
   "Truckload (~60 cu yd)": "/images/sizes/truckload.png",
   "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
 };
@@ -260,15 +295,26 @@ const categoryLabel = (size: string, productId?: number | string) => {
   const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
   if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
-  if (size.includes("2CF")) return "2 cu ft Bag";
+  if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
-  if (size.includes("Bulk Pickup")) return id === 1000 || id === 1001 ? "Bulk Pickup (per ton)" : "Bulk Pickup (per cu yd)";
+  if (size.includes("Bulk Pickup")) return "Bulk Pickup";
   if (size.includes("Truckload") || size.includes("Bulk")) {
-    if (id === 137 || id === 3000) return "Truckload (~90 cu yd)";
-    if (id === 111) return "Truckload (~60 cu yd)";
-    return "Truckload (~24 tons)";
+    if (/pallet/i.test(size)) return size.includes("22") ? "Truckload (22 pallets)" : "Truckload";
+    // V4 light loads ≈ 60 cu yd / 24 tons; dairy walking-floor stays ~24 tons.
+    if (id === 1000) return "Truckload (~24 tons)";
+    return "Truckload (~60 cu yd)";
   }
   return size;
+};
+
+/** Short size/weight line reused on Step 2 (single + pallet). */
+const bagSizeMetricLabel = (size: string, productId?: number | string) => {
+  if (size.includes("9lb") || size.includes("9 lb")) return "9 lb";
+  if (size.includes("1CF") || size.includes("1.5")) {
+    return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft (~50 lb)" : "1 cu ft (~40–50 lb)";
+  }
+  if (size.includes("2CF") || size.includes("2 cu")) return "2 cu ft (~60 lb)";
+  return categoryLabel(size, productId);
 };
 
 const priceForTier = (productId: number, tier: PriceTier) => {
@@ -280,20 +326,59 @@ const priceForTier = (productId: number, tier: PriceTier) => {
   };
 };
 
-// Only the walking-floor truckload gets per-ton conversion; "Bulk Pickup"
-// (per cu yd at the Congress scale) prices as-is.
-const isDairyCompostBulkTier = (productId: number, size: string) =>
+/** Simon's Gold walking-floor truckload — sell as 1 full load, show $/ton as secondary. */
+const isDairyCompostTruckload = (productId: number, size: string) =>
   productId === 1000 && /truckload/i.test(size);
 
 const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
 
-/** V4 sheet unit equivalents — compost & castings sell per ton (Congress scale),
- *  potting soil & mulch per cu yd; always show the other unit for reference. */
-const BULK_PICKUP_EQUIVALENTS: Record<number, string> = {
-  1000: "about $18 per cu yd",
-  1001: "about $120 per cu yd",
-  111: "about $90 per ton",
-  3000: "about $60 per ton",
+const isTruckloadCategoryKey = (key: string) => /truckload/i.test(key);
+const isBulkPickupCategoryKey = (key: string) => /bulk pickup/i.test(key);
+
+/**
+ * V4 dual-unit copy for bulk pickup + truckload.
+ * Primary sell unit matches the live tier; secondary is the congruent equivalent.
+ */
+const BULK_DUAL_UNITS: Record<
+  number,
+  {
+    pickupPrimaryUnit: "cu yd" | "ton";
+    pickupSecondary: string;
+    truckloadSecondary: string;
+    truckloadVolume: string;
+  }
+> = {
+  // Live DB: compost/castings bulk pickup sells per ton; V4 also lists cu yd equivalent.
+  1000: {
+    pickupPrimaryUnit: "ton",
+    pickupSecondary: "$18 / cu yd equivalent",
+    truckloadSecondary: "$30 / ton · ~$12 / cu yd",
+    truckloadVolume: "~24 tons · ~60 cu yd",
+  },
+  1001: {
+    pickupPrimaryUnit: "ton",
+    pickupSecondary: "$120 / cu yd equivalent",
+    truckloadSecondary: "$200 / ton · ~$80 / cu yd",
+    truckloadVolume: "~24 tons · ~60 cu yd",
+  },
+  111: {
+    pickupPrimaryUnit: "cu yd",
+    pickupSecondary: "$90 / ton equivalent",
+    truckloadSecondary: "$90 / ton · ~$36 / cu yd",
+    truckloadVolume: "~60 cu yd · ~24 tons",
+  },
+  137: {
+    pickupPrimaryUnit: "cu yd",
+    pickupSecondary: "$150 / ton equivalent",
+    truckloadSecondary: "$150 / ton · ~$60 / cu yd",
+    truckloadVolume: "~60 cu yd · ~24 tons",
+  },
+  3000: {
+    pickupPrimaryUnit: "cu yd",
+    pickupSecondary: "$60 / ton equivalent",
+    truckloadSecondary: "22 pallets · or ask for loose bulk truckload",
+    truckloadVolume: "22 pallets",
+  },
 };
 
 const palletSizeForBag = (size: string, productId?: number | string) => {
@@ -311,10 +396,9 @@ const palletSizeForBag = (size: string, productId?: number | string) => {
 };
 
 const singleCartLabelForSize = (size: string, productId?: number | string) => {
-  const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag" : "1CF Bag";
-  if (size.includes("2CF")) return "2CF Bag";
+  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
+  if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   return categoryLabel(size, productId);
 };
 
@@ -365,6 +449,7 @@ const isBagTier = (tier: PriceTier): boolean => {
 
 const buildSizeCategories = (product: Product): SizeCategory[] => {
   const categoryMap = new Map<string, SizeCategory>();
+  const dual = BULK_DUAL_UNITS[product.id];
 
   product.priceTiers
     .filter((tier) => !shouldHidePayPickupTier(product.id, tier.size))
@@ -373,51 +458,103 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
     const pricing = priceForTier(product.id, tier);
     const key = categoryLabel(tier.size, product.id);
-    const dairyBulk = isDairyCompostBulkTier(product.id, tier.size);
+    const dairyTruckload = isDairyCompostTruckload(product.id, tier.size);
     const bulkPickup = tier.size.includes("Bulk Pickup");
-    const bulkTon = bulkPickup && /ton/i.test(tier.unit);
-    const displayPrice = dairyBulk ? dairyCompostTonPrice(pricing.price) : pricing.price;
+    const isTruckload = /truckload/i.test(tier.size) || (tier.size.includes("Bulk") && !bulkPickup);
+    const unitFromTier = /ton/i.test(tier.unit) ? "ton" : /cu\s*yd/i.test(tier.unit) ? "cu yd" : null;
+    const pickupUnit = unitFromTier ?? dual?.pickupPrimaryUnit ?? "cu yd";
+    // Dairy truckload: charge the full load ($720), show $/ton as secondary — not $30 × qty=1.
+    const displayPrice = pricing.price;
+    const palletTruckload = isTruckload && /pallet/i.test(tier.size);
+    const tonEquivalent = dairyTruckload ? dairyCompostTonPrice(pricing.price) : null;
+
+    let priceLabel = pricing.priceLabel;
+    let secondaryPriceLabel: string | undefined;
+    if (dairyTruckload) {
+      priceLabel = pricing.priceLabel;
+      secondaryPriceLabel = `$${tonEquivalent!.toFixed(0)}/ton · ~60 cu yd`;
+    } else if (bulkPickup) {
+      priceLabel = `$${displayPrice.toFixed(2)}/${pickupUnit}`;
+      secondaryPriceLabel = dual?.pickupSecondary;
+    } else if (isTruckload && !palletTruckload) {
+      priceLabel = pricing.priceLabel;
+      secondaryPriceLabel = dual?.truckloadSecondary;
+    } else if (palletTruckload) {
+      secondaryPriceLabel = dual?.truckloadSecondary;
+    }
+
+    const bagMetric = bagSizeMetricLabel(tier.size, product.id);
+
     categoryMap.set(key, {
       key,
       label: key,
       price: displayPrice,
-      priceLabel: dairyBulk
-        ? `$${displayPrice.toFixed(2)}/ton`
-        : bulkPickup
-        ? `$${displayPrice.toFixed(2)}/${bulkTon ? "ton" : "cu yd"}`
-        : pricing.priceLabel,
+      priceLabel,
+      secondaryPriceLabel,
       image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
       choices: [
         {
           ...tier,
-          kind: tier.size.includes("Truckload") || tier.size.includes("Bulk") ? "bulk" : "single",
-          displayLabel: dairyBulk
-            ? "Bulk tons"
+          kind: isTruckload || bulkPickup ? "bulk" : "single",
+          displayLabel: dairyTruckload || key.includes("Truckload")
+            ? "Truckload delivery"
             : bulkPickup
-            ? bulkTon ? "Bulk tons" : "Bulk cubic yards"
-            : key.includes("Truckload") ? "Truckload" : key.includes("Super Sack") ? "Super Sack" : "Single bag",
-          subLabel: dairyBulk
-            ? "24 tons per walking-floor truckload"
+            ? `Per ${pickupUnit}`
+            : key.includes("Super Sack")
+            ? "Super Sack"
+            : "Single bag",
+          subLabel: dairyTruckload || key.includes("Truckload")
+            ? dual?.truckloadVolume ?? "~24 tons"
             : bulkPickup
-            ? BULK_PICKUP_EQUIVALENTS[product.id] ?? "loose bulk, weighed at pickup"
-            : key.includes("Truckload")
-            ? tier.size.includes("24") ? "24 tons" : tier.size.includes("60") ? "~60 cubic yards" : "90 cubic yards"
+            ? dual?.pickupSecondary ?? "Loose bulk, weighed at pickup"
             : key.includes("Super Sack")
               ? product.id === 137 || product.id === 111 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
-              : "one bag",
-          cartLabel: dairyBulk
-            ? "Bulk Dairy Compost (tons)"
+              : bagMetric,
+          cartLabel: dairyTruckload
+            ? "Truckload (~24 tons)"
             : bulkPickup
-            ? bulkTon ? "Bulk Pickup (tons)" : "Bulk Pickup (cu yd)"
+            ? `Bulk Pickup (${pickupUnit})`
             : key.includes("Truckload") || key.includes("Super Sack")
             ? key
             : singleCartLabelForSize(tier.size, product.id),
           displayPrice,
-          unit: dairyBulk ? "ton" : tier.unit,
+          secondaryPriceLabel,
+          unit: dairyTruckload
+            ? "per truckload"
+            : bulkPickup
+            ? `per ${pickupUnit}`
+            : tier.unit,
         },
       ],
     });
   });
+
+  const attachPalletChoice = (
+    category: SizeCategory,
+    tier: PriceTier,
+    qty: number,
+    palletSize: string,
+    cartLabel: string,
+  ) => {
+    const unitPrice = category.choices.find((choice) => choice.kind === "single")?.displayPrice;
+    const listPrice = qty && unitPrice ? qty * unitPrice : priceForTier(product.id, tier).price;
+    const displayPrice = applyPalletDiscount(listPrice);
+    const bagMetric = bagSizeMetricLabel(palletSize, product.id);
+
+    category.choices.unshift({
+      ...tier,
+      size: palletSize,
+      qty,
+      unit: "per pallet",
+      kind: "pallet",
+      displayLabel: "Pallet",
+      subLabel: `${qty} × ${bagMetric}`,
+      cartLabel,
+      displayPrice,
+      compareAtPrice: listPrice,
+      badge: "10% off",
+    });
+  };
 
   product.priceTiers
     .filter((tier) => !shouldHidePayPickupTier(product.id, tier.size))
@@ -434,18 +571,17 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const category = categoryMap.get(baseKey);
     if (!category) return;
 
-    const unitPrice = category.choices.find((choice) => choice.kind === "single")?.displayPrice;
-    const price = tier.qty && unitPrice ? tier.qty * unitPrice : priceForTier(product.id, tier).price;
     const palletMeta = palletSizeForBag(tier.size, product.id);
+    const qty = tier.qty ?? palletMeta?.qty;
+    if (!qty) return;
 
-    category.choices.unshift({
-      ...tier,
-      kind: "pallet",
-      displayLabel: "Pallet",
-      subLabel: tier.qty ? `Pallet of ${tier.qty}` : "Pallet",
-      cartLabel: palletMeta?.cartLabel ?? "Pallet",
-      displayPrice: price,
-    });
+    attachPalletChoice(
+      category,
+      tier,
+      qty,
+      palletMeta?.size ?? tier.size,
+      palletMeta?.cartLabel ?? "Pallet",
+    );
   });
 
   categoryMap.forEach((category) => {
@@ -455,17 +591,13 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     const palletMeta = palletSizeForBag(single.size, product.id);
     if (!palletMeta) return;
 
-    category.choices.unshift({
-      ...single,
-      size: palletMeta.size,
-      qty: palletMeta.qty,
-      unit: "per pallet",
-      kind: "pallet",
-      displayLabel: "Pallet",
-      subLabel: `Pallet of ${palletMeta.qty}`,
-      cartLabel: palletMeta.cartLabel,
-      displayPrice: single.displayPrice * palletMeta.qty,
-    });
+    attachPalletChoice(
+      category,
+      single,
+      palletMeta.qty,
+      palletMeta.size,
+      palletMeta.cartLabel,
+    );
   });
 
   return Array.from(categoryMap.values());
@@ -520,8 +652,8 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "organic matter for soil",
     ],
     guideImages: [
-      "/images/product-guides/simons-gold-01.webp",
-      "/images/product-guides/simons-gold-02.webp",
+      "/images/optimized/simons-gold-new-graphics-2-uses.jpg",
+      "/images/optimized/simons-gold-new-graphics-2-lifestyle.jpg",
       "/images/product-guides/simons-gold-03.webp",
       "/images/product-guides/simons-gold-04.webp",
     ],
@@ -554,8 +686,8 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "root zone amendment",
     ],
     guideImages: [
-      "/images/product-guides/mikeys-worm-poop-01.webp",
-      "/images/product-guides/mikeys-worm-poop-02.webp",
+      "/images/optimized/mikeys-worm-new-graphics-2-uses.jpg",
+      "/images/optimized/mikeys-worm-new-graphics-2-lifestyle.jpg",
       "/images/product-guides/mikeys-worm-poop-03.webp",
       "/images/product-guides/mikeys-worm-poop-04.webp",
     ],
@@ -588,9 +720,9 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "nursery mix Arizona",
     ],
     guideImages: [
-      "/images/optimized/plantpal10lbs.jpg",
+      "/images/optimized/plantpal-new-graphics-2-lifestyle.jpg",
+      "/images/optimized/plantpal-bag-context.jpg",
       "/images/optimized/plantpal-bestfor.jpg",
-      "/images/optimized/plantpal-lifestyle.jpg",
     ],
   },
   137: {
@@ -764,7 +896,7 @@ const PAY_PICKUP_PRODUCT_IDS = new Set([1000, 1001, 111, 3000]);
 const ProductDetail = () => {
   const [, params] = useRoute<{ slug: string }>("/products/:slug");
   const [, navigate] = useLocation();
-  const { addItem, openDrawer } = useQuoteCart();
+  const { addItem, openDrawer, items: cartItems } = useQuoteCart();
   const { toast } = useToast();
   const slug = params?.slug ?? "";
 
@@ -790,13 +922,25 @@ const ProductDetail = () => {
     // page MUST use the same override or the hero will not match the card the
     // customer just tapped.
     const heroBagOverride = HERO_BAG_PHOTO[product.id];
-    [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
+    const productPhotos = [heroBagOverride, product.imageUrl, product.texturePhotoUrl, ...product.additionalImages]
       .filter((u): u is string => Boolean(u?.trim()))
-      .filter((url) => !isBlockedGalleryImage(product.id, url))
-      .forEach((url) => {
-        const key = galleryDedupeKey(product.id, url);
-        if (!seen.has(key)) { seen.add(key); items.push({ type: "image", url: url.trim() }); }
-      });
+      .filter((url) => !isBlockedGalleryImage(product.id, url));
+
+    const pushImage = (url: string) => {
+      const trimmed = url.trim();
+      const key = galleryDedupeKey(product.id, trimmed);
+      if (seen.has(key) || seen.has(trimmed)) return;
+      seen.add(key);
+      seen.add(trimmed);
+      items.push({ type: "image", url: trimmed });
+    };
+
+    // 1) Hero bag, 2–3) New Graphics 2.0 (clean lifestyle / use cases), then the remaining product photos.
+    // Certification marks already appear beside the product title, so keep them out of the gallery.
+    if (productPhotos[0]) pushImage(productPhotos[0]);
+    (NEW_GRAPHICS_2_GALLERY[product.id] ?? []).forEach(pushImage);
+
+    productPhotos.slice(1).forEach(pushImage);
 
     product.videoUrls.forEach((videoUrl) => {
       const videoId = extractYouTubeVideoId(videoUrl);
@@ -875,6 +1019,10 @@ const ProductDetail = () => {
   const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<TruckingQuote | null>(null);
+  const [deliveryZip, setDeliveryZip] = useState("");
+  const [deliveryRoughAccess, setDeliveryRoughAccess] = useState(false);
+  const [deliverySemiAccess, setDeliverySemiAccess] = useState(true);
 
   const selectedCategory = useMemo(
     () => sizeCategories.find((category) => category.key === selectedCategoryKey),
@@ -882,6 +1030,8 @@ const ProductDetail = () => {
   );
 
   const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
+  const isTruckloadSelected = Boolean(selectedCategory && isTruckloadCategoryKey(selectedCategory.key));
+  const isBulkPickupSelected = Boolean(selectedCategory && isBulkPickupCategoryKey(selectedCategory.key));
   const selectedChoice = useMemo(
     () =>
       selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
@@ -891,21 +1041,45 @@ const ProductDetail = () => {
 
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
+  const truckloadReadyToPurchase = !isTruckloadSelected || Boolean(deliveryQuote && /^\d{5}$/.test(deliveryZip));
+
+  const scrollBuyIntoView = useCallback(() => {
+    // Wait for Step 2 DOM to paint — rAF alone often fires too early.
+    window.setTimeout(() => {
+      document.getElementById("buy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  }, []);
 
   const pricingSummary = useMemo(() => {
     if (!product) return null;
 
     if (selectedChoice && selectedCategory) {
+      const isTruckload = isTruckloadCategoryKey(selectedCategory.key);
       const formatLine = needsChoice
-        ? `${selectedCategory.label} · ${selectedChoice.displayLabel}`
-        : selectedCategory.label;
+        ? selectedChoice.kind === "pallet"
+          ? `${selectedCategory.label} · Pallet`
+          : `${selectedCategory.label} · Single`
+        : selectedCategory.label.replace(/\s*\([^)]*\)\s*$/, "") || selectedCategory.label;
+      const detail = isTruckload
+        ? selectedChoice.subLabel
+        : needsChoice
+        ? selectedChoice.kind === "pallet"
+          ? `${selectedChoice.subLabel} · 10% off`
+          : selectedChoice.subLabel
+        : selectedChoice.secondaryPriceLabel || undefined;
+      const rawUnit = selectedChoice.unit?.replace(/^per\s/i, "") ?? "";
+      const unitSuffix = isTruckload
+        ? ""
+        : /bag|pallet|tote|truckload|cu yd|ton/i.test(rawUnit)
+        ? rawUnit
+        : "";
       return {
         key: `choice-${selectedChoice.size}-${quantity}`,
         eyebrow: "Your selection",
         price: fmt(selectedChoice.displayPrice),
-        unitSuffix: selectedChoice.unit?.replace(/^per\s/i, "") ?? "",
+        unitSuffix,
         subtitle: formatLine,
-        detail: selectedChoice.subLabel || selectedChoice.cartLabel,
+        detail,
         totalLine:
           quantity > 1 ? `${quantity} × ${fmt(selectedChoice.displayPrice)} = ${fmt(selectedTotal)}` : undefined,
       };
@@ -917,7 +1091,9 @@ const ProductDetail = () => {
         eyebrow: needsChoice ? "Selected size" : "Your selection",
         price: selectedCategory.priceLabel,
         subtitle: selectedCategory.label,
-        detail: needsChoice ? "Choose pallet or single format below" : undefined,
+        detail: needsChoice
+          ? "Choose pallet or single below"
+          : selectedCategory.secondaryPriceLabel,
       };
     }
 
@@ -947,7 +1123,39 @@ const ProductDetail = () => {
     setSelectedCategoryKey("");
     setSelectedChoiceSize("");
     setQuantity(1);
+    setDeliveryQuote(null);
+    setDeliveryZip("");
+    setDeliveryRoughAccess(false);
+    setDeliverySemiAccess(true);
   }, [product?.id]);
+
+  useEffect(() => {
+    if (!isTruckloadSelected) {
+      setDeliveryQuote(null);
+      return;
+    }
+    // Re-enter truckload with the last ZIP the customer already typed.
+    if (!deliveryZip) {
+      const draft = loadDeliveryDraft();
+      if (draft?.zip) setDeliveryZip(draft.zip);
+    }
+  }, [deliveryZip, isTruckloadSelected]);
+
+  // Quantity changes the trucking load count — force a fresh ZIP estimate.
+  useEffect(() => {
+    if (!isTruckloadSelected) return;
+    setDeliveryQuote(null);
+  }, [quantity, isTruckloadSelected]);
+
+  useEffect(() => {
+    if (!selectedCategoryKey) return;
+    scrollBuyIntoView();
+  }, [selectedCategoryKey, scrollBuyIntoView]);
+
+  useEffect(() => {
+    if (!selectedChoiceSize) return;
+    scrollBuyIntoView();
+  }, [selectedChoiceSize, scrollBuyIntoView]);
 
   useEffect(() => {
     if (!product) return;
@@ -976,8 +1184,37 @@ const ProductDetail = () => {
     });
   }, [product?.id]);
 
-  const addSelectionToCart = useCallback((next?: "products" | "checkout" | "quote") => {
+  const persistDeliveryDraft = useCallback(() => {
+    if (!isTruckloadSelected || !deliveryZip) return;
+    saveDeliveryDraft({
+      zip: deliveryZip,
+      roughAccess: deliveryRoughAccess,
+      semiAccess: deliverySemiAccess,
+      quote: deliveryQuote,
+      city: deliveryQuote?.breakdown.destinationCity ?? null,
+      state: deliveryQuote?.breakdown.destinationState ?? null,
+    });
+  }, [
+    deliveryQuote,
+    deliveryRoughAccess,
+    deliverySemiAccess,
+    deliveryZip,
+    isTruckloadSelected,
+  ]);
+
+  const addSelectionToCart = useCallback((
+    next?: "products" | "checkout" | "quote",
+    opts?: { quiet?: boolean; focusStreet?: boolean },
+  ) => {
     if (!product || !selectedChoice) return;
+    if (isTruckloadSelected && next === "checkout" && !truckloadReadyToPurchase && !opts?.focusStreet) {
+      toast({
+        title: "Estimate delivery first",
+        description: "Enter your ZIP and get a delivery price before purchasing a truckload.",
+      });
+      scrollBuyIntoView();
+      return;
+    }
 
     trackEvent(next === "checkout" ? "Buy Now Clicked" : "Add To Cart Clicked", {
       product_id: product.id,
@@ -989,7 +1226,13 @@ const ProductDetail = () => {
       unit_price: selectedChoice.displayPrice,
       mode: canPayOnline ? "pay" : "quote",
       next: next ?? "cart_drawer",
+      delivery_zip: deliveryZip || undefined,
+      delivery_fee: deliveryQuote?.costDollars,
+      auto_address: Boolean(opts?.focusStreet),
     });
+
+    // When auto-advancing from Get price, draft was already saved with the fresh quote.
+    if (isTruckloadSelected && !opts?.focusStreet) persistDeliveryDraft();
 
     addItem({
       productId: product.id,
@@ -1007,16 +1250,35 @@ const ProductDetail = () => {
     });
 
     setJustAdded(true);
+    const addedSpots = spotsForFormat(selectedChoice.cartLabel, quantity);
+    const nextSpots = cartFlatbedSpots(cartItems) + addedSpots;
     // Only show the toast when we're navigating away. When we're opening the
     // cart drawer, the drawer itself is the confirmation — the toast would
-    // just stack on top and cover the drawer header.
-    if (next) {
+    // just stack on top and cover the drawer header. Flatbed adds still get a
+    // short spot hint in the drawer via FlatbedLoadMeter.
+    if (next && !opts?.quiet) {
       toast({
         title: "Added to cart",
-        description: `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
+        description:
+          addedSpots > 0
+            ? `${quantity}x ${product.displayTitle} · +${addedSpots} flatbed spot${addedSpots === 1 ? "" : "s"} (${Math.min(nextSpots, FLATBED_CAPACITY)}/${FLATBED_CAPACITY})`
+            : `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
+      });
+    } else if (!next && addedSpots > 0) {
+      toast({
+        title: `+${addedSpots} flatbed spot${addedSpots === 1 ? "" : "s"}`,
+        description: `Cart is ${Math.min(nextSpots, FLATBED_CAPACITY)} / ${FLATBED_CAPACITY} spots${nextSpots === FLATBED_CAPACITY ? " — 10% off products" : ""}`,
       });
     }
     window.setTimeout(() => setJustAdded(false), 1400);
+
+    if (opts?.focusStreet) {
+      try {
+        sessionStorage.setItem("osw-focus-street", "1");
+      } catch {
+        // ignore
+      }
+    }
 
     if (next === "products") navigate("/products");
     if (next === "checkout") canPayOnline ? navigate("/checkout") : navigate("/order");
@@ -1024,7 +1286,36 @@ const ProductDetail = () => {
     // Plain "Add to Cart" (no `next`) — open the drawer so the customer can
     // see what's in their cart and choose to continue or keep shopping.
     if (!next) openDrawer();
-  }, [addItem, canPayOnline, navigate, openDrawer, product, quantity, selectedCategory?.label, selectedChoice, toast]);
+  }, [
+    addItem,
+    canPayOnline,
+    cartItems,
+    deliveryQuote?.costDollars,
+    deliveryZip,
+    isTruckloadSelected,
+    navigate,
+    openDrawer,
+    persistDeliveryDraft,
+    product,
+    quantity,
+    scrollBuyIntoView,
+    selectedCategory?.label,
+    selectedChoice,
+    toast,
+    truckloadReadyToPurchase,
+  ]);
+
+  const deliveryQuoteItems = useMemo(() => {
+    if (!product || !selectedChoice || !isTruckloadSelected) return [];
+    return [
+      {
+        sizeOption: selectedChoice.cartLabel,
+        quantity,
+        unit: selectedChoice.unit,
+        productName: product.displayTitle,
+      },
+    ];
+  }, [isTruckloadSelected, product, quantity, selectedChoice]);
 
   // --- SEO ---
   const resolvedUsageSteps = product
@@ -1100,7 +1391,10 @@ const ProductDetail = () => {
         structuredData={productStructuredData}
       />
 
-      <section className="bg-muted/20 py-2 sm:py-8 lg:py-4" aria-label="Product details">
+      <section
+        className="bg-gradient-to-b from-[#eef3eb] via-[#f7f4ef] to-[#f3f6f2] py-2 sm:py-8 lg:py-4"
+        aria-label="Product details"
+      >
         <div className="container mx-auto px-3 sm:px-4 max-w-6xl xl:max-w-7xl">
           {/* Back */}
           <Button variant="ghost" className="mb-2 h-10 min-h-[40px] rounded-lg px-2 text-muted-foreground hover:text-foreground touch-manipulation sm:mb-4 sm:h-11 sm:min-h-[44px] sm:px-3 lg:hidden" asChild>
@@ -1134,10 +1428,20 @@ const ProductDetail = () => {
               {/* ============================================================ */}
               {/* HERO: Image + Product Info                                    */}
               {/* ============================================================ */}
-              <div className="overflow-hidden rounded-2xl border bg-white shadow-sm sm:rounded-3xl">
+              <div className="overflow-hidden rounded-2xl border border-[#264027]/12 bg-white shadow-[0_10px_40px_-24px_rgba(38,64,39,0.45)] sm:rounded-3xl">
+                {/* Desktop: back sits in the top-left corner of the main card */}
+                <div className="hidden border-b border-[#264027]/[0.06] px-4 pt-3 pb-2.5 lg:block lg:px-5">
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Products
+                  </Link>
+                </div>
                 <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
                   {/* Image gallery */}
-                  <div className="bg-gradient-to-b from-white to-stone-50 p-3 sm:p-4 lg:self-start">
+                  <div className="bg-gradient-to-br from-[#f4f7f2] via-white to-[#f8f1e7] p-3 sm:p-4 lg:self-start">
                     <div className="flex flex-col gap-3 lg:flex-row-reverse">
                       <div
                         className="group relative h-[245px] rounded-xl bg-white sm:h-[390px] md:cursor-pointer lg:h-[460px] lg:flex-1"
@@ -1233,41 +1537,30 @@ const ProductDetail = () => {
 
                   {/* Product Info */}
                   <div className="flex flex-col justify-start p-4 sm:p-6 lg:p-6">
-                    {/* Desktop back link — the standalone back-button row above the card is hidden at lg */}
-                    <Link
-                      href="/products"
-                      className="mb-2 hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground lg:inline-flex"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Back to Products
-                    </Link>
-                    {/* Badges */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <Badge className="bg-primary text-primary-foreground border-0 text-xs">
-                        <Leaf className="h-3 w-3 mr-1" />
-                        {product.category}
-                      </Badge>
-                      {product.certifications.map((cert) => (
-                        <Badge key={cert} className="bg-green-50 text-green-700 border-green-200 text-xs font-medium">
-                          <ShieldCheck className="h-3 w-3 mr-1" />
-                          {cert}
-                        </Badge>
-                      ))}
-                      {product.npk && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-xs font-medium">
-                          NPK: {product.npk}
-                        </Badge>
-                      )}
+                    {/* Title + cert logos on one line; NPK sits quietly under the name */}
+                    <div className="flex items-center justify-between gap-3 sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-3xl">
+                          {product.displayTitle}
+                        </h1>
+                        {product.npk && (
+                          <p className="mt-1.5 text-xs font-medium tabular-nums tracking-wide text-stone-500">
+                            NPK {product.npk}
+                          </p>
+                        )}
+                      </div>
+                      <ProductCertificationMarks
+                        certifications={product.certifications}
+                        productSlug={product.slug}
+                        productId={product.id}
+                        variant="detail"
+                        className="shrink-0 flex-nowrap justify-end"
+                      />
                     </div>
-
-                    {/* Name */}
-                    <h1 className="text-2xl sm:text-3xl lg:text-3xl font-heading font-bold tracking-tight text-foreground">
-                      {product.displayTitle}
-                    </h1>
 
                     {/* Description */}
                     {syncedProductDescription && (
-                      <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
                         {syncedProductDescription}
                       </p>
                     )}
@@ -1276,89 +1569,92 @@ const ProductDetail = () => {
                       const payPickupContent = product ? getPayPickupProductContent(product.id) : undefined;
                       const includes = payPickupContent?.includes ?? productDetailContent?.includes ?? [];
                       const benefits = payPickupContent?.benefits ?? productDetailContent?.benefits ?? [];
-                      if (includes.length === 0 && benefits.length === 0) return null;
+                      const specSheetUrl = payPickupContent?.specSheetUrl;
+                      if (includes.length === 0 && benefits.length === 0 && !specSheetUrl) return null;
                       return (
-                        <div className="mt-4 lg:mt-3">
+                        <div className="mt-4 space-y-3 lg:mt-3">
                           <PayPickupProductFacts includes={includes} benefits={benefits} variant="detail" />
+                          {specSheetUrl && (
+                            <a
+                              href={specSheetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#b38a58] hover:text-primary hover:underline"
+                              onClick={() =>
+                                trackEvent("Product Spec Sheet Downloaded", {
+                                  product_id: product.id,
+                                  product_slug: product.slug,
+                                  placement: "buy_box",
+                                })
+                              }
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              {payPickupContent?.specSheetLabel ?? "Download spec sheet"}
+                            </a>
+                          )}
                         </div>
                       );
                     })()}
 
-                    {/* Dynamic pricing — overview until a size/format is chosen */}
-                    {pricingSummary && (
-                      <div
-                        key={pricingSummary.key}
-                        className="mt-4 rounded-2xl border border-primary/10 bg-primary/[0.03] px-4 py-3 transition-all duration-200 lg:mt-3 lg:flex lg:flex-wrap lg:items-baseline lg:gap-x-3 lg:gap-y-1 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-1"
-                      >
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          {pricingSummary.eyebrow}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 lg:mt-0">
-                          <span className="text-2xl font-bold text-primary sm:text-3xl lg:text-3xl">
-                            {pricingSummary.price}
-                          </span>
-                          {pricingSummary.unitSuffix ? (
-                            <span className="text-sm text-muted-foreground">/ {pricingSummary.unitSuffix}</span>
-                          ) : null}
-                        </div>
-                        {pricingSummary.subtitle ? (
-                          <p className="mt-1 text-sm font-semibold text-foreground lg:mt-0">{pricingSummary.subtitle}</p>
-                        ) : null}
-                        {pricingSummary.detail ? (
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground lg:mt-0">{pricingSummary.detail}</p>
-                        ) : null}
-                        {pricingSummary.totalLine ? (
-                          <p className="mt-2 text-sm font-semibold text-primary lg:mt-0 lg:w-full">{pricingSummary.totalLine}</p>
-                        ) : null}
-                      </div>
-                    )}
-
-                    <div id="buy" className="mt-5 scroll-mt-24 rounded-2xl border border-border/70 bg-stone-50/60 p-3 sm:bg-transparent sm:p-0 sm:border-0 lg:mt-4">
-                      <div
-                        className={cn(
-                          "mb-3 flex flex-col gap-3 rounded-xl border border-border/70 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:mb-2 lg:p-2.5",
-                          // Step 1 on desktop: bare label row — the size cards speak for themselves
-                          !selectedCategory && "lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <div className="mb-1.5 flex items-center gap-2 lg:mb-1">
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
-                              {selectedCategory ? "Step 2" : "Step 1"}
-                            </span>
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                              {selectedCategory ? "Purchase type" : "Choose size"}
-                            </p>
-                          </div>
-                          <p className={cn("text-base font-bold leading-tight text-foreground", !selectedCategory && "lg:hidden")}>
-                            {selectedCategory ? `How do you want ${selectedCategory.label}?` : "Select the product package"}
+                    {/* Step 1: open size list. Step 2 keeps a light panel so delivery/qty don't float. */}
+                    <div
+                      id="buy"
+                      className={cn(
+                        "mt-5 scroll-mt-28 lg:mt-4",
+                        selectedCategory
+                          ? "rounded-2xl border border-[#264027]/10 bg-[#f7f8f5] p-3 sm:p-3.5"
+                          : "pt-1",
+                      )}
+                    >
+                      {selectedCategory ? (
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                            {needsChoice
+                              ? "Bag or pallet"
+                              : isTruckloadSelected
+                              ? "Delivery"
+                              : isBulkPickupSelected
+                              ? "Pickup"
+                              : "Quantity"}
                           </p>
-                          <p className="mt-1 text-sm leading-snug text-muted-foreground lg:hidden">
-                            {selectedCategory
-                              ? "Choose single, pallet, super sack, or truckload when available."
-                              : "Start with the package size, then pick the buying format if needed."}
-                          </p>
-                        </div>
-                        {selectedCategory && (
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedCategoryKey("");
                               setSelectedChoiceSize("");
                               setQuantity(1);
+                              setDeliveryQuote(null);
+                              scrollBuyIntoView();
                             }}
-                            className="inline-flex min-h-[40px] items-center justify-center gap-2 self-start rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-bold text-primary transition hover:bg-primary/10 sm:self-auto"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
                           >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to sizes
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                            Sizes
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="mb-3 flex items-baseline justify-between gap-3">
+                          <p className="text-sm font-semibold text-foreground">Choose a size</p>
+                          {pricingSummary && (
+                            <p className="text-sm text-muted-foreground">
+                              from{" "}
+                              <span className="font-bold text-primary">{pricingSummary.price}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {!selectedCategory && sizeCategories.length > 0 && (
-                        <div className="mt-3 space-y-3">
-                          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
-                            {sizeCategories.map((category) => (
+                        <div className="divide-y divide-[#264027]/10 border-y border-[#264027]/10">
+                          {sizeCategories.map((category) => {
+                            const shortLabel =
+                              category.label.replace(/\s*\([^)]*\)\s*$/, "") || category.label;
+                            const parenDetail = category.label.match(/\(([^)]+)\)/)?.[1];
+                            const detail =
+                              category.secondaryPriceLabel ||
+                              parenDetail ||
+                              null;
+                            return (
                               <button
                                 key={category.key}
                                 type="button"
@@ -1366,210 +1662,329 @@ const ProductDetail = () => {
                                   setSelectedCategoryKey(category.key);
                                   setSelectedChoiceSize("");
                                   setQuantity(1);
+                                  setDeliveryQuote(null);
                                   trackEvent("Product Size Selected", {
                                     product_id: product.id,
                                     product_slug: product.slug,
                                     size_category: category.label,
                                     price: category.price,
                                   });
+                                  scrollBuyIntoView();
                                 }}
-                                className="group flex min-h-[178px] flex-col overflow-hidden rounded-xl border border-border bg-white text-left shadow-sm transition hover:border-primary hover:shadow-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 touch-manipulation sm:min-h-0"
+                                className="group flex w-full items-center gap-3 py-3 text-left transition hover:bg-[#264027]/[0.03] focus:outline-none focus-visible:bg-[#264027]/[0.05] touch-manipulation sm:gap-4 sm:py-3.5"
                               >
-                                <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto lg:aspect-auto lg:h-20">
+                                <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#eef4eb] sm:h-[4.5rem] sm:w-[4.5rem]">
                                   {category.image ? (
                                     <OptimizedImage
                                       src={category.image}
                                       alt={category.label}
-                                      className="h-full w-full object-contain p-2 transition-transform duration-200 group-hover:scale-[1.03]"
+                                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
                                     />
                                   ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                                      No photo
-                                    </div>
+                                    <span className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                      —
+                                    </span>
                                   )}
-                                </div>
-                                <div className="flex flex-1 flex-col justify-between gap-1 px-3 py-2.5">
-                                  <span className="block text-sm font-bold leading-tight text-foreground">
-                                    {category.label}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[15px] font-bold leading-tight text-foreground sm:text-base">
+                                    {shortLabel}
                                   </span>
-                                  <span className="block text-sm font-extrabold text-primary">
+                                  {detail && (
+                                    <span className="mt-0.5 block text-xs leading-snug text-muted-foreground sm:text-[13px]">
+                                      {detail}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="shrink-0 text-right">
+                                  <span className="block text-[15px] font-extrabold text-primary sm:text-base">
                                     {category.priceLabel}
                                   </span>
-                                </div>
+                                  <span className="mt-0.5 block text-xs font-semibold text-[#b38a58] opacity-0 transition group-hover:opacity-100 sm:opacity-100">
+                                    Select →
+                                  </span>
+                                </span>
                               </button>
-                            ))}
-                          </div>
-                          <Button
-                            size="lg"
-                            className="min-h-[46px] w-full rounded-xl font-semibold shadow-none touch-manipulation lg:hidden"
-                            disabled
-                          >
-                            {canPayOnline ? <ShoppingCart className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
-                            Select a size first
-                          </Button>
+                            );
+                          })}
                         </div>
                       )}
 
                       {selectedCategory && (
                         <div className="mt-3 space-y-3 lg:space-y-2.5">
-                          <div className="flex items-center gap-3 border-y border-border/70 py-3 lg:hidden">
+                          {/* Selected size — photo + name, no nested card */}
+                          <div className="flex items-center gap-3 pb-1">
                             {selectedCategory.image && (
-                              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-border/70">
-                                <OptimizedImage src={selectedCategory.image} alt="" className="h-full w-full object-cover" />
+                              <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#eef4eb] sm:h-20 sm:w-20">
+                                <OptimizedImage
+                                  src={selectedCategory.image}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
                               </span>
                             )}
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Package size</p>
-                              <p className="text-sm font-bold text-foreground">{selectedCategory.label}</p>
+                              <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
+                                {selectedCategory.label.replace(/\s*\([^)]*\)\s*$/, "") || selectedCategory.label}
+                              </p>
+                              <p className="mt-0.5 text-sm text-muted-foreground">
+                                {selectedChoice?.subLabel ||
+                                  selectedCategory.secondaryPriceLabel?.replace(/^\$[\d.]+\/\w+\s·\s/, "") ||
+                                  selectedCategory.label.match(/\(([^)]+)\)/)?.[1] ||
+                                  ""}
+                              </p>
+                              {!needsChoice && selectedChoice && (
+                                <p className="mt-1 text-xl font-extrabold text-primary">
+                                  {fmt(selectedTotal)}
+                                  {quantity > 1 ? (
+                                    <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
+                                      ({quantity} loads)
+                                    </span>
+                                  ) : null}
+                                </p>
+                              )}
                             </div>
                           </div>
 
                           {needsChoice && (
-                            <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Pick pallet or single
-                              </p>
-                              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                {selectedCategory.choices.map((choice) => {
-                                  const isSelected = choice.size === selectedChoiceSize;
-                                  const choiceImage = imageForChoice(choice, selectedCategory.image);
-                                  return (
-                                    <button
-                                      key={choice.size}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedChoiceSize(choice.size);
-                                        setQuantity(1);
-                                        trackEvent("Product Purchase Type Selected", {
-                                          product_id: product.id,
-                                          product_slug: product.slug,
-                                          size_category: selectedCategory.label,
-                                          format: choice.cartLabel,
-                                          price: choice.displayPrice,
-                                        });
-                                      }}
-                                      className={cn(
-                                        "group flex min-h-[188px] flex-col overflow-hidden rounded-xl border bg-white text-left transition touch-manipulation sm:min-h-0 lg:flex-row lg:items-center",
-                                        isSelected
-                                          ? "border-primary ring-2 ring-primary/30 shadow-md"
-                                          : "border-border hover:border-primary hover:shadow-sm"
+                            <div className="divide-y divide-[#264027]/10 border-y border-[#264027]/10">
+                              {selectedCategory.choices.map((choice) => {
+                                const isSelected = choice.size === selectedChoiceSize;
+                                const choiceImage = imageForChoice(choice, selectedCategory.image);
+                                return (
+                                  <button
+                                    key={choice.size}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedChoiceSize(choice.size);
+                                      setQuantity(1);
+                                      trackEvent("Product Purchase Type Selected", {
+                                        product_id: product.id,
+                                        product_slug: product.slug,
+                                        size_category: selectedCategory.label,
+                                        format: choice.cartLabel,
+                                        price: choice.displayPrice,
+                                      });
+                                    }}
+                                    className={cn(
+                                      "group flex w-full items-center gap-3 py-3 text-left transition touch-manipulation sm:gap-4",
+                                      isSelected ? "bg-[#264027]/[0.06]" : "hover:bg-[#264027]/[0.03]",
+                                    )}
+                                  >
+                                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white sm:h-16 sm:w-16">
+                                      {choiceImage ? (
+                                        <OptimizedImage
+                                          src={choiceImage}
+                                          alt={choice.displayLabel}
+                                          className="h-full w-full object-contain p-1.5"
+                                        />
+                                      ) : null}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[15px] font-bold text-foreground">
+                                          {choice.displayLabel}
+                                        </span>
+                                        {choice.badge && (
+                                          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                                            {choice.badge}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                                        {choice.subLabel}
+                                        {choice.kind === "pallet" ? " · volume discount" : ""}
+                                      </span>
+                                    </span>
+                                    <span className="shrink-0 text-right">
+                                      {choice.compareAtPrice != null && (
+                                        <span className="mr-1.5 text-xs text-muted-foreground line-through">
+                                          {fmt(choice.compareAtPrice)}
+                                        </span>
                                       )}
+                                      <span className="text-[15px] font-extrabold text-primary">
+                                        {fmt(choice.displayPrice)}
+                                      </span>
+                                      {isSelected && (
+                                        <span className="mt-0.5 block text-xs font-semibold text-primary">Selected</span>
+                                      )}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {isBulkPickupSelected && (
+                            <div className="space-y-2 rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
+                              <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                                Pickup yard
+                              </p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {PICKUP_LOCATIONS.map((loc) => {
+                                  const isCongress = loc.id === "congress";
+                                  return (
+                                    <div
+                                      key={loc.id}
+                                      className="rounded-lg border border-border/80 bg-white px-3 py-2.5"
                                     >
-                                      <div className="relative h-28 w-full shrink-0 overflow-hidden bg-white sm:aspect-[4/3] sm:h-auto lg:aspect-auto lg:h-20 lg:w-24">
-                                        {choiceImage ? (
-                                          <OptimizedImage
-                                            src={choiceImage}
-                                            alt={choice.displayLabel}
-                                            className="h-full w-full object-contain p-2 transition-transform duration-200 group-hover:scale-[1.03]"
-                                          />
-                                        ) : (
-                                          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                                            No photo
-                                          </div>
-                                        )}
-                                        {isSelected && (
-                                          <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
-                                            ✓
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 py-2.5">
+                                      <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
-                                          <span className="block text-sm font-bold leading-tight text-foreground">
-                                            {choice.displayLabel}
-                                          </span>
-                                          <span className="mt-0.5 block text-xs leading-tight text-muted-foreground">
-                                            {choice.subLabel}
-                                          </span>
+                                          <p className="text-sm font-bold text-foreground">
+                                            {loc.pickupLocationLabel}
+                                          </p>
+                                          <p className="mt-0.5 flex items-start gap-1 text-[11px] leading-snug text-muted-foreground">
+                                            <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                                            {loc.addressLine}
+                                          </p>
                                         </div>
-                                        <span className="block text-base font-extrabold text-primary">
-                                          {fmt(choice.displayPrice)}
+                                        <span
+                                          className={cn(
+                                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide",
+                                            isCongress
+                                              ? "bg-emerald-100 text-emerald-800"
+                                              : "bg-amber-100 text-amber-900",
+                                          )}
+                                        >
+                                          {isCongress ? "ASAP" : "Schedule"}
                                         </span>
                                       </div>
-                                    </button>
+                                      <p className="mt-2 flex items-start gap-1.5 text-xs leading-snug text-stone-700">
+                                        <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                        {isCongress
+                                          ? "~30 min · Mon–Fri 6 AM–2 PM"
+                                          : "~1 week · slot at checkout · 12-ton max"}
+                                      </p>
+                                      <a
+                                        href={loc.directionsUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                                      >
+                                        Directions
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </div>
                                   );
                                 })}
                               </div>
                             </div>
                           )}
 
-                          {selectedCategory.key.includes("Bulk Pickup") && (
-                            <div className="rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2.5">
-                              <p className="text-xs font-bold uppercase tracking-wider text-primary">Where you&apos;ll pick up</p>
-                              <p className="mt-1 text-sm leading-snug text-stone-700">
-                                <span className="font-semibold">Congress plant</span> — ready in about 30 min, 6 AM - 2 PM, weighed on our scale
-                                <span className="text-stone-400"> · </span>
-                                <span className="font-semibold">Phoenix yard</span> — schedule about 1 week ahead, 12-ton max
-                              </p>
-                              <p className="mt-0.5 text-xs text-muted-foreground">You&apos;ll choose your pickup location at checkout.</p>
-                            </div>
-                          )}
-
-                          <div className="border-t border-border/70 pt-3 lg:pt-2.5">
-                            <div className="flex items-end justify-between gap-3">
-                              <div>
-                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantity</p>
+                          {selectedChoice && (
+                            <div className="flex items-center justify-between gap-3 pt-1">
+                              <div className="inline-flex items-center gap-1.5">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Qty
+                                </span>
                                 <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-white p-1">
                                   <button
                                     type="button"
                                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                                    className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
+                                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
                                     aria-label="Decrease quantity"
                                   >
-                                    <Minus className="h-4 w-4" />
+                                    <Minus className="h-3.5 w-3.5" />
                                   </button>
-                                  <span className="w-10 text-center text-base font-bold">{quantity}</span>
+                                  <span className="w-8 text-center text-sm font-bold">{quantity}</span>
                                   <button
                                     type="button"
                                     onClick={() => setQuantity((q) => q + 1)}
-                                    className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
+                                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted touch-manipulation"
                                     aria-label="Increase quantity"
                                   >
-                                    <Plus className="h-4 w-4" />
+                                    <Plus className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">
-                                  {selectedChoice
-                                    ? quantity > 1
-                                      ? `${quantity} × ${selectedChoice.cartLabel}`
-                                      : selectedChoice.cartLabel
-                                    : "Choose a format"}
+                              {needsChoice && (
+                                <p className="text-right text-xl font-bold text-primary">
+                                  {fmt(selectedTotal)}
+                                  {quantity > 1 ? (
+                                    <span className="mt-0.5 block text-xs font-medium text-muted-foreground">
+                                      {quantity} × {fmt(selectedChoice.displayPrice)}
+                                    </span>
+                                  ) : null}
                                 </p>
-                                {selectedChoice && quantity > 1 ? (
-                                  <p className="mt-0.5 text-xl font-bold text-primary">{fmt(selectedTotal)}</p>
-                                ) : null}
-                              </div>
+                              )}
                             </div>
-                          </div>
+                          )}
 
-                          {canPayOnline ? (
-                            <div className="grid gap-2 sm:grid-cols-2">
+                          {isTruckloadSelected && selectedChoice && (
+                            <div className="rounded-xl border border-[#b38a58]/25 bg-gradient-to-br from-[#faf6f0] to-white p-3 sm:p-3.5">
+                              <p className="mb-2.5 text-sm text-stone-600">
+                                Enter your ZIP — we&apos;ll price delivery, then ask for the street.
+                              </p>
+                              <DeliveryQuoteWidget
+                                key={`${selectedChoice.size}-${quantity}`}
+                                items={deliveryQuoteItems}
+                                initialZip={deliveryZip}
+                                compact
+                                onQuote={(quote, ctx) => {
+                                  setDeliveryQuote(quote);
+                                  setDeliveryZip(ctx.zip);
+                                  setDeliveryRoughAccess(ctx.roughAccess);
+                                  setDeliverySemiAccess(ctx.semiAccess);
+                                  if (quote) {
+                                    saveDeliveryDraft({
+                                      zip: ctx.zip,
+                                      roughAccess: ctx.roughAccess,
+                                      semiAccess: ctx.semiAccess,
+                                      quote,
+                                      city: quote.breakdown.destinationCity ?? null,
+                                      state: quote.breakdown.destinationState ?? null,
+                                    });
+                                  }
+                                }}
+                                onGetPriceSuccess={(quote, ctx) => {
+                                  setDeliveryQuote(quote);
+                                  setDeliveryZip(ctx.zip);
+                                  setDeliveryRoughAccess(ctx.roughAccess);
+                                  setDeliverySemiAccess(ctx.semiAccess);
+                                  saveDeliveryDraft({
+                                    zip: ctx.zip,
+                                    roughAccess: ctx.roughAccess,
+                                    semiAccess: ctx.semiAccess,
+                                    quote,
+                                    city: quote.breakdown.destinationCity ?? null,
+                                    state: quote.breakdown.destinationState ?? null,
+                                  });
+                                  if (!canPayOnline) return;
+                                  // Jump straight to street address — skip a second Purchase click.
+                                  addSelectionToCart("checkout", { quiet: true, focusStreet: true });
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {canPayOnline && !isTruckloadSelected && (
+                            <div className="grid gap-2">
                               <Button
                                 size="lg"
-                                className="min-h-[48px] rounded-xl font-semibold shadow-md touch-manipulation sm:col-span-2 lg:col-span-1"
-                                disabled={!selectedChoice}
+                                className="min-h-[52px] rounded-xl bg-[#b38a58] text-base font-bold text-white shadow-md hover:bg-[#9c7648] touch-manipulation"
+                                disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
+                                onClick={() => addSelectionToCart("checkout")}
+                              >
+                                <ShoppingBag className="mr-2 h-4 w-4" />
+                                {needsChoice && !selectedChoiceSize ? "Choose bag or pallet" : "Purchase"}
+                              </Button>
+                              <Button
+                                size="lg"
+                                variant="outline"
+                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation"
+                                disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
                                 onClick={() => addSelectionToCart()}
                               >
                                 {justAdded ? <Check className="mr-2 h-4 w-4" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
                                 {justAdded ? "Added" : "Add to Cart"}
                               </Button>
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation sm:col-span-2 lg:col-span-1"
-                                disabled={!selectedChoice}
-                                onClick={() => addSelectionToCart("checkout")}
-                              >
-                                Buy Now
-                              </Button>
                             </div>
-                          ) : (
+                          )}
+                          {!canPayOnline && (
                             <Button
                               size="lg"
                               className="min-h-[48px] w-full rounded-xl font-semibold shadow-md touch-manipulation"
-                              disabled={!selectedChoice}
+                              disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
                               onClick={() => addSelectionToCart("quote")}
                             >
                               <FileText className="mr-2 h-4 w-4" />
@@ -1584,8 +1999,66 @@ const ProductDetail = () => {
 
               </div>
 
+              {(() => {
+                const payPickupContent = getPayPickupProductContent(product.id);
+                const ingredientDetails = payPickupContent?.ingredientDetails ?? [];
+                const specSheetUrl = payPickupContent?.specSheetUrl;
+                if (ingredientDetails.length === 0) return null;
+                return (
+                  <Card className="overflow-hidden rounded-2xl border border-[#264027]/12 bg-gradient-to-br from-white via-[#fbfaf7] to-[#eef4eb] p-4 shadow-sm sm:p-5">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b38a58]">
+                          Inside the mix
+                        </p>
+                        <h2 className="mt-1 text-base font-semibold sm:text-lg">
+                          What&apos;s in {product.displayTitle}
+                        </h2>
+                        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                          Short notes on each input — full details are in the spec sheet.
+                        </p>
+                      </div>
+                      {specSheetUrl && (
+                        <a
+                          href={specSheetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-[40px] items-center gap-2 self-start rounded-full border border-[#264027]/20 bg-white px-3.5 py-2 text-sm font-bold text-primary shadow-sm transition hover:border-primary hover:bg-primary/5"
+                          onClick={() =>
+                            trackEvent("Product Spec Sheet Downloaded", {
+                              product_id: product.id,
+                              product_slug: product.slug,
+                              placement: "ingredients_section",
+                            })
+                          }
+                        >
+                          <Download className="h-4 w-4" />
+                          Spec sheet
+                        </a>
+                      )}
+                    </div>
+                    <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                      {ingredientDetails.map((item, index) => (
+                        <div
+                          key={item.name}
+                          className={cn(
+                            "rounded-xl border px-3.5 py-3 shadow-sm",
+                            index % 2 === 0
+                              ? "border-[#264027]/12 bg-[#f4f7f2]"
+                              : "border-[#b38a58]/20 bg-[#faf6f0]",
+                          )}
+                        >
+                          <p className="text-sm font-bold text-[#264027]">{item.name}</p>
+                          <p className="mt-1 text-sm leading-snug text-stone-600">{item.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                );
+              })()}
+
               {productDetailContent?.guideImages.length ? (
-                <Card className="overflow-hidden rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+                <Card className="overflow-hidden rounded-2xl border border-[#264027]/12 bg-white p-4 shadow-sm sm:p-5">
                   <div className="mb-3 flex items-end justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Product guide</p>
@@ -1632,7 +2105,7 @@ const ProductDetail = () => {
               {(resolvedUsageSteps.length > 0 || bestFitAudiences(product).length > 0) && (
                 <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
                   {resolvedUsageSteps.length > 0 && (
-                    <Card className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+                    <Card className="rounded-2xl border border-[#264027]/12 bg-gradient-to-b from-white to-[#f4f7f2] p-5 shadow-sm sm:p-6">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Garden use</p>
@@ -1642,7 +2115,7 @@ const ProductDetail = () => {
                       </div>
                       <div className="space-y-3">
                         {resolvedUsageSteps.map((step, index) => (
-                          <div key={step} className="flex gap-3 rounded-xl bg-stone-50 p-3">
+                          <div key={step} className="flex gap-3 rounded-xl border border-[#264027]/8 bg-white/80 p-3">
                             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
                               {index + 1}
                             </span>
@@ -1653,20 +2126,20 @@ const ProductDetail = () => {
                     </Card>
                   )}
                   {bestFitAudiences(product).length > 0 && (
-                    <Card className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+                    <Card className="rounded-2xl border border-[#b38a58]/25 bg-gradient-to-b from-white to-[#faf6f0] p-5 shadow-sm sm:p-6">
                       <div className="mb-4">
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b38a58]">Best fit</p>
                         <h2 className="mt-1 text-base font-semibold sm:text-lg">Best For</h2>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         {bestFitAudiences(product).map((item) => (
-                          <div key={item} className="flex min-h-[42px] items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700">
+                          <div key={item} className="flex min-h-[42px] items-center gap-2 rounded-xl border border-[#b38a58]/20 bg-white px-3 py-2 text-sm font-medium text-stone-700">
                             <Leaf className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
                             <span>{item}</span>
                           </div>
                         ))}
                       </div>
-                      <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-900">
+                      <p className="mt-4 rounded-xl border border-[#b38a58]/20 bg-[#f7efe3] px-3 py-2 text-sm leading-relaxed text-[#6b5435]">
                         {bestFitNote(product)}
                       </p>
                     </Card>

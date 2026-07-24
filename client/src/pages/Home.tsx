@@ -480,7 +480,7 @@ const Home = () => {
                   }}
                   className="h-14 gap-2 bg-[#d6c1a0] px-8 text-base font-semibold text-stone-900 shadow-lg hover:bg-[#c4a878]"
                 >
-                  Shop Soil Products <ArrowRight className="h-5 w-5" />
+                  Get Soil Today <ArrowRight className="h-5 w-5" />
                 </Button>
                 <Button
                   size="lg"

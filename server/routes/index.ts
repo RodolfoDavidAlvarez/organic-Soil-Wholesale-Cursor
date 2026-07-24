@@ -28,6 +28,7 @@ import adminAnalyticsRoutes from "./admin/analytics.js";
 import adminOperationsRoutes from "./admin/operations.js";
 import contactRoutes from "./contact.js";
 import quoteRequestRoutes from "./quoteRequests.js";
+import addressSuggestRoutes from "./addressSuggest.js";
 import specialRequestRoutes from "./specialRequests.js";
 import leadRoutes from "./leads.js";
 import representativeRoutes from "./representatives.js";
@@ -82,6 +83,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/representatives", businessCardRoutes);
   app.use("/api/contact", contactRoutes);
   app.use("/api/quote", quoteRequestRoutes);
+  app.use("/api/address", addressSuggestRoutes);
   app.use("/api/special-request", specialRequestRoutes);
   app.use("/api/leads", leadRoutes);
   app.use("/api", triviaLeadsRoutes);

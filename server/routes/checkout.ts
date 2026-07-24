@@ -11,6 +11,7 @@ import {
   resolveCheckoutPickupTime,
   TONS_PER_CU_YD,
 } from '../../shared/pickupSchedule.js';
+import { applyFullFlatbedProductDiscount } from '../../shared/flatbedSpots.js';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ function getStripe() {
 router.post('/create-session', async (req, res) => {
   try {
     const {
-      items,
+      items: rawItems,
       customerInfo,
       locationId,
       isQuickOrder,
@@ -45,9 +46,13 @@ router.post('/create-session', async (req, res) => {
     } = req.body;
     let { pickupTime, pickupMode } = req.body;
 
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
       return res.status(400).json({ error: 'No items to check out' });
     }
+
+    // Authoritative full flatbed discount (22 spots → 10% off product lines).
+    const flatbedPricing = applyFullFlatbedProductDiscount(rawItems);
+    const items = flatbedPricing.items;
 
     const isDelivery = fulfillmentType === 'delivery';
     const checkoutLocationId = locationId || 1;
@@ -90,9 +95,15 @@ router.post('/create-session', async (req, res) => {
     const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
       ? deliveryAddress.preferredDate.trim()
       : '';
+    const preferredDeliveryDateEnd = isDelivery && typeof deliveryAddress?.preferredDateEnd === 'string'
+      ? deliveryAddress.preferredDateEnd.trim()
+      : '';
     const preferredDeliveryWindow = isDelivery && typeof deliveryAddress?.preferredWindow === 'string'
       ? deliveryAddress.preferredWindow.trim()
       : '';
+    const availabilityLabel = preferredDeliveryDate && preferredDeliveryDateEnd && preferredDeliveryDate !== preferredDeliveryDateEnd
+      ? `${preferredDeliveryDate} → ${preferredDeliveryDateEnd}`
+      : preferredDeliveryDate;
 
     if (isDelivery) {
       const deliveryZip = typeof deliveryAddress?.zip === 'string' ? deliveryAddress.zip.trim() : '';
@@ -119,10 +130,12 @@ router.post('/create-session', async (req, res) => {
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
       typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
       normalizedDiscount && discountPercent > 0 ? `Discount applied: ${normalizedDiscount} (-${discountPercent}%)` : null,
+      flatbedPricing.applied
+        ? `Full flatbed (22 spots): 10% product discount (−$${flatbedPricing.discountAmount.toFixed(2)})`
+        : null,
       isDelivery && deliveryAddress ? `Delivery to: ${[deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')}` : null,
       isDelivery && truckingQuote ? `Delivery: ${truckingQuote.truckLabel}, ~${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel} ($${truckingQuote.costDollars})` : null,
-      isDelivery && preferredDeliveryDate ? `Preferred delivery day: ${preferredDeliveryDate}` : null,
-      isDelivery && preferredDeliveryWindow ? `Preferred delivery window: ${preferredDeliveryWindow}` : null,
+      isDelivery && availabilityLabel ? `Customer availability: ${availabilityLabel}${preferredDeliveryWindow ? ` · ${preferredDeliveryWindow}` : ''}` : null,
       deliveryAddress?.roughAccess ? 'Site access: hard-to-reach / off-pavement (+20% modifier applied)' : null,
       // Semi-truck access: only call out the negative case. Customer opted out
       // of the pre-checked semi-access question, so we MUST call before dispatch.
@@ -195,12 +208,17 @@ router.post('/create-session', async (req, res) => {
       delivery_address_json: isDelivery && deliveryAddress
         ? {
             line1: deliveryAddress.street || null,
+            street: deliveryAddress.street || null,
             city: deliveryAddress.city || null,
             state: deliveryAddress.state || null,
             zip: deliveryAddress.zip || null,
             roughAccess: !!deliveryAddress.roughAccess,
             semiAccess: deliveryAddress.semiAccess !== false,
             originKey: deliveryAddress.originKey || null,
+            availabilityFrom: preferredDeliveryDate || null,
+            availabilityTo: preferredDeliveryDateEnd || preferredDeliveryDate || null,
+            preferredWindow: preferredDeliveryWindow || null,
+            availabilityPreset: deliveryAddress.availabilityPreset || null,
           }
         : null,
       preferred_date: isDelivery && preferredDeliveryDate ? preferredDeliveryDate : null,
@@ -218,16 +236,13 @@ router.post('/create-session', async (req, res) => {
       })),
     };
 
-    // Handle different customer info structures
-    if (isQuickOrder) {
-      // Quick order uses name field
-      orderData.business_name = customerInfo.company || customerInfo.name;
-      orderData.order_type = isDelivery ? 'delivery' : 'pickup';
-    } else {
-      // Regular checkout uses businessName
-      orderData.business_name = customerInfo.businessName;
-      orderData.order_type = isDelivery ? 'delivery' : 'regular';
-    }
+    // business_name is NOT NULL in legacy schema — always provide a display name.
+    orderData.business_name =
+      customerInfo.company ||
+      customerInfo.businessName ||
+      customerInfo.name ||
+      "OSW Customer";
+    orderData.order_type = isDelivery ? "delivery" : isQuickOrder ? "pickup" : "regular";
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -289,6 +304,15 @@ router.post('/create-session', async (req, res) => {
         payment_status: 'paid',
         source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
       });
+
+      if (isDelivery) {
+        try {
+          const { createDeliveryWorkOrderFromOswOrder } = await import('../../shared/oswDeliveryIntake.js');
+          await createDeliveryWorkOrderFromOswOrder(order.id);
+        } catch (e) {
+          console.error('[checkout free] delivery intake failed:', e);
+        }
+      }
 
       return res.json({
         free: true,
@@ -357,6 +381,7 @@ router.post('/create-session', async (req, res) => {
         fulfillment_type: isDelivery ? 'delivery' : 'pickup',
         delivery_zip: isDelivery ? deliveryAddress?.zip || '' : '',
         preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
+        preferred_delivery_date_end: isDelivery ? preferredDeliveryDateEnd : '',
         preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
         customer_type: customerInfo.customerCategory || '',
         company: customerInfo.company || '',

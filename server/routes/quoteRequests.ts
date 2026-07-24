@@ -80,19 +80,28 @@ async function getTruckingRates(): Promise<TruckingRates> {
 
 function inferFormat(rawKey: string | undefined): 'bulk' | 'pallet' | 'bag' {
   const key = String(rawKey || '').toLowerCase();
+  // Pallet truckloads (e.g. "Truckload (22 pallets)") need a flatbed, not walking-floor.
+  if (key.includes('truckload') && key.includes('pallet')) return 'pallet';
   if (key.includes('truckload') || key.includes('bulk')) return 'bulk';
   if (key === '2-cy' || key.includes('cubic yard') || key.includes('cu yd') || key.includes(' cy ')) return 'bulk';
   if (key.includes('pallet') || key.includes('tote') || key.includes('supersack') || key.includes('super sack')) return 'pallet';
   return 'bag';
 }
 
+function palletCountFromItem(item: QuoteItem): number {
+  const key = String(item.sizeOption || item.format || '');
+  const qty = Math.max(1, Number(item.quantity) || 1);
+  const match = key.match(/(\d+)\s*pallets?/i);
+  // "Truckload (22 pallets)" with qty 1 = 22 pallet spots on the flatbed.
+  if (match) return Number(match[1]) * qty;
+  if (inferFormat(key) === 'pallet') return qty;
+  return 0;
+}
+
 function pickTruck(items: QuoteItem[], milesEstimate = 100): { truck: TruckType; split: 'mixed' | null } {
   const formats = items.map((item) => inferFormat(item.sizeOption || item.format));
   const hasBulk = formats.includes('bulk');
-  const palletQty = items.reduce((sum, item, index) => {
-    if (formats[index] === 'pallet') return sum + (Number(item.quantity) || 1);
-    return sum;
-  }, 0);
+  const palletQty = items.reduce((sum, item) => sum + palletCountFromItem(item), 0);
 
   if (hasBulk && palletQty === 0) return { truck: 'walking_floor', split: null };
   if (hasBulk && palletQty > 0) return { truck: 'walking_floor', split: 'mixed' };
@@ -152,11 +161,21 @@ async function getOneWayDistance(originKey: OriginKey, destZip: string, rates: T
       .single();
 
     if (cached) {
+      // Distance cache does not store place names — still resolve city/state for checkout autofill.
+      let city: string | null = null;
+      let state: string | null = null;
+      try {
+        const place = await geocodeZip(destZip);
+        city = place.city || null;
+        state = place.state || null;
+      } catch {
+        // Non-fatal — checkout can still collect the address manually.
+      }
       return {
         miles: Number(cached.miles_one_way),
         hours: Number(cached.hours_one_way),
-        city: null,
-        state: null,
+        city,
+        state,
         cached: true,
       };
     }
@@ -218,7 +237,11 @@ export async function quoteTrucking({
 
   const { truck, split } = pickTruck(items || [], distance.miles);
   const truckRate = rates[truck];
-  const loadCount = truck === 'walking_floor' ? walkingFloorLoads(items || []) : 1;
+  const palletSpots = (items || []).reduce((sum, item) => sum + palletCountFromItem(item), 0);
+  const loadCount =
+    truck === 'walking_floor'
+      ? walkingFloorLoads(items || [])
+      : Math.max(1, Math.ceil(palletSpots / 22));
   const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
   const baseCost = roundTripHours * truckRate.hourly_rate;
   const accessModifier = roughAccess ? 1.2 : 1.0;

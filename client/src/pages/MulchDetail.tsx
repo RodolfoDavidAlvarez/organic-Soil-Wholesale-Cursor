@@ -240,11 +240,18 @@ const MulchDetail = () => {
                   <Badge className="bg-primary text-white border-0 px-3 py-1.5 text-xs font-semibold">
                     Mulch
                   </Badge>
-                  {selectedVariant?.certifications && selectedVariant.certifications.includes("OMRI") && (
-                    <Badge className="bg-green-100 text-green-800 border-green-200">
-                      OMRI Listed
-                    </Badge>
-                  )}
+                  <img
+                    src="/omri-logo.png"
+                    alt="OMRI Listed"
+                    className="h-8 w-auto sm:h-9"
+                    loading="lazy"
+                  />
+                  <img
+                    src="/uscc-logo.png"
+                    alt="US Compost Council"
+                    className="h-8 w-auto sm:h-9"
+                    loading="lazy"
+                  />
                 </div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3 text-neutral-900">Nature's Blanket Premium Mulch</h1>
                 <p className="text-base sm:text-lg lg:text-xl text-neutral-600 leading-relaxed">Premium mulch enhanced with dairy compost for optimal soil health and plant growth.</p>
@@ -451,13 +458,9 @@ const MulchDetail = () => {
 
                     <TabsContent value="certifications" className="mt-0">
                       <h4 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-neutral-900">Certifications</h4>
-                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        {selectedVariant?.certifications?.split(',').map((cert: string, index: number) => (
-                          <div key={index} className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200 text-center">
-                            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-1.5 sm:mb-2" />
-                            <p className="text-xs sm:text-sm font-medium text-neutral-900">{cert.trim()}</p>
-                          </div>
-                        ))}
+                      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-neutral-200 bg-white p-4 sm:p-5">
+                        <img src="/omri-logo.png" alt="OMRI Listed" className="h-12 w-auto sm:h-14" loading="lazy" />
+                        <img src="/uscc-logo.png" alt="US Compost Council" className="h-12 w-auto sm:h-14" loading="lazy" />
                       </div>
                     </TabsContent>
                   </div>

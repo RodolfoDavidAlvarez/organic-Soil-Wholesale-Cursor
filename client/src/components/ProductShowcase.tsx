@@ -4,11 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, ArrowRight, Leaf, Package, ChevronRight, Star, Truck, ShieldCheck } from "lucide-react";
+import { Search, Filter, ArrowRight, Leaf, Package, ChevronRight, Star, Truck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateProductSlug } from "@/utils/generateSlug";
 import { AUDIENCE_FILTERS, getAudienceTagsForProduct, type AudienceTag } from "@/data/audienceFilters";
+import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
+import { isOmriCertLabel } from "@/data/omriCertifications";
 
 // Default placeholder image for products that don't have images
 const DEFAULT_IMAGE = "/images/optimized/default-potting-soil-texture.jpg";
@@ -301,14 +303,25 @@ export default function ProductShowcase({ products, loading = false, onProductSe
                     </Badge>
                   )}
                   {(() => {
-                    const certs = typeof product.certifications === 'string' ? product.certifications : '';
-                    if (certs.includes('OMRI')) return (
-                      <Badge className="bg-white/90 text-green-700 shadow border-0 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm">
-                        <ShieldCheck className="h-2.5 w-2.5 mr-0.5" />
-                        OMRI
-                      </Badge>
+                    const raw = product.certifications;
+                    const certs =
+                      typeof raw === "string"
+                        ? raw.split(",").map((c) => c.trim()).filter(Boolean)
+                        : Array.isArray(raw)
+                          ? raw.map((c) => (typeof c === "string" ? c : c.name)).filter(Boolean)
+                          : [];
+                    const hasOmri =
+                      certs.some((c) => isOmriCertLabel(c)) ||
+                      (typeof raw === "string" && raw.includes("OMRI"));
+                    if (!hasOmri) return null;
+                    return (
+                      <ProductCertificationMarks
+                        certifications={certs}
+                        productSlug={product.slug}
+                        productId={product.id}
+                        variant="card"
+                      />
                     );
-                    return null;
                   })()}
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-[1]" />

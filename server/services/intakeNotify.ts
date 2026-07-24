@@ -356,14 +356,22 @@ function buildEmailHtml(wo: WorkOrder): string {
 }
 
 export async function notifyIntakeTeam(wo: WorkOrder): Promise<void> {
-  const phones = (process.env.INTAKE_NOTIFY_PHONES || "")
+  const { isOswDeveloperMode } = await import("../../shared/developerMode.js");
+
+  let phones = (process.env.INTAKE_NOTIFY_PHONES || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const emails = (process.env.INTAKE_NOTIFY_EMAILS || "")
+  let emails = (process.env.INTAKE_NOTIFY_EMAILS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+
+  // While testing: never fan out to Kerry/Sabrina — Rodo only.
+  if (isOswDeveloperMode()) {
+    phones = process.env.RODO_PHONE ? [process.env.RODO_PHONE] : [];
+    emails = ["ralvarez@soilseedandwater.com"];
+  }
 
   if (phones.length === 0 && emails.length === 0) {
     console.warn(

@@ -74,9 +74,14 @@ export const SIZE_CATALOG: SizeCatalogEntry[] = [
 
 /** Infer SizeFormat from a size key string (loose match — accepts any string).
  *  Used by server-side trucking calculator where we receive raw key/label
- *  strings from the cart. Returns 'bag' as the safe default for small SKUs. */
+ *  strings from the cart. Returns 'bag' as the safe default for small SKUs.
+ *  Note: "Truckload (22 pallets)" is flatbed (pallet), not walking-floor bulk.
+ *  ProductDetail maps that size photo to /images/size-formats/mixed-truckload.webp.
+ */
 export function inferSizeFormat(rawKey: string): SizeFormat {
   const k = (rawKey || "").toLowerCase();
+  // Pallet truckloads (e.g. "Truckload (22 pallets)") ride a flatbed, not walking-floor.
+  if (k.includes("truckload") && k.includes("pallet")) return "pallet";
   if (k.includes("truckload") || k.includes("bulk")) return "bulk";
   if (k === "2-cy" || k.includes("cubic yard") || k.includes("cu yd")) return "bulk";
   if (k.includes("pallet") || k.includes("tote") || k.includes("supersack") || k.includes("super sack")) return "pallet";

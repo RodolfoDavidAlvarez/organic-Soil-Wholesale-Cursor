@@ -702,6 +702,15 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
   });
 
+  if (isDeliveryOrder) {
+    try {
+      const { createDeliveryWorkOrderFromOswOrder } = await import('../shared/oswDeliveryIntake.js');
+      await createDeliveryWorkOrderFromOswOrder(orderId);
+    } catch (e) {
+      console.error('[checkout fulfill] delivery intake failed:', e?.message || e);
+    }
+  }
+
   return { ok: true, order, ...trackingPayload };
 }
 
@@ -4147,10 +4156,7 @@ ${pages}
 
     // ============ NEWSLETTER SUBSCRIBE / UNSUBSCRIBE ENDPOINTS ============
 
-    // Airtable configuration for Email Marketing 2026
-    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
-    const AIRTABLE_EMAIL_BASE_ID = "appBLlRW7MOx0qdlu";
-    const AIRTABLE_EMAIL_TABLE_ID = "tblmofFGmkN2dZ4GB";
+    // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
     // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
@@ -4223,7 +4229,7 @@ ${pages}
       }
     }
 
-    // POST /api/unsubscribe - Unsubscribe an email (sp_customers + Airtable sync)
+    // POST /api/unsubscribe - Unsubscribe an email (sp_customers only)
     if (path === '/api/unsubscribe' && req.method === 'POST') {
       const body = req.body || {};
       const email = body.email || url.searchParams.get('email');
@@ -4271,16 +4277,30 @@ ${pages}
       });
     }
 
-    // POST /api/resend/webhook — newsletter opens/clicks → sp_customers + email_events
+    // POST /api/resend/webhook — fallback if dedicated api/resend/webhook.js is not hit
     if (path === '/api/resend/webhook' && req.method === 'POST') {
       try {
+        const { readRawBody, verifyResendWebhookSignature } = await import('../shared/resendWebhookVerify.js');
+        const rawBody = await readRawBody(req);
+        const secret = process.env.RESEND_WEBHOOK_SECRET;
+        if (secret) {
+          const verified = verifyResendWebhookSignature(rawBody, req.headers, secret);
+          if (!verified.ok) {
+            console.error('[Resend Webhook] signature failed:', verified.reason);
+            return res.status(401).json({ error: 'Invalid signature', reason: verified.reason });
+          }
+        }
+        let event = req.body;
+        if (rawBody && (!event || typeof event !== 'object' || !event.type)) {
+          event = JSON.parse(rawBody);
+        }
         const db = await getSupabase();
         const { handleResendNewsletterWebhook } = await import('../shared/newsletterEngagement.js');
-        await handleResendNewsletterWebhook(db, req.body);
-        return res.json({ received: true });
+        const result = await handleResendNewsletterWebhook(db, event);
+        return res.json({ received: true, ...result });
       } catch (e) {
         console.error('[Resend Webhook] Error:', e?.message || e);
-        return res.status(200).json({ received: true, error: 'Processing error' });
+        return res.status(500).json({ received: false, error: 'Processing error' });
       }
     }
 
@@ -5360,6 +5380,8 @@ ${pages}
     // or "9lb Bag" — we need format from the string.
     function inferFormat(rawKey) {
       const k = String(rawKey || '').toLowerCase();
+      // Pallet truckloads need flatbed/hot-shot, not walking-floor bulk dump.
+      if (k.includes('truckload') && k.includes('pallet')) return 'pallet';
       if (k.includes('truckload') || k.includes('bulk')) return 'bulk';
       if (k === '2-cy' || k.includes('cubic yard') || k.includes('cu yd') || k.includes(' cy ')) return 'bulk';
       if (k.includes('pallet') || k.includes('tote') || k.includes('supersack') || k.includes('super sack')) return 'pallet';
@@ -5377,13 +5399,19 @@ ${pages}
     }
 
     // Cart items shape: [{ sizeOption, quantity, ... }]
+    function palletCountFromItem(item) {
+      const key = String(item.sizeOption || item.format || '');
+      const qty = Math.max(1, Number(item.quantity) || 1);
+      const match = key.match(/(\d+)\s*pallets?/i);
+      if (match) return Number(match[1]) * qty;
+      if (inferFormat(key) === 'pallet') return qty;
+      return 0;
+    }
+
     function pickTruck(items, milesEstimate = 100) {
       const formats = items.map((i) => inferFormat(i.sizeOption || i.format || ''));
       const hasBulk = formats.includes('bulk');
-      const palletQty = items.reduce((sum, i, idx) => {
-        if (formats[idx] === 'pallet') return sum + (Number(i.quantity) || 1);
-        return sum;
-      }, 0);
+      const palletQty = items.reduce((sum, i) => sum + palletCountFromItem(i), 0);
 
       if (hasBulk && palletQty === 0) {
         return { truck: 'walking_floor', split: null };
@@ -5432,7 +5460,14 @@ ${pages}
           .eq('dest_zip', destZip)
           .single();
         if (cached) {
-          return { miles: Number(cached.miles_one_way), hours: Number(cached.hours_one_way), city: null, state: null, cached: true };
+          let city = null;
+          let state = null;
+          try {
+            const place = await geocodeZip(destZip);
+            city = place.city || null;
+            state = place.state || null;
+          } catch (_) { /* non-fatal */ }
+          return { miles: Number(cached.miles_one_way), hours: Number(cached.hours_one_way), city, state, cached: true };
         }
       } catch (_) { /* miss */ }
 
@@ -5478,7 +5513,11 @@ ${pages}
       const { truck, split } = pickTruck(items || [], distance.miles);
       const truckRate = rates[truck];
       if (!truckRate) throw new Error(`No rate configured for truck ${truck}`);
-      const loadCount = truck === 'walking_floor' ? walkingFloorLoads(items || []) : 1;
+      const palletSpots = (items || []).reduce((sum, item) => sum + palletCountFromItem(item), 0);
+      const loadCount =
+        truck === 'walking_floor'
+          ? walkingFloorLoads(items || [])
+          : Math.max(1, Math.ceil(palletSpots / 22));
 
       const roundTripHours = distance.hours * 2 + (rates.unload_hours || 0.5);
       const baseCost = roundTripHours * truckRate.hourly_rate;
@@ -5514,6 +5553,118 @@ ${pages}
           cached: distance.cached,
         },
       };
+    }
+
+    // GET /api/address/suggest?q=&zip= — Phoenix/AZ-biased street autocomplete (Nominatim)
+    if (path === '/api/address/suggest' && req.method === 'GET') {
+      try {
+        const q = String(url.searchParams.get('q') || '').trim();
+        const zipHint = String(url.searchParams.get('zip') || '').trim();
+        if (q.length < 3) return res.json({ suggestions: [] });
+
+        const PHOENIX = { lat: 33.4484, lng: -112.074, city: 'Phoenix', state: 'AZ' };
+        let bias = PHOENIX;
+        if (/^\d{5}$/.test(zipHint)) {
+          try {
+            const zr = await fetch(`https://api.zippopotam.us/us/${zipHint}`, { signal: AbortSignal.timeout(4000) });
+            if (zr.ok) {
+              const zj = await zr.json();
+              const place = zj?.places?.[0];
+              if (place) {
+                bias = {
+                  lat: Number(place.latitude),
+                  lng: Number(place.longitude),
+                  city: place['place name'] || 'Phoenix',
+                  state: place['state abbreviation'] || 'AZ',
+                };
+              }
+            }
+          } catch (_) { /* keep Phoenix */ }
+        }
+
+        const alreadyScoped = /\b(az|arizona|phoenix)\b/i.test(q);
+        const scopedQuery = alreadyScoped
+          ? q
+          : zipHint && bias.city
+            ? `${q}, ${bias.city}, AZ`
+            : `${q}, Phoenix, AZ`;
+
+        const params = new URLSearchParams({
+          q: scopedQuery,
+          format: 'jsonv2',
+          addressdetails: '1',
+          countrycodes: 'us',
+          limit: '6',
+          viewbox: '-114.9,37.0,-109.0,31.3',
+          bounded: '0',
+        });
+        const nr = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+          headers: {
+            'User-Agent': 'OrganicSoilWholesale/1.0 (checkout address assist; info@soilseedandwater.com)',
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (!nr.ok) return res.status(502).json({ error: 'Address lookup unavailable', suggestions: [] });
+        const rows = await nr.json();
+        const suggestions = (Array.isArray(rows) ? rows : [])
+          .map((row) => {
+            const a = row.address || {};
+            const number = (a.house_number || '').trim();
+            const road = (a.road || a.pedestrian || a.residential || a.highway || '').trim();
+            const street = number && road ? `${number} ${road}` : (road || number);
+            const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.county || '';
+            const code = String(a.state_code || '').trim().toUpperCase();
+            const stateName = String(a.state || '').trim().toLowerCase();
+            const stateMap = { arizona: 'AZ', california: 'CA', nevada: 'NV', 'new mexico': 'NM', utah: 'UT', colorado: 'CO', texas: 'TX' };
+            const state = /^[A-Z]{2}$/.test(code) ? code : (stateMap[stateName] || 'AZ');
+            const zip = String(a.postcode || '').replace(/\D/g, '').slice(0, 5);
+            if (!street || !city) return null;
+            const lat = Number(row.lat);
+            const lng = Number(row.lon);
+            const dist = Number.isFinite(lat) && Number.isFinite(lng)
+              ? (lat - bias.lat) ** 2 + (lng - bias.lng) ** 2
+              : 99;
+            const inAz = state === 'AZ' || /arizona/i.test(a.state || '');
+            return {
+              id: String(row.place_id ?? `${street}-${zip}`),
+              label: [street, city, state, zip].filter(Boolean).join(', '),
+              street, city, state: state || 'AZ', zip, _dist: dist, _inAz: inAz,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => (a._inAz !== b._inAz ? (a._inAz ? -1 : 1) : a._dist - b._dist))
+          .slice(0, 5)
+          .map(({ _dist, _inAz, ...rest }) => rest);
+
+        return res.json({ suggestions, bias: { lat: bias.lat, lng: bias.lng, city: bias.city, zip: zipHint || null } });
+      } catch (err) {
+        console.error('[address/suggest]', err);
+        return res.status(500).json({ error: 'Address lookup failed', suggestions: [] });
+      }
+    }
+
+    // GET /api/address/zip/:zip — city/state for a ZIP
+    if (path.startsWith('/api/address/zip/') && req.method === 'GET') {
+      try {
+        const zip = path.split('/').pop()?.replace(/\D/g, '').slice(0, 5);
+        if (!zip || zip.length !== 5) return res.status(400).json({ error: 'Invalid ZIP' });
+        const zr = await fetch(`https://api.zippopotam.us/us/${zip}`, { signal: AbortSignal.timeout(4000) });
+        if (!zr.ok) return res.status(404).json({ error: 'ZIP not found' });
+        const zj = await zr.json();
+        const place = zj?.places?.[0];
+        if (!place) return res.status(404).json({ error: 'ZIP not found' });
+        return res.json({
+          zip,
+          city: place['place name'],
+          state: place['state abbreviation'],
+          lat: Number(place.latitude),
+          lng: Number(place.longitude),
+        });
+      } catch (err) {
+        console.error('[address/zip]', err);
+        return res.status(500).json({ error: 'ZIP lookup failed' });
+      }
     }
 
     // POST /api/quote/trucking — body { items: [{sizeOption, quantity}], zip, roughAccess?, originKey? }
@@ -5669,14 +5820,18 @@ ${pages}
     if (path === '/api/checkout/create-session' && req.method === 'POST') {
       try {
         const {
-          items, customerInfo, locationId, discountCode,
+          items: rawItems, customerInfo, locationId, discountCode,
           fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation,
         } = req.body || {};
         let { pickupTime, pickupMode } = req.body || {};
 
-        if (!Array.isArray(items) || items.length === 0) {
+        if (!Array.isArray(rawItems) || rawItems.length === 0) {
           return res.status(400).json({ error: 'No items to check out' });
         }
+
+        const { applyFullFlatbedProductDiscount } = await import('../shared/flatbedSpots.js');
+        const flatbedPricing = applyFullFlatbedProductDiscount(rawItems);
+        const items = flatbedPricing.items;
 
         const normalizedDiscount = typeof discountCode === 'string' ? discountCode.trim().toUpperCase() : null;
         const discountPercent = normalizedDiscount === 'TEST' ? 100 : 0;
@@ -5710,13 +5865,30 @@ ${pages}
           }
         }
 
+        const preferredDeliveryDate = isDelivery && typeof deliveryAddress?.preferredDate === 'string'
+          ? deliveryAddress.preferredDate.trim()
+          : '';
+        const preferredDeliveryDateEnd = isDelivery && typeof deliveryAddress?.preferredDateEnd === 'string'
+          ? deliveryAddress.preferredDateEnd.trim()
+          : '';
+        const preferredDeliveryWindow = isDelivery && typeof deliveryAddress?.preferredWindow === 'string'
+          ? deliveryAddress.preferredWindow.trim()
+          : '';
+        const availabilityLabel = preferredDeliveryDate && preferredDeliveryDateEnd && preferredDeliveryDate !== preferredDeliveryDateEnd
+          ? `${preferredDeliveryDate} → ${preferredDeliveryDateEnd}`
+          : (preferredDeliveryDate || '');
+
         const customerNotes = [
           customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
           customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
           typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
           normalizedDiscount && discountPercent > 0 ? `Discount applied: ${normalizedDiscount} (-${discountPercent}%)` : null,
+          flatbedPricing.applied
+            ? `Full flatbed (22 spots): 10% product discount (−$${flatbedPricing.discountAmount.toFixed(2)})`
+            : null,
           isDelivery && deliveryAddress ? `Delivery to: ${[deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')}` : null,
           isDelivery && truckingQuote ? `Delivery: ${truckingQuote.truckLabel}, ~${truckingQuote.hoursRoundTrip} hr round-trip from ${truckingQuote.originLabel} ($${truckingQuote.costDollars})` : null,
+          isDelivery && availabilityLabel ? `Customer availability: ${availabilityLabel}${preferredDeliveryWindow ? ` · ${preferredDeliveryWindow}` : ''}` : null,
           deliveryAddress?.roughAccess ? 'Site access: hard-to-reach / off-pavement (+20% modifier applied)' : null,
           // Semi-truck access: only call out the negative case. Customer opted out
           // of the pre-checked semi-access question, so we MUST call before dispatch.
@@ -5762,8 +5934,27 @@ ${pages}
           delivery_hours: isDelivery && truckingQuote ? truckingQuote.hoursRoundTrip : null,
           access_modifier: isDelivery && truckingQuote ? truckingQuote.accessModifier : null,
           delivery_origin_yard: isDelivery && truckingQuote ? truckingQuote.originYard : null,
+          address: isDelivery && deliveryAddress
+            ? [deliveryAddress.street, deliveryAddress.city, deliveryAddress.state, deliveryAddress.zip].filter(Boolean).join(', ')
+            : null,
+          preferred_date: isDelivery && preferredDeliveryDate ? preferredDeliveryDate : null,
+          preferred_time_start: isDelivery && preferredDeliveryWindow ? preferredDeliveryWindow : null,
+          preferred_time_end: null,
           delivery_address_json: isDelivery && deliveryAddress
-            ? { street: deliveryAddress.street || '', city: deliveryAddress.city || '', state: deliveryAddress.state || 'AZ', zip: deliveryAddress.zip || '' }
+            ? {
+                street: deliveryAddress.street || '',
+                line1: deliveryAddress.street || '',
+                city: deliveryAddress.city || '',
+                state: deliveryAddress.state || 'AZ',
+                zip: deliveryAddress.zip || '',
+                roughAccess: !!deliveryAddress.roughAccess,
+                semiAccess: deliveryAddress.semiAccess !== false,
+                originKey: deliveryAddress.originKey || null,
+                availabilityFrom: preferredDeliveryDate || null,
+                availabilityTo: preferredDeliveryDateEnd || preferredDeliveryDate || null,
+                preferredWindow: preferredDeliveryWindow || null,
+                availabilityPreset: deliveryAddress.availabilityPreset || null,
+              }
             : null,
           order_items: items.map((item) => ({
             product_id: item.productId,
@@ -5846,6 +6037,15 @@ ${pages}
             console.error('[free-order MOS forward] failed:', e?.message || e);
           }
 
+          if (isDelivery) {
+            try {
+              const { createDeliveryWorkOrderFromOswOrder } = await import('../shared/oswDeliveryIntake.js');
+              await createDeliveryWorkOrderFromOswOrder(order.id);
+            } catch (e) {
+              console.error('[free-order delivery intake] failed:', e?.message || e);
+            }
+          }
+
           return res.json({
             free: true,
             orderId: order.id,
@@ -5918,6 +6118,10 @@ ${pages}
           metadata: {
             order_id: String(order.id),
             pickup_time: pickupTime || '',
+            fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+            preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
+            preferred_delivery_date_end: isDelivery ? preferredDeliveryDateEnd : '',
+            preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
             customer_type: customerInfo?.customerCategory || '',
             company: customerInfo?.company || '',
           },

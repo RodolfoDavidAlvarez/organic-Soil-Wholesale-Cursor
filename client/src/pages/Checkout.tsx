@@ -9,12 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { PickupReadyTime, type PickupReadySelection } from "@/components/PickupReadyTime";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
+import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
+import { cartFlatbedSpots, fullLoadDiscountAmount } from "@/lib/flatbedSpots";
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
-  Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation,
+  Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
 } from "lucide-react";
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
@@ -30,6 +34,57 @@ const DELIVERY_WINDOWS = [
   "Call to coordinate",
 ];
 
+type AvailabilityPreset = "1-3" | "this-week" | "next-week" | "custom";
+
+function toYmd(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function addBusinessDays(start: Date, count: number) {
+  const d = new Date(start);
+  let left = count;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) left -= 1;
+  }
+  return d;
+}
+
+function endOfWeek(from: Date) {
+  const d = new Date(from);
+  const day = d.getDay(); // 0 Sun
+  const add = day === 0 ? 5 : day === 6 ? 6 : 5 - day;
+  d.setDate(d.getDate() + add);
+  return d;
+}
+
+function nextWeekRange(from: Date) {
+  const start = new Date(from);
+  const day = start.getDay();
+  const daysUntilMon = day === 0 ? 1 : day === 1 ? 7 : 8 - day;
+  start.setDate(start.getDate() + daysUntilMon);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 4);
+  return { from: start, to: end };
+}
+
+function rangeForPreset(preset: AvailabilityPreset): { from: string; to: string } {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  if (preset === "1-3") {
+    return { from: toYmd(addBusinessDays(today, 1)), to: toYmd(addBusinessDays(today, 3)) };
+  }
+  if (preset === "this-week") {
+    return { from: toYmd(addBusinessDays(today, 1)), to: toYmd(endOfWeek(today)) };
+  }
+  if (preset === "next-week") {
+    const { from, to } = nextWeekRange(today);
+    return { from: toYmd(from), to: toYmd(to) };
+  }
+  return { from: toYmd(addBusinessDays(today, 1)), to: toYmd(addBusinessDays(today, 3)) };
+}
+
 const Checkout: React.FC = () => {
   const [, navigate] = useLocation();
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
@@ -39,6 +94,9 @@ const Checkout: React.FC = () => {
     () => payItems.some((item) => item.format.toLowerCase().includes("truckload")),
     [payItems]
   );
+  const flatbedSpots = useMemo(() => cartFlatbedSpots(payItems), [payItems]);
+  const fullFlatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
+  const hasFlatbedSpots = flatbedSpots > 0;
   // Loose-bulk tonnage in the cart — cu yd items estimated at 50 lb/cf.
   const bulkPickupTons = useMemo(
     () =>
@@ -64,15 +122,36 @@ const Checkout: React.FC = () => {
   // Pickup state (ASAP ready time — auto-computed)
   const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(null);
 
-  // Delivery state
-  const [deliveryAddress, setDeliveryAddress] = useState({ street: "", city: "", state: "AZ", zip: "" });
-  const [deliveryQuote, setDeliveryQuote] = useState<TruckingQuote | null>(null);
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [deliveryWindow, setDeliveryWindow] = useState("");
-  const [roughAccess, setRoughAccess] = useState(false);
+  // Delivery state — seed ZIP / quote from product-page estimate when present
+  const [deliveryAddress, setDeliveryAddress] = useState(() => {
+    const draft = typeof window !== "undefined" ? loadDeliveryDraft() : null;
+    return {
+      street: "",
+      city: draft?.city ?? "",
+      state: draft?.state || "AZ",
+      zip: draft?.zip ?? "",
+    };
+  });
+  const [deliveryQuote, setDeliveryQuote] = useState<TruckingQuote | null>(() =>
+    typeof window !== "undefined" ? loadDeliveryDraft()?.quote ?? null : null,
+  );
+  const [availabilityPreset, setAvailabilityPreset] = useState<AvailabilityPreset>("1-3");
+  const [deliveryFrom, setDeliveryFrom] = useState(() => rangeForPreset("1-3").from);
+  const [deliveryTo, setDeliveryTo] = useState(() => rangeForPreset("1-3").to);
+  const [deliveryWindow, setDeliveryWindow] = useState("Anytime during business hours");
+  /** When a product-page quote exists, show a compact summary instead of re-quoting. */
+  const [editingDeliveryQuote, setEditingDeliveryQuote] = useState(false);
+  const [showSummaryItems, setShowSummaryItems] = useState(false);
+  const [roughAccess, setRoughAccess] = useState(() =>
+    typeof window !== "undefined" ? Boolean(loadDeliveryDraft()?.roughAccess) : false,
+  );
   // Default true: assume the customer has semi-truck access. They opt out
   // explicitly if they don't, which triggers an ops notification.
-  const [semiAccess, setSemiAccess] = useState(true);
+  const [semiAccess, setSemiAccess] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const draft = loadDeliveryDraft();
+    return draft ? draft.semiAccess !== false : true;
+  });
 
   // Customer
   const [name, setName] = useState("");
@@ -81,7 +160,16 @@ const Checkout: React.FC = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [activeStep, setActiveStep] = useState<CheckoutStep>("fulfillment");
+  const [activeStep, setActiveStep] = useState<CheckoutStep>(() => {
+    // Truckload buyers who already estimated ZIP on the product page land on delivery details.
+    if (typeof window === "undefined") return "fulfillment";
+    const draft = loadDeliveryDraft();
+    const truckloadInCart = items.some(
+      (item) => item.mode === "pay" && item.format.toLowerCase().includes("truckload"),
+    );
+    if (truckloadInCart && draft?.zip && draft?.quote) return "timing";
+    return "fulfillment";
+  });
   const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,16 +195,66 @@ const Checkout: React.FC = () => {
     }
   }, [fulfillment, hasTruckloadItem]);
 
+  // Keep city/state congruent with the delivery ZIP (fixes stale "Phoenix" from drafts/cache).
+  useEffect(() => {
+    const zip = deliveryAddress.zip;
+    if (!/^\d{5}$/.test(zip)) return;
+
+    let cancelled = false;
+    fetch(`/api/address/zip/${zip}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((place) => {
+        if (cancelled || !place?.city) return;
+        setDeliveryAddress((prev) => {
+          if (prev.zip !== zip) return prev;
+          // Don't overwrite a city confirmed via street autocomplete.
+          if (prev.street.trim() && prev.city.trim()) return prev;
+          if (prev.city === place.city && prev.state === (place.state || prev.state)) return prev;
+          return {
+            ...prev,
+            city: place.city,
+            state: place.state || prev.state || "AZ",
+          };
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [deliveryAddress.zip]);
+
+  // If cart gains a truckload + we already have a product-page estimate, jump to delivery details.
+  useEffect(() => {
+    if (!hasTruckloadItem || activeStep !== "fulfillment") return;
+    const draft = loadDeliveryDraft();
+    if (draft?.zip && draft?.quote) {
+      setActiveStep("timing");
+      if (draft.city || draft.state) {
+        setDeliveryAddress((prev) => ({
+          ...prev,
+          zip: draft.zip || prev.zip,
+          city: draft.city || prev.city,
+          state: draft.state || prev.state || "AZ",
+        }));
+      }
+      if (draft.quote && !deliveryQuote) setDeliveryQuote(draft.quote);
+      setRoughAccess(Boolean(draft.roughAccess));
+      setSemiAccess(draft.semiAccess !== false);
+    }
+  }, [activeStep, deliveryQuote, hasTruckloadItem]);
+
   // Items shaped for the DeliveryQuoteWidget (truck picker)
   const quoteItems = useMemo(
     () => payItems.map((i) => ({ sizeOption: i.format, quantity: i.quantity, unit: i.unit, productName: i.productName })),
     [payItems]
   );
 
-  const productSubtotal = useMemo(
+  const productSubtotalGross = useMemo(
     () => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
     [payItems]
   );
+  /** After full-flatbed 10% (server applies the same on create-session). */
+  const productSubtotal = productSubtotalGross - fullFlatbedDiscount;
   const deliveryFee = fulfillment === "delivery" && deliveryQuote ? deliveryQuote.costDollars : 0;
   const subtotal = productSubtotal + deliveryFee;
   const discountAmount = appliedDiscount ? subtotal * (appliedDiscount.percent / 100) : 0;
@@ -241,8 +379,10 @@ const Checkout: React.FC = () => {
                 roughAccess,
                 semiAccess,
                 originKey: deliveryQuote?.originYard,
-                preferredDate: deliveryDate || null,
+                preferredDate: deliveryFrom || null,
+                preferredDateEnd: deliveryTo || null,
                 preferredWindow: deliveryWindow || null,
+                availabilityPreset,
               }
             : null,
           // Echo for audit; server re-quotes truly
@@ -282,7 +422,8 @@ const Checkout: React.FC = () => {
           pickupReadyLabel: fulfillment === "pickup" ? pickupReady?.readyLabel : null,
           fulfillment,
           deliveryZip: fulfillment === "delivery" ? deliveryAddress.zip : null,
-          deliveryDate: fulfillment === "delivery" ? deliveryDate || null : null,
+          deliveryDate: fulfillment === "delivery" ? deliveryFrom || null : null,
+          deliveryDateEnd: fulfillment === "delivery" ? deliveryTo || null : null,
           deliveryWindow: fulfillment === "delivery" ? deliveryWindow || null : null,
         })
       );
@@ -535,7 +676,11 @@ const Checkout: React.FC = () => {
                       Pickup
                     </div>
                     <span className="text-[11px] font-medium leading-tight text-stone-500">
-                      {hasTruckloadItem ? "Truckload orders require delivery" : "Choose Congress or Phoenix"}
+                      {hasTruckloadItem
+                        ? "Truckload orders require delivery"
+                        : hasFlatbedSpots
+                          ? "Or deliver pallets & totes on a flatbed (Moffett)"
+                          : "Choose Congress or Phoenix"}
                     </span>
                   </button>
                   <button
@@ -783,89 +928,238 @@ const Checkout: React.FC = () => {
                 <CardHeader className="px-4 py-3 sm:px-5">
                   <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
                     <Truck className="h-4 w-4 text-[#264027]" />
-                    Get your delivery price
+                    {deliveryQuote && !editingDeliveryQuote ? "Delivery address" : "Delivery price"}
                   </CardTitle>
+                  {deliveryQuote && !editingDeliveryQuote && (
+                    <p className="mt-1 text-sm text-stone-500">
+                      Confirm where the truck should unload.
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4 px-4 pb-4 pt-0 sm:px-5">
-                  <DeliveryQuoteWidget
-                    items={quoteItems}
-                    initialZip={deliveryAddress.zip}
-                    onQuote={(q, ctx) => {
-                      setDeliveryQuote(q);
-                      setRoughAccess(ctx.roughAccess);
-                      setSemiAccess(ctx.semiAccess);
-                      setDeliveryAddress((prev) => ({ ...prev, zip: ctx.zip }));
-                    }}
-                  />
+                  {/* Compact quote when already priced on the product page */}
+                  {deliveryQuote && !editingDeliveryQuote ? (
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-stone-900">{deliveryQuote.truckLabel}</p>
+                          <p className="mt-0.5 text-xs text-stone-600">
+                            {deliveryQuote.originLabel} →{" "}
+                            {[
+                              (deliveryAddress.city || deliveryQuote.breakdown.destinationCity || "").trim(),
+                              (deliveryAddress.state || "").trim(),
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || `ZIP ${deliveryAddress.zip}`}
+                            {deliveryAddress.zip ? ` · ${deliveryAddress.zip}` : ""}
+                          </p>
+                          <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-emerald-800">
+                            <Clock className="h-3.5 w-3.5" />
+                            Usually within 1–3 business days
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-lg font-bold text-[#264027]">{fmt(deliveryQuote.costDollars).replace(/\.00$/, "")}</p>
+                          <button
+                            type="button"
+                            onClick={() => setEditingDeliveryQuote(true)}
+                            className="mt-1 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
+                          >
+                            Change ZIP
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <DeliveryQuoteWidget
+                      items={quoteItems}
+                      initialZip={deliveryAddress.zip}
+                      initialQuote={deliveryQuote}
+                      initialRoughAccess={roughAccess}
+                      initialSemiAccess={semiAccess}
+                      compact
+                      onQuote={(q, ctx) => {
+                        setDeliveryQuote(q);
+                        setRoughAccess(ctx.roughAccess);
+                        setSemiAccess(ctx.semiAccess);
+                        const cityFromQuote = q?.breakdown.destinationCity?.trim() || "";
+                        const stateFromQuote = q?.breakdown.destinationState?.trim() || "";
+                        setDeliveryAddress((prev) => ({
+                          ...prev,
+                          zip: ctx.zip,
+                          city: cityFromQuote || (prev.zip === ctx.zip ? prev.city : ""),
+                          state: stateFromQuote || prev.state || "AZ",
+                        }));
+                        saveDeliveryDraft({
+                          zip: ctx.zip,
+                          roughAccess: ctx.roughAccess,
+                          semiAccess: ctx.semiAccess,
+                          quote: q,
+                          city: cityFromQuote || null,
+                          state: stateFromQuote || null,
+                        });
+                        if (q) setEditingDeliveryQuote(false);
+                        if (!cityFromQuote && /^\d{5}$/.test(ctx.zip)) {
+                          fetch(`/api/address/zip/${ctx.zip}`)
+                            .then((r) => (r.ok ? r.json() : null))
+                            .then((place) => {
+                              if (!place?.city) return;
+                              setDeliveryAddress((prev) =>
+                                prev.zip === ctx.zip && !prev.city.trim()
+                                  ? { ...prev, city: place.city, state: place.state || prev.state || "AZ" }
+                                  : prev,
+                              );
+                            })
+                            .catch(() => {});
+                        }
+                      }}
+                    />
+                  )}
 
                   {deliveryQuote && (
-                    <div className="space-y-3 border-t border-stone-200 pt-3">
+                    <div className="space-y-3">
                       <div>
                         <Label htmlFor="d-street" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                           Street address <span className="text-red-500">*</span>
                         </Label>
-                        <Input
+                        <AddressAutocomplete
                           id="d-street"
                           value={deliveryAddress.street}
-                          onChange={(e) => setDeliveryAddress((p) => ({ ...p, street: e.target.value }))}
-                          placeholder="1234 Project Rd"
-                          autoComplete="address-line1"
-                          className="mt-1 h-11 text-base"
+                          biasZip={deliveryAddress.zip}
+                          placeholder="Start typing your street"
+                          className="mt-1"
+                          autoFocus={!deliveryAddress.street.trim()}
+                          onChange={(street) => setDeliveryAddress((p) => ({ ...p, street }))}
+                          onSelect={(address) => {
+                            const nextZip = address.zip || deliveryAddress.zip;
+                            const zipChanged = Boolean(address.zip && address.zip !== deliveryAddress.zip);
+                            setDeliveryAddress({
+                              street: address.street,
+                              city: address.city,
+                              state: address.state || "AZ",
+                              zip: nextZip,
+                            });
+                            trackEvent("Checkout Address Autocompleted", {
+                              city: address.city,
+                              state: address.state,
+                              zip: nextZip,
+                              zip_changed: zipChanged,
+                            });
+                            if (zipChanged) {
+                              setDeliveryQuote(null);
+                              setEditingDeliveryQuote(true);
+                            }
+                          }}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="d-city" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                            City <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            id="d-city"
-                            value={deliveryAddress.city}
-                            onChange={(e) => setDeliveryAddress((p) => ({ ...p, city: e.target.value }))}
-                            placeholder="Phoenix"
-                            autoComplete="address-level2"
-                            className="mt-1 h-11 text-base"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="d-state" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                            State
-                          </Label>
-                          <Input
-                            id="d-state"
-                            value={deliveryAddress.state}
-                            onChange={(e) => setDeliveryAddress((p) => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))}
-                            maxLength={2}
-                            autoComplete="address-level1"
-                            className="mt-1 h-11 text-base"
-                          />
-                        </div>
+                      <div className="grid grid-cols-[1fr_4.5rem] gap-2">
+                        <Input
+                          id="d-city"
+                          value={deliveryAddress.city}
+                          onChange={(e) => setDeliveryAddress((p) => ({ ...p, city: e.target.value }))}
+                          placeholder="City"
+                          aria-label="City"
+                          autoComplete="address-level2"
+                          className="h-11 text-base"
+                        />
+                        <Input
+                          id="d-state"
+                          value={deliveryAddress.state}
+                          onChange={(e) => setDeliveryAddress((p) => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                          maxLength={2}
+                          placeholder="AZ"
+                          aria-label="State"
+                          autoComplete="address-level1"
+                          className="h-11 text-center text-base uppercase"
+                        />
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <Label htmlFor="d-date" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                            Preferred delivery day <span className="text-stone-400 font-normal normal-case">(optional)</span>
-                          </Label>
-                          <Input
-                            id="d-date"
-                            type="date"
-                            value={deliveryDate}
-                            onChange={(e) => setDeliveryDate(e.target.value)}
-                            min={new Date().toISOString().slice(0, 10)}
-                            className="mt-1 h-11 text-base"
-                          />
+
+                      <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3">
+                        <div className="flex items-start gap-2">
+                          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-emerald-950">When can we deliver?</p>
+                            <p className="mt-0.5 text-xs text-emerald-900/80">
+                              Share an availability range. Kerry confirms or proposes a better slot.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="d-window" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                            Preferred delivery window <span className="text-stone-400 font-normal normal-case">(optional)</span>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(
+                            [
+                              { id: "1-3", label: "1–3 business days" },
+                              { id: "this-week", label: "This week" },
+                              { id: "next-week", label: "Next week" },
+                              { id: "custom", label: "Custom range" },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setAvailabilityPreset(opt.id);
+                                if (opt.id !== "custom") {
+                                  const range = rangeForPreset(opt.id);
+                                  setDeliveryFrom(range.from);
+                                  setDeliveryTo(range.to);
+                                }
+                              }}
+                              className={cn(
+                                "rounded-full px-3 py-1.5 text-xs font-bold transition",
+                                availabilityPreset === opt.id
+                                  ? "bg-[#264027] text-white"
+                                  : "bg-white text-stone-700 ring-1 ring-stone-200 hover:ring-[#264027]/40",
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="d-date" className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                              From
+                            </Label>
+                            <Input
+                              id="d-date"
+                              type="date"
+                              value={deliveryFrom}
+                              onChange={(e) => {
+                                setAvailabilityPreset("custom");
+                                setDeliveryFrom(e.target.value);
+                                if (deliveryTo && e.target.value > deliveryTo) setDeliveryTo(e.target.value);
+                              }}
+                              min={new Date().toISOString().slice(0, 10)}
+                              className="mt-1 h-11 bg-white text-base"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="d-date-end" className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                              To
+                            </Label>
+                            <Input
+                              id="d-date-end"
+                              type="date"
+                              value={deliveryTo}
+                              onChange={(e) => {
+                                setAvailabilityPreset("custom");
+                                setDeliveryTo(e.target.value);
+                              }}
+                              min={deliveryFrom || new Date().toISOString().slice(0, 10)}
+                              className="mt-1 h-11 bg-white text-base"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <Label htmlFor="d-window" className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                            Preferred window
                           </Label>
                           <select
                             id="d-window"
                             value={deliveryWindow}
                             onChange={(e) => setDeliveryWindow(e.target.value)}
-                            className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-base"
+                            className="mt-1 h-11 w-full rounded-md border border-input bg-white px-3 text-base"
                           >
-                            <option value="">Select a window</option>
                             {DELIVERY_WINDOWS.map((windowLabel) => (
                               <option key={windowLabel} value={windowLabel}>
                                 {windowLabel}
@@ -946,43 +1240,57 @@ const Checkout: React.FC = () => {
             {activeStep !== "review" && (
             <Card className="overflow-hidden rounded-2xl border-stone-200 shadow-sm">
               <CardHeader className="border-b border-[#264027]/10 bg-[#264027]/5 px-4 py-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ShoppingBag className="h-4 w-4 text-[#264027]" />
-                  Order summary
+                <CardTitle className="flex items-center justify-between gap-2 text-base">
+                  <span className="inline-flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-[#264027]" />
+                    {payItems.length} {payItems.length === 1 ? "item" : "items"}
+                  </span>
+                  <span className="font-bold text-[#264027]">{fmt(total)}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 px-4 pb-4 pt-6">
-                {payItems.map((item) => (
-                  <div key={`summary-${item.productId}-${item.format}`} className="grid grid-cols-[58px_1fr_auto] gap-3">
-                    {item.imageUrl ? (
-                      <div className="relative h-[58px] w-[58px] overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
-                        <OptimizedImage src={item.imageUrl} alt={item.productName} className="h-full w-full object-contain p-1" />
-                        {item.sizeImage && (
-                          <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 overflow-hidden rounded-md bg-white ring-2 ring-white shadow-md">
-                            <OptimizedImage src={item.sizeImage} alt={item.format} className="h-full w-full object-cover" />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex h-[58px] w-[58px] items-center justify-center rounded-lg bg-stone-100 text-stone-400">
-                        <Package className="h-5 w-5" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-stone-950">{item.productName}</p>
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-tight text-stone-500">{item.format}</p>
-                      <p className="mt-1 text-xs font-medium text-stone-500">Qty {item.quantity}</p>
-                    </div>
-                    <p className="whitespace-nowrap text-sm font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+              <CardContent className="space-y-2 px-4 py-3">
+                {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} compact className="mb-1" />}
+                <div className="flex items-center justify-between text-sm text-stone-600">
+                  <span>Products</span>
+                  <span>{fmt(productSubtotalGross)}</span>
+                </div>
+                {fullFlatbedDiscount > 0 && (
+                  <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                    <span>Full flatbed (10% off)</span>
+                    <span>−{fmt(fullFlatbedDiscount)}</span>
                   </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setActiveStep("review")}
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm font-bold text-[#264027] hover:bg-stone-50"
-                >
-                  Edit item
-                </button>
+                )}
+                {fulfillment === "delivery" && (
+                  <div className="flex items-center justify-between text-sm text-stone-600">
+                    <span>Delivery</span>
+                    <span>{deliveryQuote ? fmt(deliveryFee) : "—"}</span>
+                  </div>
+                )}
+                {(showSummaryItems || activeStep === "fulfillment") && (
+                  <div className="space-y-2 border-t border-stone-100 pt-2">
+                    {payItems.map((item) => (
+                      <div key={`summary-${item.productId}-${item.format}`} className="flex items-start justify-between gap-2 text-sm">
+                        <p className="min-w-0 text-stone-700">
+                          <span className="font-semibold text-stone-900">{item.productName}</span>
+                          <span className="block text-xs text-stone-500">
+                            {item.format} · Qty {item.quantity}
+                          </span>
+                        </p>
+                        <p className="shrink-0 font-semibold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activeStep !== "fulfillment" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSummaryItems((v) => !v)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#264027]"
+                  >
+                    {showSummaryItems ? "Hide items" : "View items"}
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition", showSummaryItems && "rotate-180")} />
+                  </button>
+                )}
               </CardContent>
             </Card>
             )}
@@ -998,10 +1306,17 @@ const Checkout: React.FC = () => {
               <CardContent className="space-y-4 p-4 sm:p-5">
                 {/* Totals */}
                 <div className="space-y-2">
+                  {hasFlatbedSpots && <FlatbedLoadMeter spots={flatbedSpots} className="mb-2" />}
                   <div className="flex items-center justify-between text-sm text-stone-600">
                     <span>Products</span>
-                    <span>{fmt(productSubtotal)}</span>
+                    <span>{fmt(productSubtotalGross)}</span>
                   </div>
+                  {fullFlatbedDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm font-medium text-emerald-700">
+                      <span>Full flatbed (10% off)</span>
+                      <span>−{fmt(fullFlatbedDiscount)}</span>
+                    </div>
+                  )}
                   {fulfillment === "delivery" && (
                     <div className={cn(
                       "flex items-center justify-between text-sm",

@@ -32,7 +32,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     category: "Dairy Compost",
     slug: "simons-gold",
     description: "Slow-release dairy compost for feeding, rebuilding, and conserving soil in beds, trees, planted areas, and Arizona landscape projects.",
-    image: "/images/optimized/dansgold9lbs-1.jpg",
+    image: "/images/optimized/simons-gold-bag-context.jpg",
     offers: [
       { name: "9 lb Bag", price: 12.46 },
       { name: "40 lb Bag (1 cu ft)", price: 24.9 },
@@ -46,7 +46,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     category: "Worm Castings",
     slug: "mikeys-worm-poop",
     description: "Nutrient-rich worm castings for root zones, top dressing, seed starts, garden beds, and soil biology support.",
-    image: "/images/optimized/mikeys-worm-poop9lbs.jpg",
+    image: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
     offers: [
       { name: "9 lb Bag", price: 18.1 },
       { name: "40 lb Bag (1 cu ft)", price: 34.9 },
@@ -59,11 +59,12 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     category: "All-Stage Nursery Mix",
     slug: "plantpal",
     description: "All-stage nursery potting mix for seed starts, propagation, containers, nurseries, and patio planters.",
-    image: "/images/optimized/plantpal10lbs.jpg",
+    image: "/images/optimized/plantpal-bag-context.jpg",
     offers: [
-      { name: "1 cu ft Bag", price: 10.99 },
+      { name: "1.5 cu ft Bag (~50 lb)", price: 10.99 },
       { name: "Super Sack (2.2 cu yd)", price: 247.28 },
-      { name: "Truckload (22 pallets)", price: 4896.05 },
+      { name: "Bulk Pickup (per cu yd)", price: 36 },
+      { name: "Truckload (~60 cu yd)", price: 2160 },
     ],
   },
   {
@@ -74,9 +75,10 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     description: "Premium healthy soil mulch made with wood fiber, worm castings, and dairy compost for clean landscape finish, moisture retention, weed suppression, gardens, farms, and commercial properties.",
     image: "/images/optimized/natures-blanket-bag-studio.jpg",
     offers: [
-      { name: "2 cu ft Bag", price: 10.99 },
+      { name: "2 cu ft Bag (~60 lb)", price: 10.99 },
       { name: "Super Sack (2.2 cu yd)", price: 137.5 },
-      { name: "Truckload (~90 cu yd)", price: 2700 },
+      { name: "Bulk Pickup (per cu yd)", price: 24 },
+      { name: "Truckload (22 pallets)", price: 2700 },
     ],
   },
 ] as const;

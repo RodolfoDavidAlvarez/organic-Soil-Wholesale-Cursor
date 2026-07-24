@@ -508,7 +508,7 @@ export const OrderForm: React.FC = () => {
               <div>
                 <p className="font-medium text-green-800 mb-1">Truckload Discount Available</p>
                 <p className="text-sm text-green-700">
-                  Get 20% off on a full truckload of pallets (22 pallets). Mix and match products within the same category for volume discounts!
+                  Get 10% off on a full truckload of pallets (22 pallets). Mix and match products for volume discounts!
                 </p>
               </div>
             </div>

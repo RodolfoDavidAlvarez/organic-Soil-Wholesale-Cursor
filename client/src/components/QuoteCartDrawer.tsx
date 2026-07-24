@@ -4,6 +4,8 @@ import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
+import { cartFlatbedSpots, fullLoadDiscountAmount } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
@@ -16,9 +18,9 @@ const fmt = (n: number): string => {
 };
 
 const CART_IMAGE_FALLBACKS: Record<number, string> = {
-  1000: "/images/optimized/dansgold9lbs-1.jpg",
-  1001: "/images/optimized/mikeys-worm-poop9lbs.jpg",
-  111: "/images/optimized/plantpal10lbs.jpg",
+  1000: "/images/optimized/simons-gold-bag-context.jpg",
+  1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
+  111: "/images/optimized/plantpal-bag-context.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
@@ -101,7 +103,10 @@ export const QuoteCartDrawer = () => {
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
   const quoteItems = useMemo(() => items.filter((i) => i.mode !== "pay"), [items]);
-  const payTotal = useMemo(() => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [payItems]);
+  const payGross = useMemo(() => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [payItems]);
+  const flatbedSpots = useMemo(() => cartFlatbedSpots(items), [items]);
+  const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
+  const payTotal = payGross - flatbedDiscount;
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
 
   const goToCheckout = () => {
@@ -153,6 +158,8 @@ export const QuoteCartDrawer = () => {
         ) : (
           <>
             <div className="flex-1 space-y-4 overflow-y-auto py-4">
+              {flatbedSpots > 0 && <FlatbedLoadMeter spots={flatbedSpots} compact />}
+
               {payItems.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#264027]">
@@ -198,6 +205,12 @@ export const QuoteCartDrawer = () => {
             <div className="space-y-3 border-t border-stone-200 pt-3">
               {payItems.length > 0 && (
                 <>
+                  {flatbedDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-emerald-800">
+                      <span className="font-medium">Full flatbed (10% off)</span>
+                      <span className="font-semibold">−{fmt(flatbedDiscount)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-stone-600">Pay today</span>
                     <span className="text-xl font-bold text-[#264027]">{fmt(payTotal)}</span>

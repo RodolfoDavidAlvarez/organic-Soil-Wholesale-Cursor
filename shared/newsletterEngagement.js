@@ -1,54 +1,166 @@
-/** Shared newsletter unsubscribe + Resend webhook helpers (Vercel + Express). */
+/** Shared newsletter subscribe / unsubscribe + Resend webhook helpers (Vercel + Express).
+ *  Source of truth: Supabase only — no Airtable.
+ */
 
 function deviceFromUserAgent(ua) {
-  if (!ua) return 'unknown';
-  const s = String(ua).toLowerCase();
-  if (/mobile|iphone|android|ipad/.test(s)) return 'mobile';
-  if (/windows|macintosh|linux|cros/.test(s)) return 'desktop';
-  return 'unknown';
+  if (!ua) return 'unknown'
+  const s = String(ua).toLowerCase()
+  if (/mobile|iphone|android|ipad/.test(s)) return 'mobile'
+  if (/windows|macintosh|linux|cros/.test(s)) return 'desktop'
+  return 'unknown'
 }
 
 function normalizeEmail(to) {
-  if (!to) return null;
-  const raw = Array.isArray(to) ? to[0] : to;
-  return raw?.toLowerCase?.().trim() || null;
+  if (!to) return null
+  const raw = Array.isArray(to) ? to[0] : to
+  return raw?.toLowerCase?.().trim() || null
 }
 
-export async function subscribeNewsletterContact(supabase, { email, name, phone, customerCategory, source = 'website_newsletter_signup' }) {
-  const normalizedEmail = normalizeEmail(email);
-  const normalizedName = String(name || '').trim().slice(0, 120);
-  const normalizedPhone = String(phone || '').trim().slice(0, 30);
-  const normalizedCustomerCategory = String(customerCategory || '').trim().slice(0, 60);
-  const now = new Date().toISOString();
+function newsletterIdFromTags(tags) {
+  if (!tags) return null
+  if (Array.isArray(tags)) {
+    const tag = tags.find((t) => t.name === 'newsletter_id' || t.name === 'campaign')
+    return tag?.value || null
+  }
+  if (typeof tags === 'object') {
+    return tags.newsletter_id || tags.campaign || null
+  }
+  return null
+}
+
+function eventKind(type) {
+  return String(type || '').replace(/^email\./, '')
+}
+
+async function recomputeCampaignRates(supabase, newsletterId) {
+  if (!newsletterId) return
+  const { data: campaign } = await supabase
+    .from('newsletter_campaigns')
+    .select('id, total_sent, total_delivered, total_opens, total_clicks, status, sent_at')
+    .eq('newsletter_id', newsletterId)
+    .maybeSingle()
+  if (!campaign) return
+
+  const denom = Number(campaign.total_delivered || campaign.total_sent || 0)
+  const openRate = denom > 0 ? Math.round((Number(campaign.total_opens || 0) / denom) * 10000) / 100 : null
+  const clickRate = denom > 0 ? Math.round((Number(campaign.total_clicks || 0) / denom) * 10000) / 100 : null
+
+  await supabase
+    .from('newsletter_campaigns')
+    .update({
+      open_rate_pct: openRate,
+      click_rate_pct: clickRate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', campaign.id)
+}
+
+/** When Resend starts delivering an externally scheduled campaign, flip scheduled → sent. */
+async function markCampaignLiveIfNeeded(supabase, newsletterId, kind) {
+  if (!newsletterId) return
+  if (!['sent', 'delivered', 'opened', 'clicked'].includes(kind)) return
+
+  const { data: campaign } = await supabase
+    .from('newsletter_campaigns')
+    .select('id, status, sent_at, total_sent')
+    .eq('newsletter_id', newsletterId)
+    .maybeSingle()
+  if (!campaign) return
+  if (campaign.status !== 'scheduled' && campaign.status !== 'sending') return
+
+  const now = new Date().toISOString()
+  await supabase
+    .from('newsletter_campaigns')
+    .update({
+      status: 'sent',
+      sent_at: campaign.sent_at || now,
+      updated_at: now,
+    })
+    .eq('id', campaign.id)
+}
+
+async function bumpCampaignCounter(supabase, newsletterId, patchBuilder) {
+  if (!newsletterId) return
+  const { data: campaign } = await supabase
+    .from('newsletter_campaigns')
+    .select(
+      'id, total_sent, total_delivered, total_opens, total_clicks, total_bounced, total_complained, mobile_opens, desktop_opens',
+    )
+    .eq('newsletter_id', newsletterId)
+    .maybeSingle()
+  if (!campaign) return
+
+  const campPatch = patchBuilder(campaign)
+  if (!campPatch || !Object.keys(campPatch).length) return
+  campPatch.updated_at = new Date().toISOString()
+  await supabase.from('newsletter_campaigns').update(campPatch).eq('id', campaign.id)
+  await recomputeCampaignRates(supabase, newsletterId)
+}
+
+async function updateNewsletterSend(supabase, { resendEmailId, email, newsletterId, status, timestamps = {} }) {
+  if (!resendEmailId && !email) return
+
+  let query = supabase.from('newsletter_email_sends').select('id, status').limit(1)
+  if (resendEmailId) query = query.eq('resend_email_id', resendEmailId)
+  else {
+    query = query.eq('email', email)
+    if (newsletterId) query = query.eq('newsletter_id', newsletterId)
+  }
+
+  const { data: rows } = await query
+  const row = rows?.[0]
+  if (!row) return
+
+  const patch = {
+    status,
+    updated_at: new Date().toISOString(),
+    ...timestamps,
+  }
+  await supabase.from('newsletter_email_sends').update(patch).eq('id', row.id)
+}
+
+export async function subscribeNewsletterContact(
+  supabase,
+  { email, name, phone, customerCategory, source = 'website_newsletter_signup' },
+) {
+  const normalizedEmail = normalizeEmail(email)
+  const normalizedName = String(name || '').trim().slice(0, 120)
+  const normalizedPhone = String(phone || '').trim().slice(0, 30)
+  const normalizedCustomerCategory = String(customerCategory || '').trim().slice(0, 60)
+  const now = new Date().toISOString()
 
   const { data: existing, error: lookupError } = await supabase
     .from('sp_customers')
-    .select('id, full_name, newsletter_subscribed, newsletter_unsubscribed_at, newsletter_verification_status, newsletter_source, newsletter_notes')
+    .select(
+      'id, full_name, newsletter_subscribed, newsletter_unsubscribed_at, newsletter_verification_status, newsletter_source, newsletter_notes',
+    )
     .ilike('email', normalizedEmail)
-    .maybeSingle();
+    .maybeSingle()
 
-  if (lookupError) throw lookupError;
+  if (lookupError) throw lookupError
 
   if (existing) {
-    const optedOut = existing.newsletter_subscribed === false
-      || Boolean(existing.newsletter_unsubscribed_at)
-      || ['Bounced', 'Complained'].includes(existing.newsletter_verification_status);
+    const optedOut =
+      existing.newsletter_subscribed === false ||
+      Boolean(existing.newsletter_unsubscribed_at) ||
+      ['Bounced', 'Complained'].includes(existing.newsletter_verification_status)
 
-    if (optedOut) return { status: 'opted_out' };
+    if (optedOut) return { status: 'opted_out' }
 
     const patch = {
       newsletter_subscribed: true,
       newsletter_source: existing.newsletter_source || source,
-      newsletter_notes: `${existing.newsletter_notes || ''}\n\n[Website opt-in ${now}]\nSource: ${source}\nConsent: explicit checkbox`.trim(),
+      newsletter_notes:
+        `${existing.newsletter_notes || ''}\n\n[Website opt-in ${now}]\nSource: ${source}\nConsent: explicit checkbox`.trim(),
       updated_at: now,
-    };
-    if (!existing.full_name && normalizedName) patch.full_name = normalizedName;
-    if (normalizedPhone) patch.phone = normalizedPhone;
-    if (normalizedCustomerCategory) patch.newsletter_contact_type = normalizedCustomerCategory;
+    }
+    if (!existing.full_name && normalizedName) patch.full_name = normalizedName
+    if (normalizedPhone) patch.phone = normalizedPhone
+    if (normalizedCustomerCategory) patch.newsletter_contact_type = normalizedCustomerCategory
 
-    const { error } = await supabase.from('sp_customers').update(patch).eq('id', existing.id);
-    if (error) throw error;
-    return { status: 'subscribed', existing: true };
+    const { error } = await supabase.from('sp_customers').update(patch).eq('id', existing.id)
+    if (error) throw error
+    return { status: 'subscribed', existing: true }
   }
 
   const { error } = await supabase.from('sp_customers').insert({
@@ -65,137 +177,206 @@ export async function subscribeNewsletterContact(supabase, { email, name, phone,
     newsletter_notes: `[Website opt-in ${now}]\nSource: ${source}\nConsent: explicit checkbox`,
     created_at: now,
     updated_at: now,
-  });
-  if (error) throw error;
-  return { status: 'subscribed', existing: false };
+  })
+  if (error) throw error
+  return { status: 'subscribed', existing: false }
 }
 
-function newsletterIdFromTags(tags) {
-  const list = tags || [];
-  const tag = list.find((t) => t.name === 'newsletter_id' || t.name === 'campaign');
-  return tag?.value || null;
-}
-
+/** DB-only unsubscribe. Airtable sync removed permanently. */
 export async function unsubscribeNewsletterContact(supabase, normalizedEmail, reason) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString()
   const { data: existing } = await supabase
     .from('sp_customers')
     .select('id, newsletter_notes')
     .ilike('email', normalizedEmail)
-    .maybeSingle();
+    .maybeSingle()
 
-  if (existing) {
-    const notes = reason?.trim()
-      ? `${existing.newsletter_notes || ''}\n\n[Unsubscribed ${now}]\nReason: ${reason.trim()}`.trim()
-      : existing.newsletter_notes;
+  if (!existing) return { updated: false }
 
-    await supabase
-      .from('sp_customers')
-      .update({
-        newsletter_subscribed: false,
-        newsletter_unsubscribed_at: now,
-        newsletter_notes: notes || null,
-        updated_at: now,
-      })
-      .eq('id', existing.id);
+  const notes = reason?.trim()
+    ? `${existing.newsletter_notes || ''}\n\n[Unsubscribed ${now}]\nReason: ${reason.trim()}`.trim()
+    : existing.newsletter_notes
+
+  await supabase
+    .from('sp_customers')
+    .update({
+      newsletter_subscribed: false,
+      newsletter_unsubscribed_at: now,
+      newsletter_notes: notes || null,
+      updated_at: now,
+    })
+    .eq('id', existing.id)
+
+  return { updated: true }
+}
+
+async function resolveNewsletterId(supabase, newsletterId, resendEmailId, email) {
+  if (newsletterId) return newsletterId
+  if (resendEmailId) {
+    const { data: send } = await supabase
+      .from('newsletter_email_sends')
+      .select('newsletter_id')
+      .eq('resend_email_id', resendEmailId)
+      .maybeSingle()
+    if (send?.newsletter_id) return send.newsletter_id
   }
-
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  if (!apiKey) return;
-
-  const base = 'appBLlRW7MOx0qdlu';
-  const table = 'tblmofFGmkN2dZ4GB';
-  const searchUrl = `https://api.airtable.com/v0/${base}/${table}?filterByFormula=LOWER({Email})="${normalizedEmail}"&maxRecords=1`;
-  const searchResponse = await fetch(searchUrl, { headers: { Authorization: `Bearer ${apiKey}` } });
-  if (!searchResponse.ok) return;
-
-  const searchData = await searchResponse.json();
-  const record = searchData.records?.[0];
-  if (!record) return;
-
-  const fields = {
-    Subscribed: false,
-    'Unsubscribed Date': now.split('T')[0],
-  };
-  if (reason?.trim()) {
-    fields.Notes = `${record.fields?.Notes || ''}\n\n[Unsubscribed ${now}]\nReason: ${reason.trim()}`.trim();
+  if (email) {
+    const { data: send } = await supabase
+      .from('newsletter_email_sends')
+      .select('newsletter_id')
+      .eq('email', email)
+      .in('status', ['scheduled', 'sent', 'delivered', 'opened', 'clicked'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (send?.newsletter_id) return send.newsletter_id
   }
-
-  await fetch(`https://api.airtable.com/v0/${base}/${table}/${record.id}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
+  return null
 }
 
 export async function handleResendNewsletterWebhook(supabase, event) {
-  const { type, data } = event || {};
-  const email = normalizeEmail(data?.to);
-  if (!email) return { skipped: true };
+  const { type, data } = event || {}
+  const email = normalizeEmail(data?.to)
+  if (!email) return { skipped: true }
 
-  const newsletterId = newsletterIdFromTags(data?.tags);
-  const device = deviceFromUserAgent(data?.user_agent);
-  const now = new Date().toISOString();
+  const kind = eventKind(type)
+  const device = deviceFromUserAgent(data?.user_agent || data?.click?.userAgent)
+  const now = new Date().toISOString()
+  const resendEmailId = data?.email_id ?? null
+  const clickUrl = data?.click?.link || data?.link || null
+  const newsletterId = await resolveNewsletterId(
+    supabase,
+    newsletterIdFromTags(data?.tags),
+    resendEmailId,
+    email,
+  )
 
-  if (['email.opened', 'email.clicked', 'email.bounced', 'email.complained'].includes(type)) {
-    const { data: customer } = await supabase
-      .from('sp_customers')
-      .select('id, newsletter_email_opens, newsletter_email_clicks')
-      .ilike('email', email)
-      .maybeSingle();
+  const tracked = new Set([
+    'sent',
+    'delivered',
+    'delivery_delayed',
+    'opened',
+    'clicked',
+    'bounced',
+    'complained',
+    'failed',
+    'suppressed',
+  ])
+  if (!tracked.has(kind)) return { skipped: true, type, email }
 
-    await supabase.from('email_events').insert({
-      email,
-      customer_id: customer?.id ?? null,
-      event_type: type.replace('email.', ''),
-      newsletter_id: newsletterId,
-      resend_email_id: data?.email_id ?? null,
-      user_agent: data?.user_agent ?? null,
-      device_type: device,
-    });
+  // Soft/transient bounces: log only — do not unsubscribe.
+  const bounceType = String(data?.bounce?.type || data?.bounce?.bounceType || '').toLowerCase()
+  const hardBounce =
+    kind === 'bounced' &&
+    (!bounceType || bounceType.includes('permanent') || bounceType.includes('hard'))
+  const suppressContact = kind === 'complained' || kind === 'suppressed' || hardBounce
 
-    if (customer) {
-      const patch = {};
-      if (type === 'email.opened') {
-        patch.newsletter_email_opens = (customer.newsletter_email_opens || 0) + 1;
-        patch.newsletter_last_opened_at = now;
-        patch.newsletter_last_open_device = device;
-      }
-      if (type === 'email.clicked') {
-        patch.newsletter_email_clicks = (customer.newsletter_email_clicks || 0) + 1;
-        patch.newsletter_last_clicked_at = now;
-        if (!customer.newsletter_email_opens) patch.newsletter_email_opens = 1;
-      }
-      if (type === 'email.bounced' || type === 'email.complained') {
-        patch.newsletter_subscribed = false;
-        patch.newsletter_verification_status = type === 'email.bounced' ? 'Bounced' : 'Complained';
-        patch.newsletter_unsubscribed_at = now;
-      }
-      if (Object.keys(patch).length) {
-        await supabase.from('sp_customers').update(patch).eq('id', customer.id);
-      }
+  const { data: customer } = await supabase
+    .from('sp_customers')
+    .select('id, newsletter_email_opens, newsletter_email_clicks')
+    .ilike('email', email)
+    .maybeSingle()
+
+  const { error: insertError } = await supabase.from('email_events').insert({
+    email,
+    customer_id: customer?.id ?? null,
+    event_type: kind,
+    newsletter_id: newsletterId,
+    resend_email_id: resendEmailId,
+    user_agent: data?.user_agent || data?.click?.userAgent || null,
+    device_type: device,
+    click_url: clickUrl,
+    tags: data?.tags || null,
+  })
+
+  // Unique (resend_email_id, event_type) — ignore duplicates
+  if (insertError && !String(insertError.message || '').includes('duplicate') && insertError.code !== '23505') {
+    throw insertError
+  }
+  if (insertError) return { ok: true, deduped: true, type, email }
+
+  if (customer) {
+    const patch = {}
+    if (kind === 'opened') {
+      patch.newsletter_email_opens = (customer.newsletter_email_opens || 0) + 1
+      patch.newsletter_last_opened_at = now
+      patch.newsletter_last_open_device = device
     }
-
-    if (newsletterId && (type === 'email.opened' || type === 'email.clicked')) {
-      const col = type === 'email.opened' ? 'total_opens' : 'total_clicks';
-      const { data: campaign } = await supabase
-        .from('newsletter_campaigns')
-        .select(`id, ${col}, mobile_opens, desktop_opens`)
-        .eq('newsletter_id', newsletterId)
-        .maybeSingle();
-
-      if (campaign) {
-        const campPatch = { [col]: (campaign[col] || 0) + 1 };
-        if (type === 'email.opened' && device === 'mobile') {
-          campPatch.mobile_opens = (campaign.mobile_opens || 0) + 1;
-        }
-        if (type === 'email.opened' && device === 'desktop') {
-          campPatch.desktop_opens = (campaign.desktop_opens || 0) + 1;
-        }
-        await supabase.from('newsletter_campaigns').update(campPatch).eq('id', campaign.id);
-      }
+    if (kind === 'clicked') {
+      patch.newsletter_email_clicks = (customer.newsletter_email_clicks || 0) + 1
+      patch.newsletter_last_clicked_at = now
+      if (!customer.newsletter_email_opens) patch.newsletter_email_opens = 1
+    }
+    if (suppressContact) {
+      patch.newsletter_subscribed = false
+      patch.newsletter_verification_status =
+        kind === 'complained' ? 'Complained' : kind === 'suppressed' ? 'Suppressed' : 'Bounced'
+      patch.newsletter_unsubscribed_at = now
+    }
+    if (Object.keys(patch).length) {
+      await supabase.from('sp_customers').update(patch).eq('id', customer.id)
     }
   }
 
-  return { ok: true, type, email };
+  const statusByKind = {
+    sent: 'sent',
+    delivered: 'delivered',
+    opened: 'opened',
+    clicked: 'clicked',
+    bounced: 'bounced',
+    complained: 'complained',
+    failed: 'failed',
+    suppressed: 'bounced',
+  }
+  const sendStatus = statusByKind[kind]
+  if (sendStatus) {
+    const timestamps = {}
+    if (kind === 'sent') timestamps.sent_at = now
+    if (kind === 'delivered') timestamps.delivered_at = now
+    if (kind === 'opened') timestamps.opened_at = now
+    if (kind === 'clicked') timestamps.clicked_at = now
+    if (kind === 'bounced' || kind === 'suppressed' || kind === 'failed') timestamps.bounced_at = now
+    await updateNewsletterSend(supabase, {
+      resendEmailId,
+      email,
+      newsletterId,
+      status: sendStatus,
+      timestamps,
+    })
+  }
+
+  if (newsletterId) {
+    await markCampaignLiveIfNeeded(supabase, newsletterId, kind)
+
+    if (kind === 'delivered') {
+      await bumpCampaignCounter(supabase, newsletterId, (c) => ({
+        total_delivered: (c.total_delivered || 0) + 1,
+      }))
+    }
+    if (kind === 'opened') {
+      await bumpCampaignCounter(supabase, newsletterId, (c) => {
+        const campPatch = { total_opens: (c.total_opens || 0) + 1 }
+        if (device === 'mobile') campPatch.mobile_opens = (c.mobile_opens || 0) + 1
+        if (device === 'desktop') campPatch.desktop_opens = (c.desktop_opens || 0) + 1
+        return campPatch
+      })
+    }
+    if (kind === 'clicked') {
+      await bumpCampaignCounter(supabase, newsletterId, (c) => ({
+        total_clicks: (c.total_clicks || 0) + 1,
+      }))
+    }
+    if (kind === 'bounced' || kind === 'suppressed' || kind === 'failed') {
+      await bumpCampaignCounter(supabase, newsletterId, (c) => ({
+        total_bounced: (c.total_bounced || 0) + 1,
+      }))
+    }
+    if (kind === 'complained') {
+      await bumpCampaignCounter(supabase, newsletterId, (c) => ({
+        total_complained: (c.total_complained || 0) + 1,
+      }))
+    }
+  }
+
+  return { ok: true, type, email, newsletterId, hardBounce: hardBounce || null }
 }
