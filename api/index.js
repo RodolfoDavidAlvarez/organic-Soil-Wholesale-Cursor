@@ -1,5 +1,13 @@
 // Vercel Serverless Function with CRM Business Card Capture
 
+// Preserve byte-exact webhook payloads. The handler parses normal JSON/form
+// requests below while keeping req.rawBody available for signature checks.
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 // Lazy initialize clients
 let supabase = null;
 let anthropic = null;
@@ -924,6 +932,36 @@ async function ensureRepresentativeForAdmin(db, adminId) {
   return newRep?.id || null;
 }
 
+async function parseRequestBody(req) {
+  if (req.body !== undefined || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method || '')) {
+    return;
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  req.rawBody = rawBody;
+  if (!rawBody) {
+    req.body = {};
+    return;
+  }
+
+  const contentType = String(req.headers['content-type'] || '').toLowerCase();
+  if (contentType.includes('application/json')) {
+    req.body = JSON.parse(rawBody);
+    return;
+  }
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    req.body = Object.fromEntries(new URLSearchParams(rawBody));
+    return;
+  }
+
+  req.body = rawBody;
+}
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -937,6 +975,8 @@ export default async function handler(req, res) {
   const path = url.pathname;
 
   try {
+    await parseRequestBody(req);
+
     // Health check
     if (path === '/api/health') {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -5716,12 +5756,8 @@ ${pages}
     // confirmation emails, and forward to the MOS sales portal so yard reps see
     // the order in the iOS app.
     //
-    // NOTE: Vercel's default body parser converts JSON before this handler runs,
-    // so we can't byte-perfect verify the Stripe signature without a separate
-    // function with bodyParser disabled. We attempt verification when possible
-    // and otherwise trust the parsed event but require the Stripe-Signature
-    // header to be present (basic anti-spam guard). To enforce strict verification,
-    // move this handler to its own function with `export const config = { api: { bodyParser: false } }`.
+    // The function-level parser is disabled so req.rawBody remains byte-exact
+    // for Stripe signature verification.
     if (path === '/api/checkout/webhook' && req.method === 'POST') {
       try {
         const Stripe = (await import('stripe')).default;
@@ -5736,13 +5772,13 @@ ${pages}
         if (process.env.STRIPE_WEBHOOK_SECRET) {
           try {
             event = stripeClient.webhooks.constructEvent(
-              typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+              req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body)),
               sig,
               process.env.STRIPE_WEBHOOK_SECRET
             );
           } catch (err) {
-            console.warn('[checkout webhook] signature verification failed, trusting parsed body:', err?.message);
-            event = req.body;
+            console.warn('[checkout webhook] signature verification failed:', err?.message);
+            return res.status(400).json({ error: 'Invalid Stripe signature' });
           }
         }
 
