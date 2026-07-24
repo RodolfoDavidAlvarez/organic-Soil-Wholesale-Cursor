@@ -60,7 +60,7 @@ This release consolidates the recent OSW customer-experience, checkout, fulfillm
 ## Newsletter and engagement infrastructure
 
 - Consolidated Resend webhook signature verification for Express and Vercel handlers.
-- Disabled Vercel’s automatic catch-all body parser and added explicit JSON/form parsing so Resend and Stripe retain byte-exact webhook payloads for strict signature verification.
+- Synchronized the production signing secret with the canonical OSW Resend endpoint and verified signed webhook acceptance.
 - Expanded delivery, open, click, bounce, complaint, and unsubscribe event processing.
 - Added safer unsubscribe handling and suppression updates.
 - Added DB-first campaign send tracking, versioning, audit, approval/preflight, scheduling, and send-mode migrations.
