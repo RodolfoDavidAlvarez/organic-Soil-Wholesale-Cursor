@@ -26,6 +26,8 @@ import { getPayPickupProductContent, getPayPickupProductDescription } from "@/da
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import TrustStrip from "@/components/TrustStrip";
 import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
+import AmazonReviewCarousel from "@/components/AmazonReviewCarousel";
+import { amazonReviewsForProduct } from "@/data/amazonReviews";
 import { getOmriCertificate } from "@/data/omriCertifications";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
@@ -2607,6 +2609,15 @@ const ProductDetail = () => {
                 </div>
 
               </div>
+
+              {/* Amazon reviews for this SKU — right under the buy box */}
+              {amazonReviewsForProduct(product.id).length > 0 ? (
+                <AmazonReviewCarousel
+                  productId={product.id}
+                  productName={product.displayTitle}
+                  variant="pdp"
+                />
+              ) : null}
 
               {(() => {
                 const payPickupContent = getPayPickupProductContent(product.id);

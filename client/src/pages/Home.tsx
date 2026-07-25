@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import TestimonialGallery from "@/components/TestimonialGallery";
+import AmazonReviewCarousel from "@/components/AmazonReviewCarousel";
 
 type FeaturedProduct = {
   id: number;
@@ -270,7 +271,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Testimonial Gallery — immediately after hero */}
+      {/* Amazon quotes first (stars + words), then field-photo proof */}
+      <AmazonReviewCarousel />
       <TestimonialGallery />
 
       <section className="bg-stone-50 py-10 md:py-14">
