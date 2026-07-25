@@ -273,9 +273,13 @@ export function DeliveryQuoteWidget({
             <div className="flex min-w-0 items-start gap-2">
               <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[#264027]" />
               <div className="min-w-0">
-                <p className="text-sm font-bold text-stone-900">{quote.truckLabel}</p>
+                <p className="text-sm font-bold text-stone-900">
+                  Delivery cost{" "}
+                  <span className="text-[#264027]">{fmt$(quote.costDollars)}</span>
+                </p>
                 <p className="mt-0.5 text-xs text-stone-600">
-                  {quote.originLabel} → {quote.breakdown.destinationCity ?? `ZIP ${zip}`}
+                  {quote.truckLabel} · Congress, AZ →{" "}
+                  {quote.breakdown.destinationCity ?? `ZIP ${zip}`}
                   {quote.breakdown.destinationState ? `, ${quote.breakdown.destinationState}` : ""}
                 </p>
                 {!compact && (
@@ -289,12 +293,6 @@ export function DeliveryQuoteWidget({
                   </p>
                 ) : null}
               </div>
-            </div>
-            <div className="shrink-0 text-right">
-              {!compact && (
-                <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">Delivery</p>
-              )}
-              <p className="text-xl font-bold text-[#264027]">{fmt$(quote.costDollars)}</p>
             </div>
           </div>
           <p className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-900">

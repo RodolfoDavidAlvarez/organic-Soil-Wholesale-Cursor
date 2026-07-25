@@ -4976,29 +4976,143 @@ ${pages}
 
     // POST /api/leads/submit
     if (path === '/api/leads/submit' && req.method === 'POST') {
-      const { name, email, phone, notes, preferred_date } = req.body || {};
-      if (!name || !email || !phone) return res.status(400).json({ error: 'Name, email, and phone are required' });
+      const body = req.body || {};
+      const {
+        name, phone, notes, preferred_date, order, source_url,
+      } = body;
+      const isOrderCallback =
+        body.lead_type === 'order_callback' || body.source === 'osw_order_callback';
+      const emailRaw = String(body.email || '').trim();
+
+      if (!name || !phone) {
+        return res.status(400).json({
+          error: isOrderCallback
+            ? 'Name and phone are required'
+            : 'Name, email, and phone are required',
+        });
+      }
+      if (!isOrderCallback && !emailRaw) {
+        return res.status(400).json({ error: 'Name, email, and phone are required' });
+      }
+      if (isOrderCallback && (!order?.line_items || !order.line_items.length)) {
+        return res.status(400).json({ error: 'Add at least one order line before requesting a callback' });
+      }
+
+      const email = emailRaw || (isOrderCallback
+        ? `callback+${String(phone).replace(/\D/g, '').slice(-10) || 'unknown'}@leads.organicsoilwholesale.com`
+        : '');
+
+      const orderLines = Array.isArray(order?.line_items) ? order.line_items : [];
+      const orderNoteParts = [];
+      if (isOrderCallback && orderLines.length) {
+        orderNoteParts.push('ORDER LINES:');
+        for (const item of orderLines) {
+          const qty = item.quantity ?? 1;
+          const pname = item.product_name || 'Product';
+          const format = item.format ? ` (${item.format})` : '';
+          const total = item.line_total != null
+            ? ` — $${Number(item.line_total).toFixed(2)}`
+            : item.unit_price != null
+              ? ` — $${(Number(item.unit_price) * qty).toFixed(2)}`
+              : '';
+          const spots = item.flatbed_spots > 0
+            ? ` [+${item.flatbed_spots} spot${item.flatbed_spots === 1 ? '' : 's'}]`
+            : '';
+          orderNoteParts.push(`- ${qty}x ${pname}${format}${total}${spots}`);
+        }
+        if (order.estimated_total != null) {
+          orderNoteParts.push(`Estimated products: $${Number(order.estimated_total).toFixed(2)}`);
+        }
+        if (order.flatbed_spots > 0) {
+          orderNoteParts.push(`Flatbed spots: ${order.flatbed_spots}/22`);
+        }
+        if (order.delivery_zip) {
+          const fee = order.delivery_fee != null
+            ? ` · est. delivery $${Number(order.delivery_fee).toFixed(2)}`
+            : '';
+          orderNoteParts.push(`Delivery ZIP: ${order.delivery_zip}${fee}`);
+        }
+        if (notes) orderNoteParts.push('', `Customer note: ${notes}`);
+      }
+      const orderNotes = orderNoteParts.length
+        ? orderNoteParts.join('\n')
+        : (notes || 'No additional notes');
+      const itemCount = orderLines.length;
+      const estimated = order?.estimated_total != null ? Number(order.estimated_total) : null;
+      const subject = isOrderCallback
+        ? `Callback requested — ${itemCount} line item${itemCount === 1 ? '' : 's'}${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}`
+        : 'Lead Form Submission';
+
       const sb = await getSupabase();
       const insertData = {
-        name, email, subject: 'Lead Form Submission',
-        message: `Phone: ${phone}\n\nNotes: ${notes || 'No additional notes'}`,
+        name,
+        email,
+        subject,
+        message: `Phone: ${phone}\n\n${orderNotes}`,
         created_at: new Date().toISOString(),
       };
       if (preferred_date) insertData.preferred_date = preferred_date;
       const { data, error } = await sb.from('contact_messages').insert(insertData).select().single();
       if (error) return res.status(500).json({ error: error.message });
-      // Notify Rodo
+
       try {
         const r = await getResend();
         await r.emails.send({
           from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
           replyTo: 'ralvarez@soilseedandwater.com',
           to: 'ralvarez@soilseedandwater.com',
-          subject: `New quote request from ${name}`,
-          html: `<p><strong>New lead from the website</strong></p><ul><li><strong>Name:</strong> ${name}</li><li><strong>Email:</strong> ${email}</li><li><strong>Phone:</strong> ${phone}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${preferred_date}</li>` : ''}<li><strong>Notes:</strong> ${notes || 'None'}</li></ul>`,
+          subject: isOrderCallback
+            ? `Callback about order from ${name}`
+            : `New quote request from ${name}`,
+          html: `<p><strong>${isOrderCallback ? 'Callback requested about an order' : 'New lead from the website'}</strong></p><ul><li><strong>Name:</strong> ${name}</li><li><strong>Email:</strong> ${emailRaw || '(none — phone callback)'}</li><li><strong>Phone:</strong> ${phone}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${preferred_date}</li>` : ''}</ul><pre style="white-space:pre-wrap;font-family:inherit">${String(orderNotes).replace(/</g, '&lt;')}</pre>`,
         });
       } catch (e) { console.error('Lead notification error:', e); }
-      return res.json({ success: true, message: 'Quote request submitted successfully', leadId: data.id });
+
+      // Forward to MOS sales portal (production path previously skipped this).
+      try {
+        const secret = process.env.MOS_LEAD_INGEST_SECRET;
+        if (secret) {
+          const mosSource = isOrderCallback ? 'osw_order_callback' : 'osw_lead_form';
+          const mosMessage = isOrderCallback
+            ? `Callback requested — ${itemCount} line items${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}\n\n${orderNotes}`
+            : (notes || undefined);
+          const r = await fetch(process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Lead-Source-Key': secret,
+            },
+            body: JSON.stringify({
+              full_name: name,
+              email,
+              phone,
+              message: mosMessage,
+              source: mosSource,
+              source_url: source_url || 'https://organicsoilwholesale.com/',
+              source_data: {
+                osw_contact_message_id: data.id,
+                lead_type: isOrderCallback ? 'order_callback' : 'lead_form',
+                ...(isOrderCallback && order ? { order } : {}),
+              },
+            }),
+          });
+          if (!r.ok) {
+            console.error('[leads/submit] MOS forward', r.status, (await r.text().catch(() => '')).slice(0, 200));
+          }
+        } else {
+          console.warn('[leads/submit] MOS_LEAD_INGEST_SECRET not set — lead not forwarded');
+        }
+      } catch (e) {
+        console.error('[leads/submit] MOS forward error:', e?.message || e);
+      }
+
+      return res.json({
+        success: true,
+        message: isOrderCallback
+          ? 'Thanks — a rep will call you about this order shortly.'
+          : 'Quote request submitted successfully',
+        leadId: data.id,
+      });
     }
 
     // ========== SCHEDULING ENDPOINTS ==========
@@ -5494,14 +5608,9 @@ ${pages}
     }
 
     async function pickClosestOrigin(destZip, rates) {
-      // Phoenix first; if Congress is materially closer (≥30 mi shorter) use that.
-      const phx = await getOneWayDistance('phoenix', destZip, rates);
-      let congress = null;
-      try { congress = await getOneWayDistance('congress', destZip, rates); } catch (_) {}
-      if (congress && phx.miles - congress.miles >= 30) {
-        return { origin: 'congress', distance: congress };
-      }
-      return { origin: 'phoenix', distance: phx };
+      // All customer deliveries dispatch from Congress plant.
+      const congress = await getOneWayDistance('congress', destZip, rates);
+      return { origin: 'congress', distance: congress };
     }
 
     async function quoteTrucking({ items, zip, roughAccess, originKey }) {

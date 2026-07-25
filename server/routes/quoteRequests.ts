@@ -206,17 +206,9 @@ async function getOneWayDistance(originKey: OriginKey, destZip: string, rates: T
 }
 
 async function pickClosestOrigin(destZip: string, rates: TruckingRates): Promise<{ origin: OriginKey; distance: DistanceResult }> {
-  const phoenix = await getOneWayDistance('phoenix', destZip, rates);
-  try {
-    const congress = await getOneWayDistance('congress', destZip, rates);
-    if (phoenix.miles - congress.miles >= 30) {
-      return { origin: 'congress', distance: congress };
-    }
-  } catch {
-    // Phoenix remains the fallback.
-  }
-
-  return { origin: 'phoenix', distance: phoenix };
+  // All customer deliveries dispatch from Congress plant.
+  const congress = await getOneWayDistance('congress', destZip, rates);
+  return { origin: 'congress', distance: congress };
 }
 
 export async function quoteTrucking({

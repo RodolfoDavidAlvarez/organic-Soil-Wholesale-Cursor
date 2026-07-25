@@ -12,7 +12,12 @@ import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQu
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
-import { cartFlatbedSpots, fullLoadDiscountAmount } from "@/lib/flatbedSpots";
+import {
+  FLATBED_CAPACITY,
+  cartFlatbedSpots,
+  fullLoadDiscountAmount,
+  spotsForFormat,
+} from "@/lib/flatbedSpots";
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
@@ -21,7 +26,8 @@ import {
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
 } from "lucide-react";
 
-const fmt = (n: number) => `$${n.toFixed(2)}`;
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
 type Fulfillment = "pickup" | "delivery";
 type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
@@ -109,8 +115,21 @@ const Checkout: React.FC = () => {
   );
   const hasBulkItem = bulkPickupTons > 0;
 
-  // Fulfillment
-  const [fulfillment, setFulfillment] = useState<Fulfillment>(() => hasTruckloadItem ? "delivery" : "pickup");
+  // Fulfillment — product page can seed pickup vs delivery via sessionStorage.
+  const [fulfillment, setFulfillment] = useState<Fulfillment>(() => {
+    if (hasTruckloadItem) return "delivery";
+    if (typeof window === "undefined") return "pickup";
+    try {
+      const pref = sessionStorage.getItem("osw-preferred-fulfillment");
+      if (pref === "pickup" || pref === "delivery") {
+        sessionStorage.removeItem("osw-preferred-fulfillment");
+        return pref;
+      }
+    } catch {
+      // ignore
+    }
+    return "pickup";
+  });
   const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("congress");
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
@@ -141,7 +160,7 @@ const Checkout: React.FC = () => {
   const [deliveryWindow, setDeliveryWindow] = useState("Anytime during business hours");
   /** When a product-page quote exists, show a compact summary instead of re-quoting. */
   const [editingDeliveryQuote, setEditingDeliveryQuote] = useState(false);
-  const [showSummaryItems, setShowSummaryItems] = useState(false);
+  const [showSummaryItems, setShowSummaryItems] = useState(true);
   const [roughAccess, setRoughAccess] = useState(() =>
     typeof window !== "undefined" ? Boolean(loadDeliveryDraft()?.roughAccess) : false,
   );
@@ -195,7 +214,7 @@ const Checkout: React.FC = () => {
     }
   }, [fulfillment, hasTruckloadItem]);
 
-  // Keep city/state congruent with the delivery ZIP (fixes stale "Phoenix" from drafts/cache).
+  // Keep city/state congruent with the delivery ZIP (fixes stale city from drafts/cache).
   useEffect(() => {
     const zip = deliveryAddress.zip;
     if (!/^\d{5}$/.test(zip)) return;
@@ -248,6 +267,38 @@ const Checkout: React.FC = () => {
     () => payItems.map((i) => ({ sizeOption: i.format, quantity: i.quantity, unit: i.unit, productName: i.productName })),
     [payItems]
   );
+
+  // Re-price drafts that still used Phoenix — all deliveries now leave from Congress.
+  useEffect(() => {
+    if (!deliveryQuote || deliveryQuote.originYard === "congress") return;
+    const zip = deliveryAddress.zip;
+    if (!/^\d{5}$/.test(zip) || quoteItems.length === 0) return;
+    let cancelled = false;
+    fetch("/api/quote/trucking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: quoteItems, zip, roughAccess }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((q) => {
+        if (cancelled || !q?.costDollars) return;
+        setDeliveryQuote(q);
+        saveDeliveryDraft({
+          zip,
+          roughAccess,
+          semiAccess,
+          quote: q,
+          city: q.breakdown?.destinationCity || deliveryAddress.city || null,
+          state: q.breakdown?.destinationState || deliveryAddress.state || null,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally once when a Phoenix-origin draft is present.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const productSubtotalGross = useMemo(
     () => payItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
@@ -302,7 +353,7 @@ const Checkout: React.FC = () => {
     });
 
     if (payItems.length === 0) {
-      setError("Your cart is empty");
+      setError("Your order is empty");
       return;
     }
     if (phoenixBulkOverLimit) {
@@ -942,9 +993,14 @@ const Checkout: React.FC = () => {
                     <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-stone-900">{deliveryQuote.truckLabel}</p>
+                          <p className="text-sm font-bold text-stone-900">
+                            Delivery cost{" "}
+                            <span className="text-[#264027]">
+                              {fmt(deliveryQuote.costDollars).replace(/\.00$/, "")}
+                            </span>
+                          </p>
                           <p className="mt-0.5 text-xs text-stone-600">
-                            {deliveryQuote.originLabel} →{" "}
+                            {deliveryQuote.truckLabel} · Congress, AZ →{" "}
                             {[
                               (deliveryAddress.city || deliveryQuote.breakdown.destinationCity || "").trim(),
                               (deliveryAddress.state || "").trim(),
@@ -953,21 +1009,14 @@ const Checkout: React.FC = () => {
                               .join(", ") || `ZIP ${deliveryAddress.zip}`}
                             {deliveryAddress.zip ? ` · ${deliveryAddress.zip}` : ""}
                           </p>
-                          <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-emerald-800">
-                            <Clock className="h-3.5 w-3.5" />
-                            Usually within 1–3 business days
-                          </p>
                         </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-lg font-bold text-[#264027]">{fmt(deliveryQuote.costDollars).replace(/\.00$/, "")}</p>
-                          <button
-                            type="button"
-                            onClick={() => setEditingDeliveryQuote(true)}
-                            className="mt-1 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
-                          >
-                            Change ZIP
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingDeliveryQuote(true)}
+                          className="shrink-0 text-xs font-semibold text-[#264027] underline-offset-2 hover:underline"
+                        >
+                          Change ZIP
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1078,9 +1127,11 @@ const Checkout: React.FC = () => {
                         <div className="flex items-start gap-2">
                           <Clock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-emerald-950">When can we deliver?</p>
+                            <p className="text-sm font-bold text-emerald-950">
+                              Usually within 1–3 business days
+                            </p>
                             <p className="mt-0.5 text-xs text-emerald-900/80">
-                              Share an availability range. Kerry confirms or proposes a better slot.
+                              Pick when you&apos;re available — Kerry confirms or proposes a better slot.
                             </p>
                           </div>
                         </div>
@@ -1267,18 +1318,85 @@ const Checkout: React.FC = () => {
                   </div>
                 )}
                 {(showSummaryItems || activeStep === "fulfillment") && (
-                  <div className="space-y-2 border-t border-stone-100 pt-2">
-                    {payItems.map((item) => (
-                      <div key={`summary-${item.productId}-${item.format}`} className="flex items-start justify-between gap-2 text-sm">
-                        <p className="min-w-0 text-stone-700">
-                          <span className="font-semibold text-stone-900">{item.productName}</span>
-                          <span className="block text-xs text-stone-500">
-                            {item.format} · Qty {item.quantity}
-                          </span>
-                        </p>
-                        <p className="shrink-0 font-semibold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
-                      </div>
-                    ))}
+                  <div className="space-y-2.5 border-t border-stone-100 pt-2">
+                    {payItems.map((item) => {
+                      const lineSpots = spotsForFormat(item.format, item.quantity);
+                      const formatKey = item.format.toLowerCase();
+                      const isWalkingFloorBulk =
+                        (formatKey.includes("truckload") || formatKey.includes("bulk")) &&
+                        !formatKey.includes("pallet");
+                      const canEditQty = !isWalkingFloorBulk;
+                      return (
+                        <div
+                          key={`summary-${item.productId}-${item.format}`}
+                          className="rounded-lg bg-stone-50/80 px-2.5 py-2"
+                        >
+                          <div className="flex items-start justify-between gap-2 text-sm">
+                            <p className="min-w-0 text-stone-700">
+                              <span className="font-semibold text-stone-900">{item.productName}</span>
+                              <span className="block text-xs text-stone-500">
+                                {item.format}
+                                {lineSpots > 0
+                                  ? ` · ${lineSpots} spot${lineSpots === 1 ? "" : "s"}`
+                                  : ""}
+                              </span>
+                            </p>
+                            <p className="shrink-0 font-semibold text-[#264027]">
+                              {fmt(item.unitPrice * item.quantity)}
+                            </p>
+                          </div>
+                          {canEditQty ? (
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5 shadow-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateQuantity(item.productId, item.format, item.quantity - 1);
+                                    trackEvent("Checkout Item Quantity Changed", {
+                                      product_id: item.productId,
+                                      format: item.format,
+                                      quantity: item.quantity - 1,
+                                      source: "summary",
+                                    });
+                                  }}
+                                  disabled={item.quantity <= 1}
+                                  className="h-8 w-8 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-40 touch-manipulation"
+                                  aria-label="Decrease quantity"
+                                >
+                                  −
+                                </button>
+                                <span className="w-7 text-center text-sm font-bold">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateQuantity(item.productId, item.format, item.quantity + 1);
+                                    trackEvent("Checkout Item Quantity Changed", {
+                                      product_id: item.productId,
+                                      format: item.format,
+                                      quantity: item.quantity + 1,
+                                      source: "summary",
+                                    });
+                                  }}
+                                  className="h-8 w-8 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-100 touch-manipulation"
+                                  aria-label="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              {lineSpots > 0 && hasFlatbedSpots && (
+                                <span className="text-[11px] font-medium text-stone-500">
+                                  {FLATBED_CAPACITY - flatbedSpots > 0
+                                    ? `${FLATBED_CAPACITY - flatbedSpots} left for 10% off`
+                                    : "Full load · 10% off"}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="mt-1.5 text-xs text-stone-500">Qty {item.quantity} · bulk walking-floor load</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {activeStep !== "fulfillment" && (
@@ -1287,7 +1405,7 @@ const Checkout: React.FC = () => {
                     onClick={() => setShowSummaryItems((v) => !v)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-[#264027]"
                   >
-                    {showSummaryItems ? "Hide items" : "View items"}
+                    {showSummaryItems ? "Hide items" : "Edit quantities"}
                     <ChevronDown className={cn("h-3.5 w-3.5 transition", showSummaryItems && "rotate-180")} />
                   </button>
                 )}

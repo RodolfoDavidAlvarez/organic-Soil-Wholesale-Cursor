@@ -1,15 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { FlatbedLoadMeter } from "@/components/FlatbedLoadMeter";
-import { cartFlatbedSpots, fullLoadDiscountAmount } from "@/lib/flatbedSpots";
+import { OrderCallbackDialog } from "@/components/OrderCallbackDialog";
+import {
+  cartFlatbedSpots,
+  FLATBED_CAPACITY,
+  fullLoadDiscountAmount,
+  spotsForFormat,
+} from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
-  CreditCard, FileText, ShoppingBag,
+  CreditCard, FileText, ShoppingBag, Phone,
 } from "lucide-react";
 
 const fmt = (n: number): string => {
@@ -31,6 +37,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
   closeDrawer: () => void;
 }) {
   const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
+  const lineSpots = spotsForFormat(item.format, item.quantity);
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
@@ -39,8 +46,6 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
             <OptimizedImage src={imageUrl} alt={item.productName} className="h-full w-full object-contain bg-white p-1" width={120} q={60} />
             {item.sizeImage && (
-              /* Size category photo overlay — bottom-right badge so the customer
-                 sees both the product AND what size/format they picked. */
               <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 overflow-hidden rounded-md bg-white ring-2 ring-white shadow-md">
                 <OptimizedImage src={item.sizeImage} alt={item.format} className="h-full w-full object-cover" />
               </div>
@@ -69,7 +74,14 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="mt-0.5 text-xs text-stone-500">{item.format}</p>
+          <p className="mt-0.5 text-xs text-stone-500">
+            {item.format}
+            {lineSpots > 0 ? (
+              <span className="ml-1.5 font-semibold text-[#264027]">
+                · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </p>
           <div className="mt-2 flex items-center justify-between">
             <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5">
               <button
@@ -100,6 +112,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
 export const QuoteCartDrawer = () => {
   const { items, removeItem, updateQuantity, clearCart, totalItems, isDrawerOpen, closeDrawer } = useQuoteCart();
   const [, navigate] = useLocation();
+  const [callbackOpen, setCallbackOpen] = useState(false);
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
   const quoteItems = useMemo(() => items.filter((i) => i.mode !== "pay"), [items]);
@@ -108,6 +121,8 @@ export const QuoteCartDrawer = () => {
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const payTotal = payGross - flatbedDiscount;
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
+  const spotsLeft = Math.max(0, FLATBED_CAPACITY - flatbedSpots);
+  const nearFull = flatbedSpots > 0 && spotsLeft > 0 && spotsLeft <= 4;
 
   const goToCheckout = () => {
     trackEvent("Cart Checkout Clicked", {
@@ -129,133 +144,161 @@ export const QuoteCartDrawer = () => {
     navigate("/order");
   };
 
+  const openCallback = () => {
+    trackEvent("Cart Callback Clicked", {
+      item_count: items.length,
+      flatbed_spots: flatbedSpots,
+    });
+    setCallbackOpen(true);
+  };
+
   return (
-    <Sheet open={isDrawerOpen} onOpenChange={(open) => !open && closeDrawer()}>
-      <SheetContent side="right" className="w-[min(100vw,390px)] sm:w-[460px] flex flex-col bg-stone-50 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+16px)]">
-        <SheetHeader className="pb-3 border-b border-stone-200">
-          <SheetTitle className="flex items-center gap-2.5 text-stone-900">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#264027] text-white">
-              <ShoppingCart className="h-4 w-4" />
-            </span>
-            <div className="flex flex-col items-start">
-              <span className="text-base font-bold leading-none">Cart</span>
-              <span className="mt-1 text-xs font-medium text-stone-500">
-                {totalItems} {totalItems === 1 ? "item" : "items"}
+    <>
+      <Sheet open={isDrawerOpen} onOpenChange={(open) => !open && closeDrawer()}>
+        <SheetContent side="right" className="w-[min(100vw,390px)] sm:w-[460px] flex flex-col bg-stone-50 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+16px)]">
+          <SheetHeader className="pb-3 border-b border-stone-200">
+            <SheetTitle className="flex items-center gap-2.5 text-stone-900">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#264027] text-white">
+                <ShoppingCart className="h-4 w-4" />
               </span>
-            </div>
-          </SheetTitle>
-        </SheetHeader>
-
-        {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <Package className="mb-4 h-16 w-16 text-stone-300" />
-            <p className="font-semibold text-stone-900">Your cart is empty</p>
-            <p className="mt-1 text-sm text-stone-500">Browse products and add items to build your order.</p>
-            <Button asChild className="mt-6" onClick={closeDrawer}>
-              <Link href="/products">Browse Products</Link>
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 space-y-4 overflow-y-auto py-4">
-              {flatbedSpots > 0 && <FlatbedLoadMeter spots={flatbedSpots} compact />}
-
-              {payItems.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#264027]">
-                    <ShoppingBag className="h-3.5 w-3.5" />
-                    Pay &amp; pick up
-                    <span className="text-stone-400">·</span>
-                    <span className="text-stone-500">{payItems.length} item{payItems.length !== 1 && "s"}</span>
-                  </div>
-                  {payItems.map((item) => (
-                    <LineItem
-                      key={`${item.productId}-${item.format}`}
-                      item={item}
-                      removeItem={removeItem}
-                      updateQuantity={updateQuantity}
-                      closeDrawer={closeDrawer}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {quoteItems.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#7a5a2e]">
-                    <FileText className="h-3.5 w-3.5" />
-                    Request a quote
-                    <span className="text-stone-400">·</span>
-                    <span className="text-stone-500">{quoteItems.length} item{quoteItems.length !== 1 && "s"}</span>
-                  </div>
-                  {quoteItems.map((item) => (
-                    <LineItem
-                      key={`${item.productId}-${item.format}`}
-                      item={item}
-                      removeItem={removeItem}
-                      updateQuantity={updateQuantity}
-                      closeDrawer={closeDrawer}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Footer: totals + CTAs only — no inline forms */}
-            <div className="space-y-3 border-t border-stone-200 pt-3">
-              {payItems.length > 0 && (
-                <>
-                  {flatbedDiscount > 0 && (
-                    <div className="flex items-center justify-between text-sm text-emerald-800">
-                      <span className="font-medium">Full flatbed (10% off)</span>
-                      <span className="font-semibold">−{fmt(flatbedDiscount)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-stone-600">Pay today</span>
-                    <span className="text-xl font-bold text-[#264027]">{fmt(payTotal)}</span>
-                  </div>
-                  <Button
-                    size="lg"
-                    onClick={goToCheckout}
-                    className="h-14 w-full rounded-xl bg-[#264027] text-base font-bold shadow-lg shadow-[#264027]/20 hover:bg-[#1f3320]"
-                  >
-                    <CreditCard className="mr-2 h-5 w-5" />
-                    Continue to Checkout
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <p className="text-center text-[11px] leading-relaxed text-stone-500">
-                    Continue to choose pickup or delivery, then pay.
-                  </p>
-                </>
-              )}
-
-              {quoteItems.length > 0 && (
-                <>
-                  {payItems.length > 0 && <div className="my-3 border-t border-stone-200" />}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-stone-600">Quote estimate</span>
-                    <span className="text-lg font-bold text-stone-700">{fmt(quoteTotal)}</span>
-                  </div>
-                  <Button
-                    size="lg"
-                    onClick={goToQuote}
-                    className="h-12 w-full rounded-xl bg-stone-700 hover:bg-stone-800"
-                  >
-                    Submit quote request <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </>
-              )}
-
-              <div className="pt-1">
-                <Button variant="ghost" size="sm" className="w-full text-stone-500 hover:text-red-600" onClick={clearCart}>
-                  Clear all
-                </Button>
+              <div className="flex flex-col items-start">
+                <span className="text-base font-bold leading-none">
+                  {flatbedSpots > 0 ? "Your flatbed load" : "Your order"}
+                </span>
+                <span className="mt-1 text-xs font-medium text-stone-500">
+                  {totalItems} {totalItems === 1 ? "item" : "items"}
+                  {flatbedSpots > 0 ? ` · ${flatbedSpots}/${FLATBED_CAPACITY} spots` : ""}
+                </span>
               </div>
+            </SheetTitle>
+          </SheetHeader>
+
+          {items.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+              <Package className="mb-4 h-16 w-16 text-stone-300" />
+              <p className="font-semibold text-stone-900">Your order is empty</p>
+              <p className="mt-1 text-sm text-stone-500">Browse products and add items to build your order.</p>
+              <Button asChild className="mt-6" onClick={closeDrawer}>
+                <Link href="/products">Browse Products</Link>
+              </Button>
             </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          ) : (
+            <>
+              <div className="flex-1 space-y-4 overflow-y-auto py-4">
+                {flatbedSpots > 0 && <FlatbedLoadMeter spots={flatbedSpots} compact />}
+                {nearFull && (
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+                    {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left for 10% off products on a full flatbed.
+                  </p>
+                )}
+
+                {payItems.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#264027]">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      Pay online
+                      <span className="text-stone-400">·</span>
+                      <span className="text-stone-500">{payItems.length} item{payItems.length !== 1 && "s"}</span>
+                    </div>
+                    {payItems.map((item) => (
+                      <LineItem
+                        key={`${item.productId}-${item.format}`}
+                        item={item}
+                        removeItem={removeItem}
+                        updateQuantity={updateQuantity}
+                        closeDrawer={closeDrawer}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {quoteItems.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#7a5a2e]">
+                      <FileText className="h-3.5 w-3.5" />
+                      Request a quote
+                      <span className="text-stone-400">·</span>
+                      <span className="text-stone-500">{quoteItems.length} item{quoteItems.length !== 1 && "s"}</span>
+                    </div>
+                    {quoteItems.map((item) => (
+                      <LineItem
+                        key={`${item.productId}-${item.format}`}
+                        item={item}
+                        removeItem={removeItem}
+                        updateQuantity={updateQuantity}
+                        closeDrawer={closeDrawer}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 border-t border-stone-200 pt-3">
+                {payItems.length > 0 && (
+                  <>
+                    {flatbedDiscount > 0 && (
+                      <div className="flex items-center justify-between text-sm text-emerald-800">
+                        <span className="font-medium">Full flatbed (10% off)</span>
+                        <span className="font-semibold">−{fmt(flatbedDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-stone-600">Pay today</span>
+                      <span className="text-xl font-bold text-[#264027]">{fmt(payTotal)}</span>
+                    </div>
+                    <Button
+                      size="lg"
+                      onClick={goToCheckout}
+                      className="h-14 w-full rounded-xl bg-[#264027] text-base font-bold shadow-lg shadow-[#264027]/20 hover:bg-[#1f3320]"
+                    >
+                      <CreditCard className="mr-2 h-5 w-5" />
+                      Continue to Checkout
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <p className="text-center text-[11px] leading-relaxed text-stone-500">
+                      Continue to choose pickup or delivery, then pay.
+                    </p>
+                  </>
+                )}
+
+                {quoteItems.length > 0 && (
+                  <>
+                    {payItems.length > 0 && <div className="my-3 border-t border-stone-200" />}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-stone-600">Quote estimate</span>
+                      <span className="text-lg font-bold text-stone-700">{fmt(quoteTotal)}</span>
+                    </div>
+                    <Button
+                      size="lg"
+                      onClick={goToQuote}
+                      className="h-12 w-full rounded-xl bg-stone-700 hover:bg-stone-800"
+                    >
+                      Submit quote request <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={openCallback}
+                  className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027]"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  Not sure? Call me
+                </button>
+
+                <div className="pt-1">
+                  <Button variant="ghost" size="sm" className="w-full text-stone-500 hover:text-red-600" onClick={clearCart}>
+                    Clear all
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <OrderCallbackDialog open={callbackOpen} onOpenChange={setCallbackOpen} />
+    </>
   );
 };

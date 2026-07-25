@@ -1,104 +1,41 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import SEO from "@/components/layout/SEO";
 import {
   ArrowRight,
-  CheckCircle,
-  Leaf,
-  Truck,
-  Award,
-  Calculator,
   MapPin,
-  Search,
-  ChevronDown,
   ChevronRight,
-  Loader2,
-  Filter,
-  DollarSign,
-  Trees,
   Package,
   Box,
   Container,
-  Sprout,
-  Tractor,
-  Flower,
-  Apple,
   ArrowUpRight,
   Building2,
-  Clock,
-  ShieldCheck,
-  CreditCard,
   Compass,
-  Star,
   Phone,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL, PHOENIX_YARD_DIRECTIONS_URL, PHOENIX_YARD_ENTRANCE_COORDINATES } from "@/config/contact";
-import { useEffect, useState } from "react";
-import { productsData } from "@/data/productData";
-import { useLocation } from "wouter";
 import { generateProductSlug } from "@/utils/generateSlug";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SidebarCarousel from "@/components/layout/SidebarCarousel";
-import ProductShowcase from "@/components/ProductShowcase";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import TestimonialGallery from "@/components/TestimonialGallery";
 
-// Temporary local Product type to resolve linter error
-type Product = {
+type FeaturedProduct = {
   id: number;
   name: string;
+  productName?: string;
   slug?: string;
   description?: string;
   category: string;
-  price?: number;
-  stockQuantity?: number;
   imageUrl?: string;
   texturePhotoUrl?: string;
-  additionalImages?: string[];
-  ingredients?: string;
-  targetAudience?: string;
-  recommendedUses?: string;
-  certifications?: { name: string }[];
-  sizeOptions?: { name: string; price: number }[];
   productType?: string;
 };
 
-type FeaturedProduct = Product & { productName?: string };
-
-// Add type definitions
-interface Certificate {
-  name: string;
-  icon: JSX.Element;
-}
-
-interface SizeOption {
-  name: string;
-  price: number;
-}
-
-interface ProductShowcaseProps {
-  products: Product[];
-  onProductSelect?: (product: Product) => void;
-}
-
-// Default placeholder image for products that don't have images
-const DEFAULT_IMAGE = "potting-soil.jpg";
-
 const Home = () => {
-  // Product categories for showcase
-  const productCategories = [
-    { id: "worm-castings", name: "Worm Castings", icon: <Leaf className="h-6 w-6" /> },
-    { id: "dairy-compost", name: "Dairy Compost", icon: <Truck className="h-6 w-6" /> },
-    { id: "fruit-trees", name: "Fruit Trees", icon: <Trees className="h-6 w-6" /> },
-    { id: "landscaping", name: "Landscaping", icon: <Filter className="h-6 w-6" /> },
-  ];
+  const [, navigate] = useLocation();
 
   const showcaseVideoUrl =
     "https://www.youtube.com/embed/yZvjAPZ0dVQ?autoplay=1&mute=1&loop=1&playlist=yZvjAPZ0dVQ&controls=0&modestbranding=1&rel=0&playsinline=1";
@@ -107,95 +44,11 @@ const Home = () => {
   const showcaseFarmersVideoUrl =
     "https://www.youtube.com/embed/HbR7BH-6uxI?autoplay=1&mute=1&loop=1&playlist=HbR7BH-6uxI&controls=0&modestbranding=1&rel=0&playsinline=1";
 
-  // Customer-submitted testimonials pulled from the OSW testimonial system.
-  const customerStories = [
-    {
-      id: 1,
-      name: "Client Testimonial",
-      company: "Phoenix grower",
-      location: "Phoenix, AZ",
-      product: "Garden soil trial",
-      title: "Same seed. Same water. Better soil.",
-      body: "Both plants were started from the same seeds with the same watering and sunlight. The fuller, healthier plant was grown in your soil. I am loving your product so far.",
-      image: "/images/testimonials/soil-craft-spring-crop.jpg",
-    },
-    {
-      id: 2,
-      name: "Pat Bernard",
-      company: "The Bernard Company",
-      location: "Yarnell, AZ",
-      product: "Premium Nature's Blanket",
-      title: "Product looked outstanding.",
-      body: "A real delivery photo from a customer project using Premium Nature's Blanket. The submitted note was simple: the product looked outstanding.",
-      image: "/images/testimonials/premium-nature-blanket-yarnell.jpg",
-    },
-    {
-      id: 3,
-      name: "Shane McCandless",
-      company: "Trinity Landscaping",
-      location: "Arizona",
-      product: "Landscape project material",
-      title: "Finished project proof.",
-      body: "The customer sent finished project photos after the job was done. This is the kind of field proof landscapers need before trusting a supplier.",
-      image: "/images/testimonials/trinity-landscaping-finished-project.jpg",
-    },
-  ];
-
-  // State for products showcase
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
-  const [, navigate] = useLocation();
-
-  // Helper function to get the display name for products
-  const getProductDisplayName = (product: Product): string => {
-    switch (product.name) {
-      case "Mikey's Worm Poop":
-        return "Worm Castings";
-      case "SuperBooster":
-        return "Concentrated Amendment for Fruits & Vegetables";
-      case "Simon's Gold":
-        return "All Natural Dairy Compost";
-      case "Soil Craft":
-        return "Premium Potting Soil";
-      case "Amazonian Dark Earth":
-        return "Biochar Mineral";
-      case "Tee Top Divot Repair Blend":
-        return "Golf Course Divot Repair Mix";
-      case "Turf Daddy Blend":
-        return "Overseed & Aeration Blend";
-      case "Artemis Root Boost Blend":
-        return "Tree & Shrub Planting Amendment";
-      case "Bacchus Blend":
-        return "Vineyard Blend";
-      default:
-        return product.description || product.name;
-    }
-  };
-
-  // State for quote calculator
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [quantity, setQuantity] = useState<number>(1);
-  const [quotePrice, setQuotePrice] = useState<number | null>(null);
-  const [truckingCost, setTruckingCost] = useState<number | null>(null);
-  const [showQuote, setShowQuote] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [textureLoaded, setTextureLoaded] = useState<{ [key: number]: boolean }>({});
-
-  // Map of our locations with coordinates for Arizona
-  const locations = [
-    { name: "Vicksburg", zip: "85348", deliverable: true, coordinates: { lat: 34.2417, lng: -113.768 } },
-    { name: "Congress", zip: "85332", deliverable: true, coordinates: { lat: 34.1625, lng: -112.8507 } },
-    { name: "Phoenix, AZ", zip: "85001", deliverable: true, coordinates: { lat: 33.4484, lng: -112.074 } },
-  ];
-
   const [phoenixLat, phoenixLng] = PHOENIX_YARD_ENTRANCE_COORDINATES.split(",");
   const PHOENIX_COORDINATES = { lat: Number(phoenixLat), lng: Number(phoenixLng) };
   const PHOENIX_MAP_EMBED_URL = `https://www.google.com/maps?q=${PHOENIX_COORDINATES.lat},${PHOENIX_COORDINATES.lng}&z=13&output=embed`;
   const PHOENIX_DIRECTIONS_URL = PHOENIX_YARD_DIRECTIONS_URL;
 
-  // Size categories data
   const sizeCategories = [
     {
       id: "pallet-boxes",
@@ -227,102 +80,8 @@ const Home = () => {
     },
   ];
 
-  // Target audience data
-  const targetAudiences = [
-    {
-      name: "Landscapers",
-      description: "Professional landscaping services",
-      icon: <Sprout className="h-6 w-6" />,
-    },
-    {
-      name: "Farmers",
-      description: "Agricultural operations",
-      icon: <Tractor className="h-6 w-6" />,
-    },
-    {
-      name: "Nurseries",
-      description: "Plant nurseries and garden centers",
-      icon: <Flower className="h-6 w-6" />,
-    },
-    {
-      name: "Fruit Growers",
-      description: "Orchards and fruit production",
-      icon: <Apple className="h-6 w-6" />,
-    },
-  ];
-
-  // Load products
-  useEffect(() => {
-    // Add IDs and required fields to the products
-    const productsWithIds = productsData.map((product, index) => ({
-      ...product,
-      id: index + 1,
-      name: product.name || "Unnamed Product",
-      category: product.category || "Uncategorized",
-      story: product.story || null,
-      usage: product.usage || null,
-      productType: product.productType || null,
-      safetyPrecautions: product.safetyPrecautions || null,
-      warranty: product.warranty || null,
-      additionalImages: product.additionalImages || null,
-      certifications: product.certifications || [],
-      sizeOptions: product.sizeOptions || [],
-    })) as Product[];
-
-    setProducts(productsWithIds);
-    setFilteredProducts(productsWithIds);
-    setIsLoading(false);
-  }, []);
-
-  // Filter products when category changes
-  useEffect(() => {
-    if (selectedCategoryId === "all") {
-      setFilteredProducts(products);
-      return;
-    }
-
-    let filtered;
-
-    switch (selectedCategoryId) {
-      case "worm-castings":
-        filtered = products.filter(
-          (p) =>
-            p.category.toLowerCase().includes("vermicompost") ||
-            p.ingredients?.toLowerCase().includes("worm") ||
-            p.name.toLowerCase().includes("worm")
-        );
-        break;
-      case "dairy-compost":
-        filtered = products.filter(
-          (p) =>
-            p.category.toLowerCase().includes("compost") || p.ingredients?.toLowerCase().includes("dairy") || p.name.toLowerCase().includes("dairy")
-        );
-        break;
-      case "fruit-trees":
-        filtered = products.filter((p) => p.targetAudience?.toLowerCase().includes("fruit") || p.recommendedUses?.toLowerCase().includes("fruit"));
-        break;
-      case "landscaping":
-        filtered = products.filter(
-          (p) =>
-            p.category.toLowerCase().includes("turf") ||
-            p.targetAudience?.toLowerCase().includes("landscap") ||
-            p.name.toLowerCase().includes("lawn") ||
-            p.name.toLowerCase().includes("turf")
-        );
-        break;
-      default:
-        filtered = products;
-    }
-
-    setFilteredProducts(filtered);
-  }, [selectedCategoryId, products]);
-
-  // Handle selection of a product
-  const handleProductSelect = (product: Product) => {
-    // Prefer slug for SEO-friendly URLs, fall back to generated slug or ID
+  const handleProductSelect = (product: FeaturedProduct) => {
     const identifier = product.slug || generateProductSlug(product.productType, product.name) || product.id;
-
-    // Navigate to product detail page
     if (product.category === "Mulch") {
       navigate(`/products/mulch/${identifier}`);
     } else {
@@ -330,45 +89,6 @@ const Home = () => {
     }
   };
 
-  // Calculate trucking cost based on distance
-  const calculateTruckingCost = () => {
-    if (!selectedProduct || !selectedSize) return;
-
-    // For demo purposes, we'll use a simple calculation
-    const baseCost = 100;
-    const costPerMile = 2;
-    const distance = 50; // Demo distance
-
-    const totalCost = baseCost + distance * costPerMile;
-    setTruckingCost(totalCost);
-  };
-
-  // Calculate quote
-  const calculateQuote = () => {
-    if (!selectedProduct || !selectedSize) return;
-
-    const sizeOption = selectedProduct.sizeOptions?.find((size) => size.name === selectedSize);
-
-    if (!sizeOption) return;
-
-    const productCost = sizeOption.price * quantity;
-    const deliveryCost = truckingCost || 0;
-
-    setQuotePrice(productCost + deliveryCost);
-    setShowQuote(true);
-  };
-
-  // Render size options
-  const renderSizeOptions = (size: { name: string; price: number }, i: number) => {
-    return (
-      <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-        <span className="text-foreground/80">{size.name}</span>
-        <span className="font-semibold">${size.price.toFixed(2)}</span>
-      </div>
-    );
-  };
-
-  // Featured products data
   const featuredProducts: FeaturedProduct[] = [
     {
       id: 1000,

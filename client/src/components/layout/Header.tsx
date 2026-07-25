@@ -40,6 +40,18 @@ const Header = () => {
   const { isAuthenticated, user, signOut } = useAuth();
   const { totalItems, openDrawer } = useQuoteCart();
   const headerRef = useRef<HTMLElement | null>(null);
+  const prevItemCount = useRef(totalItems);
+  const [orderBadgePulse, setOrderBadgePulse] = useState(false);
+
+  useEffect(() => {
+    if (totalItems > prevItemCount.current) {
+      setOrderBadgePulse(true);
+      const timer = window.setTimeout(() => setOrderBadgePulse(false), 1000);
+      prevItemCount.current = totalItems;
+      return () => window.clearTimeout(timer);
+    }
+    prevItemCount.current = totalItems;
+  }, [totalItems]);
 
   const updateHeaderHeight = useCallback(() => {
     if (!headerRef.current) {
@@ -340,13 +352,21 @@ const Header = () => {
                 <button
                   type="button"
                   onClick={openDrawer}
-                  aria-label={`Open cart, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
-                  className="relative flex items-center gap-2 border border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90 shadow-sm hover:shadow transition-all duration-300 rounded-md px-4 py-2 text-sm font-medium"
+                  aria-label={`Open order, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
+                  className={`relative flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium shadow-sm transition-all duration-300 hover:shadow ${
+                    totalItems > 0
+                      ? "border-primary bg-primary/5 text-primary hover:bg-primary/10"
+                      : "border-primary/50 text-primary hover:bg-primary/10 hover:text-primary/90"
+                  }`}
                 >
                   <ShoppingCart className="h-4 w-4" />
-                  <span>Cart</span>
+                  <span>Order</span>
                   {totalItems > 0 && (
-                    <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                    <span
+                      className={`absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white ${
+                        orderBadgePulse ? "animate-bounce" : ""
+                      }`}
+                    >
                       {totalItems}
                     </span>
                   )}
@@ -361,12 +381,18 @@ const Header = () => {
             <button
               type="button"
               onClick={openDrawer}
-              aria-label="Open cart"
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-primary hover:bg-primary/10 active:bg-primary/20 touch-manipulation"
+              aria-label={`Open order, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
+              className={`relative inline-flex h-11 w-11 items-center justify-center rounded-md touch-manipulation ${
+                totalItems > 0 ? "bg-primary/10 text-primary" : "text-primary hover:bg-primary/10 active:bg-primary/20"
+              }`}
             >
               <ShoppingCart className="h-6 w-6" />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center px-1">
+                <span
+                  className={`absolute -top-0.5 -right-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white ${
+                    orderBadgePulse ? "animate-bounce" : ""
+                  }`}
+                >
                   {totalItems}
                 </span>
               )}

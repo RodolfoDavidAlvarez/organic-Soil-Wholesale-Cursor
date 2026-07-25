@@ -13,7 +13,8 @@ export type MosLeadSource =
   | 'osw_lead_form'
   | 'osw_contact_form'
   | 'osw_quote_request'
-  | 'osw_special_request';
+  | 'osw_special_request'
+  | 'osw_order_callback';
 
 export interface MosLeadPayload {
   full_name: string;

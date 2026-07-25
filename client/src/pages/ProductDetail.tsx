@@ -12,6 +12,7 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { extractYouTubeVideoId, YouTubePlayer } from "@/components/YouTubePlayer";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
@@ -23,12 +24,13 @@ import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
+import { OrderCallbackDialog } from "@/components/OrderCallbackDialog";
 import { cartFlatbedSpots, FLATBED_CAPACITY, spotsForFormat } from "@/lib/flatbedSpots";
+import type { CartItem } from "@/contexts/QuoteCartContext";
 import {
   ArrowLeft,
   Leaf,
   ShoppingBag,
-  ShoppingCart,
   FileText,
   Minus,
   Plus,
@@ -44,7 +46,6 @@ import {
   ExternalLink,
   Download,
   Clock,
-  Truck,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -268,8 +269,8 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   Tote: "/images/sizes/2-2cy-tote.png",
   "Truckload (~24 tons)": "/images/size-formats/walking-floor-delivery.webp",
   "Truckload (24 tons)": "/images/size-formats/walking-floor-delivery.webp",
-  "Truckload (22 pallets)": "/images/size-formats/mixed-truckload.webp",
-  "Flatbed (22 pallets)": "/images/size-formats/mixed-truckload.webp",
+  "Truckload (22 pallets)": "/images/optimized/mixed-truckload-example.jpg",
+  "Flatbed (22 pallets)": "/images/optimized/mixed-truckload-example.jpg",
   "Truckload (~60 cu yd)": "/images/size-formats/walking-floor-delivery.webp",
   "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
 };
@@ -429,7 +430,18 @@ const imageForChoice = (choice: SizeChoice, fallback: string) => {
 /** Intentionally empty — Mikey's loose truckload is offered again (V4 $4,800). */
 const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {};
 
+/** Flatbed isn't a product SKU — customers pick bag/pallet/tote and fill the load. */
+const isRetiredFlatbedSkuTier = (size: string) => {
+  const normalized = size.toLowerCase();
+  if (normalized.includes("22") && normalized.includes("pallet")) return true;
+  if (normalized.includes("flatbed") && (normalized.includes("truck") || normalized.includes("pallet"))) {
+    return true;
+  }
+  return false;
+};
+
 const shouldHidePayPickupTier = (productId: number | string, size: string) => {
+  if (isRetiredFlatbedSkuTier(size)) return true;
   const hiddenTerms = HIDDEN_PAY_PICKUP_TIER_TERMS[normalizeProductId(productId)] ?? [];
   const normalized = size.toLowerCase();
   return hiddenTerms.some((term) => normalized.includes(term));
@@ -1133,6 +1145,8 @@ const ProductDetail = () => {
   const [selectedChoiceSize, setSelectedChoiceSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [callbackOpen, setCallbackOpen] = useState(false);
+  const [callbackPending, setCallbackPending] = useState<CartItem[]>([]);
   const [deliveryQuote, setDeliveryQuote] = useState<TruckingQuote | null>(null);
   const [deliveryZip, setDeliveryZip] = useState("");
   const [deliveryRoughAccess, setDeliveryRoughAccess] = useState(false);
@@ -1144,8 +1158,26 @@ const ProductDetail = () => {
   );
 
   const needsChoice = (selectedCategory?.choices.length ?? 0) > 1;
+  /** Drill-down chain: sizes → sub-options (if any) → configure (qty / delivery / CTAs). */
+  const buyStep: "sizes" | "subchoice" | "configure" = !selectedCategory
+    ? "sizes"
+    : needsChoice && !selectedChoiceSize
+      ? "subchoice"
+      : "configure";
+  const subchoiceStepLabel = useMemo(() => {
+    if (!selectedCategory || !needsChoice) return "Choose option";
+    const kinds = new Set(selectedCategory.choices.map((c) => c.kind));
+    if (kinds.has("pallet") && kinds.has("single")) return "Bag or pallet";
+    if (selectedCategory.choices.length === 2) {
+      return selectedCategory.choices.map((c) => c.displayLabel).join(" or ");
+    }
+    return "Choose option";
+  }, [needsChoice, selectedCategory]);
   const isTruckloadSelected = Boolean(selectedCategory && isTruckloadCategoryKey(selectedCategory.key));
   const isBulkPickupSelected = Boolean(selectedCategory && isBulkPickupCategoryKey(selectedCategory.key));
+  const isFlatbedCategorySelected = Boolean(
+    selectedCategory && isFlatbedTruckloadKey(selectedCategory.key),
+  );
   const selectedChoice = useMemo(
     () =>
       selectedCategory?.choices.find((choice) => choice.size === selectedChoiceSize) ??
@@ -1153,9 +1185,28 @@ const ProductDetail = () => {
     [needsChoice, selectedCategory, selectedChoiceSize]
   );
 
+  const selectedAddsFlatbedSpots = selectedChoice
+    ? spotsForFormat(selectedChoice.cartLabel, quantity) > 0
+    : isFlatbedCategorySelected;
+  const isLooseTruckloadSelected = Boolean(
+    isTruckloadSelected && !isFlatbedCategorySelected && !selectedAddsFlatbedSpots,
+  );
+  const fulfillmentMode: "flatbed" | "loose_truckload" | "bulk_pickup" | "yard_pickup" | null =
+    !selectedCategory
+      ? null
+      : isLooseTruckloadSelected
+        ? "loose_truckload"
+        : selectedAddsFlatbedSpots || isFlatbedCategorySelected
+          ? "flatbed"
+          : isBulkPickupSelected
+            ? "bulk_pickup"
+            : "yard_pickup";
+
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
-  const truckloadReadyToPurchase = !isTruckloadSelected || Boolean(deliveryQuote && /^\d{5}$/.test(deliveryZip));
+  const truckloadReadyToPurchase =
+    !isLooseTruckloadSelected || Boolean(deliveryQuote && /^\d{5}$/.test(deliveryZip));
+  const pendingFlatbedSpots = selectedChoice ? spotsForFormat(selectedChoice.cartLabel, quantity) : 0;
 
   const scrollBuyIntoView = useCallback(() => {
     // Wait for Step 2 DOM to paint — rAF alone often fires too early.
@@ -1163,6 +1214,21 @@ const ProductDetail = () => {
       document.getElementById("buy")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
   }, []);
+
+  const goBuyStepBack = useCallback(() => {
+    // One step up the chain: configure → subchoice → sizes.
+    if (buyStep === "configure" && needsChoice) {
+      setSelectedChoiceSize("");
+      setQuantity(1);
+      scrollBuyIntoView();
+      return;
+    }
+    setSelectedCategoryKey("");
+    setSelectedChoiceSize("");
+    setQuantity(1);
+    setDeliveryQuote(null);
+    scrollBuyIntoView();
+  }, [buyStep, needsChoice, scrollBuyIntoView]);
 
   const pricingSummary = useMemo(() => {
     if (!product) return null;
@@ -1299,7 +1365,7 @@ const ProductDetail = () => {
   }, [product?.id]);
 
   const persistDeliveryDraft = useCallback(() => {
-    if (!isTruckloadSelected || !deliveryZip) return;
+    if (!isLooseTruckloadSelected || !deliveryZip) return;
     saveDeliveryDraft({
       zip: deliveryZip,
       roughAccess: deliveryRoughAccess,
@@ -1313,42 +1379,12 @@ const ProductDetail = () => {
     deliveryRoughAccess,
     deliverySemiAccess,
     deliveryZip,
-    isTruckloadSelected,
+    isLooseTruckloadSelected,
   ]);
 
-  const addSelectionToCart = useCallback((
-    next?: "products" | "checkout" | "quote",
-    opts?: { quiet?: boolean; focusStreet?: boolean },
-  ) => {
-    if (!product || !selectedChoice) return;
-    if (isTruckloadSelected && next === "checkout" && !truckloadReadyToPurchase && !opts?.focusStreet) {
-      toast({
-        title: "Estimate delivery first",
-        description: "Enter your ZIP and get a delivery price before purchasing a truckload.",
-      });
-      scrollBuyIntoView();
-      return;
-    }
-
-    trackEvent(next === "checkout" ? "Buy Now Clicked" : "Add To Cart Clicked", {
-      product_id: product.id,
-      product_slug: product.slug,
-      product_name: product.displayTitle,
-      size_category: selectedCategory?.label ?? "",
-      format: selectedChoice.cartLabel,
-      quantity,
-      unit_price: selectedChoice.displayPrice,
-      mode: canPayOnline ? "pay" : "quote",
-      next: next ?? "cart_drawer",
-      delivery_zip: deliveryZip || undefined,
-      delivery_fee: deliveryQuote?.costDollars,
-      auto_address: Boolean(opts?.focusStreet),
-    });
-
-    // When auto-advancing from Get price, draft was already saved with the fresh quote.
-    if (isTruckloadSelected && !opts?.focusStreet) persistDeliveryDraft();
-
-    addItem({
+  const buildSelectionCartItem = useCallback((): CartItem | null => {
+    if (!product || !selectedChoice) return null;
+    return {
       productId: product.id,
       productName: product.displayTitle,
       productSlug: product.slug,
@@ -1357,31 +1393,80 @@ const ProductDetail = () => {
       unitPrice: selectedChoice.displayPrice,
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
-      // Show the SAME bag/hero photo the customer tapped on the list. Fall back
-      // gracefully if no override exists for this product.
       imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,
       sizeImage: SIZE_CATEGORY_PHOTO[selectedChoice.size] || undefined,
-    });
+    };
+  }, [canPayOnline, product, quantity, selectedChoice]);
+
+  const addSelectionToCart = useCallback((
+    next?: "products" | "checkout" | "callback",
+    opts?: {
+      quiet?: boolean;
+      focusStreet?: boolean;
+      preferredFulfillment?: "pickup" | "delivery";
+    },
+  ) => {
+    if (!product || !selectedChoice) return;
+    if (isLooseTruckloadSelected && next === "checkout" && !truckloadReadyToPurchase && !opts?.focusStreet) {
+      toast({
+        title: "Estimate delivery first",
+        description: "Enter your ZIP and get a delivery price before purchasing a truckload.",
+      });
+      scrollBuyIntoView();
+      return;
+    }
+
+    trackEvent(
+      next === "checkout"
+        ? "Buy Now Clicked"
+        : next === "callback"
+          ? "Order Callback Clicked"
+          : "Add To Cart Clicked",
+      {
+        product_id: product.id,
+        product_slug: product.slug,
+        product_name: product.displayTitle,
+        size_category: selectedCategory?.label ?? "",
+        format: selectedChoice.cartLabel,
+        quantity,
+        unit_price: selectedChoice.displayPrice,
+        mode: canPayOnline ? "pay" : "quote",
+        next: next ?? "cart_drawer",
+        delivery_zip: deliveryZip || undefined,
+        delivery_fee: deliveryQuote?.costDollars,
+        auto_address: Boolean(opts?.focusStreet),
+      },
+    );
+
+    // When auto-advancing from Get price, draft was already saved with the fresh quote.
+    if (isLooseTruckloadSelected && !opts?.focusStreet) persistDeliveryDraft();
+
+    const cartLine = buildSelectionCartItem();
+    if (!cartLine) return;
+    addItem(cartLine);
 
     setJustAdded(true);
     const addedSpots = spotsForFormat(selectedChoice.cartLabel, quantity);
     const nextSpots = cartFlatbedSpots(cartItems) + addedSpots;
-    // Only show the toast when we're navigating away. When we're opening the
-    // cart drawer, the drawer itself is the confirmation — the toast would
-    // just stack on top and cover the drawer header. Flatbed adds still get a
-    // short spot hint in the drawer via FlatbedLoadMeter.
-    if (next && !opts?.quiet) {
+    // Soft confirmation — keep shopping. Order stays one tap away in the header.
+    if (!opts?.quiet && !next) {
+      const lineLabel =
+        addedSpots > 0
+          ? `${quantity}× ${product.displayTitle} · +${addedSpots} spot${addedSpots === 1 ? "" : "s"} (${Math.min(nextSpots, FLATBED_CAPACITY)}/${FLATBED_CAPACITY})`
+          : `${quantity}× ${product.displayTitle} · ${selectedChoice.displayLabel}`;
       toast({
-        title: "Added to cart",
-        description:
-          addedSpots > 0
-            ? `${quantity}x ${product.displayTitle} · +${addedSpots} flatbed spot${addedSpots === 1 ? "" : "s"} (${Math.min(nextSpots, FLATBED_CAPACITY)}/${FLATBED_CAPACITY})`
-            : `${quantity}x ${product.displayTitle} (${selectedChoice.displayLabel})`,
-      });
-    } else if (!next && addedSpots > 0) {
-      toast({
-        title: `+${addedSpots} flatbed spot${addedSpots === 1 ? "" : "s"}`,
-        description: `Cart is ${Math.min(nextSpots, FLATBED_CAPACITY)} / ${FLATBED_CAPACITY} spots${nextSpots === FLATBED_CAPACITY ? " — 10% off products" : ""}`,
+        title: addedSpots > 0 ? "Added to your flatbed" : "Added to your order",
+        description: lineLabel,
+        duration: 4500,
+        action: (
+          <ToastAction
+            altText="View order"
+            onClick={() => openDrawer()}
+            className="border-[#264027]/25 bg-[#264027] text-white hover:bg-[#1f3320] hover:text-white"
+          >
+            View order
+          </ToastAction>
+        ),
       });
     }
     window.setTimeout(() => setJustAdded(false), 1400);
@@ -1393,20 +1478,30 @@ const ProductDetail = () => {
         // ignore
       }
     }
+    if (opts?.preferredFulfillment) {
+      try {
+        sessionStorage.setItem("osw-preferred-fulfillment", opts.preferredFulfillment);
+      } catch {
+        // ignore
+      }
+    }
 
     if (next === "products") navigate("/products");
     if (next === "checkout") canPayOnline ? navigate("/checkout") : navigate("/order");
-    if (next === "quote") navigate("/order");
-    // Plain "Add to Cart" (no `next`) — open the drawer so the customer can
-    // see what's in their cart and choose to continue or keep shopping.
-    if (!next) openDrawer();
+    if (next === "callback") {
+      setCallbackPending([cartLine]);
+      setCallbackOpen(true);
+      return;
+    }
+    // Stay on the product page — no intrusive cart drawer.
   }, [
     addItem,
+    buildSelectionCartItem,
     canPayOnline,
     cartItems,
     deliveryQuote?.costDollars,
     deliveryZip,
-    isTruckloadSelected,
+    isLooseTruckloadSelected,
     navigate,
     openDrawer,
     persistDeliveryDraft,
@@ -1420,7 +1515,7 @@ const ProductDetail = () => {
   ]);
 
   const deliveryQuoteItems = useMemo(() => {
-    if (!product || !selectedChoice || !isTruckloadSelected) return [];
+    if (!product || !selectedChoice || !isLooseTruckloadSelected) return [];
     return [
       {
         sizeOption: selectedChoice.cartLabel,
@@ -1429,7 +1524,7 @@ const ProductDetail = () => {
         productName: product.displayTitle,
       },
     ];
-  }, [isTruckloadSelected, product, quantity, selectedChoice]);
+  }, [isLooseTruckloadSelected, product, quantity, selectedChoice]);
 
   // --- SEO ---
   const resolvedUsageSteps = product
@@ -1720,33 +1815,7 @@ const ProductDetail = () => {
                           : "pt-1",
                       )}
                     >
-                      {selectedCategory ? (
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                            {needsChoice
-                              ? "Bag or pallet"
-                              : isTruckloadSelected
-                              ? "Delivery"
-                              : isBulkPickupSelected
-                              ? "Pickup"
-                              : "Quantity"}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCategoryKey("");
-                              setSelectedChoiceSize("");
-                              setQuantity(1);
-                              setDeliveryQuote(null);
-                              scrollBuyIntoView();
-                            }}
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                          >
-                            <ArrowLeft className="h-3.5 w-3.5" />
-                            Sizes
-                          </button>
-                        </div>
-                      ) : (
+                      {buyStep === "sizes" ? (
                         <div className="mb-3 flex items-baseline justify-between gap-3">
                           <p className="text-sm font-semibold text-foreground">Choose a size</p>
                           {pricingSummary && (
@@ -1756,9 +1825,67 @@ const ProductDetail = () => {
                             </p>
                           )}
                         </div>
+                      ) : (
+                        <div className="mb-3 space-y-2">
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={goBuyStepBack}
+                              aria-label={
+                                buyStep === "configure" && needsChoice
+                                  ? `Back to ${subchoiceStepLabel.toLowerCase()}`
+                                  : "Back to sizes"
+                              }
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#264027]/15 bg-white text-[#264027] shadow-sm transition hover:border-[#264027]/35 hover:bg-[#264027]/[0.04] touch-manipulation"
+                            >
+                              <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+                            </button>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold leading-tight text-[#264027]">
+                                {buyStep === "subchoice"
+                                  ? subchoiceStepLabel
+                                  : buyStep === "configure" && needsChoice
+                                  ? selectedChoice?.displayLabel || "Your selection"
+                                  : isLooseTruckloadSelected
+                                  ? "Delivery"
+                                  : isBulkPickupSelected
+                                  ? "Pickup"
+                                  : fulfillmentMode === "flatbed"
+                                  ? "Flatbed load"
+                                  : "Quantity"}
+                              </p>
+                              {buyStep === "subchoice" && (
+                                <p className="mt-0.5 text-xs text-stone-500">
+                                  {selectedCategory.label.replace(/\s*\([^)]*\)\s*$/, "") ||
+                                    selectedCategory.label}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {buyStep === "configure" &&
+                            fulfillmentMode &&
+                            fulfillmentMode !== "flatbed" && (
+                            <div className="rounded-xl border border-[#264027]/12 bg-white/80 px-3 py-2.5">
+                              <p className="text-sm font-semibold text-[#264027]">
+                                {fulfillmentMode === "loose_truckload"
+                                  ? "24-ton walking-floor delivery"
+                                  : fulfillmentMode === "bulk_pickup"
+                                  ? "Yard pickup · loose bulk"
+                                  : "Yard pickup"}
+                              </p>
+                              <p className="mt-0.5 text-xs leading-snug text-stone-600">
+                                {fulfillmentMode === "loose_truckload"
+                                  ? "Standardized semi load. Enter ZIP below for delivery pricing."
+                                  : fulfillmentMode === "bulk_pickup"
+                                  ? "Load at the yard — pick Phoenix or Congress at checkout."
+                                  : "Pay online, then pick up at the yard."}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       )}
 
-                      {!selectedCategory && sizeCategories.length > 0 && (
+                      {buyStep === "sizes" && sizeCategories.length > 0 && (
                         <div className="divide-y divide-[#264027]/10 border-y border-[#264027]/10">
                           {sizeCategories.map((category) => {
                             const shortLabel =
@@ -1824,45 +1951,54 @@ const ProductDetail = () => {
                         </div>
                       )}
 
-                      {selectedCategory && (
+                      {selectedCategory && buyStep !== "sizes" && (
                         <div className="mt-3 space-y-3 lg:space-y-2.5">
-                          {/* Selected size — photo + name, no nested card */}
-                          <div className="flex items-center gap-3 pb-1">
-                            {selectedCategory.image && (
-                              <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#eef4eb] sm:h-20 sm:w-20">
-                                <OptimizedImage
-                                  src={selectedCategory.image}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              </span>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
-                                {selectedCategory.label.replace(/\s*\([^)]*\)\s*$/, "") || selectedCategory.label}
-                              </p>
-                              <p className="mt-0.5 text-sm text-muted-foreground">
-                                {selectedChoice?.subLabel ||
-                                  selectedCategory.secondaryPriceLabel?.replace(/^\$[\d.]+\/\w+\s·\s/, "") ||
-                                  selectedCategory.label.match(/\(([^)]+)\)/)?.[1] ||
-                                  ""}
-                              </p>
-                              {!needsChoice && selectedChoice && (
-                                <p className="mt-1 text-xl font-extrabold text-primary">
-                                  {fmt(selectedTotal)}
-                                  {quantity > 1 ? (
-                                    <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
-                                      ({quantity} loads)
-                                    </span>
-                                  ) : null}
-                                </p>
+                          {/* Single-option sizes keep the category photo. Multi-option chains skip it. */}
+                          {!needsChoice && (
+                            <div className="flex items-center gap-3 pb-1">
+                              {selectedCategory.image && (
+                                <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#eef4eb] sm:h-20 sm:w-20">
+                                  <OptimizedImage
+                                    src={selectedCategory.image}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                </span>
                               )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-base font-bold leading-tight text-foreground sm:text-lg">
+                                  {selectedCategory.label.replace(/\s*\([^)]*\)\s*$/, "") || selectedCategory.label}
+                                </p>
+                                <p className="mt-0.5 text-sm text-muted-foreground">
+                                  {selectedChoice?.subLabel ||
+                                    selectedCategory.secondaryPriceLabel?.replace(/^\$[\d.]+\/\w+\s·\s/, "") ||
+                                    selectedCategory.label.match(/\(([^)]+)\)/)?.[1] ||
+                                    ""}
+                                </p>
+                                {selectedChoice && (
+                                  <p className="mt-1 text-xl font-extrabold text-primary">
+                                    {fmt(selectedTotal)}
+                                    {quantity > 1 ? (
+                                      <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
+                                        ({quantity} loads)
+                                      </span>
+                                    ) : null}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
                           {needsChoice && (
-                            <div className="divide-y divide-[#264027]/10 border-y border-[#264027]/10">
-                              {selectedCategory.choices.map((choice) => {
+                            <div className="grid gap-2.5">
+                              {selectedCategory.choices
+                                // Once chosen, only show that option — ← back swaps bag/pallet.
+                                .filter((choice) =>
+                                  buyStep === "configure"
+                                    ? choice.size === selectedChoiceSize
+                                    : true,
+                                )
+                                .map((choice) => {
                                 const isSelected = choice.size === selectedChoiceSize;
                                 const choiceImage = imageForChoice(choice, selectedCategory.image);
                                 return (
@@ -1870,6 +2006,7 @@ const ProductDetail = () => {
                                     key={choice.size}
                                     type="button"
                                     onClick={() => {
+                                      if (isSelected && buyStep === "configure") return;
                                       setSelectedChoiceSize(choice.size);
                                       setQuantity(1);
                                       trackEvent("Product Purchase Type Selected", {
@@ -1879,13 +2016,21 @@ const ProductDetail = () => {
                                         format: choice.cartLabel,
                                         price: choice.displayPrice,
                                       });
+                                      scrollBuyIntoView();
                                     }}
                                     className={cn(
-                                      "group flex w-full items-center gap-3 py-3 text-left transition touch-manipulation sm:gap-4",
-                                      isSelected ? "bg-[#264027]/[0.06]" : "hover:bg-[#264027]/[0.03]",
+                                      "group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3.5 text-left transition touch-manipulation sm:gap-4 sm:px-3.5",
+                                      isSelected
+                                        ? "border-[#264027] bg-[#264027] text-white shadow-md shadow-[#264027]/20"
+                                        : "border-[#264027]/12 bg-white hover:border-[#264027]/30 hover:bg-[#f7f8f5]",
                                     )}
                                   >
-                                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white sm:h-16 sm:w-16">
+                                    <span
+                                      className={cn(
+                                        "relative h-14 w-14 shrink-0 overflow-hidden rounded-xl sm:h-[4.25rem] sm:w-[4.25rem]",
+                                        isSelected ? "bg-white ring-2 ring-white/80" : "bg-[#eef4eb] ring-1 ring-stone-200/70",
+                                      )}
+                                    >
                                       {choiceImage ? (
                                         <OptimizedImage
                                           src={choiceImage}
@@ -1896,32 +2041,68 @@ const ProductDetail = () => {
                                     </span>
                                     <span className="min-w-0 flex-1">
                                       <span className="flex flex-wrap items-center gap-2">
-                                        <span className="text-[15px] font-bold text-foreground">
+                                        <span
+                                          className={cn(
+                                            "text-[15px] font-bold sm:text-base",
+                                            isSelected ? "text-white" : "text-foreground",
+                                          )}
+                                        >
                                           {choice.displayLabel}
                                         </span>
                                         {choice.badge && (
-                                          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                                          <span
+                                            className={cn(
+                                              "rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide",
+                                              isSelected
+                                                ? "bg-[#b38a58] text-white"
+                                                : "bg-amber-500 text-white",
+                                            )}
+                                          >
                                             {choice.badge}
                                           </span>
                                         )}
                                       </span>
-                                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                                      <span
+                                        className={cn(
+                                          "mt-0.5 block text-xs sm:text-[13px]",
+                                          isSelected ? "text-white/80" : "text-muted-foreground",
+                                        )}
+                                      >
                                         {choice.subLabel}
                                         {choice.kind === "pallet" ? " · volume discount" : ""}
                                       </span>
                                     </span>
-                                    <span className="shrink-0 text-right">
-                                      {choice.compareAtPrice != null && (
-                                        <span className="mr-1.5 text-xs text-muted-foreground line-through">
-                                          {fmt(choice.compareAtPrice)}
+                                    <span className="flex shrink-0 flex-col items-end gap-1.5">
+                                      <span className="text-right">
+                                        {choice.compareAtPrice != null && (
+                                          <span
+                                            className={cn(
+                                              "mr-1.5 text-xs line-through",
+                                              isSelected ? "text-white/55" : "text-muted-foreground",
+                                            )}
+                                          >
+                                            {fmt(choice.compareAtPrice)}
+                                          </span>
+                                        )}
+                                        <span
+                                          className={cn(
+                                            "text-[15px] font-extrabold sm:text-base",
+                                            isSelected ? "text-white" : "text-primary",
+                                          )}
+                                        >
+                                          {fmt(choice.displayPrice)}
                                         </span>
-                                      )}
-                                      <span className="text-[15px] font-extrabold text-primary">
-                                        {fmt(choice.displayPrice)}
                                       </span>
-                                      {isSelected && (
-                                        <span className="mt-0.5 block text-xs font-semibold text-primary">Selected</span>
-                                      )}
+                                      <span
+                                        className={cn(
+                                          "inline-flex h-7 w-7 items-center justify-center rounded-full",
+                                          isSelected
+                                            ? "bg-[#b38a58] text-white"
+                                            : "border border-[#264027]/20 bg-white text-transparent",
+                                        )}
+                                      >
+                                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                                      </span>
                                     </span>
                                   </button>
                                 );
@@ -2024,7 +2205,7 @@ const ProductDetail = () => {
                             </div>
                           )}
 
-                          {isTruckloadSelected && selectedChoice && (
+                          {isLooseTruckloadSelected && selectedChoice && (
                             <div className="rounded-xl border border-[#b38a58]/25 bg-gradient-to-br from-[#faf6f0] to-white p-3 sm:p-3.5">
                               <p className="mb-2.5 text-sm text-stone-600">
                                 Enter your ZIP — we&apos;ll price delivery, then ask for the street.
@@ -2071,39 +2252,163 @@ const ProductDetail = () => {
                             </div>
                           )}
 
-                          {canPayOnline && !isTruckloadSelected && (
-                            <div className="grid gap-2">
-                              <Button
-                                size="lg"
-                                className="min-h-[52px] rounded-xl bg-[#b38a58] text-base font-bold text-white shadow-md hover:bg-[#9c7648] touch-manipulation"
+                          {canPayOnline && !isLooseTruckloadSelected && (
+                            <div className="space-y-2.5">
+                              {needsChoice && !selectedChoiceSize ? (
+                                <Button
+                                  size="lg"
+                                  className="min-h-[48px] w-full rounded-xl bg-[#b38a58] text-base font-bold text-white shadow-md hover:bg-[#9c7648] touch-manipulation"
+                                  disabled
+                                >
+                                  <ShoppingBag className="mr-2 h-4 w-4" />
+                                  Choose bag or pallet
+                                </Button>
+                              ) : fulfillmentMode === "flatbed" ? (
+                                <div className="flex gap-2.5">
+                                  <button
+                                    type="button"
+                                    disabled={!selectedChoice}
+                                    onClick={() =>
+                                      addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
+                                    }
+                                    className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-2 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation sm:gap-2 sm:text-[15px]"
+                                  >
+                                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                    <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                    <span className="relative">Pick up</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!selectedChoice}
+                                    onClick={() =>
+                                      addSelectionToCart("checkout", {
+                                        preferredFulfillment: "delivery",
+                                      })
+                                    }
+                                    className="group flex h-[54px] min-w-0 flex-1 items-stretch overflow-hidden rounded-2xl bg-white shadow-[0_8px_20px_-6px_rgba(38,64,39,0.45)] ring-1 ring-[#264027]/20 transition hover:ring-[#264027]/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+                                  >
+                                    <span className="relative min-w-0 flex-[1.35] overflow-hidden bg-[#f0ebe3]">
+                                      <OptimizedImage
+                                        src="/images/optimized/mixed-truckload-example.jpg"
+                                        alt="Flatbed truck delivery"
+                                        className="h-full w-full object-cover object-[center_45%] transition duration-300 group-hover:scale-105"
+                                        width={280}
+                                        q={72}
+                                      />
+                                    </span>
+                                    <span className="relative flex shrink-0 items-center justify-center bg-gradient-to-b from-[#2f4a30] to-[#264027] px-2.5 text-sm font-bold text-white sm:px-3 sm:text-[15px]">
+                                      Deliver
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!selectedChoice}
+                                    onClick={() => addSelectionToCart()}
+                                    aria-label={justAdded ? "Added to flatbed" : "Add to flatbed"}
+                                    title={
+                                      justAdded
+                                        ? "Added to flatbed load"
+                                        : pendingFlatbedSpots > 0
+                                          ? `Add to flatbed · +${pendingFlatbedSpots} spot${pendingFlatbedSpots === 1 ? "" : "s"}`
+                                          : "Add to flatbed load"
+                                    }
+                                    className={cn(
+                                      "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+                                      justAdded
+                                        ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
+                                        : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
+                                    )}
+                                  >
+                                    {justAdded ? (
+                                      <Check
+                                        className="h-6 w-6 animate-in zoom-in-50 duration-300"
+                                        strokeWidth={2.75}
+                                      />
+                                    ) : (
+                                      <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2.5">
+                                  <button
+                                    type="button"
+                                    disabled={!selectedChoice}
+                                    onClick={() =>
+                                      addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
+                                    }
+                                    className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+                                  >
+                                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                    <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                    <span className="relative">Pickup now</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!selectedChoice}
+                                    onClick={() => addSelectionToCart()}
+                                    aria-label={justAdded ? "Added to order" : "Add to order"}
+                                    title={justAdded ? "Added to order" : "Add to order"}
+                                    className={cn(
+                                      "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+                                      justAdded
+                                        ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
+                                        : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
+                                    )}
+                                  >
+                                    {justAdded ? (
+                                      <Check
+                                        className="h-6 w-6 animate-in zoom-in-50 duration-300"
+                                        strokeWidth={2.75}
+                                      />
+                                    ) : (
+                                      <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                              <button
+                                type="button"
                                 disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
-                                onClick={() => addSelectionToCart("checkout")}
+                                onClick={() => addSelectionToCart("callback")}
+                                className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
                               >
-                                <ShoppingBag className="mr-2 h-4 w-4" />
-                                {needsChoice && !selectedChoiceSize ? "Choose bag or pallet" : "Purchase"}
-                              </Button>
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="min-h-[48px] rounded-xl font-semibold touch-manipulation"
-                                disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
-                                onClick={() => addSelectionToCart()}
-                              >
-                                {justAdded ? <Check className="mr-2 h-4 w-4" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                                {justAdded ? "Added" : "Add to Cart"}
-                              </Button>
+                                <Phone className="h-3.5 w-3.5" />
+                                Not sure? Call me
+                              </button>
                             </div>
                           )}
-                          {!canPayOnline && (
-                            <Button
-                              size="lg"
-                              className="min-h-[48px] w-full rounded-xl font-semibold shadow-md touch-manipulation"
-                              disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
-                              onClick={() => addSelectionToCart("quote")}
+                          {canPayOnline && isLooseTruckloadSelected && selectedChoice && (
+                            <button
+                              type="button"
+                              onClick={() => addSelectionToCart("callback")}
+                              className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] touch-manipulation"
                             >
-                              <FileText className="mr-2 h-4 w-4" />
-                              Request a Quote
-                            </Button>
+                              <Phone className="h-3.5 w-3.5" />
+                              Not sure? Call me
+                            </button>
+                          )}
+                          {!canPayOnline && (
+                            <div className="space-y-2.5">
+                              <Button
+                                size="lg"
+                                className="min-h-[48px] w-full rounded-xl font-semibold shadow-md touch-manipulation"
+                                disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
+                                onClick={() => navigate("/order")}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Request a Quote
+                              </Button>
+                              <button
+                                type="button"
+                                disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
+                                onClick={() => addSelectionToCart("callback")}
+                                className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                                Not sure? Call me
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -2625,6 +2930,15 @@ const ProductDetail = () => {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <OrderCallbackDialog
+        open={callbackOpen}
+        onOpenChange={(open) => {
+          setCallbackOpen(open);
+          if (!open) setCallbackPending([]);
+        }}
+        pendingItems={callbackPending}
+      />
     </>
   );
 };
