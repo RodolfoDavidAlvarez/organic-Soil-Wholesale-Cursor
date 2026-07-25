@@ -138,6 +138,23 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
     "Open the product page to view available sizes, pricing, pickup, and quote options.",
   );
 
+  const identity = (
+    <div className="flex min-w-0 items-start justify-between gap-2">
+      <div className="min-w-0">
+        <h3 className="font-heading text-base font-bold leading-tight text-stone-900 md:text-xl">
+          {product.productType}
+        </h3>
+        <p className="truncate text-xs font-medium text-[#7a5a2e] md:text-sm">{product.name}</p>
+      </div>
+      {PRODUCT_SEASONAL_BADGES[product.id] && (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#c62828] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">
+          <Flame className="h-3 w-3" />
+          {PRODUCT_SEASONAL_BADGES[product.id]}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div
       role="link"
@@ -145,13 +162,13 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
       onClick={goToDetail}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        "group flex h-full cursor-pointer flex-row gap-3 overflow-hidden rounded-2xl bg-white p-2 shadow-[0_4px_18px_rgba(38,64,39,0.07)] ring-1 ring-stone-200/60 transition-shadow duration-300 hover:shadow-[0_10px_28px_rgba(38,64,39,0.12)] focus:outline-none focus:ring-2 focus:ring-[#264027]/40 md:gap-4 md:p-4",
+        "group flex h-full cursor-pointer flex-col gap-2.5 overflow-hidden rounded-2xl bg-white p-2.5 shadow-[0_4px_18px_rgba(38,64,39,0.07)] ring-1 ring-stone-200/60 transition-shadow duration-300 hover:shadow-[0_10px_28px_rgba(38,64,39,0.12)] focus:outline-none focus:ring-2 focus:ring-[#264027]/40 md:flex-row md:gap-4 md:p-4",
         className
       )}
     >
-      {/* LEFT SIDE on desktop / TOP on mobile — mini gallery */}
-      <div className="w-[36%] shrink-0 self-stretch md:w-[44%]">
-        <div className="relative h-full min-h-[188px] w-full overflow-hidden rounded-xl bg-stone-50 md:min-h-[260px]">
+      {/* Mobile: image + title side-by-side. Desktop: image column. */}
+      <div className="flex gap-3 md:w-[44%] md:shrink-0 md:flex-col">
+        <div className="relative h-[7.5rem] w-[36%] shrink-0 overflow-hidden rounded-xl bg-stone-50 sm:h-[8.5rem] md:h-auto md:min-h-[260px] md:w-full md:flex-1">
           <button
             type="button"
             onClick={(event) => {
@@ -173,7 +190,6 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
             )}
           </button>
 
-          {/* Pickup availability badge. */}
           <div className="pointer-events-none absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-full bg-[#264027] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-white shadow-lg ring-2 ring-white/80 sm:left-2 sm:top-2 sm:px-3 sm:py-1.5 sm:text-[11px] md:text-xs">
             <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" strokeWidth={2.5} />
             <span className="sm:hidden">Pay</span>
@@ -192,29 +208,15 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
             </div>
           )}
         </div>
+
+        <div className="flex min-w-0 flex-1 flex-col justify-center md:hidden">{identity}</div>
       </div>
 
-      {/* RIGHT SIDE on desktop / BOTTOM on mobile — content column */}
+      {/* Full-width on mobile so description stays readable; content column on desktop */}
       <div className="flex min-w-0 flex-1 flex-col md:pt-1">
-        {/* Identity */}
-        <div className="mt-0">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="font-heading text-base font-bold leading-tight text-stone-900 md:text-xl">
-                {product.productType}
-              </h3>
-              <p className="truncate text-xs font-medium text-[#7a5a2e] md:text-sm">{product.name}</p>
-            </div>
-            {PRODUCT_SEASONAL_BADGES[product.id] && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#c62828] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">
-                <Flame className="h-3 w-3" />
-                {PRODUCT_SEASONAL_BADGES[product.id]}
-              </span>
-            )}
-          </div>
-        </div>
+        <div className="hidden md:block">{identity}</div>
 
-        <p className="mt-3 hidden text-sm leading-relaxed text-stone-600 md:block">
+        <p className="mt-0 line-clamp-2 text-[13px] leading-snug text-stone-600 md:mt-3 md:line-clamp-none md:text-sm md:leading-relaxed">
           {description}
         </p>
 
@@ -256,7 +258,7 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
             goToBuy();
           }}
           className={cn(
-            "mt-auto h-9 w-full rounded-lg text-sm font-bold text-white md:mt-3 md:h-10",
+            "mt-3 h-9 w-full rounded-lg text-sm font-bold text-white md:mt-auto md:h-10",
             buyButtonVariant === "minimal"
               ? "bg-stone-900 hover:bg-stone-800"
               : "bg-[#264027] hover:bg-[#1f3320]",
