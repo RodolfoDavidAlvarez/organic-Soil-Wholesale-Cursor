@@ -20,7 +20,6 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import TestimonialGallery from "@/components/TestimonialGallery";
 import AmazonReviewCarousel from "@/components/AmazonReviewCarousel";
 
 type FeaturedProduct = {
@@ -271,9 +270,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Amazon quotes first (stars + words), then field-photo proof */}
+      {/* Unified reviews: photo carousel + quote carousel + field strip */}
       <AmazonReviewCarousel />
-      <TestimonialGallery />
 
       <section className="bg-stone-50 py-10 md:py-14">
         <div className="container mx-auto px-4">
