@@ -23,6 +23,7 @@ import {
 import { absoluteUrl, buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
 import { getPayPickupProductContent } from "@/data/payPickupProductContent";
 import { cn } from "@/lib/utils";
+import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 const PICKUP_PRODUCTS = [
   {
@@ -319,7 +320,7 @@ export default function Pickup() {
                 Buy organic soil, compost, worm castings, and mulch online. Pick up at our Congress, AZ plant.
               </h1>
               <p className="mt-4 max-w-2xl text-lg font-medium leading-relaxed text-stone-700">
-                Pay online. Same-day pickup at our Congress, AZ plant (18980 Stanton Rd, 6 AM - 2 PM), or Phoenix by appointment. Choose bags, pallets, super sacks, or bulk pickup.
+                Pay online. Same-day pickup at our Congress, AZ plant (18980 Stanton Rd, {HOURS_LABEL}), or Phoenix by appointment. Choose bags, pallets, super sacks, or bulk pickup.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Button asChild className="h-12 rounded-lg bg-[#264027] px-6 text-base font-black hover:bg-[#1f3320]">

@@ -11,6 +11,7 @@ import { CheckCircle2, Trash2, ShoppingBag, Plus } from "lucide-react";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { trackEvent, trackEcommerceEvent } from "@/lib/analytics";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 const fmt = (n: number): string => {
   if (n >= 1000) return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
@@ -203,7 +204,7 @@ export const SimpleOrderForm: React.FC = () => {
             </Button>
           </div>
           <p className="text-xs text-gray-500">
-            Same-day pickup at our Congress, AZ plant, 6 AM - 2 PM.
+            Same-day pickup at our Congress, AZ plant, {HOURS_LABEL}.
           </p>
           <Button onClick={resetForm} variant="ghost" className="text-gray-500">
             Submit Another Request

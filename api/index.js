@@ -4931,9 +4931,10 @@ ${pages}
         const customerEmail = order.customer_email || order.email;
         if (customerEmail) {
           const orderRef = order.order_number?.slice(0, 8) || order.id;
+          const { HOURS_LABEL } = await getPickupSchedule();
           const statusMessages = {
             approved: { subject: `Order #${orderRef} Approved`, body: `Great news! Your order #${orderRef} has been approved and is being prepared.` },
-            ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. Tue-Sat, 8:00 AM - 4:00 PM (closed 1-2 PM).` },
+            ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. ${HOURS_LABEL}.` },
             out_for_delivery: { subject: `Order #${orderRef} Out for Delivery`, body: `Your order #${orderRef} is on its way! Call (602) 637-0032 with questions.` },
             completed: { subject: `Order #${orderRef} Completed`, body: `Your order #${orderRef} has been completed. Thank you for your business!` },
           };
@@ -5031,6 +5032,15 @@ ${pages}
             ? ` · est. delivery $${Number(order.delivery_fee).toFixed(2)}`
             : '';
           orderNoteParts.push(`Delivery ZIP: ${order.delivery_zip}${fee}`);
+        }
+        if (order.preferred_call_window) {
+          const windowLabels = {
+            morning: 'Morning (8–11am AZ)',
+            afternoon: 'Afternoon (12–4pm AZ)',
+            evening: 'Evening (4–6pm AZ)',
+          };
+          const key = String(order.preferred_call_window).toLowerCase();
+          orderNoteParts.push(`Preferred call time: ${windowLabels[key] || order.preferred_call_window}`);
         }
         if (notes) orderNoteParts.push('', `Customer note: ${notes}`);
       }
@@ -5381,6 +5391,7 @@ ${pages}
 
       const status = order.status;
       const orderRef = order.order_number?.slice(0, 8) || order.id;
+      const { HOURS_LABEL } = await getPickupSchedule();
 
       const statusMessages = {
         approved: {
@@ -5395,7 +5406,7 @@ ${pages}
           subject: `Order #${orderRef} Ready for Pickup`,
           html: `<p>Hi ${order.customer_name || 'there'},</p>
             <p>Your order #${orderRef} is ready for pickup!</p>
-            <p><strong>Pickup Location:</strong><br>1634 N 19th Ave, Phoenix, AZ 85009<br>Tue-Sat, 8:00 AM - 4:00 PM (closed 1-2 PM)</p>
+            <p><strong>Pickup Location:</strong><br>1634 N 19th Ave, Phoenix, AZ 85009<br>${HOURS_LABEL}</p>
             <p>Please bring a valid ID when picking up your order.</p>
             <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
         },
@@ -5440,7 +5451,7 @@ ${pages}
             const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
             const smsMessages = {
               approved: `SSW: Order #${orderRef} approved! We're preparing it now.`,
-              ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. Tue-Sat 8AM-4PM (closed 1-2PM).`,
+              ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. ${HOURS_LABEL}.`,
               out_for_delivery: `SSW: Order #${orderRef} is out for delivery! Call (602) 637-0032 with questions.`,
               completed: `SSW: Order #${orderRef} completed. Thanks for your business!`,
             };
@@ -5938,7 +5949,7 @@ ${pages}
           return res.status(400).json({ error: 'No items to check out' });
         }
 
-        const { applyFullFlatbedProductDiscount } = await import('../shared/flatbedSpots.js');
+        const { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } = await import('../shared/flatbedSpots.js');
         const flatbedPricing = applyFullFlatbedProductDiscount(rawItems);
         const items = flatbedPricing.items;
 
@@ -5951,7 +5962,31 @@ ${pages}
 
         if (!isDelivery) {
           const schedule = await getPickupSchedule();
-          const resolved = schedule.resolveCheckoutPickupTime({ pickupMode, pickupTime });
+          const pickupSite = (schedule.PICKUP_LOCATIONS || []).find((loc) => loc.locationId === locationId)
+            || (schedule.PICKUP_LOCATIONS || []).find((loc) => typeof pickupLocation === 'string' && pickupLocation.toLowerCase().includes(loc.id))
+            || (schedule.PICKUP_LOCATIONS || [])[0];
+          const bulkPickupTons = items.reduce((sum, item) => {
+            const size = String(item.sizeOption || item.format || '').toLowerCase();
+            const unit = String(item.unit || '').toLowerCase();
+            if (!size.includes('bulk')) return sum;
+            const qty = Number(item.quantity || 0);
+            return sum + (unit.includes('ton') || size.includes('ton') ? qty : qty * (schedule.TONS_PER_CU_YD || 0.675));
+          }, 0);
+          const isPhoenixBulkPickup = pickupSite?.id === 'phoenix' && bulkPickupTons > 0;
+          const hasBulkPickup = bulkPickupTons > 0;
+          const needsHeadsUp = requiresPickupHeadsUp(items);
+          const resolved = schedule.resolveCheckoutPickupTime({
+            pickupMode,
+            pickupTime,
+            allowAsap: isPhoenixBulkPickup
+              ? pickupSite?.bulkAllowAsap !== false
+              : hasBulkPickup
+                ? pickupSite?.bulkAllowAsap !== false
+                : needsHeadsUp
+                  ? false
+                  : pickupSite?.allowAsap !== false,
+            minLeadDays: isPhoenixBulkPickup ? pickupSite?.bulkMinLeadDays || 7 : pickupSite?.minLeadDays || 0,
+          });
           if (!resolved.ok) {
             return res.status(400).json({ error: resolved.message });
           }

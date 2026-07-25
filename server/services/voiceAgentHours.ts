@@ -1,18 +1,21 @@
 import {
+  CLOSE_HOUR,
   computeAsapPickup,
   formatReadyLabel,
   HOURS_LABEL,
   isOpenPickupDay,
   MIN_NOTICE_MS,
+  OPEN_HOUR,
   phoenixParts,
   phoenixYmd,
+  READY_IN_MINUTES,
   validateAsapPickupIso,
 } from "../../shared/pickupSchedule.js";
 
 export const PICKUP_TIMEZONE = "America/Phoenix";
-export const OPEN_HOUR_LOCAL = 8;
-export const CLOSE_HOUR_LOCAL = 16;
-export const MIN_LEAD_MINUTES = 30;
+export const OPEN_HOUR_LOCAL = OPEN_HOUR;
+export const CLOSE_HOUR_LOCAL = CLOSE_HOUR;
+export const MIN_LEAD_MINUTES = READY_IN_MINUTES;
 
 export type PickupOption = {
   pickupAtIso: string;

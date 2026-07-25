@@ -25,6 +25,7 @@ export interface OrderCallbackOrder {
   delivery_fee?: number;
   delivery_city?: string;
   delivery_state?: string;
+  preferred_call_window?: string;
 }
 
 export interface LeadSubmissionPayload {
@@ -86,6 +87,15 @@ function formatOrderNotes(order: OrderCallbackOrder | undefined, notes?: string)
       order.delivery_fee != null ? ` · est. delivery $${Number(order.delivery_fee).toFixed(2)}` : "";
     const place = [order.delivery_city, order.delivery_state].filter(Boolean).join(", ");
     lines.push(`Delivery ZIP: ${order.delivery_zip}${place ? ` (${place})` : ""}${fee}`);
+  }
+  if (order?.preferred_call_window) {
+    const windowLabels: Record<string, string> = {
+      morning: "Morning (8–11am AZ)",
+      afternoon: "Afternoon (12–4pm AZ)",
+      evening: "Evening (4–6pm AZ)",
+    };
+    const key = String(order.preferred_call_window).toLowerCase();
+    lines.push(`Preferred call time: ${windowLabels[key] || order.preferred_call_window}`);
   }
   if (notes) {
     lines.push("", `Customer note: ${notes}`);

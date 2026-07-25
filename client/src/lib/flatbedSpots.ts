@@ -43,6 +43,45 @@ export function cartFlatbedSpots(items: SpotLine[]): number {
   return items.reduce((sum, item) => sum + spotsForFormat(item.format, item.quantity), 0);
 }
 
+/**
+ * Loose 24-ton walking-floor delivery — always delivered.
+ * Do NOT treat flatbed pallet "truckloads" or bag/pallet lines as this.
+ */
+export function isWalkingFloorDeliveryFormat(format: string): boolean {
+  const key = String(format || "").toLowerCase();
+  if (!key) return false;
+  if (key.includes("pallet") || key.includes("tote") || key.includes("supersack") || key.includes("super sack")) {
+    return false;
+  }
+  if (key.includes("flatbed")) return false;
+  if (key.includes("bulk pickup")) return false;
+  // Standardized cart label + legacy size strings
+  if (key.includes("truckload") && (key.includes("24") || key.includes("ton") || key.includes("cu yd") || key.includes("walking"))) {
+    return true;
+  }
+  return key.includes("truckload") && !key.includes("pallet");
+}
+
+/** Loose bulk yard pickup (not walking-floor truckload delivery). */
+export function isLooseBulkPickupFormat(format: string): boolean {
+  const key = String(format || "").toLowerCase();
+  if (!key) return false;
+  if (isWalkingFloorDeliveryFormat(key)) return false;
+  return key.includes("bulk");
+}
+
+/**
+ * Pallet / tote / super sack / loose bulk need a scheduled heads-up for pickup.
+ * Bags-only carts can use ASAP (~30 min).
+ */
+export function requiresPickupHeadsUp(items: SpotLine[]): boolean {
+  return (items || []).some((item) => {
+    const format = item.format || "";
+    if (spotsForFormat(format, item.quantity) > 0) return true;
+    return isLooseBulkPickupFormat(format);
+  });
+}
+
 export function flatbedLoadCount(spots: number): number {
   if (spots <= 0) return 0;
   return Math.ceil(spots / FLATBED_CAPACITY);

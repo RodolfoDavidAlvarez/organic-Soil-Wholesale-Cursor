@@ -3,6 +3,7 @@ import { Phone, Mail, FileDown, Package, Truck, Award } from "lucide-react";
 import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 const CORE_FOUR = [
   {
@@ -257,7 +258,7 @@ const Distributors = () => {
               </form>
             )}
             <p className="text-xs text-stone-500 text-center mt-6">
-              Yard: 1634 N 19th Ave, Phoenix AZ 85009 · Tue–Sat 8 AM–4 PM (closed 1–2 PM)
+              Yard: 1634 N 19th Ave, Phoenix AZ 85009 · {HOURS_LABEL}
             </p>
           </div>
         </section>

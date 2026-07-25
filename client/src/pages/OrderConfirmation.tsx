@@ -11,6 +11,7 @@ import {
   PHOENIX_YARD_DIRECTIONS_URL,
 } from '@/config/contact';
 import { type EcommerceItem, trackEcommerceEvent, trackPhoneClick } from '@/lib/analytics';
+import { HOURS_LABEL } from '@shared/pickupSchedule.js';
 
 interface OrderDetails {
   orderId: string;
@@ -322,8 +323,7 @@ const OrderConfirmation: React.FC = () => {
             Phoenix yard hours
           </h3>
           <div className="text-sm text-stone-700 space-y-1">
-            <p>Tuesday - Saturday: 8:00 AM - 4:00 PM</p>
-            <p>Closed daily 1:00 PM - 2:00 PM (lunch)</p>
+            <p>{HOURS_LABEL}</p>
             <p>Sunday & Monday: Closed</p>
           </div>
         </div>

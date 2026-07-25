@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
+import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 // const WEBHOOK_URL = "https://hook.us1.make.com/bm4eqe7ie77vxt06gx2529x97ecgh28e"; // Deprecated - using internal API now
 
@@ -226,11 +227,11 @@ const Contact = () => {
                     <div className="flex items-start min-h-[44px]">
                       <Clock className="text-primary mt-0.5 mr-2.5 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium text-sm sm:text-base">Hours</h4>
+                        <h4 className="font-medium text-sm sm:text-base">Yard hours</h4>
                         <p className="text-xs sm:text-sm text-neutral-700">
-                          Mon-Fri: 8am-5pm
+                          {HOURS_LABEL}
                           <br />
-                          Sat: 9am-2pm
+                          Sunday &amp; Monday: Closed
                         </p>
                       </div>
                     </div>

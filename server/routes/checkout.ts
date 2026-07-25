@@ -11,7 +11,7 @@ import {
   resolveCheckoutPickupTime,
   TONS_PER_CU_YD,
 } from '../../shared/pickupSchedule.js';
-import { applyFullFlatbedProductDiscount } from '../../shared/flatbedSpots.js';
+import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
 
 const router = Router();
 
@@ -73,10 +73,18 @@ router.post('/create-session', async (req, res) => {
           error: `Phoenix bulk pickup is limited to ${PHOENIX_BULK_MAX_TONS} tons. Choose Congress pickup or delivery.`,
         });
       }
+      const needsHeadsUp = requiresPickupHeadsUp(items);
+      const hasBulkPickup = bulkPickupTons > 0;
       const resolved = resolveCheckoutPickupTime({
         pickupMode,
         pickupTime,
-        allowAsap: isPhoenixBulkPickup ? pickupSite?.bulkAllowAsap !== false : pickupSite?.allowAsap !== false,
+        allowAsap: isPhoenixBulkPickup
+          ? pickupSite?.bulkAllowAsap !== false
+          : hasBulkPickup
+            ? pickupSite?.bulkAllowAsap !== false
+            : needsHeadsUp
+              ? false
+              : pickupSite?.allowAsap !== false,
         minLeadDays: isPhoenixBulkPickup ? pickupSite?.bulkMinLeadDays || 7 : pickupSite?.minLeadDays || 0,
       });
       if (!resolved.ok) {

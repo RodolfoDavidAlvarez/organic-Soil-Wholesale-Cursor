@@ -1,4 +1,12 @@
-import { useMemo, useState, useCallback, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { useRoute, Link } from "wouter";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -18,14 +26,20 @@ import { getPayPickupProductContent, getPayPickupProductDescription } from "@/da
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import TrustStrip from "@/components/TrustStrip";
 import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
+import { getOmriCertificate } from "@/data/omriCertifications";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { SITE_URL, SEO_BUSINESS_NAME, absoluteUrl, buildLocalBusinessSchema } from "@/config/seo";
 import { trackEcommerceEvent, trackEvent } from "@/lib/analytics";
-import { PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
+import { HOURS_LABEL, PICKUP_LOCATIONS } from "@shared/pickupSchedule.js";
 import { DeliveryQuoteWidget, type TruckingQuote } from "@/components/DeliveryQuoteWidget";
 import { loadDeliveryDraft, saveDeliveryDraft } from "@/lib/deliveryDraft";
 import { OrderCallbackDialog } from "@/components/OrderCallbackDialog";
-import { cartFlatbedSpots, FLATBED_CAPACITY, spotsForFormat } from "@/lib/flatbedSpots";
+import {
+  cartFlatbedSpots,
+  FLATBED_CAPACITY,
+  isWalkingFloorDeliveryFormat,
+  spotsForFormat,
+} from "@/lib/flatbedSpots";
 import type { CartItem } from "@/contexts/QuoteCartContext";
 import {
   ArrowLeft,
@@ -41,6 +55,7 @@ import {
   Play,
   ImagePlus,
   Phone,
+  MessageCircle,
   X,
   MapPin,
   ExternalLink,
@@ -252,6 +267,95 @@ const uniqueGuideImages = (images: string[]) => {
     return true;
   });
 };
+
+const SWIPE_THRESHOLD_PX = 48;
+
+/** Horizontal swipe for mobile lightbox nav. Returns true once if a swipe just fired (skip tap-zoom). */
+function useLightboxSwipe(opts: {
+  enabled: boolean;
+  onSwipeLeft: () => void;
+  onSwipeRight: () => void;
+}) {
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
+  const { enabled, onSwipeLeft, onSwipeRight } = opts;
+
+  const onTouchStart = useCallback(
+    (event: ReactTouchEvent) => {
+      if (!enabled) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      startRef.current = { x: touch.clientX, y: touch.clientY };
+      swipedRef.current = false;
+    },
+    [enabled],
+  );
+
+  const onTouchEnd = useCallback(
+    (event: ReactTouchEvent) => {
+      const start = startRef.current;
+      startRef.current = null;
+      if (!enabled || !start) return;
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      swipedRef.current = true;
+      if (dx < 0) onSwipeLeft();
+      else onSwipeRight();
+    },
+    [enabled, onSwipeLeft, onSwipeRight],
+  );
+
+  const consumeSwipe = useCallback(() => {
+    if (!swipedRef.current) return false;
+    swipedRef.current = false;
+    return true;
+  }, []);
+
+  return {
+    swipeHandlers: {
+      onTouchStart,
+      onTouchEnd,
+    },
+    consumeSwipe,
+  };
+}
+
+/** Secondary CTA: request a personal callback when sizing/fulfillment is unclear. */
+function CallMeHelpButton({
+  disabled,
+  onClick,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 rounded-2xl border border-[#264027]/18 bg-gradient-to-r from-[#eef3eb] to-[#f7f4ef] px-3.5 py-2.5 text-left shadow-sm transition hover:border-[#264027]/35 hover:shadow-md active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
+    >
+      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#264027] text-white shadow-[0_6px_14px_-6px_rgba(38,64,39,0.7)]">
+        <MessageCircle className="h-5 w-5" strokeWidth={2.25} />
+        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#b38a58] ring-2 ring-[#eef3eb]">
+          <Phone className="h-2 w-2 text-white" strokeWidth={2.5} />
+        </span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-[#264027] group-hover:text-[#1c2e1d]">
+          Not sure? Call me
+        </span>
+        <span className="block text-xs font-medium text-stone-500">
+          I’ll text or call — we’ll pick the right size together
+        </span>
+      </span>
+    </button>
+  );
+}
 
 const galleryDedupeKey = (productId: number, url: string) => {
   const normalized = normalizedGalleryUrl(url);
@@ -986,11 +1090,14 @@ const ProductDetail = () => {
       items.push({ type: "image", url: trimmed });
     };
 
-    // 1) Hero bag, 2–3) New Graphics 2.0 (clean lifestyle / use cases), then the remaining product photos.
-    // Certification marks already appear beside the product title, so keep them out of the gallery.
+    // 1) Hero bag, 2) OMRI certificate (Airtable-synced asset), then New Graphics 2.0 / remaining photos.
+    // Small cert logos stay beside the title; the certificate document lives in the gallery.
     if (productPhotos[0]) pushImage(productPhotos[0]);
-    (NEW_GRAPHICS_2_GALLERY[product.id] ?? []).forEach(pushImage);
 
+    const omriCert = getOmriCertificate({ slug: product.slug, productId: product.id });
+    if (omriCert?.image) pushImage(omriCert.image);
+
+    (NEW_GRAPHICS_2_GALLERY[product.id] ?? []).forEach(pushImage);
     productPhotos.slice(1).forEach(pushImage);
 
     product.videoUrls.forEach((videoUrl) => {
@@ -1095,6 +1202,28 @@ const ProductDetail = () => {
   const toggleGuideZoom = useCallback(() => {
     setGuideZoom((current) => (current > 1 ? 1 : 2.25));
   }, []);
+
+  const { swipeHandlers: gallerySwipeHandlers, consumeSwipe: consumeGallerySwipe } = useLightboxSwipe({
+    enabled: isGalleryOpen && galleryZoom <= 1 && galleryItems.length > 1,
+    onSwipeLeft: goToNext,
+    onSwipeRight: goToPrev,
+  });
+
+  const { swipeHandlers: guideSwipeHandlers, consumeSwipe: consumeGuideSwipe } = useLightboxSwipe({
+    enabled: isGuideGalleryOpen && guideZoom <= 1 && guideImages.length > 1,
+    onSwipeLeft: goToNextGuideImage,
+    onSwipeRight: goToPrevGuideImage,
+  });
+
+  const handleGalleryImageActivate = useCallback(() => {
+    if (consumeGallerySwipe()) return;
+    toggleGalleryZoom();
+  }, [consumeGallerySwipe, toggleGalleryZoom]);
+
+  const handleGuideImageActivate = useCallback(() => {
+    if (consumeGuideSwipe()) return;
+    toggleGuideZoom();
+  }, [consumeGuideSwipe, toggleGuideZoom]);
 
   // Arrow keys navigate the open lightbox (skip while zoomed so pan/scroll stays natural).
   useEffect(() => {
@@ -1204,8 +1333,6 @@ const ProductDetail = () => {
 
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
   const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
-  const truckloadReadyToPurchase =
-    !isLooseTruckloadSelected || Boolean(deliveryQuote && /^\d{5}$/.test(deliveryZip));
   const pendingFlatbedSpots = selectedChoice ? spotsForFormat(selectedChoice.cartLabel, quantity) : 0;
 
   const scrollBuyIntoView = useCallback(() => {
@@ -1407,14 +1534,7 @@ const ProductDetail = () => {
     },
   ) => {
     if (!product || !selectedChoice) return;
-    if (isLooseTruckloadSelected && next === "checkout" && !truckloadReadyToPurchase && !opts?.focusStreet) {
-      toast({
-        title: "Estimate delivery first",
-        description: "Enter your ZIP and get a delivery price before purchasing a truckload.",
-      });
-      scrollBuyIntoView();
-      return;
-    }
+    // Truckload can + to cart or go Deliver without ZIP first — checkout prices delivery.
 
     trackEvent(
       next === "checkout"
@@ -1486,6 +1606,31 @@ const ProductDetail = () => {
       }
     }
 
+    // Walking-floor forces delivery for the whole order — resolve in cart before checkout.
+    const cartHasWalkingFloor = cartItems.some(
+      (item) => item.mode === "pay" && isWalkingFloorDeliveryFormat(item.format),
+    );
+    if (
+      next === "checkout" &&
+      opts?.preferredFulfillment === "pickup" &&
+      cartHasWalkingFloor &&
+      !isLooseTruckloadSelected
+    ) {
+      try {
+        sessionStorage.removeItem("osw-preferred-fulfillment");
+      } catch {
+        // ignore
+      }
+      openDrawer();
+      toast({
+        title: "Remove walking-floor to pick up",
+        description:
+          "A 24-ton walking-floor load must be delivered. Remove it from your order, then tap Pick up again — or continue with delivery for everything.",
+        duration: 7000,
+      });
+      return;
+    }
+
     if (next === "products") navigate("/products");
     if (next === "checkout") canPayOnline ? navigate("/checkout") : navigate("/order");
     if (next === "callback") {
@@ -1511,7 +1656,6 @@ const ProductDetail = () => {
     selectedCategory?.label,
     selectedChoice,
     toast,
-    truckloadReadyToPurchase,
   ]);
 
   const deliveryQuoteItems = useMemo(() => {
@@ -2112,16 +2256,21 @@ const ProductDetail = () => {
 
                           {isBulkPickupSelected && (
                             <div className="space-y-2 rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
-                              <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                                Pickup yard
-                              </p>
+                              <div className="flex items-baseline justify-between gap-2">
+                                <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                                  Pickup yards
+                                </p>
+                                <p className="text-[11px] font-medium text-muted-foreground">
+                                  Choose yard at checkout
+                                </p>
+                              </div>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {PICKUP_LOCATIONS.map((loc) => {
                                   const isCongress = loc.id === "congress";
                                   return (
                                     <div
                                       key={loc.id}
-                                      className="rounded-lg border border-border/80 bg-white px-3 py-2.5"
+                                      className="rounded-lg border border-border/60 bg-white/90 px-3 py-2.5"
                                     >
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
@@ -2135,19 +2284,19 @@ const ProductDetail = () => {
                                         </div>
                                         <span
                                           className={cn(
-                                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide",
+                                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                                             isCongress
-                                              ? "bg-emerald-100 text-emerald-800"
-                                              : "bg-amber-100 text-amber-900",
+                                              ? "bg-stone-100 text-stone-600"
+                                              : "bg-stone-100 text-stone-600",
                                           )}
                                         >
-                                          {isCongress ? "ASAP" : "Schedule"}
+                                          {isCongress ? "~30 min" : "Appt"}
                                         </span>
                                       </div>
                                       <p className="mt-2 flex items-start gap-1.5 text-xs leading-snug text-stone-700">
                                         <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                                         {isCongress
-                                          ? "~30 min · Mon–Fri 6 AM–2 PM"
+                                          ? `~30 min · ${HOURS_LABEL}`
                                           : "~1 week · slot at checkout · 12-ton max"}
                                       </p>
                                       <a
@@ -2206,21 +2355,34 @@ const ProductDetail = () => {
                           )}
 
                           {isLooseTruckloadSelected && selectedChoice && (
-                            <div className="rounded-xl border border-[#b38a58]/25 bg-gradient-to-br from-[#faf6f0] to-white p-3 sm:p-3.5">
-                              <p className="mb-2.5 text-sm text-stone-600">
-                                Enter your ZIP — we&apos;ll price delivery, then ask for the street.
-                              </p>
-                              <DeliveryQuoteWidget
-                                key={`${selectedChoice.size}-${quantity}`}
-                                items={deliveryQuoteItems}
-                                initialZip={deliveryZip}
-                                compact
-                                onQuote={(quote, ctx) => {
-                                  setDeliveryQuote(quote);
-                                  setDeliveryZip(ctx.zip);
-                                  setDeliveryRoughAccess(ctx.roughAccess);
-                                  setDeliverySemiAccess(ctx.semiAccess);
-                                  if (quote) {
+                            <div className="space-y-2.5">
+                              <div className="rounded-xl border border-[#b38a58]/25 bg-gradient-to-br from-[#faf6f0] to-white p-3 sm:p-3.5">
+                                <DeliveryQuoteWidget
+                                  key={`${selectedChoice.size}-${quantity}`}
+                                  items={deliveryQuoteItems}
+                                  initialZip={deliveryZip}
+                                  compact
+                                  onQuote={(quote, ctx) => {
+                                    setDeliveryQuote(quote);
+                                    setDeliveryZip(ctx.zip);
+                                    setDeliveryRoughAccess(ctx.roughAccess);
+                                    setDeliverySemiAccess(ctx.semiAccess);
+                                    if (quote) {
+                                      saveDeliveryDraft({
+                                        zip: ctx.zip,
+                                        roughAccess: ctx.roughAccess,
+                                        semiAccess: ctx.semiAccess,
+                                        quote,
+                                        city: quote.breakdown.destinationCity ?? null,
+                                        state: quote.breakdown.destinationState ?? null,
+                                      });
+                                    }
+                                  }}
+                                  onGetPriceSuccess={(quote, ctx) => {
+                                    setDeliveryQuote(quote);
+                                    setDeliveryZip(ctx.zip);
+                                    setDeliveryRoughAccess(ctx.roughAccess);
+                                    setDeliverySemiAccess(ctx.semiAccess);
                                     saveDeliveryDraft({
                                       zip: ctx.zip,
                                       roughAccess: ctx.roughAccess,
@@ -2229,54 +2391,12 @@ const ProductDetail = () => {
                                       city: quote.breakdown.destinationCity ?? null,
                                       state: quote.breakdown.destinationState ?? null,
                                     });
-                                  }
-                                }}
-                                onGetPriceSuccess={(quote, ctx) => {
-                                  setDeliveryQuote(quote);
-                                  setDeliveryZip(ctx.zip);
-                                  setDeliveryRoughAccess(ctx.roughAccess);
-                                  setDeliverySemiAccess(ctx.semiAccess);
-                                  saveDeliveryDraft({
-                                    zip: ctx.zip,
-                                    roughAccess: ctx.roughAccess,
-                                    semiAccess: ctx.semiAccess,
-                                    quote,
-                                    city: quote.breakdown.destinationCity ?? null,
-                                    state: quote.breakdown.destinationState ?? null,
-                                  });
-                                  if (!canPayOnline) return;
-                                  // Jump straight to street address — skip a second Purchase click.
-                                  addSelectionToCart("checkout", { quiet: true, focusStreet: true });
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {canPayOnline && !isLooseTruckloadSelected && (
-                            <div className="space-y-2.5">
-                              {needsChoice && !selectedChoiceSize ? (
-                                <Button
-                                  size="lg"
-                                  className="min-h-[48px] w-full rounded-xl bg-[#b38a58] text-base font-bold text-white shadow-md hover:bg-[#9c7648] touch-manipulation"
-                                  disabled
-                                >
-                                  <ShoppingBag className="mr-2 h-4 w-4" />
-                                  Choose bag or pallet
-                                </Button>
-                              ) : fulfillmentMode === "flatbed" ? (
+                                    // Stay on PDP — customer can + add or Deliver when ready.
+                                  }}
+                                />
+                              </div>
+                              {canPayOnline && (
                                 <div className="flex gap-2.5">
-                                  <button
-                                    type="button"
-                                    disabled={!selectedChoice}
-                                    onClick={() =>
-                                      addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
-                                    }
-                                    className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-2 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation sm:gap-2 sm:text-[15px]"
-                                  >
-                                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                                    <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
-                                    <span className="relative">Pick up</span>
-                                  </button>
                                   <button
                                     type="button"
                                     disabled={!selectedChoice}
@@ -2289,9 +2409,9 @@ const ProductDetail = () => {
                                   >
                                     <span className="relative min-w-0 flex-[1.35] overflow-hidden bg-[#f0ebe3]">
                                       <OptimizedImage
-                                        src="/images/optimized/mixed-truckload-example.jpg"
-                                        alt="Flatbed truck delivery"
-                                        className="h-full w-full object-cover object-[center_45%] transition duration-300 group-hover:scale-105"
+                                        src="/images/size-formats/walking-floor-delivery.webp"
+                                        alt="Walking-floor truck delivery"
+                                        className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-105"
                                         width={280}
                                         q={72}
                                       />
@@ -2304,51 +2424,8 @@ const ProductDetail = () => {
                                     type="button"
                                     disabled={!selectedChoice}
                                     onClick={() => addSelectionToCart()}
-                                    aria-label={justAdded ? "Added to flatbed" : "Add to flatbed"}
-                                    title={
-                                      justAdded
-                                        ? "Added to flatbed load"
-                                        : pendingFlatbedSpots > 0
-                                          ? `Add to flatbed · +${pendingFlatbedSpots} spot${pendingFlatbedSpots === 1 ? "" : "s"}`
-                                          : "Add to flatbed load"
-                                    }
-                                    className={cn(
-                                      "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
-                                      justAdded
-                                        ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
-                                        : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
-                                    )}
-                                  >
-                                    {justAdded ? (
-                                      <Check
-                                        className="h-6 w-6 animate-in zoom-in-50 duration-300"
-                                        strokeWidth={2.75}
-                                      />
-                                    ) : (
-                                      <Plus className="h-6 w-6" strokeWidth={2.5} />
-                                    )}
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2.5">
-                                  <button
-                                    type="button"
-                                    disabled={!selectedChoice}
-                                    onClick={() =>
-                                      addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
-                                    }
-                                    className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
-                                  >
-                                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                                    <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
-                                    <span className="relative">Pickup now</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={!selectedChoice}
-                                    onClick={() => addSelectionToCart()}
                                     aria-label={justAdded ? "Added to order" : "Add to order"}
-                                    title={justAdded ? "Added to order" : "Add to order"}
+                                    title={justAdded ? "Added to order" : "Add truckload to order"}
                                     className={cn(
                                       "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
                                       justAdded
@@ -2367,26 +2444,144 @@ const ProductDetail = () => {
                                   </button>
                                 </div>
                               )}
-                              <button
-                                type="button"
+                            </div>
+                          )}
+
+                          {canPayOnline && !isLooseTruckloadSelected && (
+                            <div className="space-y-2.5">
+                              {needsChoice && !selectedChoiceSize ? (
+                                <Button
+                                  size="lg"
+                                  className="min-h-[48px] w-full rounded-xl bg-[#b38a58] text-base font-bold text-white shadow-md hover:bg-[#9c7648] touch-manipulation"
+                                  disabled
+                                >
+                                  <ShoppingBag className="mr-2 h-4 w-4" />
+                                  Choose bag or pallet
+                                </Button>
+                              ) : fulfillmentMode === "flatbed" ? (
+                                <div className="space-y-1.5">
+                                  <div className="flex gap-2.5">
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() =>
+                                        addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
+                                      }
+                                      className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-2 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation sm:gap-2 sm:text-[15px]"
+                                    >
+                                      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                      <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                      <span className="relative">Pick up</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() =>
+                                        addSelectionToCart("checkout", {
+                                          preferredFulfillment: "delivery",
+                                        })
+                                      }
+                                      className="group flex h-[54px] min-w-0 flex-1 items-stretch overflow-hidden rounded-2xl bg-white shadow-[0_8px_20px_-6px_rgba(38,64,39,0.45)] ring-1 ring-[#264027]/20 transition hover:ring-[#264027]/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+                                    >
+                                      <span className="relative min-w-0 flex-[1.35] overflow-hidden bg-[#f0ebe3]">
+                                        <OptimizedImage
+                                          src="/images/optimized/mixed-truckload-example.jpg"
+                                          alt="Flatbed truck delivery"
+                                          className="h-full w-full object-cover object-[center_45%] transition duration-300 group-hover:scale-105"
+                                          width={280}
+                                          q={72}
+                                        />
+                                      </span>
+                                      <span className="relative flex shrink-0 items-center justify-center bg-gradient-to-b from-[#2f4a30] to-[#264027] px-2.5 text-sm font-bold text-white sm:px-3 sm:text-[15px]">
+                                        Deliver
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() => addSelectionToCart()}
+                                      aria-label={justAdded ? "Added to flatbed" : "Add to flatbed"}
+                                      title={
+                                        justAdded
+                                          ? "Added to flatbed load"
+                                          : pendingFlatbedSpots > 0
+                                            ? `Add to flatbed · +${pendingFlatbedSpots} spot${pendingFlatbedSpots === 1 ? "" : "s"}`
+                                            : "Add to flatbed load"
+                                      }
+                                      className={cn(
+                                        "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+                                        justAdded
+                                          ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
+                                          : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
+                                      )}
+                                    >
+                                      {justAdded ? (
+                                        <Check
+                                          className="h-6 w-6 animate-in zoom-in-50 duration-300"
+                                          strokeWidth={2.75}
+                                        />
+                                      ) : (
+                                        <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                      )}
+                                    </button>
+                                  </div>
+                                  <p className="text-center text-[11px] text-stone-500">
+                                    Pickup: we&apos;ll ask for a slot so we can stage your load.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  <div className="flex gap-2.5">
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() =>
+                                        addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
+                                      }
+                                      className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+                                    >
+                                      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                      <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                      <span className="relative">Pick up</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() => addSelectionToCart()}
+                                      aria-label={justAdded ? "Added to order" : "Add to order"}
+                                      title={justAdded ? "Added to order" : "Add to order"}
+                                      className={cn(
+                                        "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+                                        justAdded
+                                          ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
+                                          : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
+                                      )}
+                                    >
+                                      {justAdded ? (
+                                        <Check
+                                          className="h-6 w-6 animate-in zoom-in-50 duration-300"
+                                          strokeWidth={2.75}
+                                        />
+                                      ) : (
+                                        <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                      )}
+                                    </button>
+                                  </div>
+                                  <p className="text-center text-[11px] text-stone-500">
+                                    {isBulkPickupSelected
+                                      ? "Choose Congress or Phoenix at checkout."
+                                      : "Bags ready in about 30 min · need delivery? Choose it at checkout."}
+                                  </p>
+                                </div>
+                              )}
+                              <CallMeHelpButton
                                 disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
                                 onClick={() => addSelectionToCart("callback")}
-                                className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
-                              >
-                                <Phone className="h-3.5 w-3.5" />
-                                Not sure? Call me
-                              </button>
+                              />
                             </div>
                           )}
                           {canPayOnline && isLooseTruckloadSelected && selectedChoice && (
-                            <button
-                              type="button"
-                              onClick={() => addSelectionToCart("callback")}
-                              className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] touch-manipulation"
-                            >
-                              <Phone className="h-3.5 w-3.5" />
-                              Not sure? Call me
-                            </button>
+                            <CallMeHelpButton onClick={() => addSelectionToCart("callback")} />
                           )}
                           {!canPayOnline && (
                             <div className="space-y-2.5">
@@ -2399,15 +2594,10 @@ const ProductDetail = () => {
                                 <FileText className="mr-2 h-4 w-4" />
                                 Request a Quote
                               </Button>
-                              <button
-                                type="button"
+                              <CallMeHelpButton
                                 disabled={!selectedChoice || (needsChoice && !selectedChoiceSize)}
                                 onClick={() => addSelectionToCart("callback")}
-                                className="mx-auto flex items-center gap-1.5 text-xs font-medium text-stone-500 transition hover:text-[#264027] disabled:pointer-events-none disabled:opacity-40 touch-manipulation"
-                              >
-                                <Phone className="h-3.5 w-3.5" />
-                                Not sure? Call me
-                              </button>
+                              />
                             </div>
                           )}
                         </div>
@@ -2664,7 +2854,10 @@ const ProductDetail = () => {
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col pb-[env(safe-area-inset-bottom)]">
-                <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 sm:p-5">
+                <div
+                  className="relative flex min-h-0 flex-1 touch-pan-y bg-[#071b2b] p-3 sm:p-5"
+                  {...gallerySwipeHandlers}
+                >
                   <div
                     className={cn(
                       "h-full max-h-[calc(100svh-166px-env(safe-area-inset-bottom))] min-h-0 w-full rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(92vh-190px)] sm:rounded-2xl",
@@ -2685,7 +2878,7 @@ const ProductDetail = () => {
                       ) : activeGalleryItem?.type === "image" ? (
                         <button
                           type="button"
-                          onClick={toggleGalleryZoom}
+                          onClick={handleGalleryImageActivate}
                           className={cn(
                             "block touch-manipulation focus:outline-none",
                             galleryZoom > 1 ? "cursor-zoom-out" : "h-full w-full cursor-zoom-in",
@@ -2739,7 +2932,7 @@ const ProductDetail = () => {
                   )}
                   {activeGalleryItem?.type === "image" && galleryZoom <= 1 && (
                     <p className="pointer-events-none absolute bottom-5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/35 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm sm:hidden">
-                      Tap photo to zoom
+                      {galleryItems.length > 1 ? "Swipe for more · tap to zoom" : "Tap photo to zoom"}
                     </p>
                   )}
                 </div>
@@ -2858,7 +3051,10 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:max-h-[calc(88vh-70px)] sm:p-5">
+              <div
+                className="relative flex min-h-0 flex-1 touch-pan-y bg-[#071b2b] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:max-h-[calc(88vh-70px)] sm:p-5"
+                {...guideSwipeHandlers}
+              >
                 <div
                   className={cn(
                     "h-full min-h-0 w-full rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(88vh-110px)] sm:rounded-2xl",
@@ -2874,7 +3070,7 @@ const ProductDetail = () => {
                   >
                     <button
                       type="button"
-                      onClick={toggleGuideZoom}
+                      onClick={handleGuideImageActivate}
                       className={cn(
                         "block touch-manipulation focus:outline-none",
                         guideZoom > 1 ? "cursor-zoom-out" : "h-full w-full cursor-zoom-in",

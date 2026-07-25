@@ -16,6 +16,9 @@ import {
   FLATBED_CAPACITY,
   cartFlatbedSpots,
   fullLoadDiscountAmount,
+  hasFullFlatbedDiscount,
+  isWalkingFloorDeliveryFormat,
+  requiresPickupHeadsUp,
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { cn } from "@/lib/utils";
@@ -24,10 +27,19 @@ import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
+  Minus, Plus, Trash2,
 } from "lucide-react";
 
 const fmt = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+
+const CART_IMAGE_FALLBACKS: Record<number, string> = {
+  1000: "/images/optimized/simons-gold-bag-context.jpg",
+  1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
+  111: "/images/optimized/plantpal-with-veggies.jpg",
+  3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+};
+const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
 
 type Fulfillment = "pickup" | "delivery";
 type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
@@ -96,9 +108,14 @@ const Checkout: React.FC = () => {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
-  const hasTruckloadItem = useMemo(
-    () => payItems.some((item) => item.format.toLowerCase().includes("truckload")),
-    [payItems]
+  /** Only loose walking-floor truckloads force delivery — never flatbed pallets/totes. */
+  const hasWalkingFloorDelivery = useMemo(
+    () => payItems.some((item) => isWalkingFloorDeliveryFormat(item.format)),
+    [payItems],
+  );
+  const walkingFloorLines = useMemo(
+    () => payItems.filter((item) => isWalkingFloorDeliveryFormat(item.format)),
+    [payItems],
   );
   const flatbedSpots = useMemo(() => cartFlatbedSpots(payItems), [payItems]);
   const fullFlatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
@@ -109,27 +126,71 @@ const Checkout: React.FC = () => {
       payItems.reduce((sum, item) => {
         const format = item.format.toLowerCase();
         if (!format.includes("bulk")) return sum;
+        if (isWalkingFloorDeliveryFormat(item.format)) return sum;
         return sum + (format.includes("ton") ? item.quantity : item.quantity * TONS_PER_CU_YD);
       }, 0),
     [payItems]
   );
   const hasBulkItem = bulkPickupTons > 0;
+  const pickupNeedsHeadsUp = useMemo(() => requiresPickupHeadsUp(payItems), [payItems]);
 
-  // Fulfillment — product page can seed pickup vs delivery via sessionStorage.
-  const [fulfillment, setFulfillment] = useState<Fulfillment>(() => {
-    if (hasTruckloadItem) return "delivery";
-    if (typeof window === "undefined") return "pickup";
-    try {
-      const pref = sessionStorage.getItem("osw-preferred-fulfillment");
-      if (pref === "pickup" || pref === "delivery") {
-        sessionStorage.removeItem("osw-preferred-fulfillment");
-        return pref;
+  // One boot read: honor PDP Pick up / Deliver seed; walking-floor alone forces delivery.
+  const [checkoutBoot] = useState(() => {
+    const walkingFloorInCart = items.some(
+      (item) => item.mode === "pay" && isWalkingFloorDeliveryFormat(item.format),
+    );
+    let pref: Fulfillment | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem("osw-preferred-fulfillment");
+        if (raw === "pickup" || raw === "delivery") {
+          sessionStorage.removeItem("osw-preferred-fulfillment");
+          pref = raw;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-    return "pickup";
+
+    // Walking-floor in cart cannot be picked up — delivery for the whole order.
+    // If they asked for pickup, land on fulfillment with a clear conflict (not silent).
+    if (walkingFloorInCart) {
+      const draft = typeof window !== "undefined" ? loadDeliveryDraft() : null;
+      if (pref === "pickup") {
+        return {
+          fulfillment: "delivery" as Fulfillment,
+          seeded: true,
+          step: "fulfillment" as CheckoutStep,
+          pickupBlockedByWalkingFloor: true,
+        };
+      }
+      return {
+        fulfillment: "delivery" as Fulfillment,
+        seeded: pref === "delivery" || !pref,
+        step: (draft?.zip && draft?.quote ? "timing" : "fulfillment") as CheckoutStep,
+        pickupBlockedByWalkingFloor: false,
+      };
+    }
+
+    if (pref) {
+      return {
+        fulfillment: pref,
+        seeded: true,
+        step: "timing" as CheckoutStep,
+        pickupBlockedByWalkingFloor: false,
+      };
+    }
+
+    return {
+      fulfillment: "pickup" as Fulfillment,
+      seeded: false,
+      step: "fulfillment" as CheckoutStep,
+      pickupBlockedByWalkingFloor: false,
+    };
   });
+
+  const [fulfillment, setFulfillment] = useState<Fulfillment>(checkoutBoot.fulfillment);
+  const [fulfillmentSeeded] = useState(checkoutBoot.seeded);
   const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("congress");
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
@@ -137,6 +198,23 @@ const Checkout: React.FC = () => {
   );
   const isPhoenixBulkPickup = hasBulkItem && selectedPickupSite.id === "phoenix";
   const phoenixBulkOverLimit = hasBulkItem && selectedPickupSite.id === "phoenix" && bulkPickupTons > PHOENIX_BULK_MAX_TONS;
+
+  // Pickup ASAP: bags + Congress bulk. Pallet/tote → schedule. Phoenix bulk → appointment.
+  const pickupAllowAsap = isPhoenixBulkPickup
+    ? selectedPickupSite.bulkAllowAsap !== false
+    : hasBulkItem
+      ? selectedPickupSite.bulkAllowAsap !== false
+      : pickupNeedsHeadsUp
+        ? false
+        : selectedPickupSite.allowAsap !== false;
+  const pickupMinLeadDays = isPhoenixBulkPickup
+    ? selectedPickupSite.bulkMinLeadDays ?? 7
+    : selectedPickupSite.minLeadDays ?? 0;
+  const pickupScheduleHelpText = isPhoenixBulkPickup
+    ? "Phoenix bulk pickup needs loader coordination. Pick a slot at least 1 week out."
+    : !hasBulkItem && pickupNeedsHeadsUp
+      ? "Pallet or more — pick a slot so we can stage your load."
+      : undefined;
 
   // Pickup state (ASAP ready time — auto-computed)
   const [pickupReady, setPickupReady] = useState<PickupReadySelection | null>(null);
@@ -179,16 +257,7 @@ const Checkout: React.FC = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [activeStep, setActiveStep] = useState<CheckoutStep>(() => {
-    // Truckload buyers who already estimated ZIP on the product page land on delivery details.
-    if (typeof window === "undefined") return "fulfillment";
-    const draft = loadDeliveryDraft();
-    const truckloadInCart = items.some(
-      (item) => item.mode === "pay" && item.format.toLowerCase().includes("truckload"),
-    );
-    if (truckloadInCart && draft?.zip && draft?.quote) return "timing";
-    return "fulfillment";
-  });
+  const [activeStep, setActiveStep] = useState<CheckoutStep>(checkoutBoot.step);
   const [devModeLabel, setDevModeLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -209,10 +278,19 @@ const Checkout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hasTruckloadItem && fulfillment !== "delivery") {
+    if (hasWalkingFloorDelivery && fulfillment !== "delivery") {
       setFulfillment("delivery");
+      return;
     }
-  }, [fulfillment, hasTruckloadItem]);
+    // After removing walking-floor (e.g. they wanted pickup), restore pickup.
+    if (
+      !hasWalkingFloorDelivery &&
+      fulfillment === "delivery" &&
+      checkoutBoot.pickupBlockedByWalkingFloor
+    ) {
+      setFulfillment("pickup");
+    }
+  }, [checkoutBoot.pickupBlockedByWalkingFloor, fulfillment, hasWalkingFloorDelivery]);
 
   // Keep city/state congruent with the delivery ZIP (fixes stale city from drafts/cache).
   useEffect(() => {
@@ -242,9 +320,10 @@ const Checkout: React.FC = () => {
     };
   }, [deliveryAddress.zip]);
 
-  // If cart gains a truckload + we already have a product-page estimate, jump to delivery details.
+  // Walking-floor + saved ZIP → jump to address — but not when pickup was blocked (show conflict first).
   useEffect(() => {
-    if (!hasTruckloadItem || activeStep !== "fulfillment") return;
+    if (!hasWalkingFloorDelivery || activeStep !== "fulfillment") return;
+    if (checkoutBoot.pickupBlockedByWalkingFloor) return;
     const draft = loadDeliveryDraft();
     if (draft?.zip && draft?.quote) {
       setActiveStep("timing");
@@ -260,7 +339,12 @@ const Checkout: React.FC = () => {
       setRoughAccess(Boolean(draft.roughAccess));
       setSemiAccess(draft.semiAccess !== false);
     }
-  }, [activeStep, deliveryQuote, hasTruckloadItem]);
+  }, [
+    activeStep,
+    checkoutBoot.pickupBlockedByWalkingFloor,
+    deliveryQuote,
+    hasWalkingFloorDelivery,
+  ]);
 
   // Items shaped for the DeliveryQuoteWidget (truck picker)
   const quoteItems = useMemo(
@@ -514,7 +598,7 @@ const Checkout: React.FC = () => {
               <Package className="mx-auto mb-4 h-16 w-16 text-stone-300" />
               <h2 className="text-2xl font-bold mb-2">Nothing to check out</h2>
               <p className="text-stone-600 mb-6">
-                Add a pay &amp; pickup product to your cart, then come back here.
+                Add products to your cart, then come back to check out.
               </p>
               <Button onClick={() => navigate("/products")} size="lg" className="min-h-[48px]">
                 Browse products
@@ -543,7 +627,11 @@ const Checkout: React.FC = () => {
   const customerComplete = Boolean(name.trim() && phone.trim() && customerCategory);
 
   const stepMeta: Array<{ key: CheckoutStep; label: string; complete: boolean }> = [
-    { key: "fulfillment", label: fulfillment === "pickup" ? selectedPickupSite.shortLabel : "Delivery", complete: true },
+    {
+      key: "fulfillment",
+      label: fulfillment === "pickup" ? "Pickup" : "Delivery",
+      complete: true,
+    },
     { key: "timing", label: fulfillment === "pickup" ? "Ready" : "Address", complete: timingComplete },
     { key: "customer", label: "Details", complete: customerComplete },
     { key: "review", label: "Pay", complete: false },
@@ -703,21 +791,44 @@ const Checkout: React.FC = () => {
                 <CardTitle className="text-xl leading-tight sm:text-2xl">How do you want it?</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0 sm:px-5">
+                {hasWalkingFloorDelivery && (
+                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-950">
+                    <p className="font-bold">Walking-floor truckload requires delivery</p>
+                    <p className="mt-1 text-xs text-amber-900/90">
+                      Your order includes{" "}
+                      {walkingFloorLines.map((line) => line.productName).filter(Boolean).join(", ") || "a 24-ton bulk truckload"}
+                      . Remove it from your order to pick up bags or pallets, or continue with delivery for everything.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        walkingFloorLines.forEach((line) => removeItem(line.productId, line.format));
+                        setError(null);
+                        trackEvent("Checkout Walking Floor Removed For Pickup", {
+                          removed_count: walkingFloorLines.length,
+                        });
+                      }}
+                      className="mt-2 text-xs font-bold text-[#264027] underline-offset-2 hover:underline"
+                    >
+                      Remove walking-floor &amp; continue pickup
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    disabled={hasTruckloadItem}
+                    disabled={hasWalkingFloorDelivery}
                     onClick={() => {
-                      if (!hasTruckloadItem) {
+                      if (!hasWalkingFloorDelivery) {
                         setFulfillment("pickup");
-                        trackEvent("Checkout Fulfillment Selected", { fulfillment: "pickup", has_truckload_item: hasTruckloadItem });
+                        trackEvent("Checkout Fulfillment Selected", { fulfillment: "pickup", has_walking_floor: false });
                       }
                     }}
                     className={cn(
                       "flex min-h-[74px] flex-col items-start justify-center gap-1 rounded-xl border px-3 py-3 text-left transition touch-manipulation",
                       fulfillment === "pickup"
                         ? "border-[#264027] bg-[#264027]/10 text-[#264027] shadow-[inset_0_0_0_1px_#264027]"
-                        : hasTruckloadItem
+                        : hasWalkingFloorDelivery
                           ? "cursor-not-allowed border-stone-200 bg-stone-50 text-stone-400 opacity-70"
                           : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
                     )}
@@ -727,18 +838,18 @@ const Checkout: React.FC = () => {
                       Pickup
                     </div>
                     <span className="text-[11px] font-medium leading-tight text-stone-500">
-                      {hasTruckloadItem
-                        ? "Truckload orders require delivery"
-                        : hasFlatbedSpots
-                          ? "Or deliver pallets & totes on a flatbed (Moffett)"
-                          : "Choose Congress or Phoenix"}
+                      {hasWalkingFloorDelivery
+                        ? "Remove walking-floor to enable pickup"
+                        : pickupNeedsHeadsUp
+                          ? "Pallet or more · schedule a heads-up slot"
+                          : "Bags · ready in about 30 minutes"}
                     </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setFulfillment("delivery");
-                      trackEvent("Checkout Fulfillment Selected", { fulfillment: "delivery", has_truckload_item: hasTruckloadItem });
+                      trackEvent("Checkout Fulfillment Selected", { fulfillment: "delivery", has_truckload_item: hasWalkingFloorDelivery });
                     }}
                     className={cn(
                       "flex min-h-[74px] flex-col items-start justify-center gap-1 rounded-xl border px-3 py-3 text-left transition touch-manipulation",
@@ -754,7 +865,7 @@ const Checkout: React.FC = () => {
                     <span className="text-[11px] font-medium text-stone-500">Quoted by ZIP</span>
                   </button>
                 </div>
-                {fulfillment === "pickup" && !hasTruckloadItem && (
+                {fulfillment === "pickup" && !hasWalkingFloorDelivery && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                       Pickup location
@@ -911,10 +1022,25 @@ const Checkout: React.FC = () => {
             {activeStep === "timing" && (fulfillment === "pickup" ? (
               <Card className="rounded-2xl border-stone-200 shadow-sm">
                 <CardHeader className="px-4 py-3 sm:px-5">
-                  <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-                    <Calendar className="h-4 w-4 text-[#b38a58]" />
-                    When will your order be ready?
-                  </CardTitle>
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                      <Calendar className="h-4 w-4 text-[#b38a58]" />
+                      When will your order be ready?
+                    </CardTitle>
+                    {(fulfillmentSeeded || !hasWalkingFloorDelivery) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveStep("fulfillment");
+                          setError(null);
+                          trackEvent("Checkout Step Viewed", { step: "fulfillment", fulfillment, source: "change_chip" });
+                        }}
+                        className="shrink-0 rounded-full bg-[#264027]/10 px-3 py-1.5 text-xs font-bold text-[#264027] transition hover:bg-[#264027]/15"
+                      >
+                        Pickup · change
+                      </button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-0 sm:px-5">
                   <div className="mb-3 flex items-start gap-2 rounded-lg bg-stone-50 px-3 py-2.5 text-sm leading-snug text-stone-600">
@@ -953,6 +1079,9 @@ const Checkout: React.FC = () => {
                   {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
                     <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
                       <span className="font-bold">Phoenix pickup</span> is available for bags, pallets, and totes.
+                      {pickupNeedsHeadsUp
+                        ? " Pallet or more needs a scheduled slot."
+                        : " Bags can be ready in about 30 minutes."}
                     </div>
                   )}
                   {phoenixBulkOverLimit && (
@@ -961,33 +1090,53 @@ const Checkout: React.FC = () => {
                     </div>
                   )}
                   <PickupReadyTime
-                    key={selectedPickupSite.id}
+                    key={`${selectedPickupSite.id}-${pickupAllowAsap ? "asap" : "sched"}`}
                     value={pickupReady}
                     onChange={setPickupReady}
-                    allowAsap={isPhoenixBulkPickup ? selectedPickupSite.bulkAllowAsap !== false : selectedPickupSite.allowAsap !== false}
-                    minLeadDays={isPhoenixBulkPickup ? selectedPickupSite.bulkMinLeadDays ?? 7 : selectedPickupSite.minLeadDays ?? 0}
-                    scheduleHelpText={
-                      isPhoenixBulkPickup
-                        ? "Phoenix bulk pickup needs loader coordination. Pick a slot at least 1 week out."
-                        : undefined
-                    }
+                    allowAsap={pickupAllowAsap}
+                    minLeadDays={pickupMinLeadDays}
+                    scheduleHelpText={pickupScheduleHelpText}
                   />
                 </CardContent>
               </Card>
             ) : (
               <Card className="overflow-hidden rounded-2xl border-stone-200 shadow-sm">
                 <CardHeader className="px-4 py-3 sm:px-5">
-                  <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
-                    <Truck className="h-4 w-4 text-[#264027]" />
-                    {deliveryQuote && !editingDeliveryQuote ? "Delivery address" : "Delivery price"}
-                  </CardTitle>
-                  {deliveryQuote && !editingDeliveryQuote && (
-                    <p className="mt-1 text-sm text-stone-500">
-                      Confirm where the truck should unload.
-                    </p>
-                  )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                        <Truck className="h-4 w-4 text-[#264027]" />
+                        {deliveryQuote && !editingDeliveryQuote ? "Delivery address" : "Delivery price"}
+                      </CardTitle>
+                      {deliveryQuote && !editingDeliveryQuote && (
+                        <p className="mt-1 text-sm text-stone-500">
+                          Confirm where the truck should unload.
+                        </p>
+                      )}
+                    </div>
+                    {!hasWalkingFloorDelivery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveStep("fulfillment");
+                          setError(null);
+                          trackEvent("Checkout Step Viewed", { step: "fulfillment", fulfillment, source: "change_chip" });
+                        }}
+                        className="shrink-0 rounded-full bg-[#264027]/10 px-3 py-1.5 text-xs font-bold text-[#264027] transition hover:bg-[#264027]/15"
+                      >
+                        Delivery · change
+                      </button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4 px-4 pb-4 pt-0 sm:px-5">
+                  {hasWalkingFloorDelivery && (
+                    <div className="rounded-lg border border-[#264027]/15 bg-[#264027]/5 px-3 py-2 text-xs leading-snug text-stone-700">
+                      <span className="font-bold text-[#264027]">Walking-floor delivery</span>
+                      {" · "}
+                      24-ton bulk dump included in this order.
+                    </div>
+                  )}
                   {/* Compact quote when already priced on the product page */}
                   {deliveryQuote && !editingDeliveryQuote ? (
                     <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
@@ -1318,82 +1467,144 @@ const Checkout: React.FC = () => {
                   </div>
                 )}
                 {(showSummaryItems || activeStep === "fulfillment") && (
-                  <div className="space-y-2.5 border-t border-stone-100 pt-2">
+                  <div className="space-y-2 border-t border-stone-100 pt-2">
                     {payItems.map((item) => {
                       const lineSpots = spotsForFormat(item.format, item.quantity);
-                      const formatKey = item.format.toLowerCase();
-                      const isWalkingFloorBulk =
-                        (formatKey.includes("truckload") || formatKey.includes("bulk")) &&
-                        !formatKey.includes("pallet");
+                      const isWalkingFloorBulk = isWalkingFloorDeliveryFormat(item.format);
                       const canEditQty = !isWalkingFloorBulk;
+                      const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
+                      const sizeThumb =
+                        item.sizeImage || (isWalkingFloorBulk ? WALKING_FLOOR_IMAGE : undefined);
                       return (
                         <div
                           key={`summary-${item.productId}-${item.format}`}
-                          className="rounded-lg bg-stone-50/80 px-2.5 py-2"
+                          className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm"
                         >
-                          <div className="flex items-start justify-between gap-2 text-sm">
-                            <p className="min-w-0 text-stone-700">
-                              <span className="font-semibold text-stone-900">{item.productName}</span>
-                              <span className="block text-xs text-stone-500">
-                                {item.format}
-                                {lineSpots > 0
-                                  ? ` · ${lineSpots} spot${lineSpots === 1 ? "" : "s"}`
-                                  : ""}
-                              </span>
-                            </p>
-                            <p className="shrink-0 font-semibold text-[#264027]">
-                              {fmt(item.unitPrice * item.quantity)}
-                            </p>
-                          </div>
-                          {canEditQty ? (
-                            <div className="mt-2 flex items-center justify-between gap-2">
-                              <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5 shadow-sm">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    updateQuantity(item.productId, item.format, item.quantity - 1);
-                                    trackEvent("Checkout Item Quantity Changed", {
-                                      product_id: item.productId,
-                                      format: item.format,
-                                      quantity: item.quantity - 1,
-                                      source: "summary",
-                                    });
-                                  }}
-                                  disabled={item.quantity <= 1}
-                                  className="h-8 w-8 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-40 touch-manipulation"
-                                  aria-label="Decrease quantity"
-                                >
-                                  −
-                                </button>
-                                <span className="w-7 text-center text-sm font-bold">{item.quantity}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    updateQuantity(item.productId, item.format, item.quantity + 1);
-                                    trackEvent("Checkout Item Quantity Changed", {
-                                      product_id: item.productId,
-                                      format: item.format,
-                                      quantity: item.quantity + 1,
-                                      source: "summary",
-                                    });
-                                  }}
-                                  className="h-8 w-8 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-100 touch-manipulation"
-                                  aria-label="Increase quantity"
-                                >
-                                  +
-                                </button>
-                              </div>
-                              {lineSpots > 0 && hasFlatbedSpots && (
-                                <span className="text-[11px] font-medium text-stone-500">
-                                  {FLATBED_CAPACITY - flatbedSpots > 0
-                                    ? `${FLATBED_CAPACITY - flatbedSpots} left for 10% off`
-                                    : "Full load · 10% off"}
-                                </span>
+                          <div className="flex items-stretch gap-2">
+                            <div className="flex shrink-0 gap-1">
+                              {imageUrl ? (
+                                <div className="relative h-[4.25rem] w-[4.25rem] overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
+                                  <OptimizedImage
+                                    src={imageUrl}
+                                    alt={item.productName}
+                                    className="h-full w-full object-contain bg-white p-0.5"
+                                    width={120}
+                                    q={60}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-lg bg-stone-100 text-stone-400">
+                                  <Package className="h-6 w-6" />
+                                </div>
                               )}
+                              {sizeThumb ? (
+                                <div className="relative h-[4.25rem] w-[3.25rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
+                                  <OptimizedImage
+                                    src={sizeThumb}
+                                    alt={item.format}
+                                    className="h-full w-full object-cover"
+                                    width={100}
+                                    q={65}
+                                  />
+                                </div>
+                              ) : null}
                             </div>
-                          ) : (
-                            <p className="mt-1.5 text-xs text-stone-500">Qty {item.quantity} · bulk walking-floor load</p>
-                          )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold leading-tight text-stone-900">
+                                    {item.productName}
+                                  </p>
+                                  <p className="mt-0.5 text-[13px] font-bold leading-snug text-[#264027]">
+                                    {item.format}
+                                    {lineSpots > 0 ? (
+                                      <span className="ml-1.5 font-semibold text-stone-500">
+                                        · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
+                                      </span>
+                                    ) : null}
+                                  </p>
+                                </div>
+                                {canEditQty ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      removeItem(item.productId, item.format);
+                                      trackEvent("Checkout Item Removed", {
+                                        product_id: item.productId,
+                                        format: item.format,
+                                        source: "summary",
+                                      });
+                                    }}
+                                    className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                                    aria-label="Remove"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                ) : null}
+                              </div>
+                              {canEditQty ? (
+                                <div className="mt-1.5 flex items-center justify-between gap-2">
+                                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateQuantity(item.productId, item.format, item.quantity - 1);
+                                        trackEvent("Checkout Item Quantity Changed", {
+                                          product_id: item.productId,
+                                          format: item.format,
+                                          quantity: item.quantity - 1,
+                                          source: "summary",
+                                        });
+                                      }}
+                                      disabled={item.quantity <= 1}
+                                      className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100 disabled:opacity-40"
+                                      aria-label="Decrease quantity"
+                                    >
+                                      <Minus className="mx-auto h-3 w-3" />
+                                    </button>
+                                    <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateQuantity(item.productId, item.format, item.quantity + 1);
+                                        trackEvent("Checkout Item Quantity Changed", {
+                                          product_id: item.productId,
+                                          format: item.format,
+                                          quantity: item.quantity + 1,
+                                          source: "summary",
+                                        });
+                                      }}
+                                      className="h-7 w-7 rounded-md text-stone-700 hover:bg-stone-100"
+                                      aria-label="Increase quantity"
+                                    >
+                                      <Plus className="mx-auto h-3 w-3" />
+                                    </button>
+                                  </div>
+                                  <p className="text-sm font-bold text-[#264027]">
+                                    {fmt(item.unitPrice * item.quantity)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="mt-1.5 flex items-center justify-between gap-2">
+                                  <p className="text-xs text-stone-500">
+                                    Qty {item.quantity} · walking-floor load
+                                  </p>
+                                  <p className="text-sm font-bold text-[#264027]">
+                                    {fmt(item.unitPrice * item.quantity)}
+                                  </p>
+                                </div>
+                              )}
+                              {lineSpots > 0 && hasFlatbedSpots ? (
+                                <p className="mt-1 text-[11px] font-medium text-stone-500">
+                                  {hasFullFlatbedDiscount(flatbedSpots)
+                                    ? "Full load · 10% off"
+                                    : flatbedSpots > FLATBED_CAPACITY
+                                      ? "Over one flatbed"
+                                      : `${FLATBED_CAPACITY - flatbedSpots} left for 10% off`}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -1405,7 +1616,7 @@ const Checkout: React.FC = () => {
                     onClick={() => setShowSummaryItems((v) => !v)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-[#264027]"
                   >
-                    {showSummaryItems ? "Hide items" : "Edit quantities"}
+                    {showSummaryItems ? "Hide items" : "Show order items"}
                     <ChevronDown className={cn("h-3.5 w-3.5 transition", showSummaryItems && "rotate-180")} />
                   </button>
                 )}

@@ -10,13 +10,16 @@ import {
   cartFlatbedSpots,
   FLATBED_CAPACITY,
   fullLoadDiscountAmount,
+  isWalkingFloorDeliveryFormat,
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
-  CreditCard, FileText, ShoppingBag, Phone,
+  CreditCard, FileText, Phone,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
 const fmt = (n: number): string => {
   if (n >= 1000) return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
@@ -30,6 +33,13 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
+const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
+const FLATBED_IMAGE = "/images/optimized/mixed-truckload-example.jpg";
+
+function isWalkingFloorFormat(format: string) {
+  return isWalkingFloorDeliveryFormat(format);
+}
+
 function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
   item: CartItem;
   removeItem: (id: number, fmt: string) => void;
@@ -38,33 +48,61 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
 }) {
   const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
   const lineSpots = spotsForFormat(item.format, item.quantity);
+  const sizeThumb =
+    item.sizeImage ||
+    (isWalkingFloorFormat(item.format) ? WALKING_FLOOR_IMAGE : undefined);
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
-      <div className="flex items-start gap-3">
-        {imageUrl ? (
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
-            <OptimizedImage src={imageUrl} alt={item.productName} className="h-full w-full object-contain bg-white p-1" width={120} q={60} />
-            {item.sizeImage && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-7 w-7 overflow-hidden rounded-md bg-white ring-2 ring-white shadow-md">
-                <OptimizedImage src={item.sizeImage} alt={item.format} className="h-full w-full object-cover" />
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-400">
-            <Package className="h-6 w-6" />
-          </div>
-        )}
+    <div className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm">
+      <div className="flex items-stretch gap-2">
+        <div className="flex shrink-0 gap-1">
+          {imageUrl ? (
+            <div className="relative h-[4.25rem] w-[4.25rem] overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
+              <OptimizedImage
+                src={imageUrl}
+                alt={item.productName}
+                className="h-full w-full object-contain bg-white p-0.5"
+                width={120}
+                q={60}
+              />
+            </div>
+          ) : (
+            <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-lg bg-stone-100 text-stone-400">
+              <Package className="h-6 w-6" />
+            </div>
+          )}
+          {sizeThumb ? (
+            <div className="relative h-[4.25rem] w-[3.25rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
+              <OptimizedImage
+                src={sizeThumb}
+                alt={item.format}
+                className="h-full w-full object-cover"
+                width={100}
+                q={65}
+              />
+            </div>
+          ) : null}
+        </div>
+
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <Link
-              href={`/products/${item.productSlug}`}
-              onClick={closeDrawer}
-              className="text-sm font-semibold leading-tight text-stone-900 hover:text-[#264027]"
-            >
-              {item.productName}
-            </Link>
+          <div className="flex items-start justify-between gap-1.5">
+            <div className="min-w-0">
+              <Link
+                href={`/products/${item.productSlug}`}
+                onClick={closeDrawer}
+                className="text-sm font-semibold leading-tight text-stone-900 hover:text-[#264027]"
+              >
+                {item.productName}
+              </Link>
+              <p className="mt-0.5 text-[13px] font-bold leading-snug text-[#264027]">
+                {item.format}
+                {lineSpots > 0 ? (
+                  <span className="ml-1.5 font-semibold text-stone-500">
+                    · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => removeItem(item.productId, item.format)}
@@ -74,15 +112,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="mt-0.5 text-xs text-stone-500">
-            {item.format}
-            {lineSpots > 0 ? (
-              <span className="ml-1.5 font-semibold text-[#264027]">
-                · +{lineSpots} spot{lineSpots === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </p>
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-1.5 flex items-center justify-between gap-2">
             <div className="inline-flex items-center gap-0.5 rounded-lg border border-stone-200 bg-white p-0.5">
               <button
                 type="button"
@@ -109,6 +139,43 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
   );
 }
 
+function LoadSection({
+  title,
+  hint,
+  image,
+  children,
+  accent = "green",
+  headerExtra,
+}: {
+  title: string;
+  hint: string;
+  image: string;
+  children: ReactNode;
+  accent?: "green" | "camel";
+  headerExtra?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border bg-white",
+        accent === "camel" ? "border-[#b38a58]/35" : "border-stone-200",
+      )}
+    >
+      <div className="flex items-center gap-2.5 border-b border-stone-100 px-2.5 py-2">
+        <div className="h-12 w-[4.25rem] shrink-0 overflow-hidden rounded-md bg-stone-100 ring-1 ring-stone-200">
+          <OptimizedImage src={image} alt="" className="h-full w-full object-cover" width={140} q={65} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-stone-900">{title}</p>
+          <p className="text-[11px] leading-snug text-stone-500">{hint}</p>
+        </div>
+      </div>
+      {headerExtra ? <div className="border-b border-stone-100 px-2.5 py-2">{headerExtra}</div> : null}
+      <div className="space-y-2 p-2">{children}</div>
+    </div>
+  );
+}
+
 export const QuoteCartDrawer = () => {
   const { items, removeItem, updateQuantity, clearCart, totalItems, isDrawerOpen, closeDrawer } = useQuoteCart();
   const [, navigate] = useLocation();
@@ -121,8 +188,28 @@ export const QuoteCartDrawer = () => {
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const payTotal = payGross - flatbedDiscount;
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
-  const spotsLeft = Math.max(0, FLATBED_CAPACITY - flatbedSpots);
-  const nearFull = flatbedSpots > 0 && spotsLeft > 0 && spotsLeft <= 4;
+  const walkingFloorItems = useMemo(
+    () => payItems.filter((item) => isWalkingFloorFormat(item.format)),
+    [payItems],
+  );
+  const flatbedItems = useMemo(
+    () => payItems.filter((item) => spotsForFormat(item.format, item.quantity) > 0),
+    [payItems],
+  );
+  const yardItems = useMemo(
+    () =>
+      payItems.filter(
+        (item) => !isWalkingFloorFormat(item.format) && spotsForFormat(item.format, item.quantity) <= 0,
+      ),
+    [payItems],
+  );
+
+  const hasDeliveryTrucks = flatbedItems.length > 0 && walkingFloorItems.length > 0;
+  const hasMixedLoads =
+    (walkingFloorItems.length > 0 ? 1 : 0) +
+      (flatbedItems.length > 0 ? 1 : 0) +
+      (yardItems.length > 0 ? 1 : 0) >
+    1;
 
   const goToCheckout = () => {
     trackEvent("Cart Checkout Clicked", {
@@ -152,6 +239,17 @@ export const QuoteCartDrawer = () => {
     setCallbackOpen(true);
   };
 
+  const renderLines = (list: CartItem[]) =>
+    list.map((item) => (
+      <LineItem
+        key={`${item.productId}-${item.format}`}
+        item={item}
+        removeItem={removeItem}
+        updateQuantity={updateQuantity}
+        closeDrawer={closeDrawer}
+      />
+    ));
+
   return (
     <>
       <Sheet open={isDrawerOpen} onOpenChange={(open) => !open && closeDrawer()}>
@@ -163,11 +261,20 @@ export const QuoteCartDrawer = () => {
               </span>
               <div className="flex flex-col items-start">
                 <span className="text-base font-bold leading-none">
-                  {flatbedSpots > 0 ? "Your flatbed load" : "Your order"}
+                  {hasMixedLoads
+                    ? "Your order"
+                    : flatbedSpots > 0
+                      ? "Your flatbed load"
+                      : walkingFloorItems.length > 0
+                        ? "Your delivery"
+                        : "Your order"}
                 </span>
                 <span className="mt-1 text-xs font-medium text-stone-500">
                   {totalItems} {totalItems === 1 ? "item" : "items"}
-                  {flatbedSpots > 0 ? ` · ${flatbedSpots}/${FLATBED_CAPACITY} spots` : ""}
+                  {flatbedSpots > 0 ? ` · flatbed ${flatbedSpots}/${FLATBED_CAPACITY}` : ""}
+                  {walkingFloorItems.length > 0
+                    ? ` · ${walkingFloorItems.length} walking-floor`
+                    : ""}
                 </span>
               </div>
             </SheetTitle>
@@ -184,32 +291,50 @@ export const QuoteCartDrawer = () => {
             </div>
           ) : (
             <>
-              <div className="flex-1 space-y-4 overflow-y-auto py-4">
-                {flatbedSpots > 0 && <FlatbedLoadMeter spots={flatbedSpots} compact />}
-                {nearFull && (
-                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
-                    {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left for 10% off products on a full flatbed.
-                  </p>
+              <div className="flex-1 space-y-3 overflow-y-auto py-4">
+                {/* Flatbed first — mixable load, meter, 10% off. Number trucks only when both exist. */}
+                {flatbedItems.length > 0 && (
+                  <LoadSection
+                    title={
+                      hasDeliveryTrucks
+                        ? "Truck 1 · Flatbed"
+                        : "Flatbed load"
+                    }
+                    hint="Mix pallets & totes · pickup needs a scheduled heads-up"
+                    image={FLATBED_IMAGE}
+                    headerExtra={<FlatbedLoadMeter spots={flatbedSpots} meterOnly />}
+                  >
+                    {renderLines(flatbedItems)}
+                  </LoadSection>
                 )}
 
-                {payItems.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#264027]">
-                      <ShoppingBag className="h-3.5 w-3.5" />
-                      Pay online
-                      <span className="text-stone-400">·</span>
-                      <span className="text-stone-500">{payItems.length} item{payItems.length !== 1 && "s"}</span>
-                    </div>
-                    {payItems.map((item) => (
-                      <LineItem
-                        key={`${item.productId}-${item.format}`}
-                        item={item}
-                        removeItem={removeItem}
-                        updateQuantity={updateQuantity}
-                        closeDrawer={closeDrawer}
-                      />
-                    ))}
-                  </div>
+                {walkingFloorItems.length > 0 && (
+                  <LoadSection
+                    title={
+                      hasDeliveryTrucks
+                        ? "Truck 2 · Walking floor"
+                        : "Walking-floor delivery"
+                    }
+                    hint="24-ton bulk dump · always delivered"
+                    image={WALKING_FLOOR_IMAGE}
+                    accent="camel"
+                  >
+                    {renderLines(walkingFloorItems)}
+                  </LoadSection>
+                )}
+
+                {yardItems.length > 0 && (
+                  <LoadSection
+                    title="Bags & small items"
+                    hint="Pickup or delivery at checkout"
+                    image={
+                      yardItems[0]?.imageUrl ||
+                      CART_IMAGE_FALLBACKS[yardItems[0].productId] ||
+                      FLATBED_IMAGE
+                    }
+                  >
+                    {renderLines(yardItems)}
+                  </LoadSection>
                 )}
 
                 {quoteItems.length > 0 && (
@@ -220,15 +345,7 @@ export const QuoteCartDrawer = () => {
                       <span className="text-stone-400">·</span>
                       <span className="text-stone-500">{quoteItems.length} item{quoteItems.length !== 1 && "s"}</span>
                     </div>
-                    {quoteItems.map((item) => (
-                      <LineItem
-                        key={`${item.productId}-${item.format}`}
-                        item={item}
-                        removeItem={removeItem}
-                        updateQuantity={updateQuantity}
-                        closeDrawer={closeDrawer}
-                      />
-                    ))}
+                    {renderLines(quoteItems)}
                   </div>
                 )}
               </div>
@@ -256,7 +373,13 @@ export const QuoteCartDrawer = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     <p className="text-center text-[11px] leading-relaxed text-stone-500">
-                      Continue to choose pickup or delivery, then pay.
+                      {walkingFloorItems.length > 0 && flatbedItems.length === 0 && yardItems.length === 0
+                        ? "Next: delivery ZIP, street, and pay."
+                        : walkingFloorItems.length > 0
+                          ? "Walking-floor is delivery. Flatbed pickup needs a scheduled heads-up."
+                          : flatbedItems.length > 0
+                            ? "Pickup needs a scheduled heads-up for pallets & totes. Bags can be ASAP."
+                            : "Continue to choose pickup or delivery, then pay."}
                     </p>
                   </>
                 )}

@@ -369,7 +369,7 @@ const NewOrder = () => {
                     required
                     className="min-h-[44px]"
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">Pickup available Tue-Sat only.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{HOURS_LABEL}.</p>
                 </>
               )}
             </div>

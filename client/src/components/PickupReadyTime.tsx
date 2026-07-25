@@ -127,7 +127,13 @@ export function PickupReadyTime({
           <span className="flex items-center gap-1.5 text-sm font-bold">
             <Clock className="h-4 w-4" /> ASAP
           </span>
-          <span className="text-[11px] font-medium text-stone-500">Ready in ~30 min</span>
+          <span className="text-[11px] font-medium text-stone-500">
+            {displayAsap?.status === "asap"
+              ? "Ready in about 30 min"
+              : displayAsap?.readyLabel
+                ? displayAsap.readyLabel.replace(/^Ready\s+/i, "")
+                : "Next open window"}
+          </span>
         </button>
         )}
         <button
@@ -175,6 +181,11 @@ export function PickupReadyTime({
             </p>
           )}
           <PickupSlotPicker value={scheduleSlot} onChange={setScheduleSlot} minLeadDays={minLeadDays} />
+          {!scheduleSlot && (
+            <p className="text-xs font-medium text-stone-500">
+              Select a date and time slot to continue.
+            </p>
+          )}
         </>
       )}
 

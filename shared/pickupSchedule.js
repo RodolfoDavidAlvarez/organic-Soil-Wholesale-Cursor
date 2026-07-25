@@ -5,18 +5,19 @@
  */
 
 export const PICKUP_TIMEZONE = 'America/Phoenix';
-export const OPEN_DAYS = new Set([1, 2, 3, 4, 5]); // Mon-Fri
-export const SLOT_START_HOURS = [6, 7, 8, 9, 10, 11, 12, 13];
-export const LUNCH_START_HOUR = 14;
+export const OPEN_DAYS = new Set([2, 3, 4, 5, 6]); // Tue–Sat
+/** Hourly pickup starts; skip 1 PM (lunch). Last slot 3–4 PM. */
+export const SLOT_START_HOURS = [8, 9, 10, 11, 12, 14, 15];
+export const LUNCH_START_HOUR = 13;
 export const LUNCH_END_HOUR = 14;
-export const OPEN_HOUR = 6;
-export const CLOSE_HOUR = 14;
+export const OPEN_HOUR = 8;
+export const CLOSE_HOUR = 16;
 export const MIN_NOTICE_MS = 30 * 60 * 1000;
 export const READY_IN_MINUTES = 30;
 export const READY_IN_MS = READY_IN_MINUTES * 60 * 1000;
 export const ASAP_VALIDATION_TOLERANCE_MS = 2 * 60 * 1000;
-export const SAME_DAY_CUTOFF_HOUR = 14;
-export const HOURS_LABEL = 'Mon-Fri, 6 AM-2 PM';
+export const SAME_DAY_CUTOFF_HOUR = 16;
+export const HOURS_LABEL = 'Tue–Sat, 8 AM–4 PM (closed 1–2 PM)';
 export const PICKUP_ADDRESS = '18980 Stanton Rd, Congress, AZ 85332';
 
 export function pickupDirectionsUrl(addressLine) {
@@ -203,7 +204,7 @@ export function getAvailableDatesForProducts({
 
 export function getTimeSlotsForDate(dateYmd) {
   if (!isOpenPickupDay(dateYmd)) {
-    return { slots: [], message: 'Pickup available Mon-Fri only' };
+    return { slots: [], message: `Pickup available ${HOURS_LABEL}` };
   }
   const earliestMs = Date.now() + MIN_NOTICE_MS;
   const slots = getBookableSlots(dateYmd, earliestMs).map((slot) => ({

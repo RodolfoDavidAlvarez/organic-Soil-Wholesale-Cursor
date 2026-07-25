@@ -5,7 +5,6 @@
 import {
   computeAsapPickup,
   formatReadyLabel,
-  normalizeAsapReadyMs,
   phoenixParts,
   phoenixYmd,
   validateAsapPickupIso,
@@ -54,12 +53,12 @@ function readyParts(nowIso) {
   });
 }
 
-// Case 1: Tuesday 9:30 AM Phoenix → ready ~9:50 AM
+// Case 1: Tuesday 9:30 AM Phoenix → ready ~10:00 AM (30 min)
 withMockNow('2026-06-30T16:30:00.000Z', () => {
   const { result, parts } = readyParts('2026-06-30T16:30:00.000Z');
   assert('Case 1: Tuesday ASAP status', result.status === 'asap', result.status);
-  assert('Case 1: ready ~9:50 AM', parts.hour === 9 && parts.minute === 50, `${parts.hour}:${parts.minute}`);
-  assert('Case 1: label mentions 20 minutes', result.readyLabel.includes('20 minutes'));
+  assert('Case 1: ready ~10:00 AM', parts.hour === 10 && parts.minute === 0, `${parts.hour}:${parts.minute}`);
+  assert('Case 1: label mentions 30 minutes', result.readyLabel.includes('30 minutes'));
 });
 
 // Case 2: Tuesday 12:50 PM → ready bumps past lunch to 2:00 PM
@@ -68,17 +67,25 @@ withMockNow('2026-06-30T19:50:00.000Z', () => {
   assert('Case 2: lunch bump to 2 PM', parts.hour === 14 && parts.minute === 0, `${parts.hour}:${parts.minute}`);
 });
 
-// Case 3: Tuesday 3:50 PM → ready next open day ~8:20 AM
+// Case 3: Tuesday 3:50 PM → ready next open day ~8:30 AM
 withMockNow('2026-06-30T22:50:00.000Z', () => {
   const { result, parts } = readyParts('2026-06-30T22:50:00.000Z');
   assert('Case 3: scheduled status after close', result.status === 'scheduled', result.status);
-  assert('Case 3: next day ready', parts.ymd === '2026-07-01' && parts.hour === 8 && parts.minute === 20, `${parts.ymd} ${parts.hour}:${parts.minute}`);
+  assert(
+    'Case 3: next day ready',
+    parts.ymd === '2026-07-01' && parts.hour === 8 && parts.minute === 30,
+    `${parts.ymd} ${parts.hour}:${parts.minute}`,
+  );
 });
 
-// Case 4: Sunday order → ready Tue ~8:20 AM
+// Case 4: Sunday order → ready Tue ~8:30 AM (Mon closed)
 withMockNow('2026-06-28T17:00:00.000Z', () => {
   const { parts } = readyParts('2026-06-28T17:00:00.000Z');
-  assert('Case 4: Sunday → Tuesday', parts.ymd === '2026-06-30' && parts.hour === 8 && parts.minute === 20, `${parts.ymd} ${parts.hour}:${parts.minute}`);
+  assert(
+    'Case 4: Sunday → Tuesday',
+    parts.ymd === '2026-06-30' && parts.hour === 8 && parts.minute === 30,
+    `${parts.ymd} ${parts.hour}:${parts.minute}`,
+  );
 });
 
 // Case 5: validateAsapPickupIso accepts fresh client time
@@ -99,7 +106,7 @@ withMockNow('2026-06-30T16:30:00.000Z', () => {
 withMockNow('2026-06-30T16:30:00.000Z', () => {
   const asap = computeAsapPickup();
   const label = formatReadyLabel(asap.readyAtIso, { includeDate: true });
-  assert('Case 7: email label has date', label.includes('Jun') || label.includes('20 minutes'));
+  assert('Case 7: email label has date', label.includes('Jun') || label.includes('30 minutes'));
 });
 
 // Case 8: scheduled slot within business hours
