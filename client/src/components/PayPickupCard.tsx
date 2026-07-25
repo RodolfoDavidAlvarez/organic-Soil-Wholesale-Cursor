@@ -54,11 +54,15 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
     Tote: { price: 150 },
     "Truckload (~24 tons)": { price: 720 },
   },
+  1001: {
+    "Truckload (~24 tons)": { price: 4800 },
+  },
   111: {
     "1CF Bag": { price: 10.99 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
+    "Truckload (~60 cu yd)": { price: 1440 },
   },
 };
 
@@ -161,7 +165,7 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
               <OptimizedImage
                 src={heroImage}
                 alt={product.name}
-                className="absolute inset-0 h-full w-full object-contain bg-white p-1 transition-transform duration-300 group-hover/photo:scale-105"
+                className="absolute inset-0 h-full w-full object-contain bg-white p-1 scale-[1.2] transition-transform duration-300 group-hover/photo:scale-[1.28]"
                 priority={priority}
                 width={520}
                 q={66}

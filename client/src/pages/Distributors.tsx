@@ -10,7 +10,7 @@ const CORE_FOUR = [
     size: "1 cu ft bag",
     msrp: "$10.99",
     cost: "$5.50",
-    image: "/images/optimized/plantpal-bag-context.jpg",
+    image: "/images/optimized/plantpal-with-veggies.jpg",
   },
   {
     name: "Nature's Blanket Premium",

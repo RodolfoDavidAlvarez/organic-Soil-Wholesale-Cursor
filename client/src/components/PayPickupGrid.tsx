@@ -11,7 +11,7 @@ const MAIN_PRODUCT_IDS = [1000, 1001, 111, 3000] as const;
 const HERO_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg", // Simon's Gold
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg", // Mikey's Worm Poop
-  111: "/images/optimized/plantpal-bag-context.jpg", // PlantPal
+  111: "/images/optimized/plantpal-with-veggies.jpg", // PlantPal (bag + vegetables)
   3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Nature's Blanket 2 CF bag
 };
 

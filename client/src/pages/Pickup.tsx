@@ -44,7 +44,7 @@ const PICKUP_PRODUCTS = [
     anchor: "potting-soil",
     intent: "Potting soil",
     searchIntent: "garden soil pickup",
-    image: "/images/optimized/plantpal-bag-context.jpg",
+    image: "/images/optimized/plantpal-with-veggies.jpg",
   },
   {
     id: 3000,

@@ -20,7 +20,7 @@ const fmt = (n: number): string => {
 const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  111: "/images/optimized/plantpal-bag-context.jpg",
+  111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 

@@ -60,7 +60,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     ],
     blurb:
       "Castings from our own worm farm. Add to any blend for a microbial boost, or apply straight as a top-dress. OMRI-eligible.",
-    sizes: ["9 lb bag", "1 CF bag", "Tote / Super Sack"],
+    sizes: ["9 lb bag", "1 CF bag", "Tote / Super Sack", "Bulk pickup", "Truckload"],
     badge: "Microbe boost",
   },
   {
@@ -71,7 +71,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     tagline: "Seed to sale. Out of the bag.",
     heroImage: "/images/optimized/plantpal-bestfor.jpg",
     thumbnailImage: "/images/optimized/plantpal-lifestyle.jpg",
-    bagImage: "/images/optimized/plantpal-bag-context.jpg",
+    bagImage: "/images/optimized/plantpal-with-veggies.jpg",
     altImages: [
       { src: "/images/optimized/plantpal-with-veggies.jpg", label: "In use" },
       { src: "/images/optimized/plantpal-bag-context.jpg", label: "Bag" },
@@ -159,7 +159,7 @@ export const MULCH_PRODUCTS: FeaturedProductSlot[] = [
     textureImage: "/images/optimized/mulch-texture-hand.jpg",
     blurb:
       "Premium dark mulch enriched with worm castings and dairy compost for healthy soil cover, moisture retention, weed suppression, and clean landscape finish.",
-    sizes: ["2 CF bag", "Tote", "Bulk yards"],
+    sizes: ["2 CF bag", "Tote", "Bulk pickup", "Loose truckload", "Flatbed (22 pallets)"],
   },
 ];
 

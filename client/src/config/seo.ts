@@ -37,7 +37,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
       { name: "9 lb Bag", price: 12.46 },
       { name: "40 lb Bag (1 cu ft)", price: 24.9 },
       { name: "Super Sack (~2,000 lb)", price: 150 },
-      { name: "Truckload (~24 tons)", price: 720 },
+      { name: "Truckload (24 tons)", price: 720 },
     ],
   },
   {
@@ -51,6 +51,8 @@ export const PAY_PICKUP_PRODUCT_SEO = [
       { name: "9 lb Bag", price: 18.1 },
       { name: "40 lb Bag (1 cu ft)", price: 34.9 },
       { name: "Super Sack (~2,000 lb)", price: 399 },
+      { name: "Bulk Pickup (per ton)", price: 300 },
+      { name: "Truckload (24 tons)", price: 4800 },
     ],
   },
   {
@@ -59,12 +61,12 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     category: "All-Stage Nursery Mix",
     slug: "plantpal",
     description: "All-stage nursery potting mix for seed starts, propagation, containers, nurseries, and patio planters.",
-    image: "/images/optimized/plantpal-bag-context.jpg",
+    image: "/images/optimized/plantpal-with-veggies.jpg",
     offers: [
       { name: "1.5 cu ft Bag (~50 lb)", price: 10.99 },
       { name: "Super Sack (2.2 cu yd)", price: 247.28 },
       { name: "Bulk Pickup (per cu yd)", price: 36 },
-      { name: "Truckload (~60 cu yd)", price: 2160 },
+      { name: "Truckload (24 tons · ~60 cu yd)", price: 2160 },
     ],
   },
   {
@@ -78,7 +80,8 @@ export const PAY_PICKUP_PRODUCT_SEO = [
       { name: "2 cu ft Bag (~60 lb)", price: 10.99 },
       { name: "Super Sack (2.2 cu yd)", price: 137.5 },
       { name: "Bulk Pickup (per cu yd)", price: 24 },
-      { name: "Truckload (22 pallets)", price: 2700 },
+      { name: "Truckload (24 tons · ~60 cu yd)", price: 1440 },
+      { name: "Flatbed (22 pallets)", price: 2700 },
     ],
   },
 ] as const;

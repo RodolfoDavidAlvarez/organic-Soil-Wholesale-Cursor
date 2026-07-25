@@ -5,6 +5,7 @@ export const FULL_LOAD_PRODUCT_DISCOUNT = 0.1;
 export function isFlatbedFormat(format) {
   const key = String(format || '').toLowerCase();
   if (!key) return false;
+  if (key.includes('flatbed')) return true;
   if (key.includes('truckload') && key.includes('pallet')) return true;
   if (key.includes('pallet') || key.includes('tote') || key.includes('supersack') || key.includes('super sack')) {
     return true;

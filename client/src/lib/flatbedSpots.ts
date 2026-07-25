@@ -13,6 +13,7 @@ export type SpotLine = {
 export function isFlatbedFormat(format: string): boolean {
   const key = String(format || "").toLowerCase();
   if (!key) return false;
+  if (key.includes("flatbed")) return true;
   if (key.includes("truckload") && key.includes("pallet")) return true;
   if (key.includes("pallet") || key.includes("tote") || key.includes("supersack") || key.includes("super sack")) {
     return true;

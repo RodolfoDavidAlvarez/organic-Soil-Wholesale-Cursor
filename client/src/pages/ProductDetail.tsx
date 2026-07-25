@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, type KeyboardEvent } from "react";
+import { useMemo, useState, useCallback, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useRoute, Link } from "wouter";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +45,8 @@ import {
   Download,
   Clock,
   Truck,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -177,7 +179,7 @@ const fmt = (n: number): string => {
 const HERO_BAG_PHOTO: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  111: "/images/optimized/plantpal-bag-context.jpg",
+  111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
@@ -264,9 +266,11 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "2CF Bag": "/images/sizes/2cf-bag-single.png",
   "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
   Tote: "/images/sizes/2-2cy-tote.png",
-  "Truckload (~24 tons)": "/images/sizes/truckload.png",
+  "Truckload (~24 tons)": "/images/size-formats/walking-floor-delivery.webp",
+  "Truckload (24 tons)": "/images/size-formats/walking-floor-delivery.webp",
   "Truckload (22 pallets)": "/images/size-formats/mixed-truckload.webp",
-  "Truckload (~60 cu yd)": "/images/sizes/truckload.png",
+  "Flatbed (22 pallets)": "/images/size-formats/mixed-truckload.webp",
+  "Truckload (~60 cu yd)": "/images/size-formats/walking-floor-delivery.webp",
   "Bulk Pickup": "/images/categories/sizes/CY of Bulk for pick only.png",
 };
 
@@ -276,11 +280,15 @@ const productMsrpOverrides: Record<number, Record<string, { price: number; price
     Tote: { price: 150 },
     "Truckload (~24 tons)": { price: 720 },
   },
+  1001: {
+    "Truckload (~24 tons)": { price: 4800 },
+  },
   111: {
     "1CF Bag": { price: 10.99 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
+    "Truckload (~60 cu yd)": { price: 1440 },
   },
 };
 
@@ -299,10 +307,10 @@ const categoryLabel = (size: string, productId?: number | string) => {
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
   if (size.includes("Bulk Pickup")) return "Bulk Pickup";
   if (size.includes("Truckload") || size.includes("Bulk")) {
-    if (/pallet/i.test(size)) return size.includes("22") ? "Truckload (22 pallets)" : "Truckload";
-    // V4 light loads ≈ 60 cu yd / 24 tons; dairy walking-floor stays ~24 tons.
-    if (id === 1000) return "Truckload (~24 tons)";
-    return "Truckload (~60 cu yd)";
+    // Flatbed pallet truckload (mixed bags/totes) — keep distinct from loose walking-floor.
+    if (/pallet/i.test(size)) return size.includes("22") ? "Flatbed (22 pallets)" : "Flatbed truckload";
+    // All loose delivery is one standardized 24-ton semi walking-floor load.
+    return "Truckload (24 tons)";
   }
   return size;
 };
@@ -326,18 +334,29 @@ const priceForTier = (productId: number, tier: PriceTier) => {
   };
 };
 
-/** Simon's Gold walking-floor truckload — sell as 1 full load, show $/ton as secondary. */
-const isDairyCompostTruckload = (productId: number, size: string) =>
-  productId === 1000 && /truckload/i.test(size);
+/** Soil amendments sold primarily by ton (compost, castings). */
+const isTonBasisAmendment = (productId: number) => productId === 1000 || productId === 1001;
 
-const dairyCompostTonPrice = (price: number) => Number((price / 24).toFixed(2));
+/** Light materials where 24 tons ≈ 60 cu yd (potting soils, mulch). */
+const isLightVolumeMaterial = (productId: number) =>
+  productId === 111 || productId === 137 || productId === 3000;
 
-const isTruckloadCategoryKey = (key: string) => /truckload/i.test(key);
+/** Loose walking-floor truckload — always one standardized 24-ton semi load. */
+const isLooseFullTruckload = (productId: number, size: string) =>
+  /truckload/i.test(size) &&
+  !/pallet|flatbed/i.test(size) &&
+  (isTonBasisAmendment(productId) || isLightVolumeMaterial(productId));
+
+const looseTruckloadTonPrice = (price: number) => Number((price / 24).toFixed(2));
+
+const isTruckloadCategoryKey = (key: string) => /truckload|flatbed/i.test(key);
 const isBulkPickupCategoryKey = (key: string) => /bulk pickup/i.test(key);
+const isFlatbedTruckloadKey = (key: string) => /flatbed|22 pallets/i.test(key);
 
 /**
- * V4 dual-unit copy for bulk pickup + truckload.
- * Primary sell unit matches the live tier; secondary is the congruent equivalent.
+ * V4 dual-unit copy for bulk pickup + loose truckload.
+ * Loose delivery = 24-ton semi walking-floor standard.
+ * Amendments: ton basis. Light soils/mulch: show ~60 cu yd conversion.
  */
 const BULK_DUAL_UNITS: Record<
   number,
@@ -348,36 +367,37 @@ const BULK_DUAL_UNITS: Record<
     truckloadVolume: string;
   }
 > = {
-  // Live DB: compost/castings bulk pickup sells per ton; V4 also lists cu yd equivalent.
+  // Amendments — priced / sold by the ton.
   1000: {
     pickupPrimaryUnit: "ton",
     pickupSecondary: "$18 / cu yd equivalent",
-    truckloadSecondary: "$30 / ton · ~$12 / cu yd",
-    truckloadVolume: "~24 tons · ~60 cu yd",
+    truckloadSecondary: "$30 / ton",
+    truckloadVolume: "24-ton walking-floor semi",
   },
   1001: {
     pickupPrimaryUnit: "ton",
     pickupSecondary: "$120 / cu yd equivalent",
-    truckloadSecondary: "$200 / ton · ~$80 / cu yd",
-    truckloadVolume: "~24 tons · ~60 cu yd",
+    truckloadSecondary: "$200 / ton",
+    truckloadVolume: "24-ton walking-floor semi",
   },
+  // Light materials — same 24-ton load ≈ 60 cu yd.
   111: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$90 / ton equivalent",
-    truckloadSecondary: "$90 / ton · ~$36 / cu yd",
-    truckloadVolume: "~60 cu yd · ~24 tons",
+    truckloadSecondary: "~60 cu yd · $36 / cu yd",
+    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
   },
   137: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$150 / ton equivalent",
-    truckloadSecondary: "$150 / ton · ~$60 / cu yd",
-    truckloadVolume: "~60 cu yd · ~24 tons",
+    truckloadSecondary: "~60 cu yd · $60 / cu yd",
+    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
   },
   3000: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$60 / ton equivalent",
-    truckloadSecondary: "22 pallets · or ask for loose bulk truckload",
-    truckloadVolume: "22 pallets",
+    truckloadSecondary: "~60 cu yd · $24 / cu yd",
+    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
   },
 };
 
@@ -406,9 +426,8 @@ const imageForChoice = (choice: SizeChoice, fallback: string) => {
   return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
-const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {
-  1001: ["truckload"],
-};
+/** Intentionally empty — Mikey's loose truckload is offered again (V4 $4,800). */
+const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {};
 
 const shouldHidePayPickupTier = (productId: number | string, size: string) => {
   const hiddenTerms = HIDDEN_PAY_PICKUP_TIER_TERMS[normalizeProductId(productId)] ?? [];
@@ -458,28 +477,36 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
     const pricing = priceForTier(product.id, tier);
     const key = categoryLabel(tier.size, product.id);
-    const dairyTruckload = isDairyCompostTruckload(product.id, tier.size);
+    const looseFullTruckload = isLooseFullTruckload(product.id, tier.size);
     const bulkPickup = tier.size.includes("Bulk Pickup");
-    const isTruckload = /truckload/i.test(tier.size) || (tier.size.includes("Bulk") && !bulkPickup);
+    const isTruckload =
+      /truckload|flatbed/i.test(tier.size) ||
+      /truckload|flatbed/i.test(key) ||
+      (tier.size.includes("Bulk") && !bulkPickup);
     const unitFromTier = /ton/i.test(tier.unit) ? "ton" : /cu\s*yd/i.test(tier.unit) ? "cu yd" : null;
     const pickupUnit = unitFromTier ?? dual?.pickupPrimaryUnit ?? "cu yd";
-    // Dairy truckload: charge the full load ($720), show $/ton as secondary — not $30 × qty=1.
+    // Loose full loads: charge the full truck ($720 / $4800 / $1440), show $/ton as secondary.
     const displayPrice = pricing.price;
-    const palletTruckload = isTruckload && /pallet/i.test(tier.size);
-    const tonEquivalent = dairyTruckload ? dairyCompostTonPrice(pricing.price) : null;
+    const palletTruckload = isTruckload && isFlatbedTruckloadKey(key + " " + tier.size);
+    const tonEquivalent = looseFullTruckload ? looseTruckloadTonPrice(pricing.price) : null;
 
     let priceLabel = pricing.priceLabel;
     let secondaryPriceLabel: string | undefined;
-    if (dairyTruckload) {
+    if (looseFullTruckload) {
       priceLabel = pricing.priceLabel;
-      secondaryPriceLabel = `$${tonEquivalent!.toFixed(0)}/ton · ~60 cu yd`;
+      // Amendments: $/ton only. Light materials: ~60 cu yd conversion on the same 24-ton load.
+      secondaryPriceLabel =
+        dual?.truckloadSecondary ??
+        (isTonBasisAmendment(product.id)
+          ? `$${tonEquivalent!.toFixed(0)} / ton`
+          : `~60 cu yd · $${(pricing.price / 60).toFixed(0)} / cu yd`);
     } else if (bulkPickup) {
       priceLabel = `$${displayPrice.toFixed(2)}/${pickupUnit}`;
       secondaryPriceLabel = dual?.pickupSecondary;
+    } else if (palletTruckload) {
+      secondaryPriceLabel = "Bags, totes, or mixed · 22 pallet spots";
     } else if (isTruckload && !palletTruckload) {
       priceLabel = pricing.priceLabel;
-      secondaryPriceLabel = dual?.truckloadSecondary;
-    } else if (palletTruckload) {
       secondaryPriceLabel = dual?.truckloadSecondary;
     }
 
@@ -491,35 +518,46 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       price: displayPrice,
       priceLabel,
       secondaryPriceLabel,
-      image: SIZE_CATEGORY_PHOTO[tier.size] || product.imageUrl || product.texturePhotoUrl || "",
+      image:
+        SIZE_CATEGORY_PHOTO[key] ||
+        SIZE_CATEGORY_PHOTO[tier.size] ||
+        product.imageUrl ||
+        product.texturePhotoUrl ||
+        "",
       choices: [
         {
           ...tier,
           kind: isTruckload || bulkPickup ? "bulk" : "single",
-          displayLabel: dairyTruckload || key.includes("Truckload")
-            ? "Truckload delivery"
+          displayLabel: palletTruckload
+            ? "Flatbed delivery"
+            : looseFullTruckload || key.includes("Truckload")
+            ? "Loose truckload"
             : bulkPickup
             ? `Per ${pickupUnit}`
             : key.includes("Super Sack")
             ? "Super Sack"
             : "Single bag",
-          subLabel: dairyTruckload || key.includes("Truckload")
-            ? dual?.truckloadVolume ?? "~24 tons"
+          subLabel: palletTruckload
+            ? "22 pallet spots"
+            : looseFullTruckload || key.includes("Truckload")
+            ? dual?.truckloadVolume ?? "24-ton walking-floor semi"
             : bulkPickup
             ? dual?.pickupSecondary ?? "Loose bulk, weighed at pickup"
             : key.includes("Super Sack")
               ? product.id === 137 || product.id === 111 || product.id === 3000 ? "2.2 cubic yards" : "about 2,000 lb"
               : bagMetric,
-          cartLabel: dairyTruckload
-            ? "Truckload (~24 tons)"
+          cartLabel: palletTruckload
+            ? "Flatbed (22 pallets)"
+            : looseFullTruckload
+            ? "Truckload (24 tons)"
             : bulkPickup
             ? `Bulk Pickup (${pickupUnit})`
-            : key.includes("Truckload") || key.includes("Super Sack")
+            : key.includes("Truckload") || key.includes("Flatbed") || key.includes("Super Sack")
             ? key
             : singleCartLabelForSize(tier.size, product.id),
           displayPrice,
           secondaryPriceLabel,
-          unit: dairyTruckload
+          unit: looseFullTruckload || palletTruckload
             ? "per truckload"
             : bulkPickup
             ? `per ${pickupUnit}`
@@ -720,6 +758,7 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "nursery mix Arizona",
     ],
     guideImages: [
+      "/images/optimized/plantpal-with-veggies.jpg",
       "/images/optimized/plantpal-new-graphics-2-lifestyle.jpg",
       "/images/optimized/plantpal-bag-context.jpg",
       "/images/optimized/plantpal-bestfor.jpg",
@@ -958,8 +997,10 @@ const ProductDetail = () => {
   const heroImage = galleryItems.find((i) => i.type === "image")?.url ?? null;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [galleryZoom, setGalleryZoom] = useState(1);
   const [isGuideGalleryOpen, setIsGuideGalleryOpen] = useState(false);
   const [activeGuideImageIndex, setActiveGuideImageIndex] = useState(0);
+  const [guideZoom, setGuideZoom] = useState(1);
   const activeGalleryItem = galleryItems[activeGalleryIndex];
   const guideImages = useMemo(
     () => uniqueGuideImages(productDetailContent?.guideImages ?? []),
@@ -967,16 +1008,37 @@ const ProductDetail = () => {
   );
   const activeGuideImage = guideImages[activeGuideImageIndex];
 
+  const GALLERY_ZOOM_STEPS = [1, 1.5, 2.25] as const;
+
+  const stepZoom = useCallback((setter: typeof setGalleryZoom, direction: 1 | -1) => {
+    setter((current) => {
+      const idx = GALLERY_ZOOM_STEPS.findIndex((step) => Math.abs(step - current) < 0.01);
+      const from = idx === -1 ? 0 : idx;
+      return GALLERY_ZOOM_STEPS[Math.min(GALLERY_ZOOM_STEPS.length - 1, Math.max(0, from + direction))];
+    });
+  }, []);
+
+  const resetGalleryZoom = useCallback(() => setGalleryZoom(1), []);
+  const resetGuideZoom = useCallback(() => setGuideZoom(1), []);
+
+  useEffect(() => {
+    resetGalleryZoom();
+  }, [activeGalleryIndex, isGalleryOpen, resetGalleryZoom]);
+
+  useEffect(() => {
+    resetGuideZoom();
+  }, [activeGuideImageIndex, isGuideGalleryOpen, resetGuideZoom]);
+
   const openGalleryAt = useCallback((index: number) => {
     if (!galleryItems.length) return;
     setActiveGalleryIndex(((index % galleryItems.length) + galleryItems.length) % galleryItems.length);
+    resetGalleryZoom();
     requestAnimationFrame(() => setIsGalleryOpen(true));
-  }, [galleryItems.length]);
+  }, [galleryItems.length, resetGalleryZoom]);
 
   const openHeroGallery = useCallback(() => {
     if (!galleryItems.length) return;
-    const isDesktopPointer = window.matchMedia("(min-width: 768px)").matches;
-    if (isDesktopPointer) openGalleryAt(activeGalleryIndex);
+    openGalleryAt(activeGalleryIndex);
   }, [activeGalleryIndex, galleryItems.length, openGalleryAt]);
 
   const goToPrev = useCallback(() => {
@@ -989,11 +1051,20 @@ const ProductDetail = () => {
     setActiveGalleryIndex((p) => (p + 1) % galleryItems.length);
   }, [galleryItems.length]);
 
+  const stepGalleryZoom = useCallback((direction: 1 | -1) => {
+    stepZoom(setGalleryZoom, direction);
+  }, [stepZoom]);
+
+  const toggleGalleryZoom = useCallback(() => {
+    setGalleryZoom((current) => (current > 1 ? 1 : 2.25));
+  }, []);
+
   const openGuideImageAt = useCallback((index: number) => {
     if (!guideImages.length) return;
     setActiveGuideImageIndex(((index % guideImages.length) + guideImages.length) % guideImages.length);
+    resetGuideZoom();
     requestAnimationFrame(() => setIsGuideGalleryOpen(true));
-  }, [guideImages.length]);
+  }, [guideImages.length, resetGuideZoom]);
 
   const goToPrevGuideImage = useCallback(() => {
     if (!guideImages.length) return;
@@ -1004,6 +1075,49 @@ const ProductDetail = () => {
     if (!guideImages.length) return;
     setActiveGuideImageIndex((p) => (p + 1) % guideImages.length);
   }, [guideImages.length]);
+
+  const stepGuideZoom = useCallback((direction: 1 | -1) => {
+    stepZoom(setGuideZoom, direction);
+  }, [stepZoom]);
+
+  const toggleGuideZoom = useCallback(() => {
+    setGuideZoom((current) => (current > 1 ? 1 : 2.25));
+  }, []);
+
+  // Arrow keys navigate the open lightbox (skip while zoomed so pan/scroll stays natural).
+  useEffect(() => {
+    if (!isGalleryOpen && !isGuideGalleryOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (isGalleryOpen && galleryZoom <= 1 && galleryItems.length > 1) {
+        event.preventDefault();
+        if (event.key === "ArrowLeft") goToPrev();
+        else goToNext();
+        return;
+      }
+      if (isGuideGalleryOpen && guideZoom <= 1 && guideImages.length > 1) {
+        event.preventDefault();
+        if (event.key === "ArrowLeft") goToPrevGuideImage();
+        else goToNextGuideImage();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    isGalleryOpen,
+    isGuideGalleryOpen,
+    galleryZoom,
+    guideZoom,
+    galleryItems.length,
+    guideImages.length,
+    goToPrev,
+    goToNext,
+    goToPrevGuideImage,
+    goToNextGuideImage,
+  ]);
+
+  const galleryNavButtonClass =
+    "absolute top-1/2 z-20 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/25 text-white shadow-md ring-1 ring-white/35 backdrop-blur-md transition hover:bg-black/45 active:scale-95 sm:h-14 sm:w-14";
 
   const msrpPreview = useMemo(() => {
     if (!product?.priceTiers.length) return null;
@@ -1444,16 +1558,16 @@ const ProductDetail = () => {
                   <div className="bg-gradient-to-br from-[#f4f7f2] via-white to-[#f8f1e7] p-3 sm:p-4 lg:self-start">
                     <div className="flex flex-col gap-3 lg:flex-row-reverse">
                       <div
-                        className="group relative h-[245px] rounded-xl bg-white sm:h-[390px] md:cursor-pointer lg:h-[460px] lg:flex-1"
+                        className="group relative h-[245px] cursor-pointer rounded-xl bg-white touch-manipulation sm:h-[390px] lg:h-[460px] lg:flex-1"
                         role={galleryItems.length > 0 ? "button" : undefined}
                         tabIndex={galleryItems.length > 0 ? 0 : -1}
                         onClick={openHeroGallery}
-                        onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                        onKeyDown={(e: ReactKeyboardEvent<HTMLDivElement>) => {
                           if (galleryItems.length && (e.key === "Enter" || e.key === " ")) {
                             e.preventDefault(); openGalleryAt(activeGalleryIndex);
                           }
                         }}
-                        aria-label={galleryItems.length > 0 ? "Product media" : undefined}
+                        aria-label={galleryItems.length > 0 ? "Open product gallery" : undefined}
                       >
                         {activeGalleryItem?.type === "image" ? (
                           <OptimizedImage
@@ -2204,6 +2318,36 @@ const ProductDetail = () => {
                   </DialogDescription>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {activeGalleryItem?.type === "image" && (
+                    <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1">
+                      <button
+                        type="button"
+                        onClick={() => stepGalleryZoom(-1)}
+                        disabled={galleryZoom <= 1}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:bg-white/15 disabled:opacity-35"
+                        aria-label="Zoom out"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleGalleryZoom}
+                        className="min-w-[3.25rem] px-1 text-center text-xs font-bold text-white/85"
+                        aria-label={galleryZoom > 1 ? "Reset zoom" : "Zoom in"}
+                      >
+                        {Math.round(galleryZoom * 100)}%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stepGalleryZoom(1)}
+                        disabled={galleryZoom >= 2.25}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:bg-white/15 disabled:opacity-35"
+                        aria-label="Zoom in"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                   <span className="hidden rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 sm:inline-flex">
                     {activeGalleryIndex + 1} of {galleryItems.length}
                   </span>
@@ -2216,40 +2360,82 @@ const ProductDetail = () => {
 
               <div className="flex min-h-0 flex-1 flex-col pb-[env(safe-area-inset-bottom)]">
                 <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 sm:p-5">
-                  <div className="flex h-full max-h-[calc(100svh-166px-env(safe-area-inset-bottom))] min-h-0 w-full items-center justify-center overflow-hidden rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(92vh-190px)] sm:rounded-2xl">
-                    <div key={activeGalleryIndex} className="flex h-full w-full animate-in items-center justify-center fade-in-0 duration-300">
+                  <div
+                    className={cn(
+                      "h-full max-h-[calc(100svh-166px-env(safe-area-inset-bottom))] min-h-0 w-full rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(92vh-190px)] sm:rounded-2xl",
+                      galleryZoom > 1 ? "overflow-auto overscroll-contain" : "overflow-hidden",
+                    )}
+                  >
+                    <div
+                      key={activeGalleryIndex}
+                      className={cn(
+                        "flex min-h-full min-w-full animate-in items-center justify-center fade-in-0 duration-300",
+                        galleryZoom > 1 ? "p-0" : "h-full w-full",
+                      )}
+                    >
                       {activeGalleryItem?.type === "video" ? (
                         <div className="flex h-full w-full items-center justify-center">
                           <YouTubePlayer videoId={activeGalleryItem.videoId} title={product?.displayTitle ?? "Video"} className="w-full" autoPlay muted={false} />
                         </div>
                       ) : activeGalleryItem?.type === "image" ? (
-                        <OptimizedImage
-                          src={activeGalleryItem.url}
-                          alt={product?.displayTitle ?? "Product"}
-                          className="h-full max-h-full w-full max-w-full object-contain p-3 sm:p-4"
-                        />
+                        <button
+                          type="button"
+                          onClick={toggleGalleryZoom}
+                          className={cn(
+                            "block touch-manipulation focus:outline-none",
+                            galleryZoom > 1 ? "cursor-zoom-out" : "h-full w-full cursor-zoom-in",
+                          )}
+                          aria-label={galleryZoom > 1 ? "Zoom out image" : "Zoom in image"}
+                        >
+                          <OptimizedImage
+                            src={activeGalleryItem.url}
+                            alt={product?.displayTitle ?? "Product"}
+                            width={1600}
+                            q={85}
+                            className={cn(
+                              "max-w-none object-contain transition-transform duration-200",
+                              galleryZoom > 1
+                                ? "p-0"
+                                : "h-full max-h-full w-full max-w-full p-3 sm:p-4",
+                            )}
+                            style={
+                              galleryZoom > 1
+                                ? {
+                                    width: `${galleryZoom * 100}%`,
+                                    maxWidth: "none",
+                                    height: "auto",
+                                  }
+                                : undefined
+                            }
+                          />
+                        </button>
                       ) : null}
                     </div>
                   </div>
-                  {galleryItems.length > 1 && (
+                  {galleryItems.length > 1 && galleryZoom <= 1 && (
                     <>
                       <button
                         type="button"
-                        className="absolute left-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:left-7 sm:h-14 sm:w-14"
+                        className={cn(galleryNavButtonClass, "left-2 sm:left-5")}
                         onClick={goToPrev}
-                        aria-label="Previous"
+                        aria-label="Previous photo"
                       >
-                        <ChevronLeft className="h-6 w-6" />
+                        <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
                       </button>
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:right-7 sm:h-14 sm:w-14"
+                        className={cn(galleryNavButtonClass, "right-2 sm:right-5")}
                         onClick={goToNext}
-                        aria-label="Next"
+                        aria-label="Next photo"
                       >
-                        <ChevronRight className="h-6 w-6" />
+                        <ChevronRight className="h-7 w-7" strokeWidth={2.25} />
                       </button>
                     </>
+                  )}
+                  {activeGalleryItem?.type === "image" && galleryZoom <= 1 && (
+                    <p className="pointer-events-none absolute bottom-5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/35 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm sm:hidden">
+                      Tap photo to zoom
+                    </p>
                   )}
                 </div>
 
@@ -2329,6 +2515,34 @@ const ProductDetail = () => {
                   </DialogDescription>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1">
+                    <button
+                      type="button"
+                      onClick={() => stepGuideZoom(-1)}
+                      disabled={guideZoom <= 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:bg-white/15 disabled:opacity-35"
+                      aria-label="Zoom out"
+                    >
+                      <ZoomOut className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleGuideZoom}
+                      className="min-w-[3.25rem] px-1 text-center text-xs font-bold text-white/85"
+                      aria-label={guideZoom > 1 ? "Reset zoom" : "Zoom in"}
+                    >
+                      {Math.round(guideZoom * 100)}%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => stepGuideZoom(1)}
+                      disabled={guideZoom >= 2.25}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white transition hover:bg-white/15 disabled:opacity-35"
+                      aria-label="Zoom in"
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </button>
+                  </div>
                   <span className="hidden rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 sm:inline-flex">
                     {activeGuideImageIndex + 1} of {guideImages.length}
                   </span>
@@ -2340,34 +2554,69 @@ const ProductDetail = () => {
               </div>
 
               <div className="relative flex min-h-0 flex-1 bg-[#071b2b] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:max-h-[calc(88vh-70px)] sm:p-5">
-                <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(88vh-110px)] sm:rounded-2xl">
-                  <div key={activeGuideImageIndex} className="flex h-full w-full animate-in items-center justify-center fade-in-0 duration-300">
-                    <OptimizedImage
-                      src={activeGuideImage}
-                      alt={`${product?.displayTitle ?? "Product"} guide ${activeGuideImageIndex + 1}`}
-                      className="h-full max-h-[calc(100svh-86px)] w-full max-w-full object-contain p-2 sm:max-h-[calc(88vh-112px)] sm:p-4"
-                      width={1200}
-                      q={82}
-                    />
+                <div
+                  className={cn(
+                    "h-full min-h-0 w-full rounded-xl bg-white shadow-2xl shadow-black/25 sm:max-h-[calc(88vh-110px)] sm:rounded-2xl",
+                    guideZoom > 1 ? "overflow-auto overscroll-contain" : "overflow-hidden",
+                  )}
+                >
+                  <div
+                    key={activeGuideImageIndex}
+                    className={cn(
+                      "flex min-h-full min-w-full animate-in items-center justify-center fade-in-0 duration-300",
+                      guideZoom > 1 ? "p-0" : "h-full w-full",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={toggleGuideZoom}
+                      className={cn(
+                        "block touch-manipulation focus:outline-none",
+                        guideZoom > 1 ? "cursor-zoom-out" : "h-full w-full cursor-zoom-in",
+                      )}
+                      aria-label={guideZoom > 1 ? "Zoom out image" : "Zoom in image"}
+                    >
+                      <OptimizedImage
+                        src={activeGuideImage}
+                        alt={`${product?.displayTitle ?? "Product"} guide ${activeGuideImageIndex + 1}`}
+                        className={cn(
+                          "max-w-none object-contain transition-transform duration-200",
+                          guideZoom > 1
+                            ? "p-0"
+                            : "h-full max-h-[calc(100svh-86px)] w-full max-w-full p-2 sm:max-h-[calc(88vh-112px)] sm:p-4",
+                        )}
+                        style={
+                          guideZoom > 1
+                            ? {
+                                width: `${guideZoom * 100}%`,
+                                maxWidth: "none",
+                                height: "auto",
+                              }
+                            : undefined
+                        }
+                        width={1200}
+                        q={82}
+                      />
+                    </button>
                   </div>
                 </div>
-                {guideImages.length > 1 && (
+                {guideImages.length > 1 && guideZoom <= 1 && (
                   <>
                     <button
                       type="button"
-                      className="absolute left-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:left-7 sm:h-14 sm:w-14"
+                      className={cn(galleryNavButtonClass, "left-2 sm:left-5")}
                       onClick={goToPrevGuideImage}
                       aria-label="Previous guide image"
                     >
-                      <ChevronLeft className="h-6 w-6" />
+                      <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
                     </button>
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#061827]/85 text-white shadow-lg ring-1 ring-white/20 backdrop-blur transition hover:bg-[#061827] sm:right-7 sm:h-14 sm:w-14"
+                      className={cn(galleryNavButtonClass, "right-2 sm:right-5")}
                       onClick={goToNextGuideImage}
                       aria-label="Next guide image"
                     >
-                      <ChevronRight className="h-6 w-6" />
+                      <ChevronRight className="h-7 w-7" strokeWidth={2.25} />
                     </button>
                   </>
                 )}
