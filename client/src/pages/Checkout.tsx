@@ -191,7 +191,7 @@ const Checkout: React.FC = () => {
 
   const [fulfillment, setFulfillment] = useState<Fulfillment>(checkoutBoot.fulfillment);
   const [fulfillmentSeeded] = useState(checkoutBoot.seeded);
-  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("congress");
+  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("phoenix");
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
     [pickupSiteId],
@@ -555,6 +555,7 @@ const Checkout: React.FC = () => {
           freeOrder: data.free === true,
           pickupTime: fulfillment === "pickup" ? pickupReady?.readyAt : null,
           pickupReadyLabel: fulfillment === "pickup" ? pickupReady?.readyLabel : null,
+          pickupSiteId: fulfillment === "pickup" ? pickupSiteId : null,
           fulfillment,
           deliveryZip: fulfillment === "delivery" ? deliveryAddress.zip : null,
           deliveryDate: fulfillment === "delivery" ? deliveryFrom || null : null,
@@ -1481,30 +1482,30 @@ const Checkout: React.FC = () => {
                           className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm"
                         >
                           <div className="flex items-stretch gap-2">
-                            <div className="flex shrink-0 gap-1">
+                            <div className="flex shrink-0 gap-1.5">
                               {imageUrl ? (
-                                <div className="relative h-[4.25rem] w-[4.25rem] overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
+                                <div className="relative h-24 w-24 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200">
                                   <OptimizedImage
                                     src={imageUrl}
                                     alt={item.productName}
-                                    className="h-full w-full object-contain bg-white p-0.5"
-                                    width={120}
-                                    q={60}
+                                    className="h-full w-full object-contain bg-white p-1"
+                                    width={180}
+                                    q={65}
                                   />
                                 </div>
                               ) : (
-                                <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-lg bg-stone-100 text-stone-400">
-                                  <Package className="h-6 w-6" />
+                                <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-stone-100 text-stone-400">
+                                  <Package className="h-8 w-8" />
                                 </div>
                               )}
                               {sizeThumb ? (
-                                <div className="relative h-[4.25rem] w-[3.25rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
+                                <div className="relative h-24 w-[4.5rem] overflow-hidden rounded-lg bg-[#eef4eb] ring-1 ring-[#264027]/20">
                                   <OptimizedImage
                                     src={sizeThumb}
                                     alt={item.format}
                                     className="h-full w-full object-cover"
-                                    width={100}
-                                    q={65}
+                                    width={140}
+                                    q={70}
                                   />
                                 </div>
                               ) : null}

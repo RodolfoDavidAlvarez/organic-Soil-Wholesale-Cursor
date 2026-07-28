@@ -21,17 +21,17 @@ import {
   PHOENIX_YARD_DIRECTIONS_URL,
 } from "@/config/contact";
 import { absoluteUrl, buildLocalBusinessSchema, buildProductsItemListSchema } from "@/config/seo";
-import { getPayPickupProductContent } from "@/data/payPickupProductContent";
+import { getPayPickupProductContent, getPayPickupProductType } from "@/data/payPickupProductContent";
 import { cn } from "@/lib/utils";
 import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 const PICKUP_PRODUCTS = [
   {
-    id: 1000,
-    anchor: "compost",
-    intent: "Compost",
-    searchIntent: "compost near me",
-    image: "/images/optimized/simons-gold-bag-context.jpg",
+    id: 111,
+    anchor: "potting-soil",
+    intent: "Potting soil",
+    searchIntent: "garden soil pickup",
+    image: "/images/optimized/plantpal-with-veggies.jpg",
   },
   {
     id: 1001,
@@ -41,11 +41,11 @@ const PICKUP_PRODUCTS = [
     image: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   },
   {
-    id: 111,
-    anchor: "potting-soil",
-    intent: "Potting soil",
-    searchIntent: "garden soil pickup",
-    image: "/images/optimized/plantpal-with-veggies.jpg",
+    id: 1000,
+    anchor: "compost",
+    intent: "Compost",
+    searchIntent: "compost near me",
+    image: "/images/optimized/simons-gold-bag-context.jpg",
   },
   {
     id: 3000,
@@ -123,7 +123,10 @@ const normalizeProducts = (records: ApiProduct[]): PickupProduct[] => {
       id: record.id,
       name: record.name,
       slug: record.slug ?? String(record.id),
-      productType: record.productType ?? record.product_type ?? record.name,
+      productType: getPayPickupProductType(
+        record.id,
+        record.productType ?? record.product_type ?? record.name,
+      ),
       image: slot.image,
       sizes,
       anchor: slot.anchor,

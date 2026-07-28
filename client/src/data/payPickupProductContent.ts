@@ -8,6 +8,8 @@ export interface IngredientDetail {
 }
 
 export interface PayPickupProductContent {
+  /** Customer-facing product type label (overrides API productType when set) */
+  displayType?: string;
   description: string;
   /** Ingredients / components — rendered under an "Includes" label */
   includes: string[];
@@ -40,8 +42,9 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "bulk pickup (per ton)"],
   },
   111: {
+    displayType: "All-Stage Potting Mix",
     description:
-      "All-stage nursery potting mix for seed starts, propagation, containers, and patio planters.",
+      "All-stage potting mix for seed starts, propagation, containers, and patio planters.",
     includes: [
       "Dairy compost",
       "Worm castings",
@@ -76,7 +79,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
         text: "Balanced organic N-P-K for steady all-stage feeding.",
       },
     ],
-    benefits: ["All-stage nursery mix", "Balanced organic nutrition", "Ready out of the bag"],
+    benefits: ["All-stage potting mix", "Balanced organic nutrition", "Ready out of the bag"],
     startingPriceContext: "for a 1.5 cu ft bag (~50 lb)",
     sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~60 cu yd)"],
     specSheetUrl: "/documents/specsheets/PlantPal-All-Stage-Nursery-Mix-Spec-Sheet.pdf",
@@ -102,3 +105,6 @@ export const getPayPickupProductContent = (productId?: number): PayPickupProduct
 
 export const getPayPickupProductDescription = (productId?: number, fallback = ""): string =>
   getPayPickupProductContent(productId)?.description ?? fallback;
+
+export const getPayPickupProductType = (productId?: number, fallback?: string): string | undefined =>
+  getPayPickupProductContent(productId)?.displayType ?? fallback;

@@ -8,10 +8,9 @@ import {
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_TEL,
   PHOENIX_YARD_ADDRESS,
-  PHOENIX_YARD_DIRECTIONS_URL,
 } from '@/config/contact';
 import { type EcommerceItem, trackEcommerceEvent, trackPhoneClick } from '@/lib/analytics';
-import { HOURS_LABEL } from '@shared/pickupSchedule.js';
+import { HOURS_LABEL, PICKUP_LOCATIONS } from '@shared/pickupSchedule.js';
 
 interface OrderDetails {
   orderId: string;
@@ -21,6 +20,8 @@ interface OrderDetails {
   pickupReadyLabel?: string | null;
   /** 'pickup' | 'delivery' (older orders may not have this) */
   fulfillment?: 'pickup' | 'delivery';
+  /** Which yard the customer selected for pickup — 'phoenix' | 'congress'. */
+  pickupSiteId?: string | null;
   deliveryZip?: string | null;
   orderItems?: EcommerceItem[];
   value?: number;
@@ -29,6 +30,13 @@ interface OrderDetails {
   paymentConfirmed?: boolean;
   freeOrder?: boolean;
 }
+
+const DEFAULT_PICKUP_SITE_ID = 'phoenix';
+const resolvePickupSite = (siteId?: string | null, locationId?: number | null) =>
+  PICKUP_LOCATIONS.find((loc: any) => loc.id === siteId) ||
+  PICKUP_LOCATIONS.find((loc: any) => loc.locationId === locationId) ||
+  PICKUP_LOCATIONS.find((loc: any) => loc.id === DEFAULT_PICKUP_SITE_ID) ||
+  PICKUP_LOCATIONS[0];
 
 const PHOENIX_YARD_PHONE_DISPLAY = CUSTOMER_SUPPORT_PHONE_DISPLAY;
 const PHOENIX_YARD_PHONE_TEL = CUSTOMER_SUPPORT_PHONE_TEL;
@@ -73,11 +81,16 @@ const OrderConfirmation: React.FC = () => {
           }))
         : fallback.orderItems;
 
+      const confirmedSite = order?.location_id
+        ? resolvePickupSite(null, Number(order.location_id))
+        : null;
+
       return {
         ...fallback,
         orderId: String(order?.id || fallback.orderId),
         confirmationCode: order?.confirmation_code || fallback.confirmationCode,
         fulfillment: order?.fulfillment_type || fallback.fulfillment,
+        pickupSiteId: confirmedSite?.id || fallback.pickupSiteId,
         deliveryZip: order?.delivery_zip || fallback.deliveryZip,
         value: Number(payload?.value ?? order?.total_amount ?? fallback.value ?? 0),
         orderItems,
@@ -153,6 +166,7 @@ const OrderConfirmation: React.FC = () => {
   }
 
   const isDelivery = orderDetails.fulfillment === 'delivery';
+  const pickupSite = resolvePickupSite(orderDetails.pickupSiteId);
 
   const formatPickupTime = (isoString?: string | null) => {
     if (!isoString) return null;
@@ -266,7 +280,7 @@ const OrderConfirmation: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Step n={1} title="Drive to the Phoenix yard" body={PHOENIX_YARD_ADDRESS} />
+                <Step n={1} title={`Drive to the ${pickupSite.name}`} body={pickupSite.addressLine} />
                 <Step n={2} title="Pull into the yard" body="Look for the loading area." />
                 <Step
                   n={3}
@@ -298,7 +312,7 @@ const OrderConfirmation: React.FC = () => {
               size="lg"
               variant="outline"
               className="w-full min-h-[48px]"
-              onClick={() => { window.open(PHOENIX_YARD_DIRECTIONS_URL, '_blank'); }}
+              onClick={() => { window.open(pickupSite.directionsUrl, '_blank'); }}
             >
               <MapPin className="w-5 h-5 mr-2" />
               Get Directions
@@ -320,7 +334,7 @@ const OrderConfirmation: React.FC = () => {
         <div className="mt-8 bg-stone-100 rounded-lg p-4">
           <h3 className="font-medium text-stone-900 mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            Phoenix yard hours
+            {isDelivery ? 'Yard hours' : `${pickupSite.name} hours`}
           </h3>
           <div className="text-sm text-stone-700 space-y-1">
             <p>{HOURS_LABEL}</p>

@@ -29,7 +29,7 @@ const Wholesale = () => {
     "Turf Daddy Blend (9lb, 144/pallet)",
     "Turf Daddy Blend (1CF, 50/pallet)",
     "Soil Craft Garden Blend (1CF, 50/pallet)",
-    "PlantPal Nursery Mix (1CF, 50/pallet)",
+    "PlantPal Potting Mix (1CF, 50/pallet)",
     "Nature's Blanket Mulch (2CF, 25/pallet)",
     "Nature's Blanket Premium (2CF, 25/pallet)",
     "Amazonian Dark Earth (9lb, 144/pallet)",
@@ -95,7 +95,7 @@ const Wholesale = () => {
       columns: ["MSRP", "Distributor", "Pallet (50)", "Tote (2.2 CY)", "Truckload (22)"],
       products: [
         { name: "Soil Craft Garden & Planter Blend", desc: "Organic Potting Soil", popular: true, cols: ["$15.99", "$8.00", "$399.75", "$359.78", "$7,123.55"] },
-        { name: "PlantPal", desc: "All-Stage Nursery Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
+        { name: "PlantPal", desc: "All-Stage Potting Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
         { name: "PropaGrow", desc: "Root Boosting Propagation Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
         { name: "PlugBoost", desc: "Seed Starter Mix", cols: ["$10.99", "$5.50", "$274.75", "$247.28", "$4,896.05"] },
       ],

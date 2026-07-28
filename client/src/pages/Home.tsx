@@ -281,7 +281,7 @@ const Home = () => {
                 Arizona-made soil
               </p>
               <h2 className="font-heading text-2xl font-bold leading-tight text-stone-900 md:text-3xl">
-                Built in real yards for real projects.
+                Built in Arizona yards for working projects.
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-stone-600 md:text-base">
                 From Phoenix pickup to farm and orchard deliveries, our products are made, loaded, and used here in Arizona.

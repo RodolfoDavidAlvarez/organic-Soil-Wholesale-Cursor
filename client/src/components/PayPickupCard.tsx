@@ -155,6 +155,12 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
     </div>
   );
 
+  const descriptionPreview = (
+    <p className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-stone-600 md:mt-3 md:line-clamp-none md:text-sm md:leading-relaxed">
+      {description}
+    </p>
+  );
+
   return (
     <div
       role="link"
@@ -166,9 +172,9 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
         className
       )}
     >
-      {/* Mobile: image + title side-by-side. Desktop: image column. */}
+      {/* Mobile: bigger image + title/description beside it. Desktop: image column. */}
       <div className="flex gap-3 md:w-[44%] md:shrink-0 md:flex-col">
-        <div className="relative h-[7.5rem] w-[36%] shrink-0 overflow-hidden rounded-xl bg-stone-50 sm:h-[8.5rem] md:h-auto md:min-h-[260px] md:w-full md:flex-1">
+        <div className="relative aspect-square w-[48%] shrink-0 overflow-hidden rounded-xl bg-stone-50 sm:w-[46%] md:aspect-auto md:h-auto md:min-h-[260px] md:w-full md:flex-1">
           <button
             type="button"
             onClick={(event) => {
@@ -182,7 +188,7 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
               <OptimizedImage
                 src={heroImage}
                 alt={product.name}
-                className="absolute inset-0 h-full w-full object-contain bg-white p-1 scale-[1.2] transition-transform duration-300 group-hover/photo:scale-[1.28]"
+                className="absolute inset-0 h-full w-full object-contain bg-white p-1 scale-[1.15] transition-transform duration-300 group-hover/photo:scale-[1.22] md:scale-[1.2] md:group-hover/photo:scale-[1.28]"
                 priority={priority}
                 width={520}
                 q={66}
@@ -197,7 +203,7 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
           </div>
 
           {textureImage && (
-            <div className="absolute bottom-2 left-2 hidden h-[72px] w-[72px] overflow-hidden rounded-xl border-2 border-white bg-white shadow-md ring-1 ring-stone-300/60 sm:block sm:h-[84px] sm:w-[84px]">
+            <div className="absolute bottom-2 left-2 hidden h-[72px] w-[72px] overflow-hidden rounded-xl border-2 border-white bg-white shadow-md ring-1 ring-stone-300/60 sm:block sm:h-[84px] sm:w-[84px] md:block">
               <OptimizedImage
                 src={textureImage}
                 alt={`${product.name} texture`}
@@ -209,19 +215,22 @@ export function PayPickupCard({ product, heroImageOverride, backdropImageOverrid
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center md:hidden">{identity}</div>
+        {/* Mobile only: name + short description preview beside the image */}
+        <div className="flex min-w-0 flex-1 flex-col justify-center md:hidden">
+          {identity}
+          {descriptionPreview}
+        </div>
       </div>
 
-      {/* Full-width on mobile so description stays readable; content column on desktop */}
+      {/* Content column — description only shown here on desktop */}
       <div className="flex min-w-0 flex-1 flex-col md:pt-1">
-        <div className="hidden md:block">{identity}</div>
-
-        <p className="mt-0 line-clamp-2 text-[13px] leading-snug text-stone-600 md:mt-3 md:line-clamp-none md:text-sm md:leading-relaxed">
-          {description}
-        </p>
+        <div className="hidden md:block">
+          {identity}
+          {descriptionPreview}
+        </div>
 
         {cardContent && cardContent.includes.length > 0 && (
-          <div className="mt-2 md:mt-3">
+          <div className="mt-0.5 md:mt-3">
             <PayPickupProductFacts
               includes={cardContent.includes}
               benefits={cardContent.benefits}

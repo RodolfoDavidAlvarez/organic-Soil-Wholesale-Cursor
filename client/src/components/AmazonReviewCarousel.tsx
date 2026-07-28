@@ -204,87 +204,78 @@ function CarouselDots({
   );
 }
 
-function ReviewCarouselRow({
+/** Continuous marquee — cards stay on screen and keep scrolling; no snap/jump. */
+function ReviewMarqueeRow({
   reviews,
   mode,
   showProductTag,
-  delay,
-  itemClass,
+  durationSec,
+  cardClass,
   direction = "ltr",
 }: {
   reviews: AmazonReview[];
   mode: "photo" | "quote";
   showProductTag: boolean;
-  delay: number;
-  itemClass: string;
+  durationSec: number;
+  cardClass: string;
   direction?: "ltr" | "rtl";
 }) {
-  const [api, setApi] = useState<CarouselApi>();
-  const [selected, setSelected] = useState(0);
-  const [snapCount, setSnapCount] = useState(0);
-  const autoplay = useRef(
-    Autoplay({
-      delay,
-      stopOnInteraction: false,
-      stopOnMouseEnter: true,
-    }),
-  );
-
-  const onSelect = useCallback((embla: CarouselApi) => {
-    if (!embla) return;
-    setSelected(embla.selectedScrollSnap());
-    setSnapCount(embla.scrollSnapList().length);
-  }, []);
-
-  useEffect(() => {
-    if (!api) return;
-    onSelect(api);
-    api.on("reInit", onSelect);
-    api.on("select", onSelect);
-    return () => {
-      api.off("reInit", onSelect);
-      api.off("select", onSelect);
-    };
-  }, [api, onSelect]);
-
   if (reviews.length === 0) return null;
 
+  // Always two identical halves so translateX(-50%) loops seamlessly.
+  const loop = [...reviews, ...reviews];
+
   return (
-    <div>
-      <Carousel
-        setApi={setApi}
-        opts={{
-          align: "start",
-          loop: reviews.length > 1,
-          containScroll: "trimSnaps",
-          direction,
-        }}
-        plugins={reviews.length > 1 ? [autoplay.current] : []}
-        className="w-full"
+    <div className="relative -mx-4 overflow-hidden sm:mx-0">
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#eef3eb] via-[#eef3eb]/90 to-transparent sm:w-14" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#ffffff] via-[#ffffff]/90 to-transparent sm:w-14" />
+      <div
+        className={cn(
+          "review-marquee flex w-max gap-3 py-1 sm:gap-4",
+          direction === "rtl" && "review-marquee--rtl",
+        )}
+        style={{ animationDuration: `${durationSec}s` }}
       >
-        <CarouselContent className="-ml-3 md:-ml-4">
-          {reviews.map((review) => (
-            <CarouselItem key={review.id} className={cn("pl-3 md:pl-4", itemClass)}>
-              {mode === "photo" ? (
-                <PhotoReviewCard review={review} />
-              ) : (
-                <QuoteReviewCard review={review} showProductTag={showProductTag} />
-              )}
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        {reviews.length > 1 ? (
-          <>
-            <CarouselPrevious className="left-1 top-[42%] hidden h-9 w-9 border-[#264027]/15 bg-white/95 text-[#264027] shadow-md hover:bg-white sm:inline-flex md:left-2" />
-            <CarouselNext className="right-1 top-[42%] hidden h-9 w-9 border-[#264027]/15 bg-white/95 text-[#264027] shadow-md hover:bg-white sm:inline-flex md:right-2" />
-          </>
-        ) : null}
-      </Carousel>
-      <CarouselDots
-        count={snapCount}
-        selected={selected}
-        onSelect={(index) => api?.scrollTo(index)}
-      />
+        {loop.map((review, i) => (
+          <div
+            key={`${review.id}-${i}`}
+            className={cn("shrink-0", cardClass)}
+            aria-hidden={i >= reviews.length}
+          >
+            {mode === "photo" ? (
+              <PhotoReviewCard review={review} />
+            ) : (
+              <QuoteReviewCard review={review} showProductTag={showProductTag} />
+            )}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        .review-marquee {
+          animation-name: amazon-review-marquee;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        .review-marquee--rtl {
+          animation-direction: reverse;
+        }
+        .review-marquee:hover {
+          animation-play-state: paused;
+        }
+        @keyframes amazon-review-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .review-marquee {
+            animation: none !important;
+            flex-wrap: wrap;
+            width: 100% !important;
+            max-width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -297,7 +288,7 @@ function FieldPhotoStrip() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b38a58]">
           In the field
         </p>
-        <p className="text-sm font-semibold text-[#264027]">Arizona jobs · real soil in the ground</p>
+        <p className="text-sm font-semibold text-[#264027]">Arizona jobs · soil in the ground</p>
       </div>
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#eef3eb] via-[#eef3eb]/85 to-transparent sm:w-20" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#e4ebe0] via-[#e4ebe0]/85 to-transparent sm:w-20" />
@@ -521,7 +512,7 @@ export default function AmazonReviewCarousel({
             <span className="h-px w-8 bg-[#b38a58]/45" />
           </div>
           <h2 className="font-heading text-3xl font-bold tracking-tight text-[#1c2e1d] md:text-4xl">
-            Real reviews. Real results.
+            Reviews from people who used it.
           </h2>
           <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-stone-600 md:text-[15px]">
             Stars, names, and photos from Amazon buyers — plus Arizona crews putting soil in the ground.
@@ -543,13 +534,7 @@ export default function AmazonReviewCarousel({
         </motion.div>
 
         {photoReviews.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.45, delay: 0.05 }}
-            className="mb-9 md:mb-11"
-          >
+          <div className="mb-9 md:mb-11">
             <div className="mb-4 flex items-end justify-between gap-3 px-0.5">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b38a58]">
@@ -563,23 +548,18 @@ export default function AmazonReviewCarousel({
                 {photoReviews.length} photo reviews
               </p>
             </div>
-            <ReviewCarouselRow
+            <ReviewMarqueeRow
               reviews={photoReviews}
               mode="photo"
               showProductTag
-              delay={5200}
-              itemClass="basis-[86%] sm:basis-[56%] md:basis-[42%] lg:basis-[33%]"
+              durationSec={48}
+              cardClass="w-[16.5rem] sm:w-[18.5rem] md:w-[20rem]"
             />
-          </motion.div>
+          </div>
         ) : null}
 
         {quoteReviews.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.45, delay: 0.08 }}
-          >
+          <div>
             <div className="mb-4 flex items-end justify-between gap-3 px-0.5">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b38a58]">
@@ -593,16 +573,15 @@ export default function AmazonReviewCarousel({
                 {quoteReviews.length} quotes
               </p>
             </div>
-            <ReviewCarouselRow
+            <ReviewMarqueeRow
               reviews={quoteReviews}
               mode="quote"
               showProductTag
-              delay={4000}
+              durationSec={56}
               direction="rtl"
-              itemClass="basis-[80%] sm:basis-[50%] md:basis-[36%] lg:basis-[30%]"
+              cardClass="w-[15.5rem] sm:w-[17.5rem] md:w-[18.5rem]"
             />
-            <p className="mt-1 text-center text-[11px] text-stone-500 sm:hidden">Swipe for more</p>
-          </motion.div>
+          </div>
         ) : null}
 
         <FieldPhotoStrip />

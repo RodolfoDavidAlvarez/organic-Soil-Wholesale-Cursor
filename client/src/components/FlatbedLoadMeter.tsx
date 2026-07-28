@@ -103,14 +103,14 @@ export function FlatbedLoadMeter({
         <div
           className={cn(
             "shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200/80",
-            compact ? "h-14 w-14" : "h-16 w-20",
+            compact ? "h-20 w-20" : "h-24 w-28",
           )}
         >
           <OptimizedImage
             src={MIXED_FLATBED_IMAGE}
             alt="Mixed flatbed truckload with pallets and totes"
             className="h-full w-full object-cover"
-            width={160}
+            width={220}
             q={65}
           />
         </div>

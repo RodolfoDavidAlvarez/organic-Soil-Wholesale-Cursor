@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PayPickupCard, type PayPickupProduct } from "@/components/PayPickupCard";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY } from "@/config/contact";
+import { getPayPickupProductType } from "@/data/payPickupProductContent";
 
 /** MOS product ids for the 4 mains. Mirrors myorganicsoil.com lib/products.ts. */
-const MAIN_PRODUCT_IDS = [1000, 1001, 111, 3000] as const;
+const MAIN_PRODUCT_IDS = [111, 1001, 1000, 3000] as const;
 
 /** Graphic 3 / bag-in-context heroes — bag with soil & produce, white background. */
 const HERO_OVERRIDES: Record<number, string> = {
@@ -63,7 +64,10 @@ function normalize(record: ApiProduct): PayPickupProduct | null {
     id: record.id,
     name: record.name,
     slug: record.slug ?? undefined,
-    productType: (record.productType ?? record.product_type ?? record.name) as string,
+    productType: getPayPickupProductType(
+      record.id,
+      (record.productType ?? record.product_type ?? record.name) as string,
+    ),
     imageUrl: record.imageUrl ?? record.image_url ?? undefined,
     texturePhotoUrl: record.texturePhotoUrl ?? record.texture_photo_url ?? undefined,
     sizes: sizes.map((s) => ({

@@ -12,9 +12,9 @@ import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/co
 
 const MENU_PRODUCTS = [
   {
-    name: "Simon's Gold",
-    type: "Dairy Compost",
-    path: "/products/simons-gold",
+    name: "PlantPal",
+    type: "All-Stage Potting Mix",
+    path: "/products/plantpal",
   },
   {
     name: "Mikey's Worm Poop",
@@ -22,9 +22,9 @@ const MENU_PRODUCTS = [
     path: "/products/mikeys-worm-poop",
   },
   {
-    name: "PlantPal",
-    type: "All-Stage Nursery Mix",
-    path: "/products/plantpal",
+    name: "Simon's Gold",
+    type: "Dairy Compost",
+    path: "/products/simons-gold",
   },
   {
     name: "Nature's Blanket Premium",

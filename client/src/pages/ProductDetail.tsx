@@ -22,7 +22,7 @@ import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import TrustStrip from "@/components/TrustStrip";
 import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
@@ -491,20 +491,20 @@ const BULK_DUAL_UNITS: Record<
   111: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$90 / ton equivalent",
-    truckloadSecondary: "~60 cu yd · $36 / cu yd",
-    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
+    truckloadSecondary: "Est. 60 cu yd per truckload · $36/cu yd",
+    truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
   137: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$150 / ton equivalent",
-    truckloadSecondary: "~60 cu yd · $60 / cu yd",
-    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
+    truckloadSecondary: "Est. 60 cu yd per truckload · $60/cu yd",
+    truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
   3000: {
     pickupPrimaryUnit: "cu yd",
     pickupSecondary: "$60 / ton equivalent",
-    truckloadSecondary: "~60 cu yd · $24 / cu yd",
-    truckloadVolume: "24-ton walking-floor semi · ~60 cu yd",
+    truckloadSecondary: "Est. 60 cu yd per truckload · $24/cu yd",
+    truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
 };
 
@@ -617,7 +617,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
         dual?.truckloadSecondary ??
         (isTonBasisAmendment(product.id)
           ? `$${tonEquivalent!.toFixed(0)} / ton`
-          : `~60 cu yd · $${(pricing.price / 60).toFixed(0)} / cu yd`);
+          : `Est. 60 cu yd per truckload · $${(pricing.price / 60).toFixed(0)}/cu yd`);
     } else if (bulkPickup) {
       priceLabel = `$${displayPrice.toFixed(2)}/${pickupUnit}`;
       secondaryPriceLabel = dual?.pickupSecondary;
@@ -864,16 +864,16 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "Patio planters",
       "Vegetables and herbs",
     ],
-    note: "Built for nurseries and container growers who need a balanced all-stage mix with strong root development.",
+    note: "Built for container growers who need a balanced all-stage potting mix with strong root development.",
     seoKeywords: [
-      "nursery potting mix",
+      "all stage potting mix",
       "all stage potting soil",
       "PlantPal",
       "container gardening soil",
       "seed starter mix",
       "propagation soil",
       "organic potting mix Phoenix",
-      "nursery mix Arizona",
+      "potting mix Arizona",
     ],
     guideImages: [
       "/images/optimized/plantpal-with-veggies.jpg",
@@ -1022,7 +1022,10 @@ const normalizeProduct = (record: ApiProduct): Product => {
     name: record.name ?? "Product",
     displayTitle: record.displayTitle ?? record.display_title ?? record.name ?? "Product",
     category: record.category ?? "Soil amendment",
-    productType: record.productType ?? record.product_type ?? undefined,
+    productType: getPayPickupProductType(
+      record.id,
+      record.productType ?? record.product_type ?? undefined,
+    ),
     description: record.description ?? "",
     marketingNote: record.marketingNote ?? record.marketing_note ?? undefined,
     usage: record.usage ?? undefined,
@@ -2398,52 +2401,44 @@ const ProductDetail = () => {
                                 />
                               </div>
                               {canPayOnline && (
-                                <div className="flex gap-2.5">
-                                  <button
-                                    type="button"
-                                    disabled={!selectedChoice}
-                                    onClick={() =>
-                                      addSelectionToCart("checkout", {
-                                        preferredFulfillment: "delivery",
-                                      })
-                                    }
-                                    className="group flex h-[54px] min-w-0 flex-1 items-stretch overflow-hidden rounded-2xl bg-white shadow-[0_8px_20px_-6px_rgba(38,64,39,0.45)] ring-1 ring-[#264027]/20 transition hover:ring-[#264027]/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
-                                  >
-                                    <span className="relative min-w-0 flex-[1.35] overflow-hidden bg-[#f0ebe3]">
-                                      <OptimizedImage
-                                        src="/images/size-formats/walking-floor-delivery.webp"
-                                        alt="Walking-floor truck delivery"
-                                        className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-105"
-                                        width={280}
-                                        q={72}
-                                      />
-                                    </span>
-                                    <span className="relative flex shrink-0 items-center justify-center bg-gradient-to-b from-[#2f4a30] to-[#264027] px-2.5 text-sm font-bold text-white sm:px-3 sm:text-[15px]">
-                                      Deliver
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={!selectedChoice}
-                                    onClick={() => addSelectionToCart()}
-                                    aria-label={justAdded ? "Added to order" : "Add to order"}
-                                    title={justAdded ? "Added to order" : "Add truckload to order"}
-                                    className={cn(
-                                      "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
-                                      justAdded
-                                        ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
-                                        : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
-                                    )}
-                                  >
-                                    {justAdded ? (
-                                      <Check
-                                        className="h-6 w-6 animate-in zoom-in-50 duration-300"
-                                        strokeWidth={2.75}
-                                      />
-                                    ) : (
-                                      <Plus className="h-6 w-6" strokeWidth={2.5} />
-                                    )}
-                                  </button>
+                                <div className="space-y-1.5">
+                                  <div className="flex gap-2.5">
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() => addSelectionToCart("checkout")}
+                                      className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
+                                    >
+                                      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                      <ShoppingBag className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                      <span className="relative">Buy Now</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={!selectedChoice}
+                                      onClick={() => addSelectionToCart()}
+                                      aria-label={justAdded ? "Added to order" : "Add to order"}
+                                      title={justAdded ? "Added to order" : "Add truckload to order"}
+                                      className={cn(
+                                        "relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-2xl transition touch-manipulation disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+                                        justAdded
+                                          ? "bg-[#264027] text-white shadow-[0_8px_18px_-6px_rgba(38,64,39,0.65)]"
+                                          : "border-2 border-[#264027]/25 bg-white text-[#264027] shadow-sm hover:border-[#264027] hover:bg-[#264027] hover:text-white hover:shadow-md",
+                                      )}
+                                    >
+                                      {justAdded ? (
+                                        <Check
+                                          className="h-6 w-6 animate-in zoom-in-50 duration-300"
+                                          strokeWidth={2.75}
+                                        />
+                                      ) : (
+                                        <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                      )}
+                                    </button>
+                                  </div>
+                                  <p className="text-center text-[11px] text-stone-500">
+                                    Delivery only — walking-floor loads can&apos;t be picked up.
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -2466,37 +2461,12 @@ const ProductDetail = () => {
                                     <button
                                       type="button"
                                       disabled={!selectedChoice}
-                                      onClick={() =>
-                                        addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
-                                      }
-                                      className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-2 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation sm:gap-2 sm:text-[15px]"
+                                      onClick={() => addSelectionToCart("checkout")}
+                                      className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                                     >
                                       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                                      <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
-                                      <span className="relative">Pick up</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={!selectedChoice}
-                                      onClick={() =>
-                                        addSelectionToCart("checkout", {
-                                          preferredFulfillment: "delivery",
-                                        })
-                                      }
-                                      className="group flex h-[54px] min-w-0 flex-1 items-stretch overflow-hidden rounded-2xl bg-white shadow-[0_8px_20px_-6px_rgba(38,64,39,0.45)] ring-1 ring-[#264027]/20 transition hover:ring-[#264027]/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
-                                    >
-                                      <span className="relative min-w-0 flex-[1.35] overflow-hidden bg-[#f0ebe3]">
-                                        <OptimizedImage
-                                          src="/images/optimized/mixed-truckload-example.jpg"
-                                          alt="Flatbed truck delivery"
-                                          className="h-full w-full object-cover object-[center_45%] transition duration-300 group-hover:scale-105"
-                                          width={280}
-                                          q={72}
-                                        />
-                                      </span>
-                                      <span className="relative flex shrink-0 items-center justify-center bg-gradient-to-b from-[#2f4a30] to-[#264027] px-2.5 text-sm font-bold text-white sm:px-3 sm:text-[15px]">
-                                        Deliver
-                                      </span>
+                                      <ShoppingBag className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                      <span className="relative">Buy Now</span>
                                     </button>
                                     <button
                                       type="button"
@@ -2528,7 +2498,7 @@ const ProductDetail = () => {
                                     </button>
                                   </div>
                                   <p className="text-center text-[11px] text-stone-500">
-                                    Pickup: we&apos;ll ask for a slot so we can stage your load.
+                                    Pickup or delivery — choose at checkout. Pallets need a scheduled slot.
                                   </p>
                                 </div>
                               ) : (
@@ -2537,14 +2507,12 @@ const ProductDetail = () => {
                                     <button
                                       type="button"
                                       disabled={!selectedChoice}
-                                      onClick={() =>
-                                        addSelectionToCart("checkout", { preferredFulfillment: "pickup" })
-                                      }
+                                      onClick={() => addSelectionToCart("checkout")}
                                       className="group relative flex h-[54px] min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#c49a68] to-[#b38a58] px-3 text-[15px] font-bold text-white shadow-[0_8px_20px_-6px_rgba(179,138,88,0.75)] transition hover:from-[#b38a58] hover:to-[#9c7648] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                                     >
                                       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                                      <MapPin className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
-                                      <span className="relative">Pick up</span>
+                                      <ShoppingBag className="relative h-4 w-4 shrink-0 drop-shadow-sm" />
+                                      <span className="relative">Buy Now</span>
                                     </button>
                                     <button
                                       type="button"
