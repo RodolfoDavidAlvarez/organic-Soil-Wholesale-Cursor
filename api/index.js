@@ -198,7 +198,7 @@ function buildPickupOrderEmail({ order, orderItems, pickupLabel, testing = false
             </tr>
             <tr>
               <td style="background:#f4f3ee;padding:22px 28px;color:#5d5548;font-size:14px;line-height:1.5;">
-                Receipt PDF is attached for letter-size printing. Customer support: <strong>(602) 637-0032</strong>.
+                Receipt PDF is attached for letter-size printing. Customer support: <strong>(623) 263-3386</strong>.
               </td>
             </tr>
           </table>
@@ -370,7 +370,7 @@ async function buildPickupReceiptPdfBuffer({ order, orderItems, pickupLabel }) {
   setColor(0.77, 0.71, 0.61);
   commands.push('54 92 m 558 92 l S');
   setColor(0.25, 0.23, 0.19);
-  text('Questions? Call or text Soil Seed & Water at (602) 637-0032.', 62, 72, 11, 'F1');
+  text('Questions? Call or text Soil Seed & Water at (623) 263-3386.', 62, 72, 11, 'F1');
   text('Thank you for choosing Organic Soil Wholesale.', 62, 56, 11, 'F1');
 
   const stream = commands.join('\n');
@@ -647,7 +647,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
           <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
           <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
           <strong>Location:</strong> ${order?.pickup_location || '1634 N 19th Ave, Phoenix, AZ 85009'}</p>
-          <p>Please call (602) 637-0032 when you arrive.</p>
+          <p>Please call (623) 263-3386 when you arrive.</p>
           <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
       });
       if (custResult?.error) {
@@ -4369,7 +4369,7 @@ ${pages}
           replyTo: 'ralvarez@soilseedandwater.com',
           to: email,
           subject: 'Verify your email for Organic Soil Wholesale',
-          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="background-color:#2c5530;color:white;padding:20px;text-align:center"><h1>Organic Soil Wholesale</h1></div><div style="padding:30px;background-color:#f9f9f9"><h2>Verify Your Email Address</h2><p>Thank you for creating an account!</p><p>Please click the button below to verify your email address:</p><center><a href="${verificationUrl}" style="display:inline-block;padding:12px 30px;background-color:#2c5530;color:white;text-decoration:none;border-radius:5px;margin:20px 0">Verify Email</a></center><p>This link will expire in 24 hours.</p></div><div style="text-align:center;padding:20px;color:#666;font-size:14px"><p>Organic Soil Wholesale &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; (602) 637-0032</p></div></div>`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="background-color:#2c5530;color:white;padding:20px;text-align:center"><h1>Organic Soil Wholesale</h1></div><div style="padding:30px;background-color:#f9f9f9"><h2>Verify Your Email Address</h2><p>Thank you for creating an account!</p><p>Please click the button below to verify your email address:</p><center><a href="${verificationUrl}" style="display:inline-block;padding:12px 30px;background-color:#2c5530;color:white;text-decoration:none;border-radius:5px;margin:20px 0">Verify Email</a></center><p>This link will expire in 24 hours.</p></div><div style="text-align:center;padding:20px;color:#666;font-size:14px"><p>Organic Soil Wholesale &bull; 1634 N 19th Ave, Phoenix, AZ 85009 &bull; (623) 263-3386</p></div></div>`,
         });
       } catch (emailErr) {
         console.error('Failed to send verification email:', emailErr);
@@ -4935,7 +4935,7 @@ ${pages}
           const statusMessages = {
             approved: { subject: `Order #${orderRef} Approved`, body: `Great news! Your order #${orderRef} has been approved and is being prepared.` },
             ready_for_pickup: { subject: `Order #${orderRef} Ready for Pickup`, body: `Your order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix, AZ 85009. ${HOURS_LABEL}.` },
-            out_for_delivery: { subject: `Order #${orderRef} Out for Delivery`, body: `Your order #${orderRef} is on its way! Call (602) 637-0032 with questions.` },
+            out_for_delivery: { subject: `Order #${orderRef} Out for Delivery`, body: `Your order #${orderRef} is on its way! Call (623) 263-3386 with questions.` },
             completed: { subject: `Order #${orderRef} Completed`, body: `Your order #${orderRef} has been completed. Thank you for your business!` },
           };
           const msg = statusMessages[body.status];
@@ -5414,7 +5414,7 @@ ${pages}
           subject: `Order #${orderRef} Out for Delivery`,
           html: `<p>Hi ${order.customer_name || 'there'},</p>
             <p>Your order #${orderRef} is on its way! Our driver will arrive at the scheduled time.</p>
-            <p>If you need to make any changes, call us at (602) 637-0032.</p>
+            <p>If you need to make any changes, call us at (623) 263-3386.</p>
             <p>Thanks,<br>Rodo Alvarez<br>Soil Seed & Water</p>`,
         },
         completed: {
@@ -5452,7 +5452,7 @@ ${pages}
             const smsMessages = {
               approved: `SSW: Order #${orderRef} approved! We're preparing it now.`,
               ready_for_pickup: `SSW: Order #${orderRef} is ready for pickup at 1634 N 19th Ave, Phoenix. ${HOURS_LABEL}.`,
-              out_for_delivery: `SSW: Order #${orderRef} is out for delivery! Call (602) 637-0032 with questions.`,
+              out_for_delivery: `SSW: Order #${orderRef} is out for delivery! Call (623) 263-3386 with questions.`,
               completed: `SSW: Order #${orderRef} completed. Thanks for your business!`,
             };
             if (smsMessages[status]) {

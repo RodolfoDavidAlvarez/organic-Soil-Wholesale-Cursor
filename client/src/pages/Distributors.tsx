@@ -135,7 +135,7 @@ const Distributors = () => {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <Phone className="h-6 w-6 text-[#264027]" />
-                <div className="text-sm font-medium text-stone-700">(602) 637-0032</div>
+                <div className="text-sm font-medium text-stone-700">(623) 263-3386</div>
               </div>
             </div>
           </div>
@@ -203,8 +203,8 @@ const Distributors = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8 text-sm">
-              <a href="tel:+16026370032" className="flex items-center justify-center gap-2 text-[#264027] font-medium">
-                <Phone className="h-4 w-4" /> (602) 637-0032
+              <a href="tel:+16232633386" className="flex items-center justify-center gap-2 text-[#264027] font-medium">
+                <Phone className="h-4 w-4" /> (623) 263-3386
               </a>
               <a href="mailto:info@soilseedandwater.com" className="flex items-center justify-center gap-2 text-[#264027] font-medium">
                 <Mail className="h-4 w-4" /> info@soilseedandwater.com

@@ -64,7 +64,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
             </table>
             <p style="font-size:13px;line-height:1.55;color:#68746d;margin:22px 0 0;">Consent was captured through the website’s explicit opt-in checkbox. The source and timestamp are stored with the customer record.</p>
           </td></tr>
-          <tr><td style="padding:18px 30px;background:#f8f6f0;color:#68746d;font-size:12px;line-height:1.5;">Soil Seed &amp; Water · Phoenix, Arizona · (602) 637-0032</td></tr>
+          <tr><td style="padding:18px 30px;background:#f8f6f0;color:#68746d;font-size:12px;line-height:1.5;">Soil Seed &amp; Water · Phoenix, Arizona · (623) 263-3386</td></tr>
         </table>
       </td></tr>
     </table>

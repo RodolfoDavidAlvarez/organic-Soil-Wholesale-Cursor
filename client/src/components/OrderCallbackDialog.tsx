@@ -271,7 +271,7 @@ export function OrderCallbackDialog({
                 <div className="rounded-2xl border border-[#264027]/10 bg-[#f7f4ef] px-4 py-3 text-left text-xs text-stone-600">
                   Need us sooner?{" "}
                   <a
-                    href={`tel:${CUSTOMER_SUPPORT_PHONE_TEL}`}
+                    href={CUSTOMER_SUPPORT_PHONE_TEL}
                     className="font-semibold text-[#264027] underline-offset-2 hover:underline"
                   >
                     Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
@@ -460,7 +460,7 @@ export function OrderCallbackDialog({
                     Saves to our inbound leads with your cart attached.
                     Or call{" "}
                     <a
-                      href={`tel:${CUSTOMER_SUPPORT_PHONE_TEL}`}
+                      href={CUSTOMER_SUPPORT_PHONE_TEL}
                       className="font-semibold text-[#264027] underline-offset-2 hover:underline"
                     >
                       {CUSTOMER_SUPPORT_PHONE_DISPLAY}
