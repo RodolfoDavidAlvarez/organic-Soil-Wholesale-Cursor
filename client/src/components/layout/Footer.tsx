@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { trackEvent } from "@/lib/analytics";
 import { MapPin, Phone, Mail, Clock, Leaf } from "lucide-react";
-import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { CUSTOMER_SUPPORT_PHONE_DIAL, CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const Footer = () => {
   return (
@@ -167,6 +167,7 @@ const Footer = () => {
                     data-dynamic-number-ignore="true"
                     data-call-tracking-ignore="true"
                     data-official-support-phone="true"
+                    data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
                     className="no-call-tracking font-medium text-white/70 transition-colors duration-200 hover:text-white"
                   >
                     <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>

@@ -3,6 +3,8 @@ import { CheckCircle2, Loader2, MapPin, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CUSTOMER_SUPPORT_PHONE_DIAL, CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
 
 type Props = { source: string };
@@ -18,6 +20,7 @@ const customerTypes = [
 ] as const;
 
 export default function WormCastingsCampaign({ source }: Props) {
+  usePhoneNumberLock({ selector: "[data-phone-number]" });
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -75,7 +78,7 @@ export default function WormCastingsCampaign({ source }: Props) {
             </div>
           </div>
           <div className="rounded-2xl border border-[#d8e0d2] bg-white p-6 shadow-sm">
-            <div className="flex items-start gap-3"><MapPin className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-heading text-2xl font-bold text-primary">Phoenix yard pickup</h2><p className="mt-2 leading-7 text-neutral-700"><strong>1634 N 19th Ave, Phoenix, AZ 85009</strong><br />Use the south entrance from Grand Avenue and follow the yard lane to check-in and loading.</p><a className="mt-3 inline-block font-semibold text-primary underline" href="https://www.google.com/maps/dir/?api=1&destination=33.467333%2C-112.101250">Open the exact entrance pin</a></div></div>
+            <div className="flex items-start gap-3"><MapPin className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-heading text-2xl font-bold text-primary">Phoenix yard pickup</h2><p className="mt-2 leading-7 text-neutral-700"><strong>1634 N 19th Ave, Phoenix, AZ 85009</strong><br />Use the south entrance from Grand Avenue and follow the yard lane to check-in and loading.</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2"><a className="font-semibold text-primary underline" href="https://www.google.com/maps/dir/?api=1&destination=33.467333%2C-112.101250">Open the exact entrance pin</a><a href={CUSTOMER_SUPPORT_PHONE_TEL} data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking font-semibold text-primary underline">Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}</a></div></div></div>
           </div>
         </div>
 
