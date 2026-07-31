@@ -56,6 +56,7 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
+const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -151,6 +152,7 @@ function Router() {
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={() => <WormCastingsCampaign source={new URLSearchParams(window.location.search).get("source") || "community-print"} />} />
+        <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
         <Route path="/newsletter" component={NewsletterSignup} />
 
