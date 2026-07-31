@@ -169,8 +169,11 @@
       // Set exclusion attributes immediately before React loads
       (function() {
         const path = window.location.pathname;
+        const source = new URLSearchParams(window.location.search).get('source');
         const excludeFromCallTracking =
           path.startsWith('/rep/') ||
+          path === '/free-worm-castings' ||
+          (path === '/newsletter' && source === 'july-community-gift') ||
           path === '/qr' ||
           path === '/check-in' ||
           path === '/yard-map' ||

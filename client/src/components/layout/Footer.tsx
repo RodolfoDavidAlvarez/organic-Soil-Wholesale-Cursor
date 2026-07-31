@@ -161,8 +161,15 @@ const Footer = () => {
                   <div className="mr-3 rounded-full bg-white/10 p-1.5">
                     <Phone className="h-4 w-4 text-[#9ecb74]" />
                   </div>
-                  <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-medium text-white/70 transition-colors duration-200 hover:text-white">
-                    {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+                  <a
+                    href={CUSTOMER_SUPPORT_PHONE_TEL}
+                    data-callrail-ignore="true"
+                    data-dynamic-number-ignore="true"
+                    data-call-tracking-ignore="true"
+                    data-official-support-phone="true"
+                    className="no-call-tracking font-medium text-white/70 transition-colors duration-200 hover:text-white"
+                  >
+                    <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
                   </a>
                 </li>
                 <li className="flex items-center">
