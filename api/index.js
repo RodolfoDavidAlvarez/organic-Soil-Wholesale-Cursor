@@ -1,4 +1,11 @@
 // Vercel Serverless Function with CRM Business Card Capture
+import QRCode from 'qrcode';
+import {
+  WORM_CASTINGS_CAMPAIGN_KEY,
+  buildWormCastingsCouponEmail,
+  isWormCastingsCampaignSource,
+  normalizeCampaignEmail,
+} from '../shared/wormCastingsCampaign.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -36,6 +43,63 @@ async function getResend() {
     resend = new Resend(process.env.RESEND_API_KEY);
   }
   return resend;
+}
+
+async function sendWormCastingsCoupon({ db, redemption }) {
+  const email = buildWormCastingsCouponEmail({
+    fullName: redemption.full_name,
+    token: redemption.redemption_token,
+  });
+  const { data: claimed, error: claimError } = await db
+    .from('sp_worm_castings_redemptions')
+    .update({
+      distribution_status: 'sending',
+      distribution_attempts: Number(redemption.distribution_attempts || 0) + 1,
+      distribution_last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', redemption.id)
+    .in('distribution_status', ['pending', 'failed'])
+    .select()
+    .maybeSingle();
+
+  if (claimError) throw claimError;
+  if (!claimed) return { status: 'already_processing' };
+
+  try {
+    const result = await (await getResend()).emails.send({
+      from: process.env.WORM_CASTINGS_EMAIL_FROM || 'Soil Seed & Water <info@soilseedandwater.com>',
+      to: [claimed.email],
+      subject: email.subject,
+      html: email.html,
+    });
+    const providerId = result?.data?.id || null;
+    if (result?.error || !providerId) throw new Error(result?.error?.message || 'coupon_delivery_not_accepted');
+
+    await db.from('sp_worm_castings_redemptions').update({
+      distribution_status: 'sent',
+      distribution_provider_id: providerId,
+      distribution_sent_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', claimed.id);
+    await db.from('notification_log').insert({
+      notification_type: 'email', template_name: 'worm_castings_qr_distribution', recipient: claimed.email,
+      subject: email.subject, content: 'Unique worm castings redemption QR coupon', status: 'sent',
+      provider: 'resend', provider_id: providerId, source_app: 'organic_soil_wholesale_campaign', sent_at: new Date().toISOString(),
+    });
+    return { status: 'sent', providerId };
+  } catch (error) {
+    const message = error?.message || 'coupon_delivery_failed';
+    await db.from('sp_worm_castings_redemptions').update({
+      distribution_status: 'failed', distribution_last_error: message, updated_at: new Date().toISOString(),
+    }).eq('id', claimed.id);
+    await db.from('notification_log').insert({
+      notification_type: 'email', template_name: 'worm_castings_qr_distribution', recipient: claimed.email,
+      subject: email.subject, content: 'Unique worm castings redemption QR coupon', status: 'failed',
+      provider: 'resend', error_message: message, source_app: 'organic_soil_wholesale_campaign',
+    });
+    throw error;
+  }
 }
 
 let pickupScheduleModule = null;
@@ -4156,20 +4220,39 @@ ${pages}
 
     // ============ NEWSLETTER SUBSCRIBE / UNSUBSCRIBE ENDPOINTS ============
 
+    // The QR embedded in a private coupon contains only an opaque UUID. It never
+    // exposes customer information and can only be redeemed by an authenticated yard rep.
+    const wormQrMatch = path.match(/^\/api\/public\/worm-castings\/qr\/([0-9a-f-]{36})\.svg$/i);
+    if (wormQrMatch && req.method === 'GET') {
+      const db = await getSupabase();
+      const { data: redemption, error } = await db
+        .from('sp_worm_castings_redemptions')
+        .select('id')
+        .eq('campaign_key', WORM_CASTINGS_CAMPAIGN_KEY)
+        .eq('redemption_token', wormQrMatch[1])
+        .maybeSingle();
+      if (error || !redemption) return res.status(404).send('Not found');
+      const svg = await QRCode.toString(wormQrMatch[1], { type: 'svg', errorCorrectionLevel: 'M', margin: 2, width: 360 });
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+      return res.status(200).send(svg);
+    }
+
     // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
     // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
-      const { email, name, phone, customerCategory, consent, website, source } = req.body || {};
-      const normalizedEmail = String(email || '').toLowerCase().trim();
+      const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};
+      const normalizedEmail = normalizeCampaignEmail(email);
       const normalizedPhone = String(phone || '').trim();
       const normalizedCustomerCategory = String(customerCategory || '').trim();
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
+      const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
 
       // Honeypot fields are silently accepted so bots do not learn how to bypass them.
       if (website) return res.json({ success: true });
       if (!consent) return res.status(400).json({ error: 'Please confirm that you want to receive emails.' });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 254) {
+      if (!normalizedEmail || normalizedEmail.length > 254) {
         return res.status(400).json({ error: 'Please enter a valid email address.' });
       }
       if (normalizedPhone.replace(/\D/g, '').length < 10 || normalizedPhone.length > 30) {
@@ -4194,6 +4277,49 @@ ${pages}
           return res.status(409).json({
             error: 'This address has a previous opt-out. Please contact us if you would like us to review it.',
           });
+        }
+
+        let couponDeliveryStatus = null;
+        if (campaignRequested) {
+          const { data: customer, error: customerError } = await db
+            .from('sp_customers')
+            .select('id, full_name, email')
+            .ilike('email', normalizedEmail)
+            .maybeSingle();
+          if (customerError || !customer) throw customerError || new Error('Campaign subscriber could not be found');
+
+          let { data: redemption, error: redemptionError } = await db
+            .from('sp_worm_castings_redemptions')
+            .select('*')
+            .eq('campaign_key', WORM_CASTINGS_CAMPAIGN_KEY)
+            .eq('email_normalized', normalizedEmail)
+            .maybeSingle();
+
+          if (!redemption && !redemptionError) {
+            const created = await db.from('sp_worm_castings_redemptions').insert({
+              campaign_key: WORM_CASTINGS_CAMPAIGN_KEY,
+              customer_id: customer.id,
+              full_name: String(name || customer.full_name || '').trim() || normalizedEmail.split('@')[0],
+              email: normalizedEmail,
+              email_normalized: normalizedEmail,
+            }).select().single();
+            redemption = created.data;
+            redemptionError = created.error;
+          }
+          if (redemptionError || !redemption) throw redemptionError || new Error('Could not create the private coupon');
+
+          // A repeat submission never creates a second coupon. It only retries a failed delivery.
+          if (['pending', 'failed'].includes(redemption.distribution_status)) {
+            try {
+              const delivery = await sendWormCastingsCoupon({ db, redemption });
+              couponDeliveryStatus = delivery.status;
+            } catch (couponError) {
+              console.error('[Worm Castings] coupon delivery failed:', couponError?.message || couponError);
+              couponDeliveryStatus = 'failed';
+            }
+          } else {
+            couponDeliveryStatus = redemption.distribution_status === 'sent' ? 'already_sent' : redemption.distribution_status;
+          }
         }
 
         // Notification delivery is intentionally independent from the opt-in transaction.
@@ -4222,11 +4348,36 @@ ${pages}
           console.error('[Newsletter Subscribe] Admin notification error:', notificationError?.message || notificationError);
         }
 
-        return res.json({ success: true, message: "You're subscribed." });
+        return res.json({
+          success: true,
+          campaign: campaignRequested ? WORM_CASTINGS_CAMPAIGN_KEY : null,
+          couponDeliveryStatus,
+          message: campaignRequested ? 'Your private coupon is on its way.' : "You're subscribed.",
+        });
       } catch (e) {
         console.error('[Newsletter Subscribe] Error:', e?.message || e);
         return res.status(500).json({ error: 'We could not save your subscription. Please try again.' });
       }
+    }
+
+    // Admin-only delivery retry. The record and token are preserved; only the same
+    // private coupon is sent again.
+    const wormCouponResendMatch = path.match(/^\/api\/admin\/worm-castings\/([0-9a-f-]{36})\/resend$/i);
+    if (wormCouponResendMatch && req.method === 'POST') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      const db = await getSupabase();
+      const { data: existing, error: lookupError } = await db.from('sp_worm_castings_redemptions')
+        .select('*').eq('campaign_key', WORM_CASTINGS_CAMPAIGN_KEY)
+        .eq('redemption_token', wormCouponResendMatch[1]).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!existing) return res.status(404).json({ error: 'Coupon not found' });
+      const { data: queued, error: queueError } = await db.from('sp_worm_castings_redemptions')
+        .update({ distribution_status: 'pending', distribution_last_error: null, updated_at: new Date().toISOString() })
+        .eq('id', existing.id).select().single();
+      if (queueError) throw queueError;
+      const delivery = await sendWormCastingsCoupon({ db, redemption: queued });
+      return res.json({ success: true, deliveryStatus: delivery.status });
     }
 
     // POST /api/unsubscribe - Unsubscribe an email (sp_customers only)

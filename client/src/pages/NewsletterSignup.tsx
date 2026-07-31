@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/analytics";
+import WormCastingsCampaign from "@/pages/WormCastingsCampaign";
 
 const NewsletterSignup = () => {
+  const source = new URLSearchParams(window.location.search).get("source") || "website_newsletter_signup";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -47,6 +49,10 @@ const NewsletterSignup = () => {
       setSubmitting(false);
     }
   };
+
+  if (source.toLowerCase() === "july-community-gift") {
+    return <WormCastingsCampaign source={source} />;
+  }
 
   return (
     <section className="min-h-[75vh] bg-white px-4 py-10 sm:py-16">

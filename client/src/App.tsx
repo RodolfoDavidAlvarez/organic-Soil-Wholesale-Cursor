@@ -54,6 +54,8 @@ const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
+const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
+const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -148,6 +150,8 @@ function Router() {
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
+        <Route path="/free-worm-castings" component={() => <WormCastingsCampaign source={new URLSearchParams(window.location.search).get("source") || "community-print"} />} />
+        <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
         <Route path="/newsletter" component={NewsletterSignup} />
 
         {/* Customer Auth Routes */}
