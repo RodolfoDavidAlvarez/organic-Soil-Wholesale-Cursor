@@ -202,8 +202,8 @@ export default function VoiceReceipt() {
             </div>
             <div className="flex items-start gap-3">
               <Phone className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-              <a href="tel:6026370032" className="font-medium text-emerald-800 hover:underline">
-                (602) 637-0032
+              <a href="tel:6232633386" className="font-medium text-emerald-800 hover:underline">
+                (623) 263-3386
               </a>
             </div>
           </div>

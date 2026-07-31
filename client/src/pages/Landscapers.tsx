@@ -68,7 +68,7 @@ const Landscapers = () => {
                 >
                   Get a Quote
                 </Button>
-                <a href="tel:6026370032" className="contents">
+                <a href="tel:6232633386" className="contents">
                   <Button
                     size="lg"
                     className="min-h-[48px] border-2 border-white !bg-transparent !text-white hover:!bg-white hover:!text-[#264027] font-semibold shadow-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#264027]"
@@ -292,7 +292,7 @@ const Landscapers = () => {
               >
                 Get Your Custom Quote
               </Button>
-              <a href="tel:6026370032" className="contents">
+              <a href="tel:6232633386" className="contents">
                 <Button
                   size="lg"
                   className="min-h-[48px] border-2 border-white !bg-transparent !text-white hover:!bg-white hover:!text-[#264027] font-semibold shadow-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#264027]"

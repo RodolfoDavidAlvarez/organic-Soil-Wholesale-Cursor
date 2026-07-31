@@ -16,7 +16,7 @@
 
 ## Official Public Phone Number
 
-- Use **(602) 637-0032** as the official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
+- Use **(623) 263-3386** as the official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
 - Do **not** use Rodo's personal number (`928-550-1649`) on public customer-facing pages.
 - Do **not** hardcode CallRail or other tracking numbers in React/server code. Call tracking should be handled through Google Tag Manager / tracking configuration.
 - If a phone number from CallRail appears in screenshots or old code, treat it as a tracking number unless the user confirms it is the official public line.

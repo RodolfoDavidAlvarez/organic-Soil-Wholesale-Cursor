@@ -562,7 +562,7 @@ const Wholesale = () => {
             <p className="text-green-100 mb-6 max-w-xl mx-auto">
               Call us directly for same-day quotes and next-day delivery in the Phoenix metro area.
             </p>
-            <a href="tel:+16026370032">
+            <a href="tel:+16232633386">
               <Button size="lg" className="bg-white text-green-800 hover:bg-green-50 font-bold text-lg px-8">
                 <Phone className="h-5 w-5 mr-2" />
                 (602) 637-0032
