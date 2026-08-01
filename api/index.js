@@ -102,6 +102,42 @@ async function sendWormCastingsCoupon({ db, redemption }) {
   }
 }
 
+async function resendExistingWormCastingsCoupon({ db, redemption }) {
+  const lastSentAt = redemption.distribution_sent_at
+    ? new Date(redemption.distribution_sent_at).getTime()
+    : 0;
+  const resendCooldownMs = 5 * 60 * 1000;
+
+  if (lastSentAt && Date.now() - lastSentAt < resendCooldownMs) {
+    return { status: 'recently_sent' };
+  }
+
+  // Compare-and-set prevents simultaneous repeat submissions from sending the
+  // same coupon more than once. The coupon record and private token never change.
+  let queueQuery = db
+    .from('sp_worm_castings_redemptions')
+    .update({
+      distribution_status: 'pending',
+      distribution_last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', redemption.id)
+    .eq('distribution_status', 'sent');
+
+  if (redemption.distribution_sent_at) {
+    queueQuery = queueQuery.eq('distribution_sent_at', redemption.distribution_sent_at);
+  } else {
+    queueQuery = queueQuery.is('distribution_sent_at', null);
+  }
+
+  const { data: queued, error: queueError } = await queueQuery.select().maybeSingle();
+  if (queueError) throw queueError;
+  if (!queued) return { status: 'already_processing' };
+
+  const delivery = await sendWormCastingsCoupon({ db, redemption: queued });
+  return delivery.status === 'sent' ? { ...delivery, status: 'resent' } : delivery;
+}
+
 let pickupScheduleModule = null;
 async function getPickupSchedule() {
   if (!pickupScheduleModule) {
@@ -4314,7 +4350,8 @@ ${pages}
           }
           if (redemptionError || !redemption) throw redemptionError || new Error('Could not create the private coupon');
 
-          // A repeat submission never creates a second coupon. It only retries a failed delivery.
+          // A repeat submission never creates a second coupon. It resends the
+          // same private coupon, subject to a short anti-spam cooldown.
           if (['pending', 'failed'].includes(redemption.distribution_status)) {
             try {
               const delivery = await sendWormCastingsCoupon({ db, redemption });
@@ -4323,8 +4360,16 @@ ${pages}
               console.error('[Worm Castings] coupon delivery failed:', couponError?.message || couponError);
               couponDeliveryStatus = 'failed';
             }
+          } else if (redemption.distribution_status === 'sent') {
+            try {
+              const delivery = await resendExistingWormCastingsCoupon({ db, redemption });
+              couponDeliveryStatus = delivery.status;
+            } catch (couponError) {
+              console.error('[Worm Castings] existing coupon resend failed:', couponError?.message || couponError);
+              couponDeliveryStatus = 'failed';
+            }
           } else {
-            couponDeliveryStatus = redemption.distribution_status === 'sent' ? 'already_sent' : redemption.distribution_status;
+            couponDeliveryStatus = redemption.distribution_status;
           }
         }
 
@@ -4358,7 +4403,13 @@ ${pages}
           success: true,
           campaign: campaignRequested ? WORM_CASTINGS_CAMPAIGN_KEY : null,
           couponDeliveryStatus,
-          message: campaignRequested ? 'Your private coupon is on its way.' : "You're subscribed.",
+          message: campaignRequested
+            ? (couponDeliveryStatus === 'resent'
+              ? 'Your existing private coupon was emailed again.'
+              : couponDeliveryStatus === 'recently_sent'
+                ? 'Your private coupon was emailed recently.'
+                : 'Your private coupon is on its way.')
+            : "You're subscribed.",
         });
       } catch (e) {
         console.error('[Newsletter Subscribe] Error:', e?.message || e);

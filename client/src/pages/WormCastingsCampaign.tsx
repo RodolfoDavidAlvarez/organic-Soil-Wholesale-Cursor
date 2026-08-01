@@ -29,6 +29,7 @@ export default function WormCastingsCampaign({ source }: Props) {
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [couponDeliveryStatus, setCouponDeliveryStatus] = useState("");
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent) {
@@ -50,6 +51,7 @@ export default function WormCastingsCampaign({ source }: Props) {
         throw new Error("Your sign-up is saved, but we could not email the coupon yet. Please try again shortly.");
       }
       trackEvent("Worm Castings Campaign Registered", { source });
+      setCouponDeliveryStatus(body.couponDeliveryStatus || "sent");
       setSuccess(true);
     } catch (submitError: any) {
       setError(submitError?.message || "Please try again.");
@@ -83,7 +85,7 @@ export default function WormCastingsCampaign({ source }: Props) {
         </div>
 
         <Card className="border-0 shadow-xl"><CardContent className="p-6 sm:p-8">
-          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">Check your inbox.</h2><p className="mt-3 leading-7 text-neutral-600">Your private QR coupon is on its way. Bring it to the Phoenix yard from August 1 through August 31.</p><p className="mt-4 text-sm font-semibold text-neutral-700">One free 9-lb bag per person/email. Phoenix pickup only.</p></div> :
+          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">{couponDeliveryStatus === "resent" ? "We resent your coupon." : couponDeliveryStatus === "recently_sent" ? "Your coupon was already emailed." : couponDeliveryStatus === "already_processing" || couponDeliveryStatus === "sending" ? "Your coupon email is being prepared." : couponDeliveryStatus === "redeemed" ? "This coupon was already redeemed." : "Check your inbox."}</h2><p className="mt-3 leading-7 text-neutral-600">{couponDeliveryStatus === "resent" ? <>We emailed the same private QR coupon to <strong>{email}</strong>. No duplicate coupon was created.</> : couponDeliveryStatus === "recently_sent" ? <>We recently emailed your private QR coupon to <strong>{email}</strong>. Please check your inbox, Spam, and Promotions folders.</> : couponDeliveryStatus === "already_processing" || couponDeliveryStatus === "sending" ? <>We are preparing the private QR coupon for <strong>{email}</strong>. Please allow a few minutes, then check your inbox, Spam, and Promotions folders.</> : couponDeliveryStatus === "redeemed" ? "Our records show that the private coupon for this email has already been used." : <>Your private QR coupon was emailed to <strong>{email}</strong>. Please check your inbox, Spam, and Promotions folders.</>}</p>{couponDeliveryStatus !== "redeemed" && <p className="mt-3 leading-7 text-neutral-600">Bring it to the Phoenix yard from August 1 through August 31.</p>}<p className="mt-4 text-sm font-semibold text-neutral-700">One free 9-lb bag per person/email. Phoenix pickup only.</p></div> :
             <form onSubmit={submit} className="space-y-5">
               <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a42]">Your private coupon</p><h2 className="mt-2 font-heading text-2xl font-bold text-primary">Sign up for your free bag</h2><p className="mt-2 text-sm leading-6 text-neutral-600">We’ll send a unique QR coupon after you register. No purchase required.</p></div>
               <div><label htmlFor="campaign-name" className="mb-2 block text-sm font-semibold text-neutral-800">Full name</label><Input id="campaign-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={120} /></div>
