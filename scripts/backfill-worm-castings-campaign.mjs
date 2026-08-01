@@ -27,6 +27,8 @@ try {
       AND r.email_normalized = lower(trim(c.email))
     WHERE lower(coalesce(c.newsletter_source, '')) = $2
       AND c.newsletter_subscribed IS TRUE
+      AND c.newsletter_unsubscribed_at IS NULL
+      AND coalesce(c.newsletter_verification_status, '') NOT IN ('Bounced', 'Complained')
       AND c.email IS NOT NULL
       AND trim(c.email) <> ''
   `, [campaignKey, source]);
@@ -37,6 +39,15 @@ try {
   }
 
   await client.query('begin');
+  const linked = await client.query(`
+    UPDATE public.sp_worm_castings_redemptions r
+    SET customer_id = c.id, updated_at = now()
+    FROM public.sp_customers c
+    WHERE r.campaign_key = $1
+      AND r.customer_id IS NULL
+      AND r.email_normalized = lower(trim(c.email))
+    RETURNING r.id
+  `, [campaignKey]);
   const inserted = await client.query(`
     INSERT INTO public.sp_worm_castings_redemptions (
       campaign_key, customer_id, full_name, email, email_normalized, distribution_status
@@ -51,13 +62,15 @@ try {
     FROM public.sp_customers c
     WHERE lower(coalesce(c.newsletter_source, '')) = $2
       AND c.newsletter_subscribed IS TRUE
+      AND c.newsletter_unsubscribed_at IS NULL
+      AND coalesce(c.newsletter_verification_status, '') NOT IN ('Bounced', 'Complained')
       AND c.email IS NOT NULL
       AND trim(c.email) <> ''
     ON CONFLICT (campaign_key, email_normalized) DO NOTHING
     RETURNING id
   `, [campaignKey, source]);
   await client.query('commit');
-  console.log(JSON.stringify({ mode: 'apply', campaignKey, source, created_pending_coupons: inserted.rowCount }));
+  console.log(JSON.stringify({ mode: 'apply', campaignKey, source, linked_existing_coupons: linked.rowCount, created_pending_coupons: inserted.rowCount }));
 } catch (error) {
   await client.query('rollback').catch(() => undefined);
   throw error;
