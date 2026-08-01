@@ -62,8 +62,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dfe6dc;border-radius:16px;overflow:hidden;">
           <tr><td style="padding:22px 26px;border-bottom:1px solid #e6ebe3;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
-              <td width="48" valign="middle"><div style="width:42px;height:42px;line-height:42px;text-align:center;border-radius:50%;background:#264027;color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;">SSW</div></td>
-              <td valign="middle" style="padding-left:12px;"><div style="font-size:13px;font-weight:800;letter-spacing:1.6px;color:#264027;text-transform:uppercase;">Soil Seed &amp; Water</div><div style="margin-top:3px;font-size:12px;color:#748077;">Community notifications</div></td>
+              <td valign="middle"><img src="https://www.organicsoilwholesale.com/email-assets/ssw-logo.png" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"><div style="margin-top:5px;font-size:11px;color:#748077;letter-spacing:.4px;">Community notifications</div></td>
               <td align="right" valign="middle"><span style="display:inline-block;padding:7px 10px;border-radius:999px;background:#edf5ea;color:#315533;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;">New signup</span></td>
             </tr></table>
           </td></tr>
