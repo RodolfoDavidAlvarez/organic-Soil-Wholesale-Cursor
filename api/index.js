@@ -4222,7 +4222,7 @@ ${pages}
 
     // The QR embedded in a private coupon contains only an opaque UUID. It never
     // exposes customer information and can only be redeemed by an authenticated yard rep.
-    const wormQrMatch = path.match(/^\/api\/public\/worm-castings\/qr\/([0-9a-f-]{36})\.svg$/i);
+    const wormQrMatch = path.match(/^\/api\/public\/worm-castings\/qr\/([0-9a-f-]{36})\.(svg|png)$/i);
     if (wormQrMatch && req.method === 'GET') {
       const db = await getSupabase();
       const { data: redemption, error } = await db
@@ -4232,6 +4232,12 @@ ${pages}
         .eq('redemption_token', wormQrMatch[1])
         .maybeSingle();
       if (error || !redemption) return res.status(404).send('Not found');
+      if (wormQrMatch[2].toLowerCase() === 'png') {
+        const png = await QRCode.toBuffer(wormQrMatch[1], { type: 'png', errorCorrectionLevel: 'M', margin: 2, width: 600 });
+        res.setHeader('Cache-Control', 'private, max-age=300');
+        res.setHeader('Content-Type', 'image/png');
+        return res.status(200).send(png);
+      }
       const svg = await QRCode.toString(wormQrMatch[1], { type: 'svg', errorCorrectionLevel: 'M', margin: 2, width: 360 });
       res.setHeader('Cache-Control', 'private, max-age=300');
       res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
