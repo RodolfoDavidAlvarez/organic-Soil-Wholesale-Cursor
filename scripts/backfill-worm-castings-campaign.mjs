@@ -18,9 +18,9 @@ await client.connect();
 try {
   const summary = await client.query(`
     SELECT
-      count(*) FILTER (WHERE c.newsletter_subscribed IS TRUE)::int AS eligible_registrants,
-      count(r.id)::int AS existing_coupons,
-      count(*) FILTER (WHERE r.id IS NULL)::int AS missing_coupons
+      count(DISTINCT lower(trim(c.email))) FILTER (WHERE c.newsletter_subscribed IS TRUE)::int AS eligible_registrants,
+      count(DISTINCT lower(trim(c.email))) FILTER (WHERE r.id IS NOT NULL)::int AS existing_coupons,
+      count(DISTINCT lower(trim(c.email))) FILTER (WHERE r.id IS NULL)::int AS missing_coupons
     FROM public.sp_customers c
     LEFT JOIN public.sp_worm_castings_redemptions r
       ON r.campaign_key = $1
