@@ -54,7 +54,7 @@ export function buildWormCastingsCouponEmail({ fullName, token }) {
     <p style="margin:0;color:#3f4d40;font-size:14px;line-height:1.65;"><strong>1634 N 19th Ave, Phoenix, AZ 85009</strong><br>Use the south entrance from Grand Avenue and follow the yard lane to check-in.</p>
     <p style="margin:13px 0 0;"><a href="https://www.google.com/maps/dir/?api=1&amp;destination=33.467333%2C-112.101250" style="color:#264027;font-weight:700;">Open the exact entrance pin</a></p>
   </td></tr>
-  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (602) 637-0032 &nbsp;·&nbsp; Soil Seed &amp; Water<br>Regenerative Soil Solutions</td></tr>
+  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; Soil Seed &amp; Water<br>Regenerative Soil Solutions</td></tr>
 </table></td></tr></table></body></html>`,
   };
 }
