@@ -4,6 +4,7 @@ const ADMIN_TEAM = Object.freeze([
   { name: 'Sabrina Moses', email: 'sabrina@soilseedandwater.com' },
   { name: 'Kash Starks', email: 'kash@soilseedandwater.com' },
   { name: 'Gabriela Perez', email: 'gperez@soilseedandwater.com' },
+  { name: 'Alejandra Patricia Alvarez', email: 'alejandrapatriciaalvarez@gmail.com' },
 ]);
 
 const INTERNAL_TEST_RECIPIENTS = Object.freeze([ADMIN_TEAM[0]]);
@@ -27,6 +28,12 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
   const phone = String(subscriber?.phone || '').trim() || 'Not provided';
   const customerCategory = String(subscriber?.customerCategory || '').trim() || 'Not provided';
   const source = String(subscriber?.source || 'website_newsletter_signup').trim();
+  const customerCategoryLabel = customerCategory
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const sourceLabel = source
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
   const subscribedAt = subscriber?.subscribedAt ? new Date(subscriber.subscribedAt) : new Date();
   const when = Number.isNaN(subscribedAt.getTime())
     ? 'Just now'
@@ -41,30 +48,47 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
     subject: `${testPrefix}New newsletter subscriber — ${name === 'Not provided' ? email : name}`,
     html: `<!doctype html>
 <html lang="en">
-  <body style="margin:0;background:#f3f0e8;font-family:Arial,sans-serif;color:#173d2b;">
-    <div style="display:none;max-height:0;overflow:hidden;">A new subscriber joined the Soil Seed &amp; Water community newsletter.</div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f0e8;padding:28px 12px;">
-      <tr><td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #ded8c9;">
-          <tr><td style="background:#173d2b;padding:26px 30px;color:#ffffff;">
-            <div style="font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:#bdd48c;">Soil Seed &amp; Water</div>
-            <h1 style="font-size:25px;line-height:1.25;margin:8px 0 0;">New Community Subscriber</h1>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>New Community Subscriber</title>
+  </head>
+  <body bgcolor="#eef2ed" style="margin:0;background:#eef2ed;font-family:Arial,Helvetica,sans-serif;color:#243229;">
+    <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(name)} just joined the Soil Seed &amp; Water community.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#eef2ed" style="width:100%;background:#eef2ed;">
+      <tr><td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dfe6dc;border-radius:16px;overflow:hidden;">
+          <tr><td style="padding:22px 26px;border-bottom:1px solid #e6ebe3;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+              <td width="48" valign="middle"><div style="width:42px;height:42px;line-height:42px;text-align:center;border-radius:50%;background:#264027;color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;">SSW</div></td>
+              <td valign="middle" style="padding-left:12px;"><div style="font-size:13px;font-weight:800;letter-spacing:1.6px;color:#264027;text-transform:uppercase;">Soil Seed &amp; Water</div><div style="margin-top:3px;font-size:12px;color:#748077;">Community notifications</div></td>
+              <td align="right" valign="middle"><span style="display:inline-block;padding:7px 10px;border-radius:999px;background:#edf5ea;color:#315533;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;">New signup</span></td>
+            </tr></table>
           </td></tr>
-          <tr><td style="padding:28px 30px;">
-            ${testing ? '<div style="margin-bottom:20px;padding:11px 14px;background:#fff7df;border:1px solid #ead39a;border-radius:8px;color:#684e12;font-size:13px;"><strong>Internal test mode:</strong> this notification is currently going only to Rodolfo.</div>' : ''}
-            <p style="font-size:16px;line-height:1.55;margin:0 0 22px;">Someone has opted in to receive community news, growing guidance, and local product updates.</p>
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:15px;">
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;width:34%;">Name</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;"><strong>${escapeHtml(name)}</strong></td></tr>
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;">Email</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;"><a href="mailto:${escapeHtml(email)}" style="color:#2d6a45;">${escapeHtml(email)}</a></td></tr>
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;">Phone</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;"><a href="tel:${escapeHtml(phone)}" style="color:#2d6a45;">${escapeHtml(phone)}</a></td></tr>
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;">Customer type</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;">${escapeHtml(customerCategory)}</td></tr>
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;">Source</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;">${escapeHtml(source)}</td></tr>
-              <tr><td style="padding:10px 0;border-bottom:1px solid #ece8df;color:#68746d;">Subscribed</td><td style="padding:10px 0;border-bottom:1px solid #ece8df;">${escapeHtml(when)} Arizona time</td></tr>
-              <tr><td style="padding:10px 0;color:#68746d;">Status</td><td style="padding:10px 0;"><strong style="color:#2d6a45;">Active newsletter subscriber</strong></td></tr>
+          <tr><td bgcolor="#e8f1e6" style="padding:28px 26px;background:#e8f1e6;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8a6a42;">Community newsletter</div>
+            <h1 style="margin:7px 0 8px;font-size:28px;line-height:1.2;color:#1e3824;">New subscriber</h1>
+            <p style="margin:0;font-size:15px;line-height:1.55;color:#4e6253;">${escapeHtml(name)} signed up through <strong>${escapeHtml(sourceLabel)}</strong>.</p>
+          </td></tr>
+          <tr><td style="padding:24px 26px;">
+            ${testing ? '<div style="margin-bottom:18px;padding:11px 13px;background:#fff8e7;border:1px solid #ead8a8;border-radius:9px;color:#684e12;font-size:13px;"><strong>Internal test mode:</strong> currently delivered only to Rodolfo.</div>' : ''}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8df;border-radius:12px;border-collapse:separate;overflow:hidden;">
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:32%;">Name</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;font-weight:700;color:#243229;">${escapeHtml(name)}</td></tr>
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Email</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="mailto:${escapeHtml(email)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(email)}</a></td></tr>
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Phone</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="tel:${escapeHtml(phone)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(phone)}</a></td></tr>
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Customer</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;color:#243229;">${escapeHtml(customerCategoryLabel)}</td></tr>
+              <tr><td style="padding:13px 15px;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Joined</td><td style="padding:13px 15px;font-size:15px;color:#243229;">${escapeHtml(when)} AZ</td></tr>
             </table>
-            <p style="font-size:13px;line-height:1.55;color:#68746d;margin:22px 0 0;">Consent was captured through the website’s explicit opt-in checkbox. The source and timestamp are stored with the customer record.</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;"><tr>
+              <td width="49%"><a href="mailto:${escapeHtml(email)}" style="display:block;padding:13px 10px;border-radius:9px;background:#264027;color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:800;">Email subscriber</a></td>
+              <td width="2%">&nbsp;</td>
+              <td width="49%"><a href="tel:${escapeHtml(phone)}" style="display:block;padding:12px 10px;border:1px solid #cbd6c8;border-radius:9px;background:#ffffff;color:#264027;text-decoration:none;text-align:center;font-size:14px;font-weight:800;">Call subscriber</a></td>
+            </tr></table>
+            <div style="margin-top:18px;padding:13px 15px;border-radius:10px;background:#f1f6ef;color:#315533;font-size:13px;line-height:1.5;"><strong>✓ Consent recorded</strong><br><span style="color:#66756a;">Email opt-in, source, and timestamp are stored with the customer record.</span></div>
           </td></tr>
-          <tr><td style="padding:18px 30px;background:#f8f6f0;color:#68746d;font-size:12px;line-height:1.5;">Soil Seed &amp; Water · Phoenix, Arizona · (623) 263-3386</td></tr>
+          <tr><td bgcolor="#f7f8f5" style="padding:16px 26px;background:#f7f8f5;border-top:1px solid #e6ebe3;color:#748077;font-size:12px;line-height:1.5;">Organic Soil Wholesale · Phoenix, Arizona · (623) 263-3386</td></tr>
         </table>
       </td></tr>
     </table>
