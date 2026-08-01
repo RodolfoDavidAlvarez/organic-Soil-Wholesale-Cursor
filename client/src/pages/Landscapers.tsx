@@ -24,7 +24,7 @@ const Landscapers = () => {
     <>
       <SEO
         title="Landscaper Supplies Phoenix AZ | Premium Mulch, Worm Castings & Turf Daddy"
-        description="Arizona's premier wholesale supplier for landscapers in Phoenix and statewide. Premium mulch, worm castings, and Turf Daddy blend. OMRI-listed, bulk delivery and pickup. Call (602) 637-0032."
+        description="Arizona's premier wholesale supplier for landscapers in Phoenix and statewide. Premium mulch, worm castings, and Turf Daddy blend. OMRI-listed, bulk delivery and pickup. Call (623) 263-3386."
         keywords="Phoenix landscaper soil, Arizona mulch wholesale, worm castings Phoenix, Turf Daddy Arizona, bulk mulch Phoenix, landscaper supplies Arizona, commercial mulch Phoenix, organic soil Phoenix"
         canonical="https://organicsoilwholesale.com/landscapers"
         structuredData={{
@@ -75,7 +75,7 @@ const Landscapers = () => {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Phone className="h-4 w-4 mr-2" />
-                    (602) 637-0032
+                    (623) 263-3386
                   </Button>
                 </a>
               </div>
@@ -299,7 +299,7 @@ const Landscapers = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Phone className="h-4 w-4 mr-2" />
-                  Call (602) 637-0032
+                  Call (623) 263-3386
                 </Button>
               </a>
             </div>

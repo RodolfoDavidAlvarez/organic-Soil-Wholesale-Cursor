@@ -536,7 +536,7 @@ const Wholesale = () => {
                     We'll call to confirm availability, pricing, and delivery. No payment required now.
                   </p>
                   {formStatus === "error" && (
-                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at (602) 637-0032.</p>
+                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at (623) 263-3386.</p>
                   )}
                 </form>
               )}
@@ -565,7 +565,7 @@ const Wholesale = () => {
             <a href="tel:+16232633386">
               <Button size="lg" className="bg-white text-green-800 hover:bg-green-50 font-bold text-lg px-8">
                 <Phone className="h-5 w-5 mr-2" />
-                (602) 637-0032
+                (623) 263-3386
               </Button>
             </a>
           </div>

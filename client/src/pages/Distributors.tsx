@@ -135,7 +135,7 @@ const Distributors = () => {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <Phone className="h-6 w-6 text-[#264027]" />
-                <div className="text-sm font-medium text-stone-700">(602) 637-0032</div>
+                <div className="text-sm font-medium text-stone-700">(623) 263-3386</div>
               </div>
             </div>
           </div>
