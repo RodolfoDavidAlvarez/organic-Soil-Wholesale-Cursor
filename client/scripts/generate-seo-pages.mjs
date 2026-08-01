@@ -251,6 +251,33 @@ const routes = [
     canonical: absoluteUrl("/faq"),
     schemas: [localBusinessSchema],
   },
+  {
+    path: "/free-worm-castings",
+    title: "Free 9-lb Bag of Worm Castings | Phoenix Community Gift",
+    description: "Phoenix gardeners: register for one free 9-lb bag of Mikey's Worm Poop worm castings. Phoenix pickup August 1–31. One per person/email.",
+    keywords: "free worm castings Phoenix, Phoenix gardening giveaway, Mikey's Worm Poop, free compost Phoenix",
+    canonical: absoluteUrl("/free-worm-castings"),
+    image: `${absoluteUrl("/images/social/free-worm-castings-august-2026.jpg")}?v=2`,
+    imageType: "image/jpeg",
+    imageWidth: 1200,
+    imageHeight: 630,
+    schemas: [
+      localBusinessSchema,
+      {
+        "@context": "https://schema.org",
+        "@type": "Offer",
+        name: "Free 9-lb Bag of Mikey's Worm Poop Worm Castings",
+        description: "One free 9-lb bag per person/email for Phoenix pickup August 1–31, 2026.",
+        url: absoluteUrl("/free-worm-castings"),
+        price: "0",
+        priceCurrency: "USD",
+        availabilityStarts: "2026-08-01",
+        availabilityEnds: "2026-08-31",
+        eligibleRegion: { "@type": "Place", name: "Phoenix, Arizona" },
+        seller: { "@type": "Organization", name: BUSINESS_NAME },
+      },
+    ],
+  },
   ...["/checkout", "/qr", "/check-in", "/order-confirmation", "/pay-and-pickup"].map((route) => ({
     path: route,
     title: "Organic Soil Wholesale",
@@ -294,6 +321,10 @@ const headForRoute = (route) => {
     <meta property="og:title" content="${escapeAttr(route.title)}" />
     <meta property="og:description" content="${escapeAttr(route.description)}" />
     <meta property="og:image" content="${escapeAttr(image)}" />
+    ${route.imageType ? `<meta property="og:image:secure_url" content="${escapeAttr(image)}" />` : ""}
+    ${route.imageType ? `<meta property="og:image:type" content="${escapeAttr(route.imageType)}" />` : ""}
+    ${route.imageWidth ? `<meta property="og:image:width" content="${escapeAttr(route.imageWidth)}" />` : ""}
+    ${route.imageHeight ? `<meta property="og:image:height" content="${escapeAttr(route.imageHeight)}" />` : ""}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="${escapeAttr(route.canonical)}" />
     <meta name="twitter:title" content="${escapeAttr(route.title)}" />
