@@ -21,7 +21,7 @@ export function couponUrl(token) {
 }
 
 export function couponQrUrl(token) {
-  return `${APP_URL}/api/public/worm-castings/qr/${encodeURIComponent(token)}.svg`;
+  return `${APP_URL}/api/public/worm-castings/qr/${encodeURIComponent(token)}.png`;
 }
 
 export function buildWormCastingsCouponEmail({ fullName, token }) {

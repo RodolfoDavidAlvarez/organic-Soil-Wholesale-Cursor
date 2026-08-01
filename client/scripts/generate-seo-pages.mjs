@@ -9,7 +9,7 @@ const templatePath = path.join(distRoot, "index.html");
 
 const SITE_URL = "https://organicsoilwholesale.com";
 const BUSINESS_NAME = "Organic Soil Wholesale by Soil Seed & Water";
-const PHONE = "(602) 637-0032";
+const PHONE = "(623) 263-3386";
 const ADDRESS = {
   streetAddress: "1634 N 19th Ave",
   addressLocality: "Phoenix",
@@ -238,7 +238,7 @@ const routes = [
   {
     path: "/contact",
     title: "Contact Organic Soil Wholesale | Soil Seed & Water",
-    description: "Call Organic Soil Wholesale at (602) 637-0032 or visit the Phoenix pickup yard at 1634 N 19th Ave.",
+    description: "Call Organic Soil Wholesale at (623) 263-3386 or visit the Phoenix pickup yard at 1634 N 19th Ave.",
     keywords: "Organic Soil Wholesale phone, Soil Seed & Water contact, Phoenix compost supplier contact",
     canonical: absoluteUrl("/contact"),
     schemas: [localBusinessSchema],
