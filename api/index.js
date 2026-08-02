@@ -4286,6 +4286,7 @@ ${pages}
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
       const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};
       const normalizedEmail = normalizeCampaignEmail(email);
+      const normalizedName = String(name || '').trim();
       const normalizedPhone = String(phone || '').trim();
       const normalizedCustomerCategory = String(customerCategory || '').trim();
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
@@ -4296,6 +4297,9 @@ ${pages}
       if (!consent) return res.status(400).json({ error: 'Please confirm that you want to receive emails.' });
       if (!normalizedEmail || normalizedEmail.length > 254) {
         return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      if (campaignRequested && (normalizedName.length < 2 || normalizedName.length > 120)) {
+        return res.status(400).json({ error: 'Please enter your full name.' });
       }
       if (normalizedPhone.replace(/\D/g, '').length < 10 || normalizedPhone.length > 30) {
         return res.status(400).json({ error: 'Please enter a valid phone number.' });
@@ -4309,7 +4313,7 @@ ${pages}
         const { subscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
         const result = await subscribeNewsletterContact(db, {
           email: normalizedEmail,
-          name,
+          name: normalizedName,
           phone: normalizedPhone,
           customerCategory: normalizedCustomerCategory,
           source: String(source || 'website_newsletter_signup').slice(0, 100),
@@ -4341,7 +4345,7 @@ ${pages}
             const created = await db.from('sp_worm_castings_redemptions').insert({
               campaign_key: WORM_CASTINGS_CAMPAIGN_KEY,
               customer_id: customer.id,
-              full_name: String(name || customer.full_name || '').trim() || normalizedEmail.split('@')[0],
+              full_name: normalizedName || String(customer.full_name || '').trim() || normalizedEmail.split('@')[0],
               email: normalizedEmail,
               email_normalized: normalizedEmail,
             }).select().single();
@@ -4349,6 +4353,20 @@ ${pages}
             redemptionError = created.error;
           }
           if (redemptionError || !redemption) throw redemptionError || new Error('Could not create the private coupon');
+
+          // The email owns one permanent coupon, but the latest valid form name
+          // should replace stale import/test labels before that coupon is resent.
+          if (redemption.full_name !== normalizedName || redemption.customer_id !== customer.id) {
+            const updated = await db.from('sp_worm_castings_redemptions').update({
+              customer_id: customer.id,
+              full_name: normalizedName,
+              updated_at: new Date().toISOString(),
+            }).eq('id', redemption.id).select().single();
+            if (updated.error || !updated.data) {
+              throw updated.error || new Error('Could not update the private coupon owner');
+            }
+            redemption = updated.data;
+          }
 
           // A repeat submission never creates a second coupon. It resends the
           // same private coupon, subject to a short anti-spam cooldown.
@@ -4383,7 +4401,7 @@ ${pages}
             recipients,
             subscriber: {
               email: normalizedEmail,
-              name,
+              name: normalizedName,
               phone: normalizedPhone,
               customerCategory: normalizedCustomerCategory,
               source: String(source || 'website_newsletter_signup').slice(0, 100),

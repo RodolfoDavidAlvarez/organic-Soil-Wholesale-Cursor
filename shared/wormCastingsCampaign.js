@@ -24,8 +24,19 @@ export function couponQrUrl(token) {
   return `${APP_URL}/api/public/worm-castings/qr/${encodeURIComponent(token)}.png`;
 }
 
+export function normalizeCouponGreetingName(value) {
+  const rawName = String(value || '').trim();
+  const withoutTestSuffix = rawName
+    .replace(/\s*(?:—|–|-)\s*(?:\[\s*)?test(?:\s*\])?\s*$/i, '')
+    .trim();
+  const placeholders = /^(?:friend default|test|testing|unknown|n\/?a|null|undefined)$/i;
+  return withoutTestSuffix && !placeholders.test(withoutTestSuffix)
+    ? withoutTestSuffix
+    : 'Neighbor';
+}
+
 export function buildWormCastingsCouponEmail({ fullName, token }) {
-  const name = escapeHtml(String(fullName || 'Neighbor').trim() || 'Neighbor');
+  const name = escapeHtml(normalizeCouponGreetingName(fullName));
   const privateCouponUrl = couponUrl(token);
   const qrUrl = couponQrUrl(token);
 
