@@ -8,6 +8,7 @@ import {
   Loader2,
   MapPin,
   MapPinned,
+  Navigation,
   PackageCheck,
   Phone,
   ShoppingBag,
@@ -124,6 +125,9 @@ export default function WormCastingsCampaign({ source }: Props) {
         <div className="absolute -left-24 top-20 -z-10 h-72 w-72 rounded-full bg-[#c59a5d]/10 blur-3xl" />
         <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-20">
           <div className="max-w-2xl">
+            <div className="-mx-5 -mt-10 mb-6 lg:hidden">
+              <HeroProductVisual mobile />
+            </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f1d6a6] backdrop-blur">
               <Gift className="h-4 w-4" /> August community gift
             </div>
@@ -140,7 +144,7 @@ export default function WormCastingsCampaign({ source }: Props) {
               <HeroFact icon={<MapPin />} title="Phoenix" detail="Yard pickup" />
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <a
                 href="#claim-your-bag"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-6 py-3 text-base font-bold text-[#173820] shadow-lg transition hover:bg-white"
@@ -151,7 +155,13 @@ export default function WormCastingsCampaign({ source }: Props) {
                 href="/products"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 text-base font-bold text-white transition hover:bg-white/10"
               >
-                <ShoppingBag className="h-4 w-4" /> See All Products
+                <ShoppingBag className="h-4 w-4" /> See Our Products
+              </a>
+              <a
+                href={ENTRANCE_DIRECTIONS_URL}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#f1d6a6]/35 bg-[#f1d6a6]/10 px-6 py-3 text-base font-bold text-[#f6e5c4] transition hover:bg-[#f1d6a6]/15 sm:col-span-2"
+              >
+                <MapPinned className="h-5 w-5" /> Open the Exact Entrance Pin
               </a>
             </div>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
@@ -160,19 +170,8 @@ export default function WormCastingsCampaign({ source }: Props) {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[620px]">
-            <div className="absolute inset-x-10 bottom-0 h-16 rounded-full bg-black/30 blur-2xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-white shadow-2xl">
-              <img
-                src="/images/optimized/mikeys-worm-poop-bag-context.webp"
-                alt="Mikey's Worm Poop 9-lb bag with vegetables, soil, and earthworms"
-                className="aspect-[1.05/1] w-full object-cover"
-              />
-              <div className="absolute bottom-4 left-4 rounded-xl bg-[#15351f]/90 px-4 py-3 backdrop-blur">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#f1d6a6]">Made in Arizona</p>
-                <p className="mt-1 font-heading text-lg font-bold">Mikey’s Worm Poop</p>
-              </div>
-            </div>
+          <div className="relative mx-auto hidden w-full max-w-[620px] lg:block">
+            <HeroProductVisual />
           </div>
         </div>
       </section>
@@ -247,6 +246,32 @@ export default function WormCastingsCampaign({ source }: Props) {
         </div>
       </section>
 
+      <section className="bg-[#173820] py-12 text-white sm:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
+          <div className="overflow-hidden rounded-[1.75rem] border border-white/15 bg-white shadow-2xl">
+            <img
+              src="/images/optimized/mikeys-worm-new-graphics-2-uses.webp"
+              alt="Four ways to use Mikey's Worm Poop worm castings: garden beds, pots, trees, and in-ground gardens"
+              loading="lazy"
+              className="aspect-square w-full object-cover"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#f1d6a6]">Simple to use</p>
+            <h2 className="mt-3 font-heading text-3xl font-bold leading-tight sm:text-4xl">One bag. Four easy ways to help your garden grow.</h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-white/75">Mix worm castings into garden beds and pots, top-dress around trees, or work them directly into in-ground soil. They add rich organic matter right where roots need it.</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href="/products/mikeys-worm-poop" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-6 py-3 font-bold text-[#173820] shadow-lg transition hover:bg-white">
+                Learn About Worm Castings <ArrowRight className="h-4 w-4" />
+              </a>
+              <a href="/products" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10">
+                <ShoppingBag className="h-4 w-4" /> See Our Products
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="border-y border-[#dce3d8] bg-white py-12 sm:py-16">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -289,18 +314,18 @@ export default function WormCastingsCampaign({ source }: Props) {
               <img src="/email-assets/phoenix-yard-entrance-map-v2.svg" alt="Illustrated route from the south gate on Grand Avenue to Organic Soil Wholesale pickup and loading" loading="lazy" className="w-full" />
             </a>
             <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
-              <div className="flex items-start gap-4">
+              <a href={ENTRANCE_DIRECTIONS_URL} aria-label="Open the exact Organic Soil Wholesale entrance in Google Maps" className="flex items-start gap-4 rounded-2xl transition hover:bg-[#f7f3ea] focus:outline-none focus:ring-2 focus:ring-[#b5864f]">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#b5864f] text-white shadow-md">
-                  <MapPin className="h-8 w-8" />
+                  <MapPinned className="h-8 w-8" />
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a6f39]">Tap this exact pin</p>
                   <p className="mt-1 font-heading text-xl font-bold text-[#183a23]">1634 N 19th Ave, Phoenix, AZ 85009</p>
                   <p className="mt-1 text-sm leading-6 text-[#687169]">South gate on Grand Avenue · Entrance: 33.467333, -112.101250</p>
                 </div>
-              </div>
+              </a>
               <a href={ENTRANCE_DIRECTIONS_URL} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#214a2c] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#17381f]">
-                Open Turn-by-Turn Directions <ArrowRight className="h-4 w-4" />
+                <Navigation className="h-5 w-5" /> Get Directions <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -328,6 +353,25 @@ export default function WormCastingsCampaign({ source }: Props) {
           Explore All Products <ArrowRight className="h-4 w-4" />
         </a>
       </section>
+    </div>
+  );
+}
+
+function HeroProductVisual({ mobile = false }: { mobile?: boolean }) {
+  return (
+    <div className={mobile ? "relative overflow-hidden rounded-b-[1.75rem] border-b border-white/15 bg-white shadow-2xl" : "relative"}>
+      {!mobile && <div className="absolute inset-x-10 bottom-0 h-16 rounded-full bg-black/30 blur-2xl" />}
+      <div className={mobile ? "relative" : "relative overflow-hidden rounded-[2rem] border border-white/15 bg-white shadow-2xl"}>
+        <img
+          src="/images/optimized/mikeys-worm-poop-bag-context.webp"
+          alt="Mikey's Worm Poop 9-lb bag with vegetables, soil, and earthworms"
+          className={mobile ? "aspect-[16/11] w-full bg-white object-contain p-2" : "aspect-[1.05/1] w-full object-cover"}
+        />
+        <div className="absolute bottom-3 left-3 rounded-xl bg-[#15351f] px-4 py-2.5 shadow-lg sm:bottom-4 sm:left-4 sm:py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#f1d6a6] sm:text-xs">Made in Arizona</p>
+          <p className="mt-0.5 font-heading text-base font-bold sm:mt-1 sm:text-lg">Mikey’s Worm Poop</p>
+        </div>
+      </div>
     </div>
   );
 }
