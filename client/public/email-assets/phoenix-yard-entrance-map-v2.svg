@@ -81,8 +81,10 @@
 
   <!-- Entry pin -->
   <g filter="url(#shadow)">
-    <path d="M1138 902C1138 858 1080 858 1080 902C1080 931 1109 965 1109 965C1109 965 1138 931 1138 902Z" fill="#b5864f" stroke="#fff" stroke-width="6"/>
-    <circle cx="1109" cy="902" r="10" fill="#fff"/>
+    <g transform="translate(-499 -406) scale(1.45)">
+      <path d="M1138 902C1138 858 1080 858 1080 902C1080 931 1109 965 1109 965C1109 965 1138 931 1138 902Z" fill="#b5864f" stroke="#fff" stroke-width="6"/>
+      <circle cx="1109" cy="902" r="10" fill="#fff"/>
+    </g>
     <rect x="1190" y="850" width="330" height="102" rx="15" fill="#fff" stroke="#b5864f" stroke-width="4"/>
     <text x="1355" y="889" text-anchor="middle" fill="#23452e" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="900">ENTER HERE</text>
     <text x="1355" y="923" text-anchor="middle" fill="#6a604e" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">South gate on Grand Avenue</text>
