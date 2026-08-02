@@ -56,7 +56,7 @@ const offers: BundleOffer[] = [
     title: "Garden Bed Builder Bundle",
     shortTitle: "Garden Bed Builder",
     description: "Everything you need to build healthier, richer garden beds from the ground up—soil, compost, worm castings, and a protective mulch finish.",
-    heroImage: "/images/optimized/mikeys-worm-new-graphics-2-uses.webp",
+    heroImage: "/images/bundles/garden-bed-builder.webp",
     heroAlt: "Worm castings being used in garden beds, pots, around trees, and in-ground gardens",
     listPrice: 285.14,
     salePrice: 214,
@@ -77,7 +77,7 @@ const offers: BundleOffer[] = [
     title: "Raised Bed Refresh Bundle",
     shortTitle: "Raised Bed Refresh",
     description: "Bring tired raised beds back to life with fresh potting mix, rich compost, and a concentrated worm-castings boost.",
-    heroImage: "/images/optimized/simons-gold-new-graphics-2-uses.webp",
+    heroImage: "/images/bundles/raised-bed-refresh.webp",
     heroAlt: "Simon's Gold compost used to enrich garden soil",
     listPrice: 128.66,
     salePrice: 96,
@@ -97,7 +97,7 @@ const offers: BundleOffer[] = [
     title: "Container Garden Kit",
     shortTitle: "Container Garden",
     description: "A simple, complete mix for a patio garden full of herbs, flowers, vegetables, and thriving containers.",
-    heroImage: "/images/optimized/plantpal-new-graphics-2-lifestyle.webp",
+    heroImage: "/images/bundles/container-garden-kit.webp",
     heroAlt: "PlantPal potting mix supporting a thriving container garden",
     listPrice: 103.76,
     salePrice: 78,
@@ -117,7 +117,7 @@ const offers: BundleOffer[] = [
     title: "Tree & Shrub Care Kit",
     shortTitle: "Tree & Shrub Care",
     description: "Give established trees and shrubs a richer root zone, a gentle organic feeding layer, and mulch that helps hold moisture where it matters.",
-    heroImage: "/images/optimized/mikeys-worm-new-graphics-2-uses.webp",
+    heroImage: "/images/bundles/tree-shrub-care.webp",
     heroAlt: "Worm castings used around the base of a tree",
     listPrice: 117.67,
     salePrice: 88,
@@ -137,7 +137,7 @@ const offers: BundleOffer[] = [
     title: "Mulch + Soil Shield Bundle",
     shortTitle: "Mulch + Soil Shield",
     description: "Improve the soil underneath and finish the surface with a thick mulch layer that helps protect moisture and reduce stress from the heat.",
-    heroImage: "/images/optimized/natures-blanket-premium-lifestyle.jpg",
+    heroImage: "/images/bundles/mulch-soil-shield.webp",
     heroAlt: "Nature's Blanket Premium mulch protecting a healthy landscape bed",
     listPrice: 128.66,
     salePrice: 96,
@@ -157,7 +157,7 @@ const offers: BundleOffer[] = [
     title: "Grow More Add-On Bundle",
     shortTitle: "Grow More Add-On",
     description: "Bring your private free worm-castings coupon, then add the rest of the garden essentials for one simple pickup price.",
-    heroImage: "/images/optimized/mikeys-worm-poop-bag-context.webp",
+    heroImage: "/images/bundles/grow-more-add-on.webp",
     heroAlt: "Mikey's Worm Poop bag with vegetables, soil, and earthworms",
     listPrice: 34.44,
     salePrice: 25,
@@ -204,7 +204,7 @@ function OffersIndex() {
 function OfferCard({ offer }: { offer: BundleOffer }) {
   return (
     <Link href={`/offers/${offer.slug}`} className="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl">
-      <img src={offer.heroImage} alt={offer.heroAlt} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+      <img src={offer.heroImage} alt={offer.heroAlt} loading="lazy" className="aspect-[16/10] w-full bg-[#f7f5ef] object-contain p-3" />
       <div className="p-6">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a6f39]">{offer.badge}</p>
         <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23]">{offer.shortTitle}</h2>
@@ -266,7 +266,7 @@ function OfferPage({ offer }: { offer: BundleOffer }) {
             <p className="mt-3 text-sm font-semibold text-[#f1d6a6]">{offer.badge} · Phoenix yard pickup</p>
           </div>
           <div className="order-1 min-h-[300px] lg:order-2 lg:min-h-full">
-            <img src={offer.heroImage} alt={offer.heroAlt} className="h-full min-h-[300px] w-full object-cover" fetchPriority="high" />
+            <img src={offer.heroImage} alt={offer.heroAlt} className="h-full min-h-[300px] w-full bg-[#f7f5ef] object-contain p-4" fetchPriority="high" />
           </div>
         </div>
       </section>
@@ -278,7 +278,7 @@ function OfferPage({ offer }: { offer: BundleOffer }) {
           <div className="mt-7 grid gap-4 sm:grid-cols-2">
             {offer.items.map((item) => (
               <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#e0e5dc]" key={`${item.name}-${item.amount}`}>
-                <img src={item.image} alt={item.alt} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                <img src={item.image} alt={item.alt} loading="lazy" className="aspect-[4/3] w-full bg-white object-contain p-3" />
                 <div className="p-4"><p className="font-heading text-lg font-bold">{item.name}</p><p className="mt-1 text-sm font-semibold text-[#5c6a5e]">{item.amount}</p></div>
               </article>
             ))}
