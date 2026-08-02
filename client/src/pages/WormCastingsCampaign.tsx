@@ -29,6 +29,8 @@ type Props = { source: string };
 
 const ENTRANCE_DIRECTIONS_URL =
   "https://www.google.com/maps/dir/?api=1&destination=33.467333%2C-112.101250";
+const PHOENIX_YARD_HOURS = "Tuesday–Saturday, 8:00 AM–4:00 PM";
+const PHOENIX_YARD_BREAK = "Closed for break from 1:00–2:00 PM";
 
 const customerTypes = [
   ["home-gardener", "Home gardener"],
@@ -199,6 +201,12 @@ export default function WormCastingsCampaign({ source }: Props) {
               <HeroFact icon={<MapPin />} title="Phoenix" detail="Yard pickup" />
             </div>
 
+            <div className="mt-4 rounded-2xl border border-[#f1d6a6]/25 bg-white/10 p-4 text-sm leading-6 text-white/80">
+              <strong className="text-white">Pickup hours:</strong> {PHOENIX_YARD_HOURS}
+              <br />
+              {PHOENIX_YARD_BREAK}
+            </div>
+
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <a
                 href="#claim-your-bag"
@@ -241,8 +249,8 @@ export default function WormCastingsCampaign({ source }: Props) {
           <p className="text-base leading-7 text-[#576259]">We’ll email your unique coupon immediately. Staff will scan it when you arrive, confirm your information, and hand off one 9-lb bag.</p>
           <div className="space-y-3">
             <ProcessStep number="1" title="Complete the form" detail="Use the email you can access on your phone." />
-            <ProcessStep number="2" title="Open your private QR" detail="Check your inbox, Spam, or Promotions folder." />
-            <ProcessStep number="3" title="Visit the Phoenix yard" detail="Show the QR to a team member before pickup." />
+            <ProcessStep number="2" title="Open your private QR" detail="The email includes your QR, backup code, exact entrance pin, yard map, and pickup hours." />
+            <ProcessStep number="3" title="Visit the Phoenix yard" detail="Tuesday–Saturday, 8:00 AM–4:00 PM. Closed for break from 1:00–2:00 PM." />
           </div>
           <div className="rounded-2xl border border-[#dce5d8] bg-[#edf3e9] p-5">
             <p className="font-bold text-[#183a23]">Already registered?</p>
@@ -297,6 +305,7 @@ export default function WormCastingsCampaign({ source }: Props) {
                     {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Creating your coupon…</> : <>Email My Private QR Coupon <ArrowRight className="ml-2 h-4 w-4" /></>}
                   </Button>
                   <p className="text-center text-xs leading-5 text-[#6c756d]">Valid August 1–31, 2026. One free 9-lb bag per person/email. Phoenix pickup only.</p>
+                  <p className="text-center text-xs font-semibold leading-5 text-[#39463c]">{PHOENIX_YARD_HOURS}. {PHOENIX_YARD_BREAK}.</p>
                 </form>
               )}
             </div>
@@ -386,6 +395,12 @@ export default function WormCastingsCampaign({ source }: Props) {
                 <Navigation className="h-5 w-5" /> Get Directions <ArrowRight className="h-4 w-4" />
               </a>
             </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-[#d9e1d5] bg-white p-5 text-center shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a6f39]">Pickup hours</p>
+            <p className="mt-2 font-heading text-2xl font-bold text-[#183a23]">{PHOENIX_YARD_HOURS}</p>
+            <p className="mt-1 font-semibold text-[#5b665d]">{PHOENIX_YARD_BREAK}</p>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -489,6 +504,7 @@ function CouponSuccess({ email, status }: { email: string; status: string }) {
                 : <>We emailed your private QR coupon to <strong>{email}</strong>. Please check your inbox, Spam, and Promotions folders.</>}
       </p>
       {!isRedeemed && <div className="mx-auto mt-6 max-w-md rounded-2xl bg-[#edf3e9] p-5 text-left"><p className="font-bold text-[#183a23]">What to do next</p><p className="mt-1 text-sm leading-6 text-[#5f6961]">Open the email on your phone, then show the private QR to our yard team between August 1 and August 31.</p></div>}
+      {!isRedeemed && <div className="mx-auto mt-3 max-w-md rounded-2xl border border-[#d9e1d5] bg-white p-5 text-left"><p className="font-bold text-[#183a23]">Pickup hours</p><p className="mt-1 text-sm leading-6 text-[#5f6961]">{PHOENIX_YARD_HOURS}. {PHOENIX_YARD_BREAK}. Your email also includes the exact entrance pin and yard map.</p></div>}
       <p className="mt-5 text-sm font-bold text-[#39463c]">One free 9-lb bag per person/email · Phoenix pickup only</p>
     </div>
   );

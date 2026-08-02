@@ -4271,12 +4271,12 @@ ${pages}
       if (error || !redemption) return res.status(404).send('Not found');
       if (wormQrMatch[2].toLowerCase() === 'png') {
         const png = await QRCode.toBuffer(wormQrMatch[1], { type: 'png', errorCorrectionLevel: 'M', margin: 2, width: 600 });
-        res.setHeader('Cache-Control', 'private, max-age=300');
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
         res.setHeader('Content-Type', 'image/png');
         return res.status(200).send(png);
       }
       const svg = await QRCode.toString(wormQrMatch[1], { type: 'svg', errorCorrectionLevel: 'M', margin: 2, width: 360 });
-      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
       res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
       return res.status(200).send(svg);
     }
