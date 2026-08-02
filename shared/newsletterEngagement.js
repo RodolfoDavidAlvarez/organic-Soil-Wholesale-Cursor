@@ -295,6 +295,35 @@ export async function handleResendNewsletterWebhook(supabase, event) {
   }
   if (insertError) return { ok: true, deduped: true, type, email }
 
+  // Transactional campaign coupons also use Resend. Keep their audit row and
+  // redemption delivery state aligned with verified provider events.
+  if (resendEmailId) {
+    if (kind === 'delivered') {
+      await supabase
+        .from('notification_log')
+        .update({ status: 'delivered', delivered_at: now })
+        .eq('provider_id', resendEmailId)
+        .eq('template_name', 'worm_castings_qr_distribution')
+    }
+
+    if (suppressContact || kind === 'failed') {
+      const failureMessage = `Resend reported ${kind}`
+      await supabase
+        .from('notification_log')
+        .update({ status: 'failed', error_message: failureMessage })
+        .eq('provider_id', resendEmailId)
+        .eq('template_name', 'worm_castings_qr_distribution')
+      await supabase
+        .from('sp_worm_castings_redemptions')
+        .update({
+          distribution_status: 'failed',
+          distribution_last_error: failureMessage,
+          updated_at: now,
+        })
+        .eq('distribution_provider_id', resendEmailId)
+    }
+  }
+
   if (customer) {
     const patch = {}
     if (kind === 'opened') {
