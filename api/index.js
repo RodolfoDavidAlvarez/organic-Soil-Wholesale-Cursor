@@ -4,6 +4,7 @@ import {
   WORM_CASTINGS_CAMPAIGN_KEY,
   buildWormCastingsCouponEmail,
   isWormCastingsCampaignSource,
+  normalizeCampaignSource,
   normalizeCampaignEmail,
 } from '../shared/wormCastingsCampaign.js';
 
@@ -4289,6 +4290,7 @@ ${pages}
       const normalizedName = String(name || '').trim();
       const normalizedPhone = String(phone || '').trim();
       const normalizedCustomerCategory = String(customerCategory || '').trim();
+      const normalizedSource = normalizeCampaignSource(source || 'website_newsletter_signup').slice(0, 100);
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
       const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
 
@@ -4316,7 +4318,7 @@ ${pages}
           name: normalizedName,
           phone: normalizedPhone,
           customerCategory: normalizedCustomerCategory,
-          source: String(source || 'website_newsletter_signup').slice(0, 100),
+          source: normalizedSource,
         });
 
         if (result.status === 'opted_out') {
@@ -4404,7 +4406,7 @@ ${pages}
               name: normalizedName,
               phone: normalizedPhone,
               customerCategory: normalizedCustomerCategory,
-              source: String(source || 'website_newsletter_signup').slice(0, 100),
+              source: normalizedSource,
               subscribedAt: new Date().toISOString(),
             },
           });

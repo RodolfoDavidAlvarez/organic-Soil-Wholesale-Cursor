@@ -50,6 +50,23 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/yard-map/1/:token*",
+      "destination": "/yard-map",
+      "permanent": false
+    },
+    {
+      "source": "/contact/1/:token*",
+      "destination": "/contact",
+      "permanent": false
+    },
+    {
+      "source": "/unsubscribe/1/:token*",
+      "destination": "/unsubscribe",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

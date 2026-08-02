@@ -2,6 +2,14 @@ export const WORM_CASTINGS_CAMPAIGN_KEY = 'free-worm-castings-2026-08';
 export const WORM_CASTINGS_CAMPAIGN_SOURCES = new Set([
   'july-community-gift',
   'community-print',
+  'social',
+  'socia',
+  'ig-ads',
+  'fb-ads',
+  'fa',
+  'friend-share',
+  'hubspot',
+  'stripe',
 ]);
 
 const APP_URL = 'https://www.organicsoilwholesale.com';
@@ -13,7 +21,34 @@ export function normalizeCampaignEmail(value) {
 }
 
 export function isWormCastingsCampaignSource(value) {
-  return WORM_CASTINGS_CAMPAIGN_SOURCES.has(String(value || '').trim().toLowerCase());
+  return WORM_CASTINGS_CAMPAIGN_SOURCES.has(normalizeCampaignSource(value));
+}
+
+export function normalizeCampaignSource(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const compact = raw.replace(/\s+/g, '-').replace(/_+/g, '-');
+  const map = {
+    socia: 'social',
+    socials: 'social',
+    instagram: 'social',
+    reels: 'social',
+    shorts: 'social',
+    facebook: 'social',
+    'facebook-ads': 'fb-ads',
+    facebookads: 'fb-ads',
+    'fb-ads': 'fb-ads',
+    fbads: 'fb-ads',
+    fa: 'fb-ads',
+    'instagram-ads': 'ig-ads',
+    instagramads: 'ig-ads',
+    igads: 'ig-ads',
+    'ig-ads': 'ig-ads',
+    print: 'community-print',
+    flyer: 'community-print',
+    'community-print': 'community-print',
+    newsletter: 'july-community-gift',
+  };
+  return map[compact] || compact || 'website_newsletter_signup';
 }
 
 export function couponUrl(token) {

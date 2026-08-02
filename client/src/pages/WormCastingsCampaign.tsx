@@ -1,4 +1,4 @@
-import { FormEvent, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -67,8 +67,44 @@ const products = [
   },
 ] as const;
 
+function normalizeTrackingSource(value: string) {
+  const raw = String(value || "").trim().toLowerCase().replace(/\s+/g, "-").replace(/_+/g, "-");
+  const map: Record<string, string> = {
+    socia: "social",
+    socials: "social",
+    instagram: "social",
+    reels: "social",
+    shorts: "social",
+    facebook: "social",
+    "facebook-ads": "fb-ads",
+    facebookads: "fb-ads",
+    fa: "fb-ads",
+    "instagram-ads": "ig-ads",
+    instagramads: "ig-ads",
+    igads: "ig-ads",
+    print: "community-print",
+    flyer: "community-print",
+    newsletter: "july-community-gift",
+  };
+  return map[raw] || raw || "community-print";
+}
+
+function campaignTrackingProperties(source: string) {
+  if (typeof window === "undefined") return { source: normalizeTrackingSource(source) };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    source: normalizeTrackingSource(source),
+    utm_source: params.get("utm_source"),
+    utm_medium: params.get("utm_medium"),
+    utm_campaign: params.get("utm_campaign"),
+    landing_path: window.location.pathname,
+  };
+}
+
 export default function WormCastingsCampaign({ source }: Props) {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
+  const trackingSource = normalizeTrackingSource(source);
+  const formStartedRef = useRef(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -80,8 +116,26 @@ export default function WormCastingsCampaign({ source }: Props) {
   const [couponDeliveryStatus, setCouponDeliveryStatus] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    trackEvent("Worm Castings Campaign Viewed", campaignTrackingProperties(source));
+  }, [source]);
+
+  function trackCampaignAction(action: string, extra?: Record<string, string | boolean | number | null>) {
+    trackEvent(`Worm Castings Campaign ${action}`, {
+      ...campaignTrackingProperties(source),
+      ...(extra || {}),
+    });
+  }
+
+  function markFormStarted() {
+    if (formStartedRef.current) return;
+    formStartedRef.current = true;
+    trackCampaignAction("Form Started");
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    trackCampaignAction("Form Submitted");
     setSubmitting(true);
     setError("");
     try {
@@ -95,7 +149,7 @@ export default function WormCastingsCampaign({ source }: Props) {
           customerCategory,
           consent,
           website,
-          source,
+          source: trackingSource,
           campaign: "free-worm-castings-2026-08",
         }),
       });
@@ -108,10 +162,11 @@ export default function WormCastingsCampaign({ source }: Props) {
           "Your sign-up is saved, but we could not email the coupon yet. Please try again shortly.",
         );
       }
-      trackEvent("Worm Castings Campaign Registered", { source });
+      trackCampaignAction("Registered", { coupon_delivery_status: body.couponDeliveryStatus || "sent" });
       setCouponDeliveryStatus(body.couponDeliveryStatus || "sent");
       setSuccess(true);
     } catch (submitError: any) {
+      trackCampaignAction("Form Error");
       setError(submitError?.message || "Please try again.");
     } finally {
       setSubmitting(false);
@@ -147,18 +202,21 @@ export default function WormCastingsCampaign({ source }: Props) {
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <a
                 href="#claim-your-bag"
+                onClick={() => trackCampaignAction("CTA Clicked", { cta: "claim_my_free_bag" })}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-6 py-3 text-base font-bold text-[#173820] shadow-lg transition hover:bg-white"
               >
                 Claim My Free Bag <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="/products"
+                onClick={() => trackCampaignAction("Products Clicked", { cta: "hero_products" })}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 text-base font-bold text-white transition hover:bg-white/10"
               >
                 <ShoppingBag className="h-4 w-4" /> See Our Products
               </a>
               <a
                 href={ENTRANCE_DIRECTIONS_URL}
+                onClick={() => trackCampaignAction("Directions Clicked", { cta: "hero_directions" })}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#f1d6a6]/35 bg-[#f1d6a6]/10 px-6 py-3 text-base font-bold text-[#f6e5c4] transition hover:bg-[#f1d6a6]/15 sm:col-span-2"
               >
                 <MapPinned className="h-5 w-5" /> Open the Exact Entrance Pin
@@ -204,7 +262,7 @@ export default function WormCastingsCampaign({ source }: Props) {
               {success ? (
                 <CouponSuccess email={email} status={couponDeliveryStatus} />
               ) : (
-                <form onSubmit={submit} className="space-y-5">
+                <form onSubmit={submit} onFocus={markFormStarted} className="space-y-5">
                   <div>
                     <label htmlFor="campaign-name" className="mb-2 block text-sm font-bold text-[#243129]">Full name</label>
                     <Input id="campaign-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required maxLength={120} className="h-12 rounded-xl" />
@@ -261,10 +319,10 @@ export default function WormCastingsCampaign({ source }: Props) {
             <h2 className="mt-3 font-heading text-3xl font-bold leading-tight sm:text-4xl">One bag. Four easy ways to help your garden grow.</h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-white/75">Mix worm castings into garden beds and pots, top-dress around trees, or work them directly into in-ground soil. They add rich organic matter right where roots need it.</p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <a href="/products/mikeys-worm-poop" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-6 py-3 font-bold text-[#173820] shadow-lg transition hover:bg-white">
+              <a href="/products/mikeys-worm-poop" onClick={() => trackCampaignAction("Product Detail Clicked", { cta: "worm_castings_detail" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-6 py-3 font-bold text-[#173820] shadow-lg transition hover:bg-white">
                 Learn About Worm Castings <ArrowRight className="h-4 w-4" />
               </a>
-              <a href="/products" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10">
+              <a href="/products" onClick={() => trackCampaignAction("Products Clicked", { cta: "uses_products" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 font-bold text-white transition hover:bg-white/10">
                 <ShoppingBag className="h-4 w-4" /> See Our Products
               </a>
             </div>
@@ -280,7 +338,7 @@ export default function WormCastingsCampaign({ source }: Props) {
               <h2 className="mt-3 font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Real products for healthier soil.</h2>
               <p className="mt-3 leading-7 text-[#5b665d]">We make compost, worm castings, potting mix, and mulch for home gardens, farms, nurseries, and landscapes.</p>
             </div>
-            <a href="/products" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#214a2c] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#17381f]">
+            <a href="/products" onClick={() => trackCampaignAction("Products Clicked", { cta: "products_section" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#214a2c] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#17381f]">
               <ShoppingBag className="h-4 w-4" /> Shop All Products
             </a>
           </div>
@@ -310,11 +368,11 @@ export default function WormCastingsCampaign({ source }: Props) {
           </div>
 
           <div className="mt-8 overflow-hidden rounded-[1.75rem] border-2 border-[#bd9460] bg-white shadow-[0_24px_70px_rgba(40,60,38,0.14)]">
-            <a href={ENTRANCE_DIRECTIONS_URL} aria-label="Open exact Organic Soil Wholesale south entrance in Google Maps" className="block bg-[#f7f3ea]">
+            <a href={ENTRANCE_DIRECTIONS_URL} onClick={() => trackCampaignAction("Directions Clicked", { cta: "map_image" })} aria-label="Open exact Organic Soil Wholesale south entrance in Google Maps" className="block bg-[#f7f3ea]">
               <img src="/email-assets/phoenix-yard-entrance-map-v2.svg" alt="Illustrated route from the south gate on Grand Avenue to Organic Soil Wholesale pickup and loading" loading="lazy" className="w-full" />
             </a>
             <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
-              <a href={ENTRANCE_DIRECTIONS_URL} aria-label="Open the exact Organic Soil Wholesale entrance in Google Maps" className="flex items-start gap-4 rounded-2xl transition hover:bg-[#f7f3ea] focus:outline-none focus:ring-2 focus:ring-[#b5864f]">
+              <a href={ENTRANCE_DIRECTIONS_URL} onClick={() => trackCampaignAction("Directions Clicked", { cta: "map_pin_card" })} aria-label="Open the exact Organic Soil Wholesale entrance in Google Maps" className="flex items-start gap-4 rounded-2xl transition hover:bg-[#f7f3ea] focus:outline-none focus:ring-2 focus:ring-[#b5864f]">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#b5864f] text-white shadow-md">
                   <MapPinned className="h-8 w-8" />
                 </div>
@@ -324,7 +382,7 @@ export default function WormCastingsCampaign({ source }: Props) {
                   <p className="mt-1 text-sm leading-6 text-[#687169]">South gate on Grand Avenue · Entrance: 33.467333, -112.101250</p>
                 </div>
               </a>
-              <a href={ENTRANCE_DIRECTIONS_URL} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#214a2c] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#17381f]">
+              <a href={ENTRANCE_DIRECTIONS_URL} onClick={() => trackCampaignAction("Directions Clicked", { cta: "map_button" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#214a2c] px-6 py-3 font-bold text-white shadow-md transition hover:bg-[#17381f]">
                 <Navigation className="h-5 w-5" /> Get Directions <ArrowRight className="h-4 w-4" />
               </a>
             </div>
@@ -338,7 +396,7 @@ export default function WormCastingsCampaign({ source }: Props) {
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6">
             <p className="font-semibold text-[#39463c]">Questions before you arrive?</p>
-            <a href={CUSTOMER_SUPPORT_PHONE_TEL} data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#214a2c] bg-white px-5 py-3 font-bold text-[#214a2c]">
+            <a href={CUSTOMER_SUPPORT_PHONE_TEL} onClick={() => trackCampaignAction("Phone Clicked")} data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#214a2c] bg-white px-5 py-3 font-bold text-[#214a2c]">
               <Phone className="h-4 w-4" /> Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
             </a>
           </div>
@@ -349,7 +407,7 @@ export default function WormCastingsCampaign({ source }: Props) {
         <Sprout className="mx-auto h-9 w-9 text-[#c9dfb8]" />
         <h2 className="mx-auto mt-4 max-w-2xl font-heading text-3xl font-bold sm:text-4xl">Better gardens start with better soil.</h2>
         <p className="mx-auto mt-4 max-w-xl leading-7 text-white/75">Discover Arizona-made soil products for raised beds, containers, farms, and landscapes.</p>
-        <a href="/products" className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-7 py-3 font-bold text-[#173820] shadow-lg transition hover:bg-white">
+        <a href="/products" onClick={() => trackCampaignAction("Products Clicked", { cta: "footer_products" })} className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f3e8cc] px-7 py-3 font-bold text-[#173820] shadow-lg transition hover:bg-white">
           Explore All Products <ArrowRight className="h-4 w-4" />
         </a>
       </section>
