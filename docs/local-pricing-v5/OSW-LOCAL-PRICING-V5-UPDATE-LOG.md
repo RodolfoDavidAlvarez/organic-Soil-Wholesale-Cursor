@@ -111,3 +111,13 @@ Amendments already laddered — leave as sheet:
 ## One-line handoff
 
 **V5 Local Pricing = same hero products, potting pallets at 30×1.5 CF, pallet 20% off list, raised light-product pickup between tote and truckload, full flatbed still +10% at 22 spots — update the OSW website and talk tracks to match this sheet.**
+
+---
+
+## Companion pack — V5 All Products (2026-08-03)
+
+Expanded catalog sheet lives beside this core pack:
+
+`_pricing-v4/official/V5-All-Products-Organic-Soil-Wholesale-Local-Pricing/`
+
+Same V5 discount rules (pallet 20%, potting 30×1.5 CF, flatbed +10%). Adds PropaGrow, PlugBoost, Nature's Blanket, specialty blends, and concentrated amendments. **Not V6.** Website mirror: `docs/local-pricing-v5-all-products/`. See that folder's `OSW-LOCAL-PRICING-V5-ALL-PRODUCTS-UPDATE-LOG.md`.
