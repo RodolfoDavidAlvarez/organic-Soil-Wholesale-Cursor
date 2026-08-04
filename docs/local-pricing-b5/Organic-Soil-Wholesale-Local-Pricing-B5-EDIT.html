@@ -271,6 +271,11 @@
     }
     .price { font-weight: 800; color: #111827; }
     .muted { color: #6b7280; font-size: 10px; }
+    .list-price {
+      text-decoration: line-through;
+      text-decoration-thickness: 1.5px;
+      color: #9ca3af;
+    }
     .sheet-note {
       margin-top: 10px;
       padding: 8px 10px;
@@ -582,7 +587,7 @@
               </div>
             </td>
             <td class="editable" contenteditable="true" data-field="bag"><span class="price">$15.99</span><br/><span class="muted">1.5 CF bag<br/>~50 lb</span></td>
-            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$575.64</span><br/><span class="muted">list $639.60 · 10% off · 40 units</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$575.64</span><br/><span class="muted"><span class="list-price">$639.60</span> · 10% off · 40 units</span></td>
             <td class="editable" contenteditable="true" data-field="tote"><span class="price">$359.78</span><br/><span class="muted">2.2 cu yd<br/>~1,600 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$120 / cu yd</span><br/><span class="muted">$300 / ton equivalent</span></td>
             <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$3,600</span><br/><span class="muted">$150 / ton · ~60 cu yd<br/>(~$60 / cu yd)</span></td>
@@ -601,7 +606,7 @@
               </div>
             </td>
             <td class="editable" contenteditable="true" data-field="bag"><span class="price">$10.99</span><br/><span class="muted">1.5 CF bag<br/>~50 lb</span></td>
-            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$395.64</span><br/><span class="muted">list $439.60 · 10% off · 40 units</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$395.64</span><br/><span class="muted"><span class="list-price">$439.60</span> · 10% off · 40 units</span></td>
             <td class="editable" contenteditable="true" data-field="tote"><span class="price">$247.28</span><br/><span class="muted">2.2 cu yd<br/>~1,600 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$80 / cu yd</span><br/><span class="muted">$200 / ton equivalent</span></td>
             <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$2,160</span><br/><span class="muted">$90 / ton · ~60 cu yd<br/>(~$36 / cu yd)</span></td>
@@ -638,7 +643,7 @@
               </div>
             </td>
             <td class="editable" contenteditable="true" data-field="bag"><span class="price">$10.99</span><br/><span class="muted">2 CF bag</span></td>
-            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$247.28</span><br/><span class="muted">list $274.75 · 10% off · 25 units</span></td>
+            <td class="editable" contenteditable="true" data-field="pallet"><span class="price">$247.28</span><br/><span class="muted"><span class="list-price">$274.75</span> · 10% off · 25 units</span></td>
             <td class="editable" contenteditable="true" data-field="tote"><span class="price">$137.50</span><br/><span class="muted">2.2 cu yd<br/>super sack</span></td>
             <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$44 / cu yd</span><br/><span class="muted">$110 / ton equivalent</span></td>
             <td class="editable" contenteditable="true" data-field="truckload"><span class="price">$1,440</span><br/><span class="muted">$60 / ton · ~60 cu yd<br/>(~$24 / cu yd)</span></td>
@@ -729,8 +734,8 @@
             <td class="editable" contenteditable="true" data-field="bag-9lb"><span class="price">$12.46</span><br/><span class="muted">sealable 9 lb bag</span></td>
             <td class="editable" contenteditable="true" data-field="bag-1cf"><span class="price">$24.90</span><br/><span class="muted">1 CF bag<br/>~50 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pallet">
-              <div class="pallet-tier"><span class="price">$1,614.82</span><br/><span class="muted">144 · 9 lb list $1,794.24 · 10% off</span></div>
-              <div class="pallet-tier"><span class="price">$1,120.50</span><br/><span class="muted">50 · 1 CF list $1,245.00 · 10% off</span></div>
+              <div class="pallet-tier"><span class="price">$1,614.82</span><br/><span class="muted">144 · 9 lb · <span class="list-price">$1,794.24</span> · 10% off</span></div>
+              <div class="pallet-tier"><span class="price">$1,120.50</span><br/><span class="muted">50 · 1 CF · <span class="list-price">$1,245.00</span> · 10% off</span></div>
             </td>
             <td class="editable" contenteditable="true" data-field="tote"><span class="price">$149.00</span><br/><span class="muted">2.2 cu yd<br/>~2,000 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$18 / cu yd</span><br/><span class="muted">$45 / ton equivalent</span></td>
@@ -751,8 +756,8 @@
             <td class="editable" contenteditable="true" data-field="bag-9lb"><span class="price">$18.10</span><br/><span class="muted">sealable 9 lb bag</span></td>
             <td class="editable" contenteditable="true" data-field="bag-1cf"><span class="price">$34.90</span><br/><span class="muted">1 CF bag<br/>~45 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pallet">
-              <div class="pallet-tier"><span class="price">$2,345.76</span><br/><span class="muted">144 · 9 lb list $2,606.40 · 10% off</span></div>
-              <div class="pallet-tier"><span class="price">$1,570.50</span><br/><span class="muted">50 · 1 CF list $1,745.00 · 10% off</span></div>
+              <div class="pallet-tier"><span class="price">$2,345.76</span><br/><span class="muted">144 · 9 lb · <span class="list-price">$2,606.40</span> · 10% off</span></div>
+              <div class="pallet-tier"><span class="price">$1,570.50</span><br/><span class="muted">50 · 1 CF · <span class="list-price">$1,745.00</span> · 10% off</span></div>
             </td>
             <td class="editable" contenteditable="true" data-field="tote"><span class="price">$399.00</span><br/><span class="muted">2.2 cu yd<br/>~2,000 lb</span></td>
             <td class="editable" contenteditable="true" data-field="pickup"><span class="price">$120 / cu yd</span><br/><span class="muted">$300 / ton equivalent</span></td>
@@ -764,134 +769,7 @@
       <div class="footer">2</div>
     </section>
 
-    <section class="page" data-page="size-guide">
-      <div class="header">
-        <div class="header-top">
-          <div class="brand-block">
-            <div class="brand-primary">
-              <span class="wordmark">Organic <span class="wm-soil">Soil</span> <span class="wm-wholesale">Wholesale</span></span>
-              <span class="header-sep">·</span>
-              <span class="doc-title editable" contenteditable="true">Size Category Guide</span>
-            </div>
-            <span class="byline">by Soil Seed &amp; Water Group · local wholesale formats</span>
-          </div>
-          <img class="ssw-logo" src="../../../Organic Soil Wholesale Website/client/public/images/soil-seed-and-water-logo.png" alt="Soil Seed &amp; Water" />
-        </div>
-      </div>
-
-      <div class="section-title editable" contenteditable="true">How to Choose the Right Format</div>
-      <div class="guide-intro editable" contenteditable="true">These size categories help customers compare storage, handling, loading, and delivery needs before discounts are applied.</div>
-
-      <table class="guide-table" data-table="size-guide">
-        <colgroup>
-          <col style="width:24%"><col style="width:38%"><col style="width:38%">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Format</th>
-            <th>Best Use</th>
-            <th>Handling Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/9lb-single-bag.webp" alt="9 lb bag" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">9 lb sealable bag</div>
-                  <div class="format-sub editable" contenteditable="true">Entry size, resealable</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Good for retail shelves, samples, small customer jobs, and easy repeat purchases.</td>
-            <td class="editable" contenteditable="true">Easy to count, store, move by hand, and keep closed between uses.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/1-5cf-single-bag.webp" alt="1 to 2 cu ft bag" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">1 CF, 1.5 CF, and 2 CF bags</div>
-                  <div class="format-sub editable" contenteditable="true">White bag formats, usually 40-50 lb</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Good when the customer needs a movable single unit with more product than the 9 lb bag.</td>
-            <td class="editable" contenteditable="true">Strong for storage. The bag helps hold water and moisture so product still has wetting when opened.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/palletized-bags.webp" alt="Palletized bags" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">Pallet</div>
-                  <div class="format-sub editable" contenteditable="true">Same bag format, full pallet volume</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Good for retailers, contractors, nurseries, one-off projects, and one-time projects.</td>
-            <td class="editable" contenteditable="true">Easier to count, ship, store, and move with a forklift or pallet jack.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/super-sack.webp" alt="Tote super sack" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">Tote / super sack</div>
-                  <div class="format-sub editable" contenteditable="true">2.2 cu yd, movable bulk</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Better pricing than bagged pallets while still movable. Better for storage than loose bulk when product must be moved later.</td>
-            <td class="editable" contenteditable="true">Can usually load at least one unit into a heavy-duty pickup or trailer.<div class="attention"><strong>Attention:</strong> customer needs a way to unload. Forklift is best. Manual unloading is possible but not recommended. Product can dry out because the sack breathes and loses moisture within weeks.</div></td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/bulk-yard-pickup.webp" alt="Bulk pickup" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">Pickup by cubic yard</div>
-                  <div class="format-sub editable" contenteditable="true">Local loader pickup</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Best for customers who can receive loose material, coordinate pickup, and use the product soon.</td>
-            <td class="editable" contenteditable="true">Requires coordination and loader availability. Confirm location, product, loader, bucket size, and whether pricing is by cubic yard or by ton.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/mixed-truckload.webp" alt="Flatbed truckload" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">Truckload flatbed</div>
-                  <div class="format-sub editable" contenteditable="true">Usually around 22 pallet spots</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Best for palletized orders, tote orders, mixed loads, equipment, and palletized bulk products.</td>
-            <td class="editable" contenteditable="true">Often comes with a Moffett forklift. The Moffett has big tires and can usually handle dirt yards better than a standard warehouse forklift.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="format-cell">
-                <img class="format-photo" src="../../../Organic Soil Wholesale Website/client/public/images/size-formats/walking-floor-delivery.webp" alt="Walking floor delivery" />
-                <div>
-                  <div class="format-name editable" contenteditable="true">Walking floor loose truckload</div>
-                  <div class="format-sub editable" contenteditable="true">Loose material, usually priced by ton</div>
-                </div>
-              </div>
-            </td>
-            <td class="editable" contenteditable="true">Best for big-volume jobs, farms, yards, landscapers, repeat bulk fills, and customers who can receive a large loose pile.</td>
-            <td class="editable" contenteditable="true">Needs open space for truck access, turning, and unloading. If not used quickly, cover with a tarp or compost tarp to manage rain, drying, and moisture.</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="footer">3</div>
-    </section>
-
-    <section class="page" data-page="operations-notes">
+<section class="page" data-page="operations-notes">
       <div class="header">
         <div class="header-top">
           <div class="brand-block">
@@ -973,7 +851,7 @@
         </div>
       </div>
 
-      <div class="footer">4</div>
+      <div class="footer">3</div>
     </section>
   </div>
 
