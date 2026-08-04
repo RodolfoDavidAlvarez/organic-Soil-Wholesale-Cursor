@@ -1,3 +1,5 @@
+> **Superseded for the printed local sheet:** B5 Local Pricing is current — see `PRICING-B5-LOCAL-2026-08-03.md` and `_pricing-v4/official/B5-Organic-Soil-Wholesale-Local-Pricing/`. This V4 checkpoint remains the pre-edit / no-discount baseline.
+
 # Pricing V4 + discount baseline (2026-08-03)
 
 Checkpoint before local-pricing ladder edits (pickup between tote and truckload) and before expanding discount presentation on the no-discount V4 sheet.
