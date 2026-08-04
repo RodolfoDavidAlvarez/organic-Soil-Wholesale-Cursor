@@ -18,11 +18,13 @@ Expanded catalog companion to the core sheet **V5 Local Pricing** (hero / daily 
 
 ## Pages (5)
 
-1. Potting soils (Soil Craft, PlantPal, PropaGrow, PlugBoost) + Mulch (Premium + Nature's Blanket) — includes yard pickup / truckload where defined
+1. Potting soils (Soil Craft, PlantPal, PropaGrow, PlugBoost) + Mulch (Premium + Nature's Blanket) — yard pickup / truckload where defined
 2. Core amendments — Simon's Gold + Mikey's Worm Poop (same numbers as V5 heroes; pickup kept)
 3. Specialty amendments — bag / pallet / tote only (**no yard pickup**)
 4. Concentrated amendments — SuperBooster + Cultivator's Rose — bag / pallet / tote only (**no yard pickup**)
-5. Pickup and Delivery Notes (ops page; no size-guide)
+5. Size Category Guide (**How to Choose the Right Format**)
+
+Pickup and Delivery Notes are **not** on this sheet.
 
 ## Rules (same as V5 core)
 

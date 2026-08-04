@@ -20,7 +20,7 @@
 
 Core V5 keeps the short hero sheet (Soil Craft, PlantPal, Nature's Blanket Premium, Simon's Gold, Mikey's Worm Poop) for everyday quotes.
 
-**V5 Local Pricing (All Products)** uses the same discount math and design system, then adds PropaGrow, PlugBoost, Nature's Blanket (standard), specialty blends, and concentrated amendments so sales can price the full local catalog from one PDF.
+**V5 Local Pricing (All Products)** uses the same discount math and design system, then adds PropaGrow, PlugBoost, specialty blends, and concentrated amendments so sales can price the full local catalog from one PDF. Mulch matches core V5: **Nature's Blanket Premium only**.
 
 ## Shared rules with V5 core
 
