@@ -141,7 +141,7 @@ type SizeCategory = {
 };
 
 /** Volume incentive: pallet vs buying the same bags individually. */
-const PALLET_VOLUME_DISCOUNT = 0.1;
+const PALLET_VOLUME_DISCOUNT = 0.2;
 
 const applyPalletDiscount = (listPrice: number) =>
   Number((listPrice * (1 - PALLET_VOLUME_DISCOUNT)).toFixed(2));
@@ -511,10 +511,10 @@ const BULK_DUAL_UNITS: Record<
 const palletSizeForBag = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
   if (size.includes("1CF")) {
-    // PlantPal / Soil Craft ship 1.5 cu ft bags at 40 per pallet (V4 pricing sheet);
+    // PlantPal / Soil Craft ship 1.5 cu ft bags at 30 per pallet (B5 pricing sheet);
     // standard 1CF bags stay at 50 per pallet.
     if (isPlantPalOrSoilCraftBag(productId)) {
-      return { size: "Pallet (40 x 1CF)", qty: 40, cartLabel: "Pallet of 1.5 cu ft Bags" };
+      return { size: "Pallet (30 x 1.5CF)", qty: 30, cartLabel: "Pallet of 1.5 cu ft Bags" };
     }
     return { size: "Pallet (50 x 1CF)", qty: 50, cartLabel: "Pallet of 1CF Bags" };
   }
@@ -708,7 +708,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       cartLabel,
       displayPrice,
       compareAtPrice: listPrice,
-      badge: "10% off",
+      badge: "20% off",
     });
   };
 
@@ -1376,7 +1376,7 @@ const ProductDetail = () => {
         ? selectedChoice.subLabel
         : needsChoice
         ? selectedChoice.kind === "pallet"
-          ? `${selectedChoice.subLabel} · 10% off`
+          ? `${selectedChoice.subLabel} · 20% off`
           : selectedChoice.subLabel
         : selectedChoice.secondaryPriceLabel || undefined;
       const rawUnit = selectedChoice.unit?.replace(/^per\s/i, "") ?? "";
