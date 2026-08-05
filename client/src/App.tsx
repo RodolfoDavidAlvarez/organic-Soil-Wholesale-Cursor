@@ -257,7 +257,8 @@ function App() {
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar;
+  const isWormCastingsCampaign = location === "/free-worm-castings";
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {
