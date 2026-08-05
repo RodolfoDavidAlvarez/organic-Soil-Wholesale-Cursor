@@ -20,7 +20,6 @@ import {
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_TEL,
 } from "@/config/contact";
-import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
 
 type Props = { source: string };
@@ -104,7 +103,6 @@ function campaignTrackingProperties(source: string) {
 }
 
 export default function WormCastingsCampaign({ source }: Props) {
-  usePhoneNumberLock({ selector: "[data-phone-number]" });
   const trackingSource = normalizeTrackingSource(source);
   const formStartedRef = useRef(false);
   const [name, setName] = useState("");

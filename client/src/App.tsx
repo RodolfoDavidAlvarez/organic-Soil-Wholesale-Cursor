@@ -17,6 +17,7 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
+import WormCastingsCampaign from "@/pages/WormCastingsCampaign";
 import {
   enforceOfficialSupportPhones,
   isCallTrackingExcludedPath,
@@ -59,7 +60,6 @@ const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
-const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
@@ -112,6 +112,12 @@ const ScrollToTop = () => {
 
   return null;
 };
+
+const FreeWormCastingsRoute = () => (
+  <WormCastingsCampaign
+    source={new URLSearchParams(window.location.search).get("source") || "community-print"}
+  />
+);
 
 const CallTrackingRouteSync = () => {
   const [location] = useLocation();
@@ -180,7 +186,7 @@ function Router() {
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
-        <Route path="/free-worm-castings" component={() => <WormCastingsCampaign source={new URLSearchParams(window.location.search).get("source") || "community-print"} />} />
+        <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
         <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
@@ -251,7 +257,8 @@ function App() {
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar;
+  const isWormCastingsCampaign = location === "/free-worm-castings";
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {
