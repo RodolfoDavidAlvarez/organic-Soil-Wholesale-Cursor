@@ -17,6 +17,7 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
+import { isCallTrackingExcludedPath, setDocumentCallTrackingExclusion } from "@/lib/callTracking";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
@@ -103,6 +104,16 @@ const ScrollToTop = () => {
       top: 0,
       behavior: "smooth",
     });
+  }, [location]);
+
+  return null;
+};
+
+const CallTrackingRouteSync = () => {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    setDocumentCallTrackingExclusion(isCallTrackingExcludedPath(location));
   }, [location]);
 
   return null;
@@ -268,6 +279,7 @@ function App() {
                     {showStandardLayout && <Footer />}
                     <Toaster />
                     <ScrollToTop />
+                    <CallTrackingRouteSync />
                     <Analytics />
                     {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}

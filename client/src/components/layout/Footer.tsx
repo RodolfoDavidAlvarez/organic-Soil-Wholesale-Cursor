@@ -1,9 +1,13 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trackEvent } from "@/lib/analytics";
 import { MapPin, Phone, Mail, Clock, Leaf } from "lucide-react";
 import { CUSTOMER_SUPPORT_PHONE_DIAL, CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { isCallTrackingExcludedPath } from "@/lib/callTracking";
 
 const Footer = () => {
+  const [location] = useLocation();
+  const lockOfficialPhone = isCallTrackingExcludedPath(location);
+
   return (
     <footer className="relative z-10 mt-auto border-t border-white/10 bg-[#101f16] text-white">
       <div className="py-14">
@@ -163,12 +167,20 @@ const Footer = () => {
                   </div>
                   <a
                     href={CUSTOMER_SUPPORT_PHONE_TEL}
-                    data-callrail-ignore="true"
-                    data-dynamic-number-ignore="true"
-                    data-call-tracking-ignore="true"
                     data-official-support-phone="true"
                     data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
-                    className="no-call-tracking font-medium text-white/70 transition-colors duration-200 hover:text-white"
+                    {...(lockOfficialPhone
+                      ? {
+                          "data-callrail-ignore": "true",
+                          "data-dynamic-number-ignore": "true",
+                          "data-call-tracking-ignore": "true",
+                          className:
+                            "no-call-tracking font-medium text-white/70 transition-colors duration-200 hover:text-white",
+                        }
+                      : {
+                          className:
+                            "font-medium text-white/70 transition-colors duration-200 hover:text-white",
+                        })}
                   >
                     <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
                   </a>
