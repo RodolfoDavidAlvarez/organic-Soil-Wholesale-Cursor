@@ -49,9 +49,16 @@ const YardMap = () => {
                   </a>
                 </Button>
                 <Button asChild variant="outline" className="h-12 rounded-xl text-base font-bold">
-                  <a href={CUSTOMER_SUPPORT_PHONE_TEL}>
+                  <a
+                    href={CUSTOMER_SUPPORT_PHONE_TEL}
+                    data-official-support-phone="true"
+                    data-callrail-ignore="true"
+                    data-dynamic-number-ignore="true"
+                    data-call-tracking-ignore="true"
+                    className="no-call-tracking"
+                  >
                     <Phone className="mr-2 h-5 w-5" />
-                    Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+                    Call <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
                   </a>
                 </Button>
               </div>

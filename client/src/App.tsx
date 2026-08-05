@@ -17,7 +17,11 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
-import { isCallTrackingExcludedPath, setDocumentCallTrackingExclusion } from "@/lib/callTracking";
+import {
+  enforceOfficialSupportPhones,
+  isCallTrackingExcludedPath,
+  setDocumentCallTrackingExclusion,
+} from "@/lib/callTracking";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
@@ -113,7 +117,20 @@ const CallTrackingRouteSync = () => {
   const [location] = useLocation();
 
   useEffect(() => {
-    setDocumentCallTrackingExclusion(isCallTrackingExcludedPath(location));
+    const excluded = isCallTrackingExcludedPath(location);
+    setDocumentCallTrackingExclusion(excluded);
+    if (!excluded || typeof document === "undefined") return;
+
+    enforceOfficialSupportPhones();
+    const observer = new MutationObserver(() => enforceOfficialSupportPhones());
+    observer.observe(document.body, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
   }, [location]);
 
   return null;

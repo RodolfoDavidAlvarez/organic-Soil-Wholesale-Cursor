@@ -108,37 +108,6 @@ const Header = () => {
 
   const lockOfficialPhone = isCallTrackingExcludedPath(location);
 
-  // Only lock the nav phone on operational/direct-help routes. On marketing
-  // pages CallRail/GTM must be able to swap the displayed number for DNI.
-  useEffect(() => {
-    const header = headerRef.current;
-    if (!header || !lockOfficialPhone) return;
-
-    const enforceOfficialSupportPhone = () => {
-      header.querySelectorAll<HTMLAnchorElement>("[data-official-support-phone]").forEach((link) => {
-        if (link.getAttribute("href") !== CUSTOMER_SUPPORT_PHONE_TEL) {
-          link.setAttribute("href", CUSTOMER_SUPPORT_PHONE_TEL);
-        }
-
-        const textNode = link.querySelector<HTMLElement>("[data-official-support-phone-text]");
-        if (textNode && textNode.textContent !== CUSTOMER_SUPPORT_PHONE_DISPLAY) {
-          textNode.textContent = CUSTOMER_SUPPORT_PHONE_DISPLAY;
-        }
-      });
-    };
-
-    enforceOfficialSupportPhone();
-    const observer = new MutationObserver(enforceOfficialSupportPhone);
-    observer.observe(header, {
-      attributes: true,
-      characterData: true,
-      childList: true,
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
-  }, [lockOfficialPhone]);
-
   useEffect(() => {
     updateHeaderHeight();
   }, [isScrolled, isMobileMenuOpen, updateHeaderHeight]);
