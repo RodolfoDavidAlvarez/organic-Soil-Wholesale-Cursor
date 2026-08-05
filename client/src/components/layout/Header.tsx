@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
+import { isCallTrackingExcludedPath } from "@/lib/callTracking";
 
 const MENU_PRODUCTS = [
   {
@@ -105,9 +106,13 @@ const Header = () => {
     };
   }, [updateHeaderHeight]);
 
+  const lockOfficialPhone = isCallTrackingExcludedPath(location);
+
+  // Only lock the nav phone on operational/direct-help routes. On marketing
+  // pages CallRail/GTM must be able to swap the displayed number for DNI.
   useEffect(() => {
     const header = headerRef.current;
-    if (!header) return;
+    if (!header || !lockOfficialPhone) return;
 
     const enforceOfficialSupportPhone = () => {
       header.querySelectorAll<HTMLAnchorElement>("[data-official-support-phone]").forEach((link) => {
@@ -132,7 +137,7 @@ const Header = () => {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [lockOfficialPhone]);
 
   useEffect(() => {
     updateHeaderHeight();
@@ -299,11 +304,19 @@ const Header = () => {
               <a
                 href={CUSTOMER_SUPPORT_PHONE_TEL}
                 aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
-                data-callrail-ignore="true"
-                data-dynamic-number-ignore="true"
-                data-call-tracking-ignore="true"
+                {...(lockOfficialPhone
+                  ? {
+                      "data-callrail-ignore": "true",
+                      "data-dynamic-number-ignore": "true",
+                      "data-call-tracking-ignore": "true",
+                      className:
+                        "no-call-tracking flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200",
+                    }
+                  : {
+                      className:
+                        "flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200",
+                    })}
                 data-official-support-phone="true"
-                className="no-call-tracking flex items-center gap-1 text-primary hover:text-primary/80 transition-colors duration-200"
               >
                 <Phone className="h-4 w-4" />
                 <span className="font-medium" data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
@@ -557,11 +570,19 @@ const Header = () => {
                     <a
                       href={CUSTOMER_SUPPORT_PHONE_TEL}
                       aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
-                      data-callrail-ignore="true"
-                      data-dynamic-number-ignore="true"
-                      data-call-tracking-ignore="true"
+                      {...(lockOfficialPhone
+                        ? {
+                            "data-callrail-ignore": "true",
+                            "data-dynamic-number-ignore": "true",
+                            "data-call-tracking-ignore": "true",
+                            className:
+                              "no-call-tracking mb-3 flex min-h-[44px] items-center justify-center gap-2 rounded-md text-primary",
+                          }
+                        : {
+                            className:
+                              "mb-3 flex min-h-[44px] items-center justify-center gap-2 rounded-md text-primary",
+                          })}
                       data-official-support-phone="true"
-                      className="no-call-tracking mb-3 flex min-h-[44px] items-center justify-center gap-2 rounded-md text-primary"
                     >
                       <Phone className="h-4 w-4" />
                       <span className="font-medium" data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
