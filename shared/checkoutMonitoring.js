@@ -38,6 +38,21 @@ export async function recordCheckoutEvent(db, input) {
     last_seen_at: now,
     updated_at: now,
   };
+  if (input.event === 'checkout_entered') {
+    patch.entered_at = now;
+    patch.order_id = null;
+    patch.stripe_checkout_session_id = null;
+    patch.error_code = null;
+    patch.error_message = null;
+    patch.completed_at = null;
+    patch.immediate_alerted_at = null;
+    patch.abandoned_alerted_at = null;
+  } else if (input.event === 'payment_requested') {
+    patch.error_code = null;
+    patch.error_message = null;
+    patch.immediate_alerted_at = null;
+    patch.abandoned_alerted_at = null;
+  }
   if (input.fulfillment === 'pickup' || input.fulfillment === 'delivery') {
     patch.fulfillment_type = input.fulfillment;
   }
