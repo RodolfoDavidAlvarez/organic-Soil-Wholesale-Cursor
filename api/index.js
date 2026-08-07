@@ -1,5 +1,6 @@
 // Vercel Serverless Function with CRM Business Card Capture
 import QRCode from 'qrcode';
+import crypto from 'node:crypto';
 import {
   WORM_CASTINGS_CAMPAIGN_KEY,
   buildWormCastingsCouponEmail,
@@ -8,6 +9,12 @@ import {
   normalizeCampaignEmail,
 } from '../shared/wormCastingsCampaign.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
+import {
+  CHECKOUT_ALERT_TO,
+  isCheckoutMonitorSessionId,
+  recordCheckoutEvent,
+  sendCheckoutAlert,
+} from '../shared/checkoutMonitoring.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -45,6 +52,103 @@ async function getResend() {
     resend = new Resend(process.env.RESEND_API_KEY);
   }
   return resend;
+}
+
+async function notifyCheckoutIssue(db, monitor, subject, heading, message) {
+  if (!monitor || monitor.immediate_alerted_at) return;
+  try {
+    await sendCheckoutAlert(await getResend(), {
+      subject,
+      heading,
+      sessionId: monitor.session_id,
+      stage: monitor.stage,
+      orderId: monitor.order_id,
+      fulfillment: monitor.fulfillment_type,
+      itemCount: monitor.item_count,
+      cartValue: monitor.cart_value,
+      message,
+    });
+    await db.from('checkout_monitor_sessions').update({
+      immediate_alerted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('session_id', monitor.session_id).is('immediate_alerted_at', null);
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'checkout_alert_failed',
+      sessionId: monitor.session_id,
+      message: error?.message || String(error),
+    }));
+  }
+}
+
+async function safeRecordCheckoutEvent(db, input) {
+  try {
+    return await recordCheckoutEvent(db, input);
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'checkout_monitor_write_failed',
+      monitorEvent: input?.event,
+      sessionId: input?.sessionId,
+      message: error?.message || String(error),
+    }));
+    return null;
+  }
+}
+
+async function fulfillStripeDeposit(db, orderId, session) {
+  const numericOrderId = parseInt(String(orderId || ''), 10);
+  if (!numericOrderId) return { ok: false, reason: 'invalid_order_id' };
+
+  const { data: existing } = await db.from('orders').select('*').eq('id', numericOrderId).single();
+  if (!existing) return { ok: false, reason: 'order_not_found' };
+  if (existing.deposit_paid) return { ok: true, alreadyPaid: true };
+
+  const { data: claimed, error } = await db.from('orders').update({
+    deposit_paid: true,
+    deposit_paid_at: new Date().toISOString(),
+    stripe_payment_intent_id: session?.payment_intent || null,
+    updated_at: new Date().toISOString(),
+  }).eq('id', numericOrderId).or('deposit_paid.is.null,deposit_paid.eq.false').select('*').maybeSingle();
+  if (error) throw error;
+  if (!claimed) return { ok: true, alreadyPaid: true };
+
+  await db.from('order_status_history').insert({
+    order_id: numericOrderId,
+    old_status: existing.status || 'pending',
+    new_status: 'deposit_paid',
+    notes: `Deposit paid via Stripe. Payment Intent: ${session?.payment_intent || 'N/A'}`,
+  });
+
+  try {
+    const twilio = (await import('twilio')).default;
+    const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await twilioClient.messages.create({
+      body: `Deposit paid! Order #${claimed.order_number?.slice(0, 8)} - $${claimed.deposit_amount} from ${claimed.customer_name}`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: process.env.RODO_PHONE,
+    });
+  } catch (smsError) {
+    console.error('[stripe deposit] SMS notification error:', smsError?.message || smsError);
+  }
+
+  const customerEmail = claimed.customer_email || claimed.email;
+  if (customerEmail) {
+    try {
+      await (await getResend()).emails.send({
+        from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+        replyTo: 'ralvarez@soilseedandwater.com',
+        to: customerEmail,
+        subject: `Deposit confirmed - Order #${claimed.order_number?.slice(0, 8) || claimed.id}`,
+        html: `<p>Hi ${escapeHtml(claimed.customer_name || 'there')},</p>
+          <p>Your deposit of <strong>$${Number(claimed.deposit_amount || 0).toLocaleString()}</strong> has been received.</p>
+          <p>We'll notify you when your order is ready for ${claimed.fulfillment_type === 'delivery' ? 'delivery' : 'pickup'}.</p>
+          <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
+      });
+    } catch (emailError) {
+      console.error('[stripe deposit] confirmation email error:', emailError?.message || emailError);
+    }
+  }
+  return { ok: true };
 }
 
 async function sendWormCastingsCoupon({ db, redemption }) {
@@ -818,7 +922,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
 
 // Admin-only failure monitor: logs every input failure to system_errors and
 // emails Rodo (rate-limited to once per path per 30 min). Never throws.
-const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
+const FAILURE_ALERT_TO = process.env.DEVELOPER_ALERT_TO || 'developer@bettersystems.ai';
 async function reportFailure({ kind, path, method, status, message }) {
   try {
     const db = await getSupabase();
@@ -1075,6 +1179,48 @@ export default async function handler(req, res) {
       }
     }
 
+    // Daily privacy-light digest of checkout journeys that stopped before payment.
+    if (path === '/api/cron/checkout-monitor' && req.method === 'GET') {
+      const cronSecret = process.env.CRON_SECRET;
+      if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const db = await getSupabase();
+      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: stale, error } = await db
+        .from('checkout_monitor_sessions')
+        .select('*')
+        .in('status', ['active', 'payment_pending', 'redirected', 'failed'])
+        .lt('last_seen_at', cutoff)
+        .is('abandoned_alerted_at', null)
+        .order('last_seen_at', { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      if (!stale?.length) return res.json({ ok: true, abandoned: 0, alerted: false });
+
+      const rows = stale.map((entry) => `<tr>
+        <td>${escapeHtml(entry.stage)}</td><td>${escapeHtml(entry.fulfillment_type || '—')}</td>
+        <td>${escapeHtml(entry.item_count)}</td><td>$${Number(entry.cart_value || 0).toFixed(2)}</td>
+        <td>${escapeHtml(entry.order_id || '—')}</td><td>${escapeHtml(entry.last_seen_at)}</td>
+      </tr>`).join('');
+      const emailResult = await (await getResend()).emails.send({
+        from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
+        replyTo: 'developer@bettersystems.ai',
+        to: [CHECKOUT_ALERT_TO],
+        subject: `[OSW checkout] ${stale.length} incomplete checkout${stale.length === 1 ? '' : 's'}`,
+        html: `<h2>Incomplete checkout digest</h2><p>These checkout journeys stopped for at least one hour.</p>
+          <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Last step</th><th>Type</th><th>Items</th><th>Cart</th><th>Order</th><th>Last activity</th></tr></thead><tbody>${rows}</tbody></table>
+          <p>This monitor does not collect IP addresses, browser fingerprints, emails, phones, or addresses.</p>`,
+      });
+      if (emailResult?.error) throw new Error(emailResult.error.message || 'Digest email failed');
+      const now = new Date().toISOString();
+      await db.from('checkout_monitor_sessions').update({
+        status: 'abandoned', abandoned_alerted_at: now, updated_at: now,
+      }).in('session_id', stale.map((entry) => entry.session_id));
+      console.log(JSON.stringify({ event: 'checkout_abandonment_digest_sent', count: stale.length }));
+      return res.json({ ok: true, abandoned: stale.length, alerted: true });
+    }
+
     // Public site flags (developer mode banner on checkout, etc.)
     if (path === '/api/site-config' && req.method === 'GET') {
       const dev = await getDeveloperMode();
@@ -1082,6 +1228,117 @@ export default async function handler(req, res) {
     }
 
     const db = await getSupabase();
+
+    // Defense in depth: these public paths must be routed to api/stripe-webhook.js,
+    // where the untouched request bytes are verified. Never process parsed bodies.
+    if (req.method === 'POST' && (path === '/api/checkout/webhook' || path === '/api/webhooks/stripe')) {
+      return res.status(503).json({ error: 'Raw Stripe webhook route is unavailable' });
+    }
+
+    // Browser journey updates. Payload intentionally excludes customer identity.
+    if (path === '/api/checkout/monitor' && req.method === 'POST') {
+      const startedAt = Date.now();
+      try {
+        const body = req.body || {};
+        const monitor = await recordCheckoutEvent(db, {
+          sessionId: body.sessionId,
+          event: body.event,
+          fulfillment: body.fulfillment,
+          itemCount: body.itemCount,
+          cartValue: body.cartValue,
+          errorCode: body.event === 'checkout_error' ? 'browser_checkout_error' : undefined,
+          errorMessage: body.event === 'checkout_error' ? body.errorMessage : undefined,
+        });
+        if (req.body?.event === 'stripe_canceled' && monitor.order_id && monitor.stripe_checkout_session_id) {
+          await notifyCheckoutIssue(
+            db,
+            monitor,
+            'Customer returned from Stripe without paying',
+            'Stripe checkout was canceled',
+            'The customer reached Stripe Checkout and returned without a completed payment.',
+          );
+        }
+        console.log(JSON.stringify({
+          event: 'checkout_monitor_event',
+          monitorEvent: req.body?.event,
+          sessionId: monitor.session_id,
+          durationMs: Date.now() - startedAt,
+        }));
+        return res.json({ ok: true });
+      } catch (error) {
+        const badRequest = /Invalid checkout monitor/.test(error?.message || '');
+        console.error(JSON.stringify({ event: 'checkout_monitor_rejected', message: error?.message || String(error) }));
+        return res.status(badRequest ? 400 : 500).json({ error: badRequest ? error.message : 'Monitor update failed' });
+      }
+    }
+
+    // Only the raw-body webhook function can call this processor. It signs the
+    // exact JSON it forwards after Stripe signature verification succeeds.
+    if (path === '/api/stripe/process-verified-event' && req.method === 'POST') {
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const supplied = String(req.headers['x-osw-internal-signature'] || '');
+      const body = JSON.stringify(req.body || {});
+      const expected = webhookSecret
+        ? crypto.createHmac('sha256', webhookSecret).update(body).digest('hex')
+        : '';
+      const valid = supplied.length === expected.length && supplied.length > 0
+        && crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected));
+      if (!valid) return res.status(401).json({ error: 'Unauthorized' });
+
+      const event = req.body;
+      const session = event?.data?.object;
+      if (!event?.id || !event?.type) return res.status(400).json({ error: 'Invalid event' });
+
+      if (event.type === 'checkout.session.completed') {
+        const orderId = parseInt(String(session?.metadata?.order_id || ''), 10);
+        if (orderId && session?.metadata?.type === 'deposit') {
+          await fulfillStripeDeposit(db, orderId, session);
+        } else if (orderId) {
+          await fulfillOswCheckoutOrder(orderId, session);
+          const monitorId = session?.metadata?.checkout_monitor_id;
+          if (isCheckoutMonitorSessionId(monitorId)) {
+            await safeRecordCheckoutEvent(db, {
+              sessionId: monitorId,
+              event: 'payment_completed',
+              orderId,
+              stripeSessionId: session.id,
+              fulfillment: session?.metadata?.fulfillment_type,
+            });
+          }
+        }
+      } else if (event.type === 'checkout.session.expired') {
+        const monitorId = session?.metadata?.checkout_monitor_id;
+        if (isCheckoutMonitorSessionId(monitorId)) {
+          const monitor = await safeRecordCheckoutEvent(db, {
+            sessionId: monitorId,
+            event: 'stripe_canceled',
+            orderId: Number(session?.metadata?.order_id) || undefined,
+            stripeSessionId: session.id,
+            errorCode: 'stripe_session_expired',
+            errorMessage: 'Stripe Checkout session expired before payment.',
+          });
+          await notifyCheckoutIssue(db, monitor, 'Stripe session expired', 'Checkout expired before payment', monitor?.error_message);
+        }
+      } else if (event.type === 'payment_intent.payment_failed') {
+        const orderId = parseInt(String(session?.metadata?.order_id || ''), 10);
+        if (orderId) {
+          await db.from('orders').update({ payment_status: 'failed', status: 'payment_failed' }).eq('id', orderId);
+        }
+        const monitorId = session?.metadata?.checkout_monitor_id;
+        if (isCheckoutMonitorSessionId(monitorId)) {
+          const message = session?.last_payment_error?.message || 'Stripe reported a failed payment.';
+          const monitor = await safeRecordCheckoutEvent(db, {
+            sessionId: monitorId,
+            event: 'payment_failed',
+            orderId: orderId || undefined,
+            errorCode: session?.last_payment_error?.code || 'payment_failed',
+            errorMessage: message,
+          });
+          await notifyCheckoutIssue(db, monitor, 'Payment failed', 'Stripe payment failed', message);
+        }
+      }
+      return res.json({ processed: true, eventId: event.id });
+    }
 
     // ============ CONTACT FORM ============
     // Public contact form. Records to contact_submissions and forwards to the MOS
@@ -6187,6 +6444,16 @@ ${pages}
         }
 
         const result = await fulfillOswCheckoutOrder(id, session);
+        const monitorId = session?.metadata?.checkout_monitor_id;
+        if (isCheckoutMonitorSessionId(monitorId)) {
+          await safeRecordCheckoutEvent(db, {
+            sessionId: monitorId,
+            event: 'payment_completed',
+            orderId: id,
+            stripeSessionId: session.id,
+            fulfillment: session?.metadata?.fulfillment_type,
+          });
+        }
         return res.json(result);
       } catch (err) {
         console.error('[checkout confirm-paid] error:', err?.message || err);
@@ -6198,6 +6465,7 @@ ${pages}
     // Creates a draft order, then either (a) skips Stripe for free orders
     // (TEST discount code = 100% off) or (b) returns a Stripe Checkout URL.
     if (path === '/api/checkout/create-session' && req.method === 'POST') {
+      const monitorSessionId = req.body?.monitorSessionId;
       try {
         const {
           items: rawItems, customerInfo, locationId, discountCode,
@@ -6207,6 +6475,16 @@ ${pages}
 
         if (!Array.isArray(rawItems) || rawItems.length === 0) {
           return res.status(400).json({ error: 'No items to check out' });
+        }
+
+        if (isCheckoutMonitorSessionId(monitorSessionId)) {
+          await safeRecordCheckoutEvent(db, {
+            sessionId: monitorSessionId,
+            event: 'payment_requested',
+            fulfillment: fulfillmentType === 'delivery' ? 'delivery' : 'pickup',
+            itemCount: rawItems.length,
+            cartValue: rawItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0),
+          });
         }
 
         const { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } = await import('../shared/flatbedSpots.js');
@@ -6381,6 +6659,17 @@ ${pages}
           return res.status(500).json({ error: 'Failed to create order' });
         }
 
+        if (isCheckoutMonitorSessionId(monitorSessionId)) {
+          await safeRecordCheckoutEvent(db, {
+            sessionId: monitorSessionId,
+            event: 'payment_requested',
+            orderId: order.id,
+            fulfillment: isDelivery ? 'delivery' : 'pickup',
+            itemCount: items.length,
+            cartValue: totalDollars,
+          });
+        }
+
         const orderItems = items.map((item) => ({
           order_id: order.id,
           product_id: item.productId,
@@ -6448,6 +6737,17 @@ ${pages}
             } catch (e) {
               console.error('[free-order delivery intake] failed:', e?.message || e);
             }
+          }
+
+          if (isCheckoutMonitorSessionId(monitorSessionId)) {
+            await safeRecordCheckoutEvent(db, {
+              sessionId: monitorSessionId,
+              event: 'payment_completed',
+              orderId: order.id,
+              fulfillment: isDelivery ? 'delivery' : 'pickup',
+              itemCount: items.length,
+              cartValue: 0,
+            });
           }
 
           return res.json({
@@ -6518,9 +6818,10 @@ ${pages}
           line_items: lineItems,
           mode: 'payment',
           success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
-          cancel_url: `${origin}/checkout?canceled=true`,
+          cancel_url: `${origin}/checkout?canceled=true${isCheckoutMonitorSessionId(monitorSessionId) ? `&monitor_id=${encodeURIComponent(monitorSessionId)}` : ''}`,
           metadata: {
             order_id: String(order.id),
+            checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
             pickup_time: pickupTime || '',
             fulfillment_type: isDelivery ? 'delivery' : 'pickup',
             preferred_delivery_date: isDelivery ? preferredDeliveryDate : '',
@@ -6528,6 +6829,13 @@ ${pages}
             preferred_delivery_window: isDelivery ? preferredDeliveryWindow : '',
             customer_type: customerInfo?.customerCategory || '',
             company: customerInfo?.company || '',
+          },
+          payment_intent_data: {
+            metadata: {
+              order_id: String(order.id),
+              checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
+              fulfillment_type: isDelivery ? 'delivery' : 'pickup',
+            },
           },
           customer_email: customerInfo?.email || undefined,
         });
@@ -6537,6 +6845,18 @@ ${pages}
           .update({ stripe_checkout_session_id: session.id })
           .eq('id', order.id);
 
+        if (isCheckoutMonitorSessionId(monitorSessionId)) {
+          await safeRecordCheckoutEvent(db, {
+            sessionId: monitorSessionId,
+            event: 'stripe_redirect',
+            orderId: order.id,
+            stripeSessionId: session.id,
+            fulfillment: isDelivery ? 'delivery' : 'pickup',
+            itemCount: items.length,
+            cartValue: totalDollars,
+          });
+        }
+
         return res.json({
           sessionId: session.id,
           orderId: order.id,
@@ -6545,6 +6865,25 @@ ${pages}
         });
       } catch (err) {
         console.error('Checkout error:', err);
+        if (isCheckoutMonitorSessionId(monitorSessionId)) {
+          try {
+            const monitor = await safeRecordCheckoutEvent(db, {
+              sessionId: monitorSessionId,
+              event: 'checkout_error',
+              errorCode: err?.type || err?.code || 'checkout_session_error',
+              errorMessage: err?.message || 'Failed to create checkout session',
+            });
+            await notifyCheckoutIssue(
+              db,
+              monitor,
+              'Checkout could not start',
+              'A customer could not reach Stripe Checkout',
+              monitor?.error_message || err?.message,
+            );
+          } catch (monitorError) {
+            console.error('[checkout monitor] could not record create-session failure:', monitorError?.message || monitorError);
+          }
+        }
         return res.status(500).json({ error: err.message || 'Failed to create checkout session' });
       }
     }

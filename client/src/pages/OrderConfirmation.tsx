@@ -10,6 +10,7 @@ import {
   PHOENIX_YARD_ADDRESS,
 } from '@/config/contact';
 import { type EcommerceItem, trackEcommerceEvent, trackPhoneClick } from '@/lib/analytics';
+import { recordCheckoutMonitorEvent } from '@/lib/checkoutMonitor';
 import { HOURS_LABEL, PICKUP_LOCATIONS } from '@shared/pickupSchedule.js';
 
 interface OrderDetails {
@@ -127,6 +128,13 @@ const OrderConfirmation: React.FC = () => {
           setOrderDetails(confirmed);
           if (payload?.ok || confirmed.paymentConfirmed || confirmed.freeOrder) {
             trackPurchaseOnce(confirmed);
+            recordCheckoutMonitorEvent('payment_completed', {
+              orderId: Number(confirmed.orderId),
+              fulfillment: confirmed.fulfillment,
+              itemCount: confirmed.items,
+              cartValue: confirmed.value,
+              stripeSessionId: sessionId || undefined,
+            });
           }
         })
         .catch(() => {
