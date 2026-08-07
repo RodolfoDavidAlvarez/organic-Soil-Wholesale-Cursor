@@ -51,136 +51,62 @@ const productImages = {
 
 const offers: BundleOffer[] = [
   {
-    slug: "garden-bed-builder",
-    eyebrow: "The complete bed build",
-    title: "Garden Bed Builder Bundle",
-    shortTitle: "Garden Bed Builder",
-    description: "Everything you need to build healthier, richer garden beds from the ground up—soil, compost, worm castings, and a protective mulch finish.",
-    heroImage: "/images/optimized/mikeys-worm-new-graphics-2-uses.webp",
-    heroAlt: "Worm castings being used in garden beds, pots, around trees, and in-ground gardens",
-    listPrice: 285.14,
-    salePrice: 214,
-    savings: 71.14,
-    badge: "25% launch savings",
-    idealFor: "New beds, fall vegetables, and serious backyard growers",
-    result: "Build the whole bed once, then grow into it all season.",
+    slug: "garden-refresh",
+    eyebrow: "The 4×8 raised-bed reset",
+    title: "Garden Refresh",
+    shortTitle: "Garden Refresh",
+    description: "Ten cubic feet across seven bags: compost, worm castings, and mulch—exactly what one 4×8 raised bed needs for fall.",
+    heroImage: "/images/offers/garden-refresh.png",
+    heroAlt: "Garden Refresh offer: seven bags for one 4 by 8 raised bed, $69 pickup price",
+    listPrice: 91,
+    salePrice: 69,
+    savings: 22,
+    badge: "Save $22",
+    idealFor: "Refreshing one existing 4×8 raised bed for fall",
+    result: "Four cubic feet feed the soil and six cubic feet finish the bed with mulch.",
     items: [
-      { name: "PlantPal all-stage potting mix", amount: "3 × 1.5-cu-ft bags", ...productImages.plantpal },
-      { name: "Simon's Gold dairy compost", amount: "6 × 1-cu-ft bags", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "2 × 1-cu-ft bags", ...productImages.mikeys },
       { name: "Nature's Blanket Premium mulch", amount: "3 × 2-cu-ft bags", ...productImages.mulch },
-    ],
-  },
-  {
-    slug: "raised-bed-refresh",
-    eyebrow: "Refresh what you already have",
-    title: "Raised Bed Refresh Bundle",
-    shortTitle: "Raised Bed Refresh",
-    description: "Bring tired raised beds back to life with fresh potting mix, rich compost, and a concentrated worm-castings boost.",
-    heroImage: "/images/optimized/simons-gold-new-graphics-2-uses.webp",
-    heroAlt: "Simon's Gold compost used to enrich garden soil",
-    listPrice: 128.66,
-    salePrice: 96,
-    savings: 32.66,
-    badge: "25% launch savings",
-    idealFor: "Existing raised beds that need a new season of life",
-    result: "More organic matter, better moisture holding, and happier roots.",
-    items: [
-      { name: "PlantPal all-stage potting mix", amount: "4 × 1.5-cu-ft bags", ...productImages.plantpal },
-      { name: "Simon's Gold dairy compost", amount: "2 × 1-cu-ft bags", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "1 × 1-cu-ft bag", ...productImages.mikeys },
-    ],
-  },
-  {
-    slug: "container-garden-kit",
-    eyebrow: "For patios, porches, and pots",
-    title: "Container Garden Kit",
-    shortTitle: "Container Garden",
-    description: "A simple, complete mix for a patio garden full of herbs, flowers, vegetables, and thriving containers.",
-    heroImage: "/images/optimized/plantpal-new-graphics-2-lifestyle.webp",
-    heroAlt: "PlantPal potting mix supporting a thriving container garden",
-    listPrice: 103.76,
-    salePrice: 78,
-    savings: 25.76,
-    badge: "25% launch savings",
-    idealFor: "Container gardeners, patios, balconies, and first-time growers",
-    result: "Start with a clean foundation and feed every container naturally.",
-    items: [
-      { name: "PlantPal all-stage potting mix", amount: "4 × 1.5-cu-ft bags", ...productImages.plantpal },
+      { name: "Mikey's Worm Poop worm castings", amount: "3 × 1-cu-ft bags", ...productImages.mikeys },
       { name: "Simon's Gold dairy compost", amount: "1 × 1-cu-ft bag", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "1 × 1-cu-ft bag", ...productImages.mikeys },
     ],
   },
   {
-    slug: "tree-shrub-care-kit",
-    eyebrow: "Feed roots. Protect the soil.",
-    title: "Tree & Shrub Care Kit",
-    shortTitle: "Tree & Shrub Care",
-    description: "Give established trees and shrubs a richer root zone, a gentle organic feeding layer, and mulch that helps hold moisture where it matters.",
-    heroImage: "/images/optimized/mikeys-worm-new-graphics-2-uses.webp",
-    heroAlt: "Worm castings used around the base of a tree",
-    listPrice: 117.67,
-    salePrice: 88,
-    savings: 29.67,
-    badge: "25% launch savings",
-    idealFor: "Fruit trees, citrus, shrubs, and landscape plantings",
-    result: "Feed the root zone and protect it from Arizona heat.",
+    slug: "big-garden-setup",
+    eyebrow: "Fill the beds. Feed the soil. Finish the surface.",
+    title: "Big Garden Setup",
+    shortTitle: "Big Garden Setup",
+    description: "One 2.2-cubic-yard tote of living soil plus ten bags of compost, worm castings, and mulch for two to three 4×8 beds.",
+    heroImage: "/images/offers/big-garden-setup.png",
+    heroAlt: "Big Garden Setup offer: one PlantPal tote and ten bags for $459",
+    listPrice: 642,
+    salePrice: 459,
+    savings: 183,
+    badge: "Save $183",
+    idealFor: "Building or deeply resetting two to three 4×8 garden beds",
+    result: "72.4 cubic feet of total material in one coordinated Phoenix pickup.",
     items: [
-      { name: "Simon's Gold dairy compost", amount: "2 × 1-cu-ft bags", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "1 × 1-cu-ft bag", ...productImages.mikeys },
+      { name: "PlantPal living soil", amount: "1 × 2.2-cu-yd tote", ...productImages.plantpal },
+      { name: "Simon's Gold dairy compost", amount: "4 × 1-cu-ft bags", ...productImages.simons },
+      { name: "Mikey's Worm Poop worm castings", amount: "3 × 1-cu-ft bags", ...productImages.mikeys },
       { name: "Nature's Blanket Premium mulch", amount: "3 × 2-cu-ft bags", ...productImages.mulch },
-    ],
-  },
-  {
-    slug: "mulch-soil-shield",
-    eyebrow: "Arizona heat protection",
-    title: "Mulch + Soil Shield Bundle",
-    shortTitle: "Mulch + Soil Shield",
-    description: "Improve the soil underneath and finish the surface with a thick mulch layer that helps protect moisture and reduce stress from the heat.",
-    heroImage: "/images/optimized/natures-blanket-premium-lifestyle.jpg",
-    heroAlt: "Nature's Blanket Premium mulch protecting a healthy landscape bed",
-    listPrice: 128.66,
-    salePrice: 96,
-    savings: 32.66,
-    badge: "25% launch savings",
-    idealFor: "Landscape beds, trees, shrubs, and water-wise yards",
-    result: "A healthier soil layer below and a cooler, protected surface above.",
-    items: [
-      { name: "Simon's Gold dairy compost", amount: "2 × 1-cu-ft bags", ...productImages.simons },
-      { name: "Mikey's Worm Poop worm castings", amount: "1 × 1-cu-ft bag", ...productImages.mikeys },
-      { name: "Nature's Blanket Premium mulch", amount: "4 × 2-cu-ft bags", ...productImages.mulch },
-    ],
-  },
-  {
-    slug: "free-bag-garden-add-on",
-    eyebrow: "Exclusive community-gift add-on",
-    title: "Grow More Add-On Bundle",
-    shortTitle: "Grow More Add-On",
-    description: "Bring your private free worm-castings coupon, then add the rest of the garden essentials for one simple pickup price.",
-    heroImage: "/images/optimized/mikeys-worm-poop-bag-context.webp",
-    heroAlt: "Mikey's Worm Poop bag with vegetables, soil, and earthworms",
-    listPrice: 34.44,
-    salePrice: 25,
-    savings: 9.44,
-    badge: "Save 27% with your coupon",
-    idealFor: "August community-gift registrants",
-    result: "Leave with all four core products in one yard visit.",
-    couponOnly: true,
-    items: [
-      { name: "PlantPal all-stage potting mix", amount: "1 × 1.5-cu-ft bag", ...productImages.plantpal },
-      { name: "Simon's Gold dairy compost", amount: "1 × 9-lb bag", ...productImages.simons },
-      { name: "Nature's Blanket Premium mulch", amount: "1 × 2-cu-ft bag", ...productImages.mulch },
     ],
   },
 ];
 
 const fmt = (value: number) => `$${value.toFixed(2)}`;
 
+const legacyOfferAliases: Record<string, string> = {
+  "raised-bed-refresh": "garden-refresh",
+  "garden-bed-builder": "big-garden-setup",
+};
+
 export default function BundleOffers() {
   const [, params] = useRoute("/offers/:slug");
-  const offer = useMemo(() => offers.find((item) => item.slug === params?.slug), [params?.slug]);
+  const requestedSlug = params?.slug;
+  const slug = requestedSlug ? legacyOfferAliases[requestedSlug] || requestedSlug : undefined;
+  const offer = useMemo(() => offers.find((item) => item.slug === slug), [slug]);
 
-  if (!params?.slug) return <OffersIndex />;
+  if (!slug) return <OffersIndex />;
   if (!offer) return <OffersIndex />;
   return <OfferPage offer={offer} />;
 }
@@ -193,7 +119,7 @@ function OffersIndex() {
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup bundles</p>
         <h1 className="mt-3 max-w-3xl font-heading text-4xl font-bold text-[#183a23] sm:text-5xl">Build a better garden for less.</h1>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-[#657066]">Complete bundles with Arizona-made soil, compost, worm castings, and mulch. Every offer is built for a specific garden job and priced for pickup.</p>
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-10 grid max-w-5xl gap-6 md:grid-cols-2">
           {offers.map((offer) => <OfferCard offer={offer} key={offer.slug} />)}
         </div>
       </div>
@@ -204,7 +130,7 @@ function OffersIndex() {
 function OfferCard({ offer }: { offer: BundleOffer }) {
   return (
     <Link href={`/offers/${offer.slug}`} className="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl">
-      <img src={offer.heroImage} alt={offer.heroAlt} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+      <img src={offer.heroImage} alt={offer.heroAlt} loading="lazy" className="aspect-[17/22] w-full bg-[#f4f2eb] object-contain" />
       <div className="p-6">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a6f39]">{offer.badge}</p>
         <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23]">{offer.shortTitle}</h2>
@@ -265,8 +191,8 @@ function OfferPage({ offer }: { offer: BundleOffer }) {
             </div>
             <p className="mt-3 text-sm font-semibold text-[#f1d6a6]">{offer.badge} · Phoenix yard pickup</p>
           </div>
-          <div className="order-1 min-h-[300px] lg:order-2 lg:min-h-full">
-            <img src={offer.heroImage} alt={offer.heroAlt} className="h-full min-h-[300px] w-full object-cover" fetchPriority="high" />
+          <div className="order-1 min-h-[300px] bg-[#f4f2eb] lg:order-2 lg:min-h-full">
+            <img src={offer.heroImage} alt={offer.heroAlt} className="h-full min-h-[300px] w-full object-contain" fetchPriority="high" />
           </div>
         </div>
       </section>

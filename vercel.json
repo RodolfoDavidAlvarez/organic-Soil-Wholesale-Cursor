@@ -4,9 +4,15 @@
   "framework": null,
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/worm-castings-day3",
+      "schedule": "0 16 * * *"
+    }
+  ],
   "images": {
     "sizes": [256, 384, 480, 640, 750, 828, 1080, 1200, 1600],
     "domains": [],

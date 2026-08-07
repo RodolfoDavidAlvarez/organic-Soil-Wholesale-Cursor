@@ -7,6 +7,7 @@ import {
   normalizeCampaignSource,
   normalizeCampaignEmail,
 } from '../shared/wormCastingsCampaign.js';
+import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -1041,6 +1042,37 @@ export default async function handler(req, res) {
     // Health check
     if (path === '/api/health') {
       return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+
+    // Daily Day-3 worm-castings pickup reminders (Vercel Cron)
+    if (path === '/api/cron/worm-castings-day3' && req.method === 'GET') {
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.authorization || '';
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { default: pg } = await import('pg');
+      const { Resend } = await import('resend');
+      const client = new pg.Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+      });
+      const resendClient = new Resend(process.env.RESEND_API_KEY);
+      const limit = Math.min(Number(url.searchParams.get('limit') || 50), 100);
+
+      await client.connect();
+      try {
+        const summary = await processDay3Reminders(client, resendClient, {
+          apply: true,
+          limit,
+          delayMs: 120,
+          sourceApp: 'organic_soil_wholesale_day3_reminder_cron',
+        });
+        return res.json(summary);
+      } finally {
+        await client.end();
+      }
     }
 
     // Public site flags (developer mode banner on checkout, etc.)

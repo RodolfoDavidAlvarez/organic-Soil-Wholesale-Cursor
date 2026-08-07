@@ -303,7 +303,6 @@ export async function handleResendNewsletterWebhook(supabase, event) {
         .from('notification_log')
         .update({ status: 'delivered', delivered_at: now })
         .eq('provider_id', resendEmailId)
-        .eq('template_name', 'worm_castings_qr_distribution')
     }
 
     if (suppressContact || kind === 'failed') {
@@ -312,7 +311,6 @@ export async function handleResendNewsletterWebhook(supabase, event) {
         .from('notification_log')
         .update({ status: 'failed', error_message: failureMessage })
         .eq('provider_id', resendEmailId)
-        .eq('template_name', 'worm_castings_qr_distribution')
       await supabase
         .from('sp_worm_castings_redemptions')
         .update({
