@@ -23,6 +23,7 @@ import {
 } from "@/lib/flatbedSpots";
 import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
+import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
@@ -108,6 +109,7 @@ const Checkout: React.FC = () => {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
+  const monitorSessionId = useMemo(() => getCheckoutMonitorId(), []);
   /** Only loose walking-floor truckloads force delivery — never flatbed pallets/totes. */
   const hasWalkingFloorDelivery = useMemo(
     () => payItems.some((item) => isWalkingFloorDeliveryFormat(item.format)),
@@ -395,6 +397,30 @@ const Checkout: React.FC = () => {
   const discountAmount = appliedDiscount ? subtotal * (appliedDiscount.percent / 100) : 0;
   const total = Math.max(0, subtotal - discountAmount);
 
+  useEffect(() => {
+    if (payItems.length === 0) return;
+    const common = { fulfillment, itemCount: payItems.length, cartValue: total };
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("canceled") === "true") {
+      recordCheckoutMonitorEvent("stripe_canceled", {
+        ...common,
+        sessionId: params.get("monitor_id") || monitorSessionId,
+      });
+    } else {
+      recordCheckoutMonitorEvent("checkout_entered", common);
+    }
+  }, [monitorSessionId]);
+
+  useEffect(() => {
+    if (payItems.length === 0) return;
+    if (new URLSearchParams(window.location.search).get("canceled") === "true") return;
+    recordCheckoutMonitorEvent(activeStep, {
+      fulfillment,
+      itemCount: payItems.length,
+      cartValue: total,
+    });
+  }, [activeStep, fulfillment]);
+
   const applyDiscount = () => {
     setDiscountError(null);
     const code = discountInput.trim().toUpperCase();
@@ -482,6 +508,11 @@ const Checkout: React.FC = () => {
     }
 
     setSubmitting(true);
+    recordCheckoutMonitorEvent("payment_requested", {
+      fulfillment,
+      itemCount: payItems.length,
+      cartValue: total,
+    });
     try {
       const res = await fetch("/api/checkout/create-session", {
         method: "POST",
@@ -528,6 +559,7 @@ const Checkout: React.FC = () => {
             : null,
           isQuickOrder: true,
           discountCode: appliedDiscount?.code || null,
+          monitorSessionId,
         }),
       });
       const data = await res.json();
@@ -570,6 +602,13 @@ const Checkout: React.FC = () => {
         return;
       }
       if (data.url) {
+        recordCheckoutMonitorEvent("stripe_redirect", {
+          fulfillment,
+          itemCount: payItems.length,
+          cartValue: total,
+          orderId: data.orderId,
+          stripeSessionId: data.sessionId,
+        });
         window.location.assign(data.url);
         return;
       }
@@ -580,6 +619,12 @@ const Checkout: React.FC = () => {
         fulfillment,
         item_count: payItems.length,
         reason: err instanceof Error ? err.message.slice(0, 80) : "Checkout error",
+      });
+      recordCheckoutMonitorEvent("checkout_error", {
+        fulfillment,
+        itemCount: payItems.length,
+        cartValue: total,
+        errorMessage: err instanceof Error ? err.message.slice(0, 300) : "Checkout error",
       });
       setSubmitting(false);
     }

@@ -5,12 +5,19 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60
+    },
+    "api/stripe-webhook.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
     {
       "path": "/api/cron/worm-castings-day3",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/checkout-monitor",
+      "schedule": "15 16 * * *"
     }
   ],
   "images": {
@@ -74,6 +81,14 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/checkout/webhook",
+      "destination": "/api/stripe-webhook"
+    },
+    {
+      "source": "/api/webhooks/stripe",
+      "destination": "/api/stripe-webhook"
+    },
     {
       "source": "/api/:path*",
       "destination": "/api"
