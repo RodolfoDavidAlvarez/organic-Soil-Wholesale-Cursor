@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
 export const config = { api: { bodyParser: false } };
 
@@ -19,6 +21,35 @@ function requestOrigin(req) {
   return `${forwardedProto || 'https'}://${host}`;
 }
 
+async function reportWebhookFailure(message) {
+  try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+    const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const path = '/api/checkout/webhook';
+    const { data: row } = await db.from('system_errors').insert({
+      kind: 'stripe_webhook_failure', path, method: 'POST', status: 500,
+      message: String(message || '').slice(0, 500),
+    }).select('id').single();
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { count } = await db.from('system_errors')
+      .select('id', { count: 'exact', head: true })
+      .eq('path', path).eq('alerted', true).gte('created_at', since);
+    if ((count || 0) > 0 || !process.env.RESEND_API_KEY) return;
+    const result = await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
+      replyTo: 'developer@bettersystems.ai',
+      to: [process.env.DEVELOPER_ALERT_TO || 'developer@bettersystems.ai'],
+      subject: '[OSW checkout] Stripe webhook failure',
+      text: `The OSW Stripe webhook failed.\n\n${String(message || '').slice(0, 500)}\n\nTime: ${new Date().toISOString()}\nAlerts are paused for this path for 30 minutes.`,
+    });
+    if (!result?.error && row?.id) {
+      await db.from('system_errors').update({ alerted: true }).eq('id', row.id);
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'stripe_webhook_alert_failed', message: error?.message || String(error) }));
+  }
+}
+
 export default async function handler(req, res) {
   const startedAt = Date.now();
   const requestId = req.headers['x-vercel-id'] || crypto.randomUUID();
@@ -29,6 +60,7 @@ export default async function handler(req, res) {
   const signature = req.headers['stripe-signature'];
   if (!stripeKey || !webhookSecret) {
     console.error(JSON.stringify({ event: 'stripe_webhook_misconfigured', requestId }));
+    await reportWebhookFailure('Stripe webhook environment variables are missing.');
     return res.status(503).json({ error: 'Stripe webhook is not configured' });
   }
   if (!signature) return res.status(400).json({ error: 'Missing Stripe-Signature header' });
@@ -73,6 +105,7 @@ export default async function handler(req, res) {
       message: error?.message || String(error),
       durationMs: Date.now() - startedAt,
     }));
+    await reportWebhookFailure(error?.message || String(error));
     return res.status(signatureFailure ? 400 : 500).json({
       error: signatureFailure ? 'Invalid Stripe signature' : 'Webhook processing failed',
     });

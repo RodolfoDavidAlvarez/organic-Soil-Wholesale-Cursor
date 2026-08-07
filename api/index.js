@@ -922,7 +922,7 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
 
 // Admin-only failure monitor: logs every input failure to system_errors and
 // emails Rodo (rate-limited to once per path per 30 min). Never throws.
-const FAILURE_ALERT_TO = 'rodolfo@bettersystems.ai';
+const FAILURE_ALERT_TO = process.env.DEVELOPER_ALERT_TO || 'developer@bettersystems.ai';
 async function reportFailure({ kind, path, method, status, message }) {
   try {
     const db = await getSupabase();
