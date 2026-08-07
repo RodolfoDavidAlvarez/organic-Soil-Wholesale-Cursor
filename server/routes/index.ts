@@ -41,6 +41,7 @@ import unsubscribeRoutes from "./unsubscribe.js";
 import newsletterRoutes from "./newsletter.js";
 import schedulingRoutes from "./scheduling.js";
 import webhookRoutes from "./webhooks.js";
+import campaignRedirectRoutes from "./campaignRedirect.js";
 // import pricingRoutes from "./pricing.js";
 
 export function registerRoutes(app: Express): Promise<Server> {
@@ -61,6 +62,8 @@ export function registerRoutes(app: Express): Promise<Server> {
     const { getDevSiteConfig } = await import("../../shared/developerMode.js");
     res.json(getDevSiteConfig());
   });
+
+  app.use("/r", campaignRedirectRoutes);
 
   // Register route modules
   app.use("/api/public/products", publicProductRoutes);

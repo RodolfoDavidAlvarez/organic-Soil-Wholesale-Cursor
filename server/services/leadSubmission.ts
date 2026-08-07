@@ -215,6 +215,19 @@ export async function processLeadSubmission(
       osw_contact_message_id: data.id,
       lead_type: isOrderCallback ? "order_callback" : "lead_form",
       ...(isOrderCallback && order ? { order } : {}),
+      ...(() => {
+        const utm: Record<string, string> = {};
+        try {
+          const u = new URL(source_url || "https://organicsoilwholesale.com/");
+          for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "campaign_link_code"] as const) {
+            const v = u.searchParams.get(key);
+            if (v) utm[key] = v;
+          }
+        } catch {
+          // ignore
+        }
+        return utm;
+      })(),
     },
   });
 
