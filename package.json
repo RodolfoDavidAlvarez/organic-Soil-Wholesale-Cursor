@@ -17,7 +17,8 @@
     "test:phone-links": "node scripts/test-phone-links.mjs",
     "test:form": "tsx scripts/test-lead-submission.ts",
     "test:pricing": "node scripts/test-osw-pricing.mjs",
-    "test:ux": "node scripts/test-osw-ux.mjs"
+    "test:ux": "node scripts/test-osw-ux.mjs",
+    "test:worm-day3": "node --test test/worm-castings-day3-reminders.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

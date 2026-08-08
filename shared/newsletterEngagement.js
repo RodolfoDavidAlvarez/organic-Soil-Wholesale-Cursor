@@ -298,6 +298,13 @@ export async function handleResendNewsletterWebhook(supabase, event) {
   // Transactional campaign coupons also use Resend. Keep their audit row and
   // redemption delivery state aligned with verified provider events.
   if (resendEmailId) {
+    const { updateReminderDeliveryFromWebhook } = await import('./wormCastingsDay3Reminders.js')
+    await updateReminderDeliveryFromWebhook(supabase, {
+      providerId: resendEmailId,
+      kind,
+      now,
+    })
+
     if (kind === 'delivered') {
       await supabase
         .from('notification_log')

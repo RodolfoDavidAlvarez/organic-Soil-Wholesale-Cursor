@@ -121,12 +121,13 @@ export function buildWormCastingsCouponEmail({ fullName, token }) {
   };
 }
 
-export function buildWormCastingsDay3ReminderEmail({ fullName, token }) {
+export function buildWormCastingsDay3ReminderEmail({ fullName, token, email }) {
   const name = escapeHtml(normalizeCouponGreetingName(fullName));
   const privateCouponUrl = couponUrl(token);
   const qrUrl = couponQrUrl(token);
   const backupCode = escapeHtml(token);
   const directionsUrl = PHOENIX_YARD_DIRECTIONS_URL.replaceAll('&', '&amp;');
+  const unsubscribeUrl = `${APP_URL}/unsubscribe?email=${encodeURIComponent(String(email || '').trim().toLowerCase())}`;
 
   return {
     subject: 'Your free worm castings bag is still waiting',
@@ -164,7 +165,7 @@ export function buildWormCastingsDay3ReminderEmail({ fullName, token }) {
     <p style="margin:14px auto 0;max-width:420px;color:#6a746b;font-size:12px;line-height:1.5;">If the QR image does not load, tap the button above. Backup code: <strong style="color:#263527;">${backupCode}</strong></p>
     <p style="margin:18px 0 0;color:#526052;font-size:13px;line-height:1.55;">One free 9-lb bag of Mikey's Worm Poop per person/email. No purchase required. Valid through August 31, 2026.</p>
   </td></tr>
-  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; Soil Seed &amp; Water<br>Regenerative Soil Solutions</td></tr>
+  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; Soil Seed &amp; Water<br>1634 N 19th Ave, Phoenix, AZ 85009<br><a href="${unsubscribeUrl}" style="color:#fff;text-decoration:underline;">Unsubscribe from email reminders</a></td></tr>
 </table></td></tr></table></body></html>`,
   };
 }

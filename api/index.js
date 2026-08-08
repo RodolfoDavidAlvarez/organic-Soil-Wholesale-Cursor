@@ -1181,7 +1181,7 @@ export default async function handler(req, res) {
         const summary = await processDay3Reminders(client, resendClient, {
           apply: true,
           limit,
-          delayMs: 120,
+          delayMs: 250,
           sourceApp: 'organic_soil_wholesale_day3_reminder_cron',
         });
         return res.json(summary);

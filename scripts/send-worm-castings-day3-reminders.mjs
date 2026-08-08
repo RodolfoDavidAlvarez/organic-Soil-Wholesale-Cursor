@@ -38,6 +38,7 @@ try {
   const summary = await processDay3Reminders(client, resend, {
     apply,
     limit: Number.isFinite(limit) && limit > 0 ? limit : 200,
+    delayMs: 250,
     sourceApp: 'organic_soil_wholesale_day3_reminder_script',
   });
   console.log(JSON.stringify(summary, null, 2));
