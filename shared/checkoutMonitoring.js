@@ -2,6 +2,11 @@ const VALID_SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-
 
 export const CHECKOUT_ALERT_TO = process.env.CHECKOUT_ALERT_TO || 'developer@bettersystems.ai';
 
+// Failed payments and checkout errors receive an immediate alert. Keep them out
+// of the abandonment digest so their failure status is preserved and the same
+// incident is not reported twice.
+export const CHECKOUT_ABANDONMENT_STATUSES = ['active', 'payment_pending', 'redirected'];
+
 export const CHECKOUT_EVENT_STATE = {
   checkout_entered: { status: 'active', stage: 'checkout_entered' },
   fulfillment: { status: 'active', stage: 'fulfillment' },

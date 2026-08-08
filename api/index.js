@@ -10,6 +10,7 @@ import {
 } from '../shared/wormCastingsCampaign.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import {
+  CHECKOUT_ABANDONMENT_STATUSES,
   CHECKOUT_ALERT_TO,
   isCheckoutMonitorSessionId,
   recordCheckoutEvent,
@@ -1201,7 +1202,7 @@ export default async function handler(req, res) {
       const { data: stale, error } = await db
         .from('checkout_monitor_sessions')
         .select('*')
-        .in('status', ['active', 'payment_pending', 'redirected', 'failed'])
+        .in('status', CHECKOUT_ABANDONMENT_STATUSES)
         .lt('last_seen_at', cutoff)
         .is('abandoned_alerted_at', null)
         .order('last_seen_at', { ascending: true })
@@ -1218,8 +1219,8 @@ export default async function handler(req, res) {
         from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
         replyTo: 'developer@bettersystems.ai',
         to: [CHECKOUT_ALERT_TO],
-        subject: `[OSW checkout] ${stale.length} incomplete checkout${stale.length === 1 ? '' : 's'}`,
-        html: `<h2>Incomplete checkout digest</h2><p>These checkout journeys stopped for at least one hour.</p>
+        subject: `[OSW checkout digest] ${stale.length} incomplete checkout${stale.length === 1 ? '' : 's'}`,
+        html: `<h2>Incomplete checkout digest</h2><p>These checkout journeys stopped for at least one hour. This is a customer-behavior signal, not a website outage alert.</p>
           <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Last step</th><th>Type</th><th>Items</th><th>Cart</th><th>Order</th><th>Last activity</th></tr></thead><tbody>${rows}</tbody></table>
           <p>This monitor does not collect IP addresses, browser fingerprints, emails, phones, or addresses.</p>`,
       });
@@ -1345,7 +1346,13 @@ export default async function handler(req, res) {
             errorCode: session?.last_payment_error?.code || 'payment_failed',
             errorMessage: message,
           });
-          await notifyCheckoutIssue(db, monitor, 'Payment failed', 'Stripe payment failed', message);
+          await notifyCheckoutIssue(
+            db,
+            monitor,
+            'Customer payment method failed',
+            'Stripe declined a customer payment',
+            `${message} No charge was completed. This is a customer payment issue, not a website outage.`,
+          );
         }
       }
       return res.json({ processed: true, eventId: event.id });
