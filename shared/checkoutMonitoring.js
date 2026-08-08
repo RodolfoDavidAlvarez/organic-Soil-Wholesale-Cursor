@@ -7,6 +7,17 @@ export const CHECKOUT_ALERT_TO = process.env.CHECKOUT_ALERT_TO || 'developer@bet
 // incident is not reported twice.
 export const CHECKOUT_ABANDONMENT_STATUSES = ['active', 'payment_pending', 'redirected'];
 
+export function checkoutAlertFollowUpFromOrder(order) {
+  if (!order) return {};
+  return {
+    customerName: order.customer_name || undefined,
+    customerEmail: order.customer_email || order.email || undefined,
+    customerPhone: order.phone || undefined,
+    pickupScheduledAt: order.pickup_scheduled_at || undefined,
+    pickupLocation: order.pickup_location || undefined,
+  };
+}
+
 export const CHECKOUT_EVENT_STATE = {
   checkout_entered: { status: 'active', stage: 'checkout_entered' },
   fulfillment: { status: 'active', stage: 'fulfillment' },
@@ -100,24 +111,75 @@ export async function sendCheckoutAlert(resendClient, {
   itemCount,
   cartValue,
   message,
+  customerName,
+  customerEmail,
+  customerPhone,
+  pickupScheduledAt,
+  pickupLocation,
 }) {
-  const safe = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[char]);
+  const html = buildCheckoutAlertHtml({
+    heading,
+    sessionId,
+    stage,
+    orderId,
+    fulfillment,
+    itemCount,
+    cartValue,
+    message,
+    customerName,
+    customerEmail,
+    customerPhone,
+    pickupScheduledAt,
+    pickupLocation,
+  });
   const result = await resendClient.emails.send({
     from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
     replyTo: 'developer@bettersystems.ai',
     to: [CHECKOUT_ALERT_TO],
     subject: `[OSW checkout] ${subject}`,
-    html: `<h2>${safe(heading)}</h2>
+    html,
+  });
+  if (result?.error) throw new Error(result.error.message || 'Checkout alert email failed');
+  return result?.data?.id || null;
+}
+
+export function buildCheckoutAlertHtml({
+  heading,
+  sessionId,
+  stage,
+  orderId,
+  fulfillment,
+  itemCount,
+  cartValue,
+  message,
+  customerName,
+  customerEmail,
+  customerPhone,
+  pickupScheduledAt,
+  pickupLocation,
+}) {
+  const safe = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+  const clean = (value, max = 160) => typeof value === 'string' ? value.trim().slice(0, max) : '';
+  const followUpRows = [
+    ['Name', clean(customerName, 120)],
+    ['Email', clean(customerEmail, 254)],
+    ['Phone', clean(customerPhone, 40)],
+    ['Pickup time', clean(pickupScheduledAt, 80)],
+    ['Pickup location', clean(pickupLocation, 160)],
+  ].filter(([, value]) => value);
+  const followUp = followUpRows.length
+    ? `<h3>Customer follow-up</h3><p>${followUpRows.map(([label, value]) => `<strong>${safe(label)}:</strong> ${safe(value)}`).join('<br>')}</p>`
+    : '<p><strong>Customer follow-up:</strong> No contact details were captured.</p>';
+
+  return `<h2>${safe(heading)}</h2>
       <p><strong>Stage:</strong> ${safe(stage || 'unknown')}<br>
       <strong>Order:</strong> ${safe(orderId || 'not created')}<br>
       <strong>Fulfillment:</strong> ${safe(fulfillment || 'not selected')}<br>
       <strong>Cart:</strong> ${safe(itemCount || 0)} item(s), $${safe(Number(cartValue || 0).toFixed(2))}<br>
       <strong>Monitor ID:</strong> ${safe(sessionId || 'unknown')}</p>
       ${message ? `<p><strong>Details:</strong> ${safe(message)}</p>` : ''}
-      <p>No IP address, browser fingerprint, email, phone, or address was collected by this monitor.</p>`,
-  });
-  if (result?.error) throw new Error(result.error.message || 'Checkout alert email failed');
-  return result?.data?.id || null;
+      ${followUp}
+      <p>No IP address, browser fingerprint, card data, Stripe secret, billing address, or delivery address is included in this alert. Customer follow-up details come only from the draft order when already captured.</p>`;
 }

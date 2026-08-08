@@ -12,6 +12,7 @@ import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
   CHECKOUT_ALERT_TO,
+  checkoutAlertFollowUpFromOrder,
   isCheckoutMonitorSessionId,
   recordCheckoutEvent,
   sendCheckoutAlert,
@@ -59,7 +60,7 @@ async function getResend() {
   return resend;
 }
 
-async function notifyCheckoutIssue(db, monitor, subject, heading, message) {
+async function notifyCheckoutIssue(db, monitor, subject, heading, message, followUp = {}) {
   if (!monitor || monitor.immediate_alerted_at) return;
   try {
     await sendCheckoutAlert(await getResend(), {
@@ -72,6 +73,11 @@ async function notifyCheckoutIssue(db, monitor, subject, heading, message) {
       itemCount: monitor.item_count,
       cartValue: monitor.cart_value,
       message,
+      customerName: followUp.customerName,
+      customerEmail: followUp.customerEmail,
+      customerPhone: followUp.customerPhone,
+      pickupScheduledAt: followUp.pickupScheduledAt,
+      pickupLocation: followUp.pickupLocation,
     });
     await db.from('checkout_monitor_sessions').update({
       immediate_alerted_at: new Date().toISOString(),
@@ -1333,8 +1339,18 @@ export default async function handler(req, res) {
         }
       } else if (event.type === 'payment_intent.payment_failed') {
         const orderId = parseInt(String(session?.metadata?.order_id || ''), 10);
+        let orderContact = null;
         if (orderId) {
-          await db.from('orders').update({ payment_status: 'failed', status: 'payment_failed' }).eq('id', orderId);
+          const { data, error: orderUpdateError } = await db
+            .from('orders')
+            .update({ payment_status: 'failed', status: 'payment_failed' })
+            .eq('id', orderId)
+            .select('customer_name,customer_email,email,phone,pickup_scheduled_at,pickup_location')
+            .maybeSingle();
+          orderContact = data;
+          if (orderUpdateError) {
+            console.error(JSON.stringify({ event: 'payment_failed_order_update_failed', orderId }));
+          }
         }
         const monitorId = session?.metadata?.checkout_monitor_id;
         if (isCheckoutMonitorSessionId(monitorId)) {
@@ -1349,9 +1365,10 @@ export default async function handler(req, res) {
           await notifyCheckoutIssue(
             db,
             monitor,
-            'Customer payment method failed',
-            'Stripe declined a customer payment',
-            `${message} No charge was completed. This is a customer payment issue, not a website outage.`,
+            'Customer payment declined — no charge, no fulfillment',
+            'Customer payment declined — no charge, no fulfillment',
+            `${message} The website and checkout remained available.`,
+            checkoutAlertFollowUpFromOrder(orderContact),
           );
         }
       }
