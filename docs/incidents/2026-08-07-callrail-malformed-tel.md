@@ -2,7 +2,7 @@
 
 - Discovery date: 2026-08-07
 - Severity: P0 call-conversion regression
-- Status: Reopened for canonical destination correction; website deployment, CallRail destination verification, and physical-device verification pending
+- Status: Website corrected in production; CallRail forwarding-destination verification and approved physical-device test call pending (not Resolved)
 - Affected window: Start is not yet determinable. The defect was confirmed on production on 2026-08-07 before the corrective deployment.
 
 ## Customer-visible symptom
@@ -52,6 +52,17 @@ The React source supplied a visible number, `href`, and `aria-label` independent
 - CallRail DNI must recognize the new canonical source number and every assigned tracking number must route to `(623) 263-3386`.
 - A real test call and CallRail conversion-log confirmation require explicit approval before placing the call or changing external routing.
 - See `docs/PHONE_SOURCE_OF_TRUTH.md` for the permanent replacement checklist.
+
+## Canonical correction production evidence
+
+- Website commit: `3418bf1fafd225c2b76a7eb2db2a06533c7f258a`.
+- Production deployment: `dpl_EECeH4FixTtTuzW8mwthHu9zwJwP`, Ready and aliased to `https://www.organicsoilwholesale.com` on 2026-08-07.
+- Build, client typecheck, canonical-link regression suite, and call-tracking exclusion suite passed.
+- Fresh sessions with CallRail blocked were checked at 390x844 and 1440x900 across home, products, contact, campaign, checkout, quote, QR, and yard-map routes. Every rendered official CTA used `(623) 263-3386` / `tel:+16232633386`; no retired number appeared.
+- In a fresh production session with CallRail loaded, DNI supplied `(602) 313-3897`; all rendered links synchronized to `tel:+16023133897` and `Call (602) 313-3897`. The captured browser dial intent was `tel:+16023133897`; no call was placed.
+- CallRail's public `swap.js` configuration contains `(623) 263-3386` / `16232633386` and does not contain the retired number. This confirms the public DNI source-number configuration.
+- The authenticated CallRail dashboard was unavailable. Forwarding destinations for `(602) 313-3897` and every pool number could not be confirmed. A dashboard routing change or real test call requires explicit approval.
+- Vercel reported no error/fatal logs for the production deployment after verification.
 
 ## Impact evidence and limits
 
