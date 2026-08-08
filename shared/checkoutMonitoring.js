@@ -18,6 +18,15 @@ export function checkoutAlertFollowUpFromOrder(order) {
   };
 }
 
+const KNOWN_SCANNER_INPUT_PATHS = new Set(['/api/graphql']);
+
+export function shouldAlertUnmatchedInput(path, method) {
+  return ['POST', 'PUT', 'PATCH'].includes(method)
+    && typeof path === 'string'
+    && path.startsWith('/api/')
+    && !KNOWN_SCANNER_INPUT_PATHS.has(path);
+}
+
 export const CHECKOUT_EVENT_STATE = {
   checkout_entered: { status: 'active', stage: 'checkout_entered' },
   fulfillment: { status: 'active', stage: 'fulfillment' },

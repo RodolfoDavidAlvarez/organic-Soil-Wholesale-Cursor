@@ -6,6 +6,7 @@ import {
   CHECKOUT_EVENT_STATE,
   buildCheckoutAlertHtml,
   checkoutAlertFollowUpFromOrder,
+  shouldAlertUnmatchedInput,
 } from '../shared/checkoutMonitoring.js';
 
 test('abandonment digest excludes failures that already receive immediate alerts', () => {
@@ -13,6 +14,12 @@ test('abandonment digest excludes failures that already receive immediate alerts
   assert.equal(CHECKOUT_EVENT_STATE.checkout_error.status, 'failed');
   assert.equal(CHECKOUT_EVENT_STATE.payment_failed.status, 'failed');
   assert.equal(CHECKOUT_ABANDONMENT_STATUSES.includes('failed'), false);
+});
+
+test('known GraphQL scanner probes do not trigger customer-input alerts', () => {
+  assert.equal(shouldAlertUnmatchedInput('/api/graphql', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'POST'), true);
+  assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'GET'), false);
 });
 
 test('order enrichment returns only bounded follow-up fields', () => {

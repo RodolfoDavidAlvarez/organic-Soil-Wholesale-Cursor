@@ -16,6 +16,7 @@ import {
   isCheckoutMonitorSessionId,
   recordCheckoutEvent,
   sendCheckoutAlert,
+  shouldAlertUnmatchedInput,
 } from '../shared/checkoutMonitoring.js';
 import {
   normalizeV5CheckoutItems,
@@ -6945,7 +6946,7 @@ ${pages}
 
     // 404 — alert admin only when a real submission (POST/PUT/PATCH) hits a
     // missing route (i.e. a broken input), not GET noise from bots/crawlers.
-    if (['POST', 'PUT', 'PATCH'].includes(req.method) && path.startsWith('/api/')) {
+    if (shouldAlertUnmatchedInput(path, req.method)) {
       await reportFailure({ kind: 'unmatched_input', path, method: req.method, status: 404, message: 'No prod route for this input' });
     }
     return res.status(404).json({ error: 'API endpoint not found', path });
