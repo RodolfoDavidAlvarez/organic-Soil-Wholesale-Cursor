@@ -1145,6 +1145,13 @@ export default async function handler(req, res) {
 
   const url = new URL(req.url, `https://${req.headers.host}`);
   const path = url.pathname;
+  const startedAt = Date.now();
+  const vercelRequestId = Array.isArray(req.headers['x-vercel-id'])
+    ? req.headers['x-vercel-id'][0]
+    : req.headers['x-vercel-id'];
+  const requestId = vercelRequestId || crypto.randomUUID();
+  const isLeadSubmission = path === '/api/leads/submit' && req.method === 'POST';
+  if (isLeadSubmission) res.setHeader('X-OSW-Request-ID', requestId);
 
   try {
     // Health check
@@ -5498,6 +5505,7 @@ ${pages}
 
     // POST /api/leads/submit
     if (path === '/api/leads/submit' && req.method === 'POST') {
+      console.info(JSON.stringify({ event: 'lead_submission_started', requestId }));
       const body = req.body || {};
       const {
         name, phone, notes, preferred_date, order, source_url,
@@ -5507,17 +5515,21 @@ ${pages}
       const emailRaw = String(body.email || '').trim();
 
       if (!name || !phone) {
+        console.warn(JSON.stringify({ event: 'lead_submission_rejected', requestId, status: 400, reason: 'missing_required_fields', durationMs: Date.now() - startedAt }));
         return res.status(400).json({
           error: isOrderCallback
             ? 'Name and phone are required'
             : 'Name, email, and phone are required',
+          requestId,
         });
       }
       if (!isOrderCallback && !emailRaw) {
-        return res.status(400).json({ error: 'Name, email, and phone are required' });
+        console.warn(JSON.stringify({ event: 'lead_submission_rejected', requestId, status: 400, reason: 'missing_email', durationMs: Date.now() - startedAt }));
+        return res.status(400).json({ error: 'Name, email, and phone are required', requestId });
       }
       if (isOrderCallback && (!order?.line_items || !order.line_items.length)) {
-        return res.status(400).json({ error: 'Add at least one order line before requesting a callback' });
+        console.warn(JSON.stringify({ event: 'lead_submission_rejected', requestId, status: 400, reason: 'missing_order_lines', durationMs: Date.now() - startedAt }));
+        return res.status(400).json({ error: 'Add at least one order line before requesting a callback', requestId });
       }
 
       const email = emailRaw || (isOrderCallback
@@ -5584,7 +5596,10 @@ ${pages}
       };
       if (preferred_date) insertData.preferred_date = preferred_date;
       const { data, error } = await sb.from('contact_messages').insert(insertData).select().single();
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error(JSON.stringify({ event: 'lead_submission_failed', requestId, status: 500, reason: 'database_insert', durationMs: Date.now() - startedAt }), error);
+        return res.status(500).json({ error: 'Failed to process lead', requestId });
+      }
 
       try {
         const r = await getResend();
@@ -5637,12 +5652,14 @@ ${pages}
         console.error('[leads/submit] MOS forward error:', e?.message || e);
       }
 
+      console.info(JSON.stringify({ event: 'lead_submission_succeeded', requestId, status: 200, leadId: data.id, durationMs: Date.now() - startedAt }));
       return res.json({
         success: true,
         message: isOrderCallback
           ? 'Thanks — a rep will call you about this order shortly.'
           : 'Quote request submitted successfully',
         leadId: data.id,
+        requestId,
       });
     }
 
@@ -6909,6 +6926,10 @@ ${pages}
     }
     return res.status(404).json({ error: 'API endpoint not found', path });
   } catch (error) {
+    if (isLeadSubmission) {
+      console.error(JSON.stringify({ event: 'lead_submission_failed', requestId, status: 500, reason: 'unhandled', durationMs: Date.now() - startedAt }), error);
+      return res.status(500).json({ error: 'Failed to process lead', requestId });
+    }
     console.error('API error:', error);
     await reportFailure({ kind: 'server_error', path, method: req.method, status: 500, message: error?.message || String(error) });
     return res.status(500).json({ error: error.message || 'Internal server error' });

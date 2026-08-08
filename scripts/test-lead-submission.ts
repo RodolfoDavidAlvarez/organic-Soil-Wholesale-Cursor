@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   completeLeadSuccess,
   LeadSubmissionRequestError,
@@ -58,4 +59,10 @@ assert.equal(successVisible, true, "accepted leads remain visibly successful");
 assert.equal(laterActionRan, true, "one non-critical failure does not stop later actions");
 assert.equal(capturedErrors.length, 1);
 
-console.log("Lead submission: accepted/rejected responses, request IDs, and post-success failure isolation ok");
+const productionApiSource = await readFile(new URL("../api/index.js", import.meta.url), "utf8");
+assert.match(productionApiSource, /path === '\/api\/leads\/submit'/, "the deployed monolith retains the lead route");
+assert.match(productionApiSource, /X-OSW-Request-ID/, "the deployed lead route emits a trace header");
+assert.match(productionApiSource, /lead_submission_succeeded/, "the deployed lead route logs accepted writes");
+assert.match(productionApiSource, /lead_submission_failed/, "the deployed lead route logs failed writes");
+
+console.log("Lead submission: actual production route, accepted/rejected responses, request IDs, and post-success failure isolation ok");
