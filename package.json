@@ -13,7 +13,8 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "vercel-build": "npm install --prefix client && npm run --prefix client build",
-    "grok": "node scripts/grok-cli.js"
+    "grok": "node scripts/grok-cli.js",
+    "test:phone-links": "node scripts/test-phone-links.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

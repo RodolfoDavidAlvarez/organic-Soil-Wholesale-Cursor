@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Phone, Search, User, NotebookPen, CreditCard, ExternalLink, X, ZoomIn, Building2, Leaf, GraduationCap, MapPin, Tractor, Truck, Trees, Factory, Shield, Heart, BookOpen, Calendar, Copy, Check } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { getPhoneNumberForTel } from '@/utils/phone';
 
 interface RepresentativeSummary {
   id: number;
@@ -620,7 +621,7 @@ export default function AdminRepresentativeContacts() {
                               )}
                               {contact.phone && (
                                 <a
-                                  href={`tel:${contact.phone}`}
+                                  href={`tel:${getPhoneNumberForTel(contact.phone)}`}
                                   className="flex-1 flex items-center justify-center gap-2 h-11 px-3 rounded-lg border text-sm font-medium"
                                 >
                                   <Phone className="h-4 w-4" />
@@ -743,7 +744,7 @@ export default function AdminRepresentativeContacts() {
                               {contact.phone && (
                                 <div className="flex items-center gap-2">
                                   <Phone className="h-3.5 w-3.5" />
-                                  <a href={`tel:${contact.phone}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                                  <a href={`tel:${getPhoneNumberForTel(contact.phone)}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
                                     {contact.phone}
                                   </a>
                                 </div>
@@ -1057,7 +1058,7 @@ export default function AdminRepresentativeContacts() {
                     {selectedContact.phone && (
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <a href={`tel:${selectedContact.phone}`} className="hover:underline">
+                        <a href={`tel:${getPhoneNumberForTel(selectedContact.phone)}`} className="hover:underline">
                           {selectedContact.phone}
                         </a>
                       </div>

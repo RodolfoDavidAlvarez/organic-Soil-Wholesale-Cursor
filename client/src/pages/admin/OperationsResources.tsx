@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
 import { useLocation } from 'wouter';
+import { getPhoneNumberForTel } from '@/utils/phone';
 
 interface Contact {
   name: string;
@@ -395,7 +396,7 @@ function ContactRow({ contact }: { contact: Contact }) {
       <div className="flex items-center gap-2">
         {contact.phone && (
           <a
-            href={`tel:${contact.phone}`}
+            href={`tel:${getPhoneNumberForTel(contact.phone)}`}
             className="p-2 bg-[#264027] text-white rounded-full hover:bg-[#3c5233] transition-colors"
           >
             <Phone className="w-4 h-4" />

@@ -185,33 +185,41 @@ const Home = () => {
               <p className="mt-5 max-w-xl text-base text-stone-200 md:text-lg">
                 Dairy compost, worm castings, premium potting blends and amendments — produced in Arizona, delivered by the pallet, supersack, or truckload to landscapers, farms, and nurseries.
               </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-8 sm:flex sm:flex-row">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    trackEvent("Hero CTA Clicked", { cta: "request_quote" });
+                    navigate(`/order${window.location.search}`);
+                  }}
+                  className="h-14 px-3 text-sm font-bold text-stone-950 sm:px-7 sm:text-base"
+                >
+                  Request a Quote
+                </Button>
                 <Button
                   size="lg"
                   onClick={() => {
                     trackEvent("Hero CTA Clicked", { cta: "shop_products" });
                     navigate("/products");
                   }}
-                  className="h-14 gap-2 bg-[#d6c1a0] px-8 text-lg font-extrabold tracking-tight text-stone-950 shadow-xl ring-1 ring-white/30 hover:bg-[#c4a878]"
+                  className="h-14 gap-1.5 bg-[#d6c1a0] px-3 text-sm font-extrabold tracking-tight text-stone-950 shadow-xl ring-1 ring-white/30 hover:bg-[#c4a878] sm:px-7 sm:text-base"
                 >
-                  Get Soil Today <ArrowRight className="h-5 w-5 stroke-[3]" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  asChild
-                  className="h-14 gap-2 border-white/30 bg-white/5 px-8 text-base font-semibold text-white backdrop-blur hover:bg-white/15 hover:text-white"
-                >
-                  <a
-                    href={CUSTOMER_SUPPORT_PHONE_TEL}
-                    onClick={() => trackEvent("Hero CTA Clicked", { cta: "call" })}
-                  >
-                    <Phone className="h-5 w-5" />
-                    Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
-                  </a>
+                  Get Soil Today <ArrowRight className="h-4 w-4 stroke-[3] sm:h-5 sm:w-5" />
                 </Button>
               </div>
-              <div className="mt-7 grid grid-cols-3 gap-3 border-t border-white/15 pt-5 text-sm text-stone-300 sm:mt-10 sm:gap-6 sm:pt-6">
+              <a
+                href={CUSTOMER_SUPPORT_PHONE_TEL}
+                aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
+                data-official-support-phone="true"
+                data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)}
+                onClick={() => trackEvent("Hero CTA Clicked", { cta: "call" })}
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white/85 underline-offset-4 hover:text-white hover:underline"
+              >
+                <Phone className="h-4 w-4" />
+                Need help? Call <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>
+              </a>
+              <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/15 pt-5 text-sm text-stone-300 sm:mt-8 sm:gap-6 sm:pt-6">
                 <div>
                   <p className="font-bold text-white">Made in AZ</p>
                   <p className="text-xs text-stone-400">Phoenix-based</p>
@@ -254,7 +262,7 @@ const Home = () => {
       </section>
 
       {/* Unified reviews: photo carousel + quote carousel + field strip */}
-      <DeferredMount minHeight={680} rootMargin="-300px 0px">
+      <DeferredMount minHeight={680} rootMargin="1200px 0px">
         <Suspense fallback={<div className="min-h-[680px] bg-[#eef3eb]" aria-hidden />}>
           <AmazonReviewCarousel />
         </Suspense>

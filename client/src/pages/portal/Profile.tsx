@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, Phone, Mail, Building2, User, CreditCard } from 'lucide-react';
 import PortalLayout from './PortalLayout';
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from '@/config/contact';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -54,7 +55,7 @@ const Profile = () => {
         <div className="rounded-xl bg-white/70 border border-primary/10 shadow-sm p-5">
           <p className="text-sm text-muted-foreground leading-relaxed">
             Need to update your info? Give us a call at{' '}
-            <a href="tel:6232633386" className="text-primary font-medium hover:underline">(623) 263-3386</a> or email{' '}
+            <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="text-primary font-medium hover:underline">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</a> or email{' '}
             <a href="mailto:ralvarez@soilseedandwater.com" className="text-primary font-medium hover:underline">ralvarez@soilseedandwater.com</a>
           </p>
         </div>

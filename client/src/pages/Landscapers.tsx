@@ -5,6 +5,7 @@ import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { getOptimizedImageSrc } from "@/utils/getOptimizedImageSrc";
 import { getMulchProducts } from "@/data/productData";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const Landscapers = () => {
   const [, setLocation] = useLocation();
@@ -24,7 +25,7 @@ const Landscapers = () => {
     <>
       <SEO
         title="Landscaper Supplies Phoenix AZ | Premium Mulch, Worm Castings & Turf Daddy"
-        description="Arizona's premier wholesale supplier for landscapers in Phoenix and statewide. Premium mulch, worm castings, and Turf Daddy blend. OMRI-listed, bulk delivery and pickup. Call (623) 263-3386."
+        description={`Arizona's premier wholesale supplier for landscapers in Phoenix and statewide. Premium mulch, worm castings, and Turf Daddy blend. OMRI-listed, bulk delivery and pickup. Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}.`}
         keywords="Phoenix landscaper soil, Arizona mulch wholesale, worm castings Phoenix, Turf Daddy Arizona, bulk mulch Phoenix, landscaper supplies Arizona, commercial mulch Phoenix, organic soil Phoenix"
         canonical="https://organicsoilwholesale.com/landscapers"
         structuredData={{
@@ -68,14 +69,14 @@ const Landscapers = () => {
                 >
                   Get a Quote
                 </Button>
-                <a href="tel:6232633386" className="contents">
+                <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="contents">
                   <Button
                     size="lg"
                     className="min-h-[48px] border-2 border-white !bg-transparent !text-white hover:!bg-white hover:!text-[#264027] font-semibold shadow-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#264027]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Phone className="h-4 w-4 mr-2" />
-                    (623) 263-3386
+                    {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                   </Button>
                 </a>
               </div>
@@ -292,14 +293,14 @@ const Landscapers = () => {
               >
                 Get Your Custom Quote
               </Button>
-              <a href="tel:6232633386" className="contents">
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="contents">
                 <Button
                   size="lg"
                   className="min-h-[48px] border-2 border-white !bg-transparent !text-white hover:!bg-white hover:!text-[#264027] font-semibold shadow-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#264027]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Phone className="h-4 w-4 mr-2" />
-                  Call (623) 263-3386
+                  Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                 </Button>
               </a>
             </div>

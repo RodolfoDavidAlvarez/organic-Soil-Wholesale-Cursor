@@ -21,6 +21,7 @@ import {
   enforceOfficialSupportPhones,
   isCallTrackingExcludedPath,
   setDocumentCallTrackingExclusion,
+  synchronizeTrackedSupportPhones,
 } from "@/lib/callTracking";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -125,10 +126,14 @@ const CallTrackingRouteSync = () => {
   useEffect(() => {
     const excluded = isCallTrackingExcludedPath(location);
     setDocumentCallTrackingExclusion(excluded);
-    if (!excluded || typeof document === "undefined") return;
+    if (typeof document === "undefined") return;
 
-    enforceOfficialSupportPhones();
-    const observer = new MutationObserver(() => enforceOfficialSupportPhones());
+    const synchronize = () => {
+      if (excluded) enforceOfficialSupportPhones();
+      synchronizeTrackedSupportPhones();
+    };
+    synchronize();
+    const observer = new MutationObserver(synchronize);
     observer.observe(document.body, {
       attributes: true,
       characterData: true,

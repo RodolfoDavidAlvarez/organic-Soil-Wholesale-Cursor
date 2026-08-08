@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { ShoppingCart, Phone } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
-import { CUSTOMER_SUPPORT_PHONE_TEL } from '@/config/contact';
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from '@/config/contact';
 
 const FloatingCTA = () => {
   return (
@@ -11,7 +11,7 @@ const FloatingCTA = () => {
         data-official-support-phone="true"
         onClick={() => trackEvent("Floating CTA Clicked", { cta: "call", page: window.location.pathname })}
         className="flex items-center justify-center w-12 h-12 rounded-full bg-white text-primary shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20"
-        aria-label="Call us"
+        aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
       >
         <Phone className="h-5 w-5" />
       </a>

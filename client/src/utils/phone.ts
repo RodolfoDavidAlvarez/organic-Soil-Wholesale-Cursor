@@ -14,6 +14,7 @@ export const formatPhoneNumber = (phone: string): string => {
 
 export const getPhoneNumberForTel = (phone: string): string => {
   if (!phone) return phone;
-  const cleaned = stripNonDigits(phone);
-  return cleaned.startsWith('1') && cleaned.length === 11 ? cleaned : cleaned;
+  let cleaned = stripNonDigits(phone);
+  if (cleaned.length === 11 && cleaned.startsWith('1')) cleaned = cleaned.slice(1);
+  return cleaned.length === 10 ? `+1${cleaned}` : phone;
 };

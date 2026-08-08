@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Quote, Star } from "lucide-react";
 import {
   Carousel,
@@ -66,19 +66,54 @@ function ProductChip({ label, tone = "light" }: { label: string; tone?: "light" 
   );
 }
 
-/** Image-forward card — photo always on top so every slide matches. */
-function PhotoReviewCard({ review }: { review: AmazonReview }) {
+function DeferredReviewImage({ src, alt }: { src: string; alt: string }) {
+  const imageRef = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image || !("IntersectionObserver" in window)) {
+      setShouldLoad(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setShouldLoad(true);
+        observer.disconnect();
+      },
+      { rootMargin: "100px 0px" },
+    );
+    observer.observe(image);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[1.35rem] bg-white shadow-[0_14px_40px_-24px_rgba(38,64,39,0.55)] ring-1 ring-[#264027]/12 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-22px_rgba(38,64,39,0.5)]">
-      <div className="relative aspect-[5/4] w-full overflow-hidden bg-stone-100">
+    <div ref={imageRef} className="h-full w-full bg-gradient-to-br from-stone-100 to-[#e4ebe0]">
+      {shouldLoad ? (
         <img
-          src={review.photo}
-          alt={`${review.name} — ${review.product} customer photo`}
+          src={src}
+          alt={alt}
           width="1125"
           height="1500"
           className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
           loading="lazy"
           decoding="async"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Image-forward card — photo always on top so every slide matches. */
+function PhotoReviewCard({ review }: { review: AmazonReview }) {
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-[1.35rem] bg-white shadow-[0_14px_40px_-24px_rgba(38,64,39,0.55)] ring-1 ring-[#264027]/12 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-22px_rgba(38,64,39,0.5)]">
+      <div className="relative aspect-[5/4] w-full overflow-hidden bg-stone-100">
+        <DeferredReviewImage
+          src={review.photo}
+          alt={`${review.name} — ${review.product} customer photo`}
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
         <div className="absolute left-3 top-3">

@@ -4,6 +4,7 @@ import { Award, Leaf, Truck, Phone, Package, DollarSign, Clock, ChevronDown } fr
 import { useState } from "react";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const Wholesale = () => {
   const [, setLocation] = useLocation();
@@ -536,7 +537,7 @@ const Wholesale = () => {
                     We'll call to confirm availability, pricing, and delivery. No payment required now.
                   </p>
                   {formStatus === "error" && (
-                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at (623) 263-3386.</p>
+                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at {CUSTOMER_SUPPORT_PHONE_DISPLAY}.</p>
                   )}
                 </form>
               )}
@@ -562,10 +563,10 @@ const Wholesale = () => {
             <p className="text-green-100 mb-6 max-w-xl mx-auto">
               Call us directly for same-day quotes and next-day delivery in the Phoenix metro area.
             </p>
-            <a href="tel:+16232633386">
+            <a href={CUSTOMER_SUPPORT_PHONE_TEL}>
               <Button size="lg" className="bg-white text-green-800 hover:bg-green-50 font-bold text-lg px-8">
                 <Phone className="h-5 w-5 mr-2" />
-                (623) 263-3386
+                {CUSTOMER_SUPPORT_PHONE_DISPLAY}
               </Button>
             </a>
           </div>

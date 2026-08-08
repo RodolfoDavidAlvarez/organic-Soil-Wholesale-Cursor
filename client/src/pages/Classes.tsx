@@ -1,7 +1,7 @@
 import { useState } from "react";
 import SEO from "@/components/layout/SEO";
 import { Sprout, MapPin, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react";
-import { PHOENIX_YARD_DIRECTIONS_URL } from "@/config/contact";
+import { CUSTOMER_SUPPORT_PHONE_DIAL, CUSTOMER_SUPPORT_PHONE_DISPLAY, PHOENIX_YARD_DIRECTIONS_URL } from "@/config/contact";
 
 /**
  * /classes — Garden Classes landing page.
@@ -11,8 +11,8 @@ import { PHOENIX_YARD_DIRECTIONS_URL } from "@/config/contact";
  * so we can notify them when classes are scheduled.
  */
 
-const SSW_PHONE_DIAL = "+16232633386";
-const SSW_PHONE_DISPLAY = "(623) 263-3386";
+const SSW_PHONE_DIAL = CUSTOMER_SUPPORT_PHONE_DIAL;
+const SSW_PHONE_DISPLAY = CUSTOMER_SUPPORT_PHONE_DISPLAY;
 const PHOENIX_DIRECTIONS_URL = PHOENIX_YARD_DIRECTIONS_URL;
 
 type FormState =

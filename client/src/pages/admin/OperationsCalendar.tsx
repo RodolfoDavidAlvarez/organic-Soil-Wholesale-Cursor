@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OperationsLayout from '@/components/admin/OperationsLayout';
 import ProtectedAdminRoute from '@/components/admin/ProtectedAdminRoute';
+import { getPhoneNumberForTel } from '@/utils/phone';
 
 // Database type (snake_case from API)
 interface ScheduledLoadDB {
@@ -560,7 +561,7 @@ export default function OperationsCalendar() {
                             <div className="text-xs text-gray-500 uppercase tracking-wide">Contact</div>
                             <div className="font-medium text-gray-900">{selectedLoad.contactName}</div>
                             {selectedLoad.contactPhone && (
-                              <a href={`tel:${selectedLoad.contactPhone}`} className="text-[#264027] font-mono text-sm hover:underline">
+                              <a href={`tel:${getPhoneNumberForTel(selectedLoad.contactPhone)}`} className="text-[#264027] font-mono text-sm hover:underline">
                                 {selectedLoad.contactPhone}
                               </a>
                             )}

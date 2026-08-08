@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { QRCodeSVG } from "qrcode.react";
 import { Check, Clock, MapPin, Phone, Loader2, ChevronRight } from "lucide-react";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 type VoiceOrder = {
   id: number;
@@ -202,8 +203,8 @@ export default function VoiceReceipt() {
             </div>
             <div className="flex items-start gap-3">
               <Phone className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-              <a href="tel:6232633386" className="font-medium text-emerald-800 hover:underline">
-                (623) 263-3386
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-medium text-emerald-800 hover:underline">
+                {CUSTOMER_SUPPORT_PHONE_DISPLAY}
               </a>
             </div>
           </div>

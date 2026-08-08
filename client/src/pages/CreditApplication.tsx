@@ -97,7 +97,7 @@ export default function CreditApplication() {
         <p className="text-gray-600">
           Thank you. Our team will review your wholesale credit application and follow up shortly.
           Questions? Call us at{" "}
-          <a className="text-green-700 font-semibold" href={`tel:${CUSTOMER_SUPPORT_PHONE_TEL}`}>
+          <a className="text-green-700 font-semibold" href={CUSTOMER_SUPPORT_PHONE_TEL}>
             {CUSTOMER_SUPPORT_PHONE_DISPLAY}
           </a>.
         </p>

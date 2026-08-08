@@ -4,6 +4,7 @@ import SEO from "@/components/layout/SEO";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { HOURS_LABEL } from "@shared/pickupSchedule.js";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const CORE_FOUR = [
   {
@@ -135,7 +136,7 @@ const Distributors = () => {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <Phone className="h-6 w-6 text-[#264027]" />
-                <div className="text-sm font-medium text-stone-700">(623) 263-3386</div>
+                <div className="text-sm font-medium text-stone-700">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</div>
               </div>
             </div>
           </div>
@@ -203,8 +204,8 @@ const Distributors = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8 text-sm">
-              <a href="tel:+16232633386" className="flex items-center justify-center gap-2 text-[#264027] font-medium">
-                <Phone className="h-4 w-4" /> (623) 263-3386
+              <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="flex items-center justify-center gap-2 text-[#264027] font-medium">
+                <Phone className="h-4 w-4" /> {CUSTOMER_SUPPORT_PHONE_DISPLAY}
               </a>
               <a href="mailto:info@soilseedandwater.com" className="flex items-center justify-center gap-2 text-[#264027] font-medium">
                 <Mail className="h-4 w-4" /> info@soilseedandwater.com

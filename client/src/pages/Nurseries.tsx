@@ -6,6 +6,7 @@ import { productsData } from "@/data/productData";
 import ProductShowcase from "@/components/ProductShowcase";
 import SEO from "@/components/layout/SEO";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 
 const Nurseries = () => {
   const [, setLocation] = useLocation();
@@ -144,13 +145,13 @@ const Nurseries = () => {
                   >
                     Get Wholesale Pricing
                   </Button>
-                  <a href="tel:+16232633386">
+                  <a href={CUSTOMER_SUPPORT_PHONE_TEL}>
                     <Button
                       size="lg"
                       className="bg-amber-500 text-white hover:bg-amber-600 font-bold text-lg px-8 w-full shadow-lg"
                     >
                       <Phone className="h-5 w-5 mr-2" />
-                      (623) 263-3386
+                      {CUSTOMER_SUPPORT_PHONE_DISPLAY}
                     </Button>
                   </a>
                 </div>
@@ -374,7 +375,7 @@ const Nurseries = () => {
                     {formStatus === "submitting" ? "Submitting..." : "Request Wholesale Account"}
                   </Button>
                   {formStatus === "error" && (
-                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at (623) 263-3386.</p>
+                    <p className="text-red-600 text-sm text-center">Something went wrong. Please call us at {CUSTOMER_SUPPORT_PHONE_DISPLAY}.</p>
                   )}
                 </form>
               )}
@@ -397,10 +398,10 @@ const Nurseries = () => {
             <p className="text-green-100 mb-6 max-w-xl mx-auto">
               Call us for same-day quotes. Most orders deliver next business day in the Phoenix metro.
             </p>
-            <a href="tel:+16232633386">
+            <a href={CUSTOMER_SUPPORT_PHONE_TEL}>
               <Button size="lg" className="bg-white text-green-800 hover:bg-green-50 font-bold text-lg px-8">
                 <Phone className="h-5 w-5 mr-2" />
-                (623) 263-3386
+                {CUSTOMER_SUPPORT_PHONE_DISPLAY}
               </Button>
             </a>
           </div>
