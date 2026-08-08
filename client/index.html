@@ -1,21 +1,38 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-MRVDQ73P');</script>
-    <!-- End Google Tag Manager -->
-
-    <!-- Google Analytics 4 direct event fallback. Page views stay managed by GTM. -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RFRTHKGL0X"></script>
+    <!-- Queue analytics immediately, then load third-party scripts after the page is interactive. -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-RFRTHKGL0X', { send_page_view: false });
+
+      (function () {
+        var loaded = false;
+        function loadGoogleTracking() {
+          if (loaded) return;
+          loaded = true;
+          window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+
+          var gtm = document.createElement('script');
+          gtm.async = true;
+          gtm.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-MRVDQ73P';
+          document.head.appendChild(gtm);
+
+          var ga = document.createElement('script');
+          ga.async = true;
+          ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-RFRTHKGL0X';
+          document.head.appendChild(ga);
+        }
+
+        ['pointerdown', 'keydown', 'touchstart'].forEach(function (eventName) {
+          window.addEventListener(eventName, loadGoogleTracking, { once: true, passive: true });
+        });
+        window.addEventListener('load', function () {
+          window.setTimeout(loadGoogleTracking, 0);
+        }, { once: true });
+      })();
     </script>
 
     <meta charset="UTF-8" />
@@ -46,13 +63,33 @@
     <meta name="geo.region" content="US-AZ" />
     <meta name="geo.placename" content="Arizona" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Self-host the only two critical font families to avoid render-blocking font CSS. -->
+    <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Each route preloads exactly its real hero/LCP image before the SPA starts. -->
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var preload = document.createElement('link');
+        preload.rel = 'preload';
+        preload.as = 'image';
+        preload.type = 'image/webp';
+        preload.setAttribute('fetchpriority', 'high');
+        if (path === '/') {
+          preload.href = '/images/performance/home-hero-640.webp';
+          preload.setAttribute('imagesrcset', '/images/performance/home-hero-640.webp 640w, /images/performance/home-hero-960.webp 960w, /images/performance/home-hero-1200.webp 1200w');
+          preload.setAttribute('imagesizes', '100vw');
+        } else if (path === '/free-worm-castings') {
+          preload.href = '/images/performance/campaign-hero-640.webp';
+          preload.setAttribute('imagesrcset', '/images/performance/campaign-hero-640.webp 640w, /images/performance/campaign-hero-1200.webp 1200w');
+          preload.setAttribute('imagesizes', '(max-width: 1023px) 100vw, 50vw');
+        } else {
+          return;
+        }
+        document.head.appendChild(preload);
+      })();
+    </script>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />

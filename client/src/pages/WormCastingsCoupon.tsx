@@ -11,7 +11,7 @@ const PHOENIX_YARD_BREAK = "Closed for break from 1:00–2:00 PM";
 
 export default function WormCastingsCoupon() {
   const [, params] = useRoute("/redeem/worm-castings/:token");
-  const token = params?.token || "";
+  const token = (params as { token?: string } | null)?.token || "";
   const qrSrc = `/api/public/worm-castings/qr/${encodeURIComponent(token)}.png`;
   return (
     <main className="min-h-screen bg-[#f6f5ee] px-5 py-8 text-[#263527] md:py-12">

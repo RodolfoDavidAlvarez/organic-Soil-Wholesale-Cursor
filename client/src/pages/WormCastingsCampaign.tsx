@@ -21,6 +21,7 @@ import {
   CUSTOMER_SUPPORT_PHONE_TEL,
 } from "@/config/contact";
 import { trackEvent } from "@/lib/analytics";
+import DeferredMount from "@/components/DeferredMount";
 
 type Props = { source: string };
 
@@ -45,25 +46,25 @@ const products = [
   {
     name: "Mikey’s Worm Poop",
     type: "Worm castings",
-    image: "/images/optimized/worm-castting-product-texture.jpg",
+    image: "/images/performance/campaign-worm-thumb-384.webp",
     alt: "Rich, finished Mikey's Worm Poop worm castings held in two hands",
   },
   {
     name: "Simon’s Gold",
     type: "Dairy compost",
-    image: "/images/optimized/simons-gold-bag-context.webp",
+    image: "/images/performance/campaign-simons-thumb-384.webp",
     alt: "Simon's Gold dairy compost bag with fresh garden vegetables",
   },
   {
     name: "Soil Craft",
     type: "All-stage potting mix",
-    image: "/images/optimized/soil-craft-lifestyle.jpg",
+    image: "/images/performance/campaign-soilcraft-thumb-384.webp",
     alt: "A flowering plant being potted with Soil Craft potting mix",
   },
   {
     name: "Nature’s Blanket",
     type: "Premium mulch",
-    image: "/images/optimized/natures-blanket-bag-context.webp",
+    image: "/images/performance/campaign-mulch-thumb-384.webp",
     alt: "Nature's Blanket premium mulch bag surrounded by clean mulch",
   },
 ] as const;
@@ -178,34 +179,34 @@ export default function WormCastingsCampaign({ source }: Props) {
       <section className="relative isolate overflow-hidden bg-[#15351f] text-white">
         <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_75%_20%,rgba(107,151,93,0.34),transparent_42%)]" />
         <div className="absolute -left-24 top-20 -z-10 h-72 w-72 rounded-full bg-[#c59a5d]/10 blur-3xl" />
-        <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 pb-10 pt-8 sm:px-8 sm:pb-14 sm:pt-12 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14 lg:py-16">
-          <div className="max-w-2xl">
-            <div className="-mx-5 -mt-8 mb-6 lg:hidden">
-              <HeroProductVisual mobile />
-            </div>
+        <div className="mx-auto grid max-w-7xl items-center gap-7 px-5 pb-8 pt-5 sm:px-8 sm:pb-14 sm:pt-12 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14 lg:py-16">
+          <div className="order-1 -mx-5 -mt-5 lg:order-2 lg:mx-auto lg:mt-0 lg:w-full lg:max-w-[620px]">
+            <HeroProductVisual />
+          </div>
+          <div className="order-2 max-w-2xl lg:order-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f1d6a6] backdrop-blur">
               <Gift className="h-4 w-4" /> August community gift
             </div>
-            <h1 className="mt-6 font-heading text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 font-heading text-4xl font-bold leading-[1.05] tracking-tight sm:mt-6 sm:text-5xl lg:text-6xl">
               Free 9-lb bag of worm castings for Phoenix gardeners.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/80 sm:text-lg">
+            <p className="mt-4 max-w-xl text-base leading-7 text-white/80 sm:mt-5 sm:text-lg">
               Soil Seed &amp; Water is opening the Phoenix yard to the community. Register once, get your private QR coupon by email, then pick up one bag of Mikey’s Worm Poop in August.
             </p>
 
-            <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
+            <div className="mt-5 grid grid-cols-3 gap-2 sm:mt-7 sm:max-w-xl sm:gap-3">
               <HeroFact icon={<PackageCheck />} title="9-lb bag" detail="One per email" />
               <HeroFact icon={<CalendarDays />} title="Aug 1–31" detail="Pickup dates" />
               <HeroFact icon={<MapPin />} title="Phoenix" detail="Yard pickup" />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[#f1d6a6]/25 bg-white/10 p-4 text-sm leading-6 text-white/80">
+            <div className="mt-3 rounded-2xl border border-[#f1d6a6]/25 bg-white/10 p-3 text-sm leading-5 text-white/80 sm:mt-4 sm:p-4 sm:leading-6">
               <strong className="text-white">Pickup hours:</strong> {PHOENIX_YARD_HOURS}
               <br />
               {PHOENIX_YARD_BREAK}
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-3">
               <a
                 href="#claim-your-bag"
                 onClick={() => trackCampaignAction("CTA Clicked", { cta: "claim_my_free_bag" })}
@@ -216,28 +217,25 @@ export default function WormCastingsCampaign({ source }: Props) {
               <a
                 href="/products"
                 onClick={() => trackCampaignAction("Products Clicked", { cta: "hero_products" })}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 text-base font-bold text-white transition hover:bg-white/10"
+                className="hidden min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3 text-base font-bold text-white transition hover:bg-white/10 sm:inline-flex"
               >
                 <ShoppingBag className="h-4 w-4" /> See Our Products
               </a>
               <a
                 href={ENTRANCE_DIRECTIONS_URL}
                 onClick={() => trackCampaignAction("Directions Clicked", { cta: "hero_directions" })}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#f1d6a6]/35 bg-[#f1d6a6]/10 px-6 py-3 text-base font-bold text-[#f6e5c4] transition hover:bg-[#f1d6a6]/15 sm:col-span-3"
+                className="hidden min-h-12 items-center justify-center gap-2 rounded-xl border border-[#f1d6a6]/35 bg-[#f1d6a6]/10 px-6 py-3 text-base font-bold text-[#f6e5c4] transition hover:bg-[#f1d6a6]/15 sm:col-span-3 sm:inline-flex"
               >
                 <MapPinned className="h-5 w-5" /> Open the Exact Entrance Pin
               </a>
             </div>
-            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/70 sm:mt-5 sm:gap-x-5 sm:gap-y-2 sm:text-sm">
               <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#f1d6a6]" /> No purchase required</span>
               <span>One per person/email</span>
               <span>Phoenix pickup only</span>
             </div>
           </div>
 
-          <div className="relative mx-auto hidden w-full max-w-[620px] lg:block">
-            <HeroProductVisual />
-          </div>
         </div>
       </section>
 
@@ -296,6 +294,7 @@ export default function WormCastingsCampaign({ source }: Props) {
           </div>
         </div>
 
+        <DeferredMount minHeight={800} rootMargin="0px">
         <aside className="space-y-5">
           <div className="overflow-hidden rounded-[1.75rem] border border-[#d8e1d4] bg-white shadow-[0_20px_60px_rgba(28,62,36,0.10)]">
             <div className="h-[270px] bg-[#e8ece4] sm:h-[320px]">
@@ -335,7 +334,7 @@ export default function WormCastingsCampaign({ source }: Props) {
             <div className="mt-4 grid grid-cols-4 gap-2">
               {products.map((product) => (
                 <a key={product.name} href="/products" onClick={() => trackCampaignAction("Products Clicked", { cta: `product_thumb_${product.name}` })} className="group overflow-hidden rounded-xl border border-[#e0e5dc] bg-[#fafaf7]">
-                  <img src={product.image} alt={product.alt} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
+                  <img src={product.image} alt={product.alt} width="384" height="384" loading="lazy" decoding="async" className="aspect-square w-full object-cover transition group-hover:scale-105" />
                 </a>
               ))}
             </div>
@@ -351,8 +350,10 @@ export default function WormCastingsCampaign({ source }: Props) {
             </a>
           </div>
         </aside>
+        </DeferredMount>
       </section>
 
+      <DeferredMount minHeight={560} rootMargin="0px">
       <section className="border-t border-[#dce3d8] bg-white py-10 sm:py-12">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
@@ -366,28 +367,41 @@ export default function WormCastingsCampaign({ source }: Props) {
             </div>
             <div className="overflow-hidden rounded-[1.5rem] border border-[#e0e5dc] bg-[#fafaf7]">
               <img
-                src="/images/optimized/mikeys-worm-new-graphics-2-uses.webp"
+                src="/images/performance/campaign-uses-640.webp"
+                srcSet="/images/performance/campaign-uses-640.webp 640w, /images/performance/campaign-uses-960.webp 960w"
+                sizes="(max-width: 1023px) 100vw, 55vw"
                 alt="Four ways to use Mikey's Worm Poop worm castings: garden beds, pots, trees, and in-ground gardens"
+                width="960"
+                height="960"
                 loading="lazy"
+                decoding="async"
                 className="aspect-[16/10] w-full object-cover"
               />
             </div>
           </div>
         </div>
       </section>
+      </DeferredMount>
     </div>
   );
 }
 
-function HeroProductVisual({ mobile = false }: { mobile?: boolean }) {
+function HeroProductVisual() {
   return (
-    <div className={mobile ? "relative overflow-hidden rounded-b-[1.75rem] border-b border-white/15 bg-white shadow-2xl" : "relative"}>
-      {!mobile && <div className="absolute inset-x-10 bottom-0 h-16 rounded-full bg-black/30 blur-2xl" />}
-      <div className={mobile ? "relative" : "relative overflow-hidden rounded-[2rem] border border-white/15 bg-white shadow-2xl"}>
+    <div className="relative overflow-hidden rounded-b-[1.75rem] border-b border-white/15 bg-white shadow-2xl lg:overflow-visible lg:rounded-[2rem] lg:border">
+      <div className="absolute inset-x-10 bottom-0 hidden h-16 rounded-full bg-black/30 blur-2xl lg:block" />
+      <div className="relative lg:overflow-hidden lg:rounded-[2rem]">
         <img
-          src="/images/optimized/mikeys-worm-poop-bag-context.webp"
+          src="/images/performance/campaign-hero-640.webp"
+          srcSet="/images/performance/campaign-hero-640.webp 640w, /images/performance/campaign-hero-1200.webp 1200w"
+          sizes="(max-width: 1023px) 100vw, 50vw"
           alt="Mikey's Worm Poop 9-lb bag with vegetables, soil, and earthworms"
-          className={mobile ? "aspect-[16/11] w-full bg-white object-contain p-2" : "aspect-[1.05/1] w-full object-cover"}
+          width="1200"
+          height="1200"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          className="h-[210px] w-full bg-white object-contain p-2 sm:h-auto sm:aspect-[16/11] lg:aspect-[1.05/1] lg:object-cover lg:p-0"
         />
         <div className="absolute bottom-3 left-3 rounded-xl bg-[#15351f] px-4 py-2.5 shadow-lg sm:bottom-4 sm:left-4 sm:py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#f1d6a6] sm:text-xs">Made in Arizona</p>
@@ -403,7 +417,7 @@ function HeroFact({ icon, title, detail }: { icon: ReactNode; title: string; det
     <div className="rounded-xl border border-white/10 bg-white/[0.07] px-2 py-3 text-center backdrop-blur sm:px-4 sm:text-left">
       <div className="mx-auto mb-2 flex h-7 w-7 items-center justify-center text-[#f1d6a6] sm:mx-0 [&_svg]:h-5 [&_svg]:w-5">{icon}</div>
       <p className="text-sm font-bold sm:text-base">{title}</p>
-      <p className="mt-0.5 text-[10px] text-white/60 sm:text-xs">{detail}</p>
+      <p className="mt-0.5 hidden text-[10px] text-white/60 sm:block sm:text-xs">{detail}</p>
     </div>
   );
 }

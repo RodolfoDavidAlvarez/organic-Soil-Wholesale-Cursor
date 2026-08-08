@@ -17,7 +17,6 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
-import WormCastingsCampaign from "@/pages/WormCastingsCampaign";
 import {
   enforceOfficialSupportPhones,
   isCallTrackingExcludedPath,
@@ -60,6 +59,7 @@ const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
+const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
@@ -144,7 +144,7 @@ const CallTrackingRouteSync = () => {
 
 function Router() {
   return (
-    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-[calc(100vh-var(--app-header-height,5rem))] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/pickup" component={Pickup} />

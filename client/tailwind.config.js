@@ -55,7 +55,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter var", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Montserrat", "Inter", "system-ui", "sans-serif"],
       },
     },
   },

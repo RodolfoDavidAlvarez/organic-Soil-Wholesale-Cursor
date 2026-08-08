@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Autoplay from "embla-carousel-autoplay";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Quote, Star } from "lucide-react";
 import {
   Carousel,
@@ -15,7 +13,6 @@ import {
   amazonReviewsForProduct,
   type AmazonReview,
 } from "@/data/amazonReviews";
-import { FIELD_PROOF_IMAGES } from "@/data/fieldProofImages";
 import { cn } from "@/lib/utils";
 
 function Stars({ count, size = "md" }: { count: number; size?: "sm" | "md" }) {
@@ -77,6 +74,8 @@ function PhotoReviewCard({ review }: { review: AmazonReview }) {
         <img
           src={review.photo}
           alt={`${review.name} — ${review.product} customer photo`}
+          width="1125"
+          height="1500"
           className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
           loading="lazy"
           decoding="async"
@@ -204,43 +203,26 @@ function CarouselDots({
   );
 }
 
-/** Continuous marquee — cards stay on screen and keep scrolling; no snap/jump. */
+/** One accessible, swipeable copy of each review. */
 function ReviewMarqueeRow({
   reviews,
   mode,
   showProductTag,
-  durationSec,
   cardClass,
-  direction = "ltr",
 }: {
   reviews: AmazonReview[];
   mode: "photo" | "quote";
   showProductTag: boolean;
-  durationSec: number;
   cardClass: string;
-  direction?: "ltr" | "rtl";
 }) {
   if (reviews.length === 0) return null;
 
-  // Always two identical halves so translateX(-50%) loops seamlessly.
-  const loop = [...reviews, ...reviews];
-
   return (
-    <div className="relative -mx-4 overflow-hidden sm:mx-0">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#eef3eb] via-[#eef3eb]/90 to-transparent sm:w-14" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#ffffff] via-[#ffffff]/90 to-transparent sm:w-14" />
-      <div
-        className={cn(
-          "review-marquee flex w-max gap-3 py-1 sm:gap-4",
-          direction === "rtl" && "review-marquee--rtl",
-        )}
-        style={{ animationDuration: `${durationSec}s` }}
-      >
-        {loop.map((review, i) => (
+    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-1 sm:mx-0 sm:gap-4 sm:px-0">
+        {reviews.map((review) => (
           <div
-            key={`${review.id}-${i}`}
-            className={cn("shrink-0", cardClass)}
-            aria-hidden={i >= reviews.length}
+            key={review.id}
+            className={cn("shrink-0 snap-start", cardClass)}
           >
             {mode === "photo" ? (
               <PhotoReviewCard review={review} />
@@ -249,77 +231,6 @@ function ReviewMarqueeRow({
             )}
           </div>
         ))}
-      </div>
-      <style>{`
-        .review-marquee {
-          animation-name: amazon-review-marquee;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .review-marquee--rtl {
-          animation-direction: reverse;
-        }
-        .review-marquee:hover {
-          animation-play-state: paused;
-        }
-        @keyframes amazon-review-marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .review-marquee {
-            animation: none !important;
-            flex-wrap: wrap;
-            width: 100% !important;
-            max-width: 100%;
-            justify-content: center;
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function FieldPhotoStrip() {
-  const doubled = [...FIELD_PROOF_IMAGES, ...FIELD_PROOF_IMAGES];
-  return (
-    <div className="relative mt-10 overflow-hidden border-t border-[#264027]/10 pt-8 md:mt-12 md:pt-10">
-      <div className="mb-4 flex flex-col items-center gap-1 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b38a58]">
-          In the field
-        </p>
-        <p className="text-sm font-semibold text-[#264027]">Arizona jobs · soil in the ground</p>
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#eef3eb] via-[#eef3eb]/85 to-transparent sm:w-20" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#e4ebe0] via-[#e4ebe0]/85 to-transparent sm:w-20" />
-      <div
-        className="field-marquee flex w-max gap-3 py-1 [animation:amazon-field-marquee_52s_linear_infinite] hover:[animation-play-state:paused]"
-      >
-        {doubled.map((img, i) => (
-          <div
-            key={`${img.src}-${i}`}
-            className="relative h-[7.25rem] w-44 shrink-0 overflow-hidden rounded-2xl bg-stone-200 shadow-[0_8px_20px_-12px_rgba(38,64,39,0.45)] ring-1 ring-[#264027]/10 sm:h-36 sm:w-52"
-          >
-            <img
-              src={img.src}
-              alt={img.alt}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-            <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
-          </div>
-        ))}
-      </div>
-      <style>{`
-        @keyframes amazon-field-marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .field-marquee { animation: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -374,9 +285,6 @@ export default function AmazonReviewCarousel({
   const quoteReviews = useMemo(
     () => interleaveByProduct(reviews.filter((r) => !r.photo).sort((a, b) => b.stars - a.stars)),
     [reviews],
-  );
-  const pdpAutoplay = useRef(
-    Autoplay({ delay: 4800, stopOnInteraction: false, stopOnMouseEnter: true }),
   );
   const [pdpApi, setPdpApi] = useState<CarouselApi>();
   const [pdpSelected, setPdpSelected] = useState(0);
@@ -437,7 +345,6 @@ export default function AmazonReviewCarousel({
           <Carousel
             setApi={setPdpApi}
             opts={{ align: "start", loop: reviews.length > 1, containScroll: "trimSnaps" }}
-            plugins={reviews.length > 1 ? [pdpAutoplay.current] : []}
             className="w-full"
           >
             <CarouselContent className="-ml-3 md:-ml-4">
@@ -497,13 +404,7 @@ export default function AmazonReviewCarousel({
       />
 
       <div className="container relative mx-auto max-w-6xl px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 text-center md:mb-10"
-        >
+        <div className="mb-8 text-center md:mb-10">
           <div className="mb-3 inline-flex items-center gap-3">
             <span className="h-px w-8 bg-[#b38a58]/45" />
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b38a58]">
@@ -531,7 +432,7 @@ export default function AmazonReviewCarousel({
               Across {productCount} products
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {photoReviews.length > 0 ? (
           <div className="mb-9 md:mb-11">
@@ -552,7 +453,6 @@ export default function AmazonReviewCarousel({
               reviews={photoReviews}
               mode="photo"
               showProductTag
-              durationSec={48}
               cardClass="w-[16.5rem] sm:w-[18.5rem] md:w-[20rem]"
             />
           </div>
@@ -577,14 +477,11 @@ export default function AmazonReviewCarousel({
               reviews={quoteReviews}
               mode="quote"
               showProductTag
-              durationSec={56}
-              direction="rtl"
               cardClass="w-[15.5rem] sm:w-[17.5rem] md:w-[18.5rem]"
             />
           </div>
         ) : null}
 
-        <FieldPhotoStrip />
       </div>
     </section>
   );

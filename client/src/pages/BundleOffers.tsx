@@ -102,7 +102,7 @@ const legacyOfferAliases: Record<string, string> = {
 
 export default function BundleOffers() {
   const [, params] = useRoute("/offers/:slug");
-  const requestedSlug = params?.slug;
+  const requestedSlug = (params as { slug?: string } | null)?.slug;
   const slug = requestedSlug ? legacyOfferAliases[requestedSlug] || requestedSlug : undefined;
   const offer = useMemo(() => offers.find((item) => item.slug === slug), [slug]);
 

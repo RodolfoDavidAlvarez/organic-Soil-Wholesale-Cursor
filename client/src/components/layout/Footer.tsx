@@ -19,6 +19,8 @@ const Footer = () => {
                 <img
                   src="/email-assets/ssw-logo-white.png"
                   alt="Soil Seed and Water"
+                  width="423"
+                  height="101"
                   className="h-auto w-56 max-w-full"
                   loading="lazy"
                 />
@@ -29,8 +31,10 @@ const Footer = () => {
                   className="inline-flex w-fit items-center rounded-xl border border-white/15 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <img
-                    src="/images/ufe-logo.png"
+                    src="/images/performance/ufe-logo-400.webp"
                     alt="Urban Farming Education"
+                    width="400"
+                    height="159"
                     className="h-10 w-auto"
                     loading="lazy"
                   />

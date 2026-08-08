@@ -17,10 +17,13 @@ import { trackEvent } from "@/lib/analytics";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL, PHOENIX_YARD_DIRECTIONS_URL, PHOENIX_YARD_ENTRANCE_COORDINATES } from "@/config/contact";
 import { generateProductSlug } from "@/utils/generateSlug";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { motion } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
-import AmazonReviewCarousel from "@/components/AmazonReviewCarousel";
+import DeferredMount from "@/components/DeferredMount";
+import LazyYouTube from "@/components/LazyYouTube";
+import { lazy, Suspense } from "react";
+
+const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
 
 type FeaturedProduct = {
   id: number;
@@ -37,13 +40,6 @@ type FeaturedProduct = {
 const Home = () => {
   const [, navigate] = useLocation();
 
-  const showcaseVideoUrl =
-    "https://www.youtube.com/embed/yZvjAPZ0dVQ?autoplay=1&mute=1&loop=1&playlist=yZvjAPZ0dVQ&controls=0&modestbranding=1&rel=0&playsinline=1";
-  const showcaseWormVideoUrl =
-    "https://www.youtube.com/embed/UBs6anRv2IY?autoplay=1&mute=1&loop=1&playlist=UBs6anRv2IY&controls=0&modestbranding=1&rel=0&playsinline=1";
-  const showcaseFarmersVideoUrl =
-    "https://www.youtube.com/embed/HbR7BH-6uxI?autoplay=1&mute=1&loop=1&playlist=HbR7BH-6uxI&controls=0&modestbranding=1&rel=0&playsinline=1";
-
   const [phoenixLat, phoenixLng] = PHOENIX_YARD_ENTRANCE_COORDINATES.split(",");
   const PHOENIX_COORDINATES = { lat: Number(phoenixLat), lng: Number(phoenixLng) };
   const PHOENIX_MAP_EMBED_URL = `https://www.google.com/maps?q=${PHOENIX_COORDINATES.lat},${PHOENIX_COORDINATES.lng}&z=13&output=embed`;
@@ -54,28 +50,28 @@ const Home = () => {
       id: "pallet-boxes",
       name: "Pallet of 9 lb bags",
       description: "144 units (36 cases of 4 units)",
-      image: "/images/categories/sizes/Size Categories- Pallet of Box.png",
+      image: "/images/performance/home-size-pallet-boxes-480.webp",
       icon: <Box className="h-6 w-6" />,
     },
     {
       id: "pallet-bags",
       name: "Pallet of 1CF bags",
       description: "50 bags (1CF each)",
-      image: "/images/categories/sizes/Size Category - pallet of 50 1 CF bags.png",
+      image: "/images/performance/home-size-pallet-bags-480.webp",
       icon: <Package className="h-6 w-6" />,
     },
     {
       id: "bulk",
       name: "Bulk Delivery",
       description: "22-24 tons (soil amendments and concentrates) / 90-110 CYs (potting soil and mulch)",
-      image: "/images/categories/sizes/Bulk delivery.png",
+      image: "/images/performance/home-size-bulk-480.webp",
       icon: <Container className="h-6 w-6" />,
     },
     {
       id: "cubic-yard",
       name: "Buy in Cubic Yard",
       description: "Bulk pickup only",
-      image: "/images/categories/sizes/CY of Bulk for pick only.png",
+      image: "/images/performance/home-size-yard-480.webp",
       icon: <Container className="h-6 w-6" />,
     },
   ];
@@ -95,7 +91,7 @@ const Home = () => {
       name: "Dairy Compost",
       productName: "Simon's Gold",
       slug: "simons-gold",
-      imageUrl: "Compost Texture Look.jpg",
+      imageUrl: "/images/performance/home-product-compost-480.webp",
       texturePhotoUrl: "Compost Texture Look.jpg",
       description: "All-natural dairy compost",
       category: "Amendment",
@@ -105,7 +101,7 @@ const Home = () => {
       name: "Worm Castings",
       productName: "Mikey's Worm Poop",
       slug: "mikeys-worm-poop",
-      imageUrl: "Worm castting product texture.png",
+      imageUrl: "/images/performance/home-product-worm-480.webp",
       texturePhotoUrl: "Worm castting product texture.png",
       description: "All-natural vermicompost",
       category: "Amendment",
@@ -115,7 +111,7 @@ const Home = () => {
       name: "Organic Concentrated Blend",
       productName: "SuperBooster",
       slug: "superbooster",
-      imageUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
+      imageUrl: "/images/performance/home-product-concentrate-480.webp",
       texturePhotoUrl: "Concentrated Organic Amendment Fertilizer Product look.jpeg",
       description: "Organic concentrated amendment",
       category: "Concentrated Amendment",
@@ -125,7 +121,7 @@ const Home = () => {
       name: "Biochar",
       productName: "Amazonian Dark Earth",
       slug: "amazonian-dark-earth",
-      imageUrl: "Biochar Product Texture Look.jpg",
+      imageUrl: "/images/performance/home-product-biochar-480.webp",
       texturePhotoUrl: "Biochar Product Texture Look.jpg",
       description: "Biochar mineral amendment",
       category: "Amendment",
@@ -155,31 +151,29 @@ const Home = () => {
             "query-input": "required name=search_term_string",
           },
         }}
-      >
-        <link rel="preload" href="/hero-main-photo-v2-optimized.jpg" as="image" />
-      </SEO>
+      />
 
       {/* Turf Daddy Hero — Organic Soil Wholesale brand */}
       <section className="relative isolate overflow-hidden bg-stone-900 text-white">
         <div className="absolute inset-0 -z-10">
           <img
-            src="/images/optimized/turf-daddy-blend-lifestyle.jpg"
+            src="/images/performance/home-hero-960.webp"
+            srcSet="/images/performance/home-hero-640.webp 640w, /images/performance/home-hero-960.webp 960w, /images/performance/home-hero-1200.webp 1200w"
+            sizes="100vw"
             alt="Turf Daddy applied to a lawn"
+            width="1200"
+            height="1200"
             className="h-full w-full object-cover opacity-40"
             loading="eager"
+            decoding="async"
             fetchPriority="high"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/70 to-stone-950/40" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-stone-50 to-transparent" />
         </div>
-        <div className="container mx-auto px-4 py-20 md:py-28 lg:py-36">
+        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-28 lg:py-36">
           <div className="grid items-center gap-12 lg:grid-cols-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              className="lg:col-span-5"
-            >
+            <div className="lg:col-span-5">
               <div className="mb-5">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-stone-300/80">
                   by Soil Seed &amp; Water
@@ -217,7 +211,7 @@ const Home = () => {
                   </a>
                 </Button>
               </div>
-              <div className="mt-10 grid grid-cols-3 gap-6 border-t border-white/15 pt-6 text-sm text-stone-300">
+              <div className="mt-7 grid grid-cols-3 gap-3 border-t border-white/15 pt-5 text-sm text-stone-300 sm:mt-10 sm:gap-6 sm:pt-6">
                 <div>
                   <p className="font-bold text-white">Made in AZ</p>
                   <p className="text-xs text-stone-400">Phoenix-based</p>
@@ -231,31 +225,20 @@ const Home = () => {
                   <p className="text-xs text-stone-400">delivery across AZ</p>
                 </div>
               </div>
-              <figure className="mt-8 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 lg:hidden">
-                <img
-                  src="/images/hero/turf-daddy-before-after-hero.jpg"
-                  alt="Turf Daddy before-and-after lawn transformation"
-                  className="block w-full"
-                />
-                <figcaption className="bg-black/80 p-4">
-                  <p className="text-sm font-semibold leading-tight text-white">
-                    Turf Daddy testimonial: before / after results.
-                  </p>
-                </figcaption>
-              </figure>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="hidden lg:col-span-7 lg:block"
-            >
+            </div>
+            <div className="hidden lg:col-span-7 lg:block">
               <div className="relative">
                 <div className="absolute -inset-10 rounded-3xl bg-gradient-to-br from-[#d6c1a0]/40 to-transparent blur-3xl" />
                 <figure className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/10">
                   <img
-                    src="/images/hero/turf-daddy-before-after-hero.jpg"
+                    src="/images/performance/home-results-1280.webp"
+                    srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-1280.webp 1280w"
+                    sizes="55vw"
                     alt="Turf Daddy before-and-after lawn transformation"
+                    width="1280"
+                    height="696"
+                    loading="lazy"
+                    decoding="async"
                     className="block w-full"
                   />
                   <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-5 md:p-6">
@@ -265,13 +248,17 @@ const Home = () => {
                   </figcaption>
                 </figure>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Unified reviews: photo carousel + quote carousel + field strip */}
-      <AmazonReviewCarousel />
+      <DeferredMount minHeight={680} rootMargin="-300px 0px">
+        <Suspense fallback={<div className="min-h-[680px] bg-[#eef3eb]" aria-hidden />}>
+          <AmazonReviewCarousel />
+        </Suspense>
+      </DeferredMount>
 
       <section className="bg-stone-50 py-10 md:py-14">
         <div className="container mx-auto px-4">
@@ -296,20 +283,32 @@ const Home = () => {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <img
-                src="/images/field-content/field-application.jpg"
+                src="/images/performance/field-application-360.webp"
+                srcSet="/images/performance/field-application-360.webp 360w, /images/performance/field-application-720.webp 720w"
+                sizes="33vw"
                 alt="Growers reviewing compost in Arizona"
+                width="720"
+                height="960"
                 className="h-56 w-full rounded-2xl object-cover shadow-sm"
                 loading="lazy"
               />
               <img
-                src="/images/field-content/super-sack-loading-poster.jpg"
+                src="/images/performance/field-super-sack-360.webp"
+                srcSet="/images/performance/field-super-sack-360.webp 360w, /images/performance/field-super-sack-720.webp 720w"
+                sizes="33vw"
                 alt="Super sack loading for wholesale order"
+                width="720"
+                height="1280"
                 className="h-56 w-full rounded-2xl object-cover shadow-sm"
                 loading="lazy"
               />
               <img
-                src="/images/field-content/orchard-application-poster.jpg"
+                src="/images/performance/field-orchard-360.webp"
+                srcSet="/images/performance/field-orchard-360.webp 360w, /images/performance/field-orchard-720.webp 720w"
+                sizes="33vw"
                 alt="Compost applied in orchard rows"
+                width="720"
+                height="405"
                 className="h-56 w-full rounded-2xl object-cover shadow-sm"
                 loading="lazy"
               />
@@ -325,28 +324,17 @@ const Home = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             {/* Left Column - Availability Checker, and Size Categories */}
             <div className="order-2 lg:order-1 lg:col-span-4 flex flex-col gap-6 mt-8 lg:mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="text-center lg:text-left"
-              >
+              <div className="text-center lg:text-left">
                 <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-3 leading-tight">
                   Pickup, pallet, or truckload.
                 </h2>
                 <p className="text-base text-muted-foreground/80 max-w-md">
                   Locally produced soil amendments and bulk loads for landscapers, farms, nurseries, and commercial growers.
                 </p>
-              </motion.div>
+              </div>
 
               {/* Pickup and Distribution Center */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
-              >
+              <div className="bg-white rounded-xl border-2 border-border p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <MapPin className="h-6 w-6 text-primary" />
                   <h2 className="text-lg font-bold text-primary">Pickup & Distribution</h2>
@@ -379,15 +367,10 @@ const Home = () => {
                     </Button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Size Categories Carousel */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
-              >
+              <div className="bg-white rounded-xl border-2 border-border p-6 shadow-sm">
                 <h2 className="text-lg font-bold mb-4">Size Categories</h2>
                 <Carousel
                   opts={{
@@ -399,14 +382,14 @@ const Home = () => {
                   className="w-full"
                 >
                   <CarouselContent>
-                    {sizeCategories.map((category, index) => (
+                    {sizeCategories.map((category) => (
                       <CarouselItem key={category.id}>
                         <div className="relative aspect-[4/3] rounded-lg overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300">
                           <OptimizedImage
                             src={category.image}
                             alt={category.name}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            priority={index === 0}
+                            width={480}
                             sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 28vw"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-4 flex flex-col justify-end">
@@ -423,26 +406,19 @@ const Home = () => {
                   <CarouselPrevious className="left-2" />
                   <CarouselNext className="right-2" />
                 </Carousel>
-              </motion.div>
+              </div>
             </div>
 
             {/* Right Column - Featured Products */}
             <div className="order-1 lg:order-2 lg:col-span-8 mt-0 lg:mt-0">
               <h2 className="mb-4 text-3xl font-heading font-bold text-primary lg:hidden text-center">Featured Products</h2>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-white rounded-xl border-2 border-border p-6 shadow-sm"
-              >
+              <div className="bg-white rounded-xl border-2 border-border p-6 shadow-sm">
                 <h2 className="hidden text-xl font-bold mb-4 lg:block">Featured Products</h2>
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  {featuredProducts.map((product, index) => (
-                    <motion.div
+                  {featuredProducts.map((product) => (
+                    <div
                       key={product.id}
-                      className="group cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.2 }}
+                      className="group cursor-pointer transition-transform duration-200 hover:scale-[1.02]"
                       onClick={() => handleProductSelect(product)}
                     >
                       <div className="relative aspect-square overflow-hidden rounded-2xl bg-neutral-50">
@@ -456,7 +432,7 @@ const Home = () => {
                           src={product.imageUrl}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          priority={index < 2}
+                          width={480}
                           sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 25vw"
                         />
                       </div>
@@ -466,7 +442,7 @@ const Home = () => {
                         </h3>
                         {product.productName && <p className="text-sm font-semibold text-muted-foreground mt-1">{product.productName}</p>}
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
                 <div className="mt-8 text-center">
@@ -478,7 +454,7 @@ const Home = () => {
                     <ChevronRight className="ml-2 h-5 w-5" />
                   </Button>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -488,37 +464,19 @@ const Home = () => {
       {/* Showcase Photos Section */}
       <section className="py-16 px-4 md:px-8 bg-white border-t border-border">
         <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
+          <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-extrabold text-foreground mb-4 tracking-tight">
               Our Work in Action
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground mt-4 max-w-2xl mx-auto">
               Discover our premium organic soil products in action across various applications
             </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
-          >
+          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <Card className="group relative overflow-hidden border-2 border-border bg-white shadow-sm flex flex-col">
               <CardContent className="relative flex-1 p-0 bg-black">
                 <div className="relative aspect-video w-full lg:h-full">
-                  <iframe
-                    src={showcaseVideoUrl}
-                    title="Simon's Gold Dairy Compost Video"
-                    className="absolute inset-0 h-full w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  ></iframe>
+                  <LazyYouTube id="yZvjAPZ0dVQ" title="Simon's Gold Dairy Compost Video" className="absolute inset-0" />
                 </div>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white">
@@ -538,13 +496,7 @@ const Home = () => {
               <Card className="border-2 border-border bg-white shadow-sm overflow-hidden flex flex-col h-full">
                 <CardContent className="p-0 bg-black">
                   <div className="relative aspect-video w-full">
-                    <iframe
-                      src={showcaseWormVideoUrl}
-                      title="Worm Farming Video"
-                      className="absolute inset-0 h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    ></iframe>
+                    <LazyYouTube id="UBs6anRv2IY" title="Worm Farming Video" className="absolute inset-0" />
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 bg-white p-6 text-left">
@@ -563,13 +515,7 @@ const Home = () => {
               <Card className="border-2 border-border bg-white shadow-sm overflow-hidden flex flex-col h-full">
                 <CardContent className="p-0 bg-black">
                   <div className="relative aspect-video w-full">
-                    <iframe
-                      src={showcaseFarmersVideoUrl}
-                      title="Compost Blend for Farmers Video"
-                      className="absolute inset-0 h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    ></iframe>
+                    <LazyYouTube id="HbR7BH-6uxI" title="Compost Blend for Farmers Video" className="absolute inset-0" />
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 bg-white p-6 text-left">
@@ -583,7 +529,7 @@ const Home = () => {
                 </CardFooter>
               </Card>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>
