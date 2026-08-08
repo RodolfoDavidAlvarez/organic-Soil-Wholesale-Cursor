@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CalendarDays, CheckCircle2, MapPin, PackageCheck, Phone, Plus, ShoppingBag, Trash2, Truck } from "lucide-react";
 import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { trackEvent, trackEcommerceEvent } from "@/lib/analytics";
+import { completeLeadSuccess, LeadSubmissionRequestError, submitLeadPayload } from "@/lib/leadSubmissionClient";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
@@ -130,6 +131,7 @@ export const SimpleOrderForm: React.FC = () => {
     event.preventDefault();
     if (!validateForm()) return;
     setIsSubmitting(true);
+    let result;
     try {
       const customerSummary = [`Customer type: ${leadInfo.customer_category}`, leadInfo.company.trim() ? `Company / farm: ${leadInfo.company.trim()}` : "", "Marketing contact permission: Yes"].filter(Boolean).join("\n");
       const fulfillmentSummary = fulfillment === "pickup"
@@ -144,24 +146,32 @@ export const SimpleOrderForm: React.FC = () => {
         cartSummary ? `--- QUOTE CART ---\n${cartSummary}\nEstimated Total: ${fmt(totalPrice)}\n--- END CART ---` : "",
         leadInfo.notes.trim(),
       ].filter(Boolean);
-      const response = await fetch("/api/leads/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...leadInfo, marketing_opt_in: true, notes: sections.join("\n\n"), preferred_date: leadInfo.preferred_date || null, source_url: window.location.href }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to submit form");
-      clearCart();
-      setShowThankYou(true);
-      trackEvent("Quote Request Submitted", { source: "order_page", product_count: selectedProducts.length, fulfillment });
-      trackEcommerceEvent("generate_lead", { lead_type: "quote_form", source: "order_page", pickup_sales_channel: "osw_yard" });
-      toast({ title: "Quote Request Submitted", description: "We'll contact you shortly with pricing." });
+      result = await submitLeadPayload({ ...leadInfo, marketing_opt_in: true, notes: sections.join("\n\n"), preferred_date: leadInfo.preferred_date || null, source_url: window.location.href });
     } catch (error) {
-      console.error("Error submitting form:", error);
+      const requestError = error instanceof LeadSubmissionRequestError ? error : null;
+      console.error("Error submitting form:", {
+        error,
+        status: requestError?.status,
+        requestId: requestError?.requestId,
+      });
       toast({ title: "Submission Failed", description: "We couldn't send the request. Please try again or call us.", variant: "destructive" });
-    } finally {
       setIsSubmitting(false);
+      return;
     }
+
+    // The server has accepted the lead. Optional browser-side cleanup or
+    // tracking failures must never reclassify it as a failed submission.
+    completeLeadSuccess(
+      () => setShowThankYou(true),
+      [
+        () => clearCart(),
+        () => trackEvent("Quote Request Submitted", { source: "order_page", product_count: selectedProducts.length, fulfillment }),
+        () => trackEcommerceEvent("generate_lead", { lead_type: "quote_form", source: "order_page", pickup_sales_channel: "osw_yard" }),
+        () => toast({ title: "Quote Request Submitted", description: "We'll contact you shortly with pricing." }),
+      ],
+      (error) => console.warn("Non-critical post-submit action failed after the lead was accepted:", { error, requestId: result.requestId }),
+    );
+    setIsSubmitting(false);
   };
 
   if (showThankYou) return (

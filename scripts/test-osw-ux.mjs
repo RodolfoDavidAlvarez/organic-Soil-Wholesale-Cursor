@@ -18,6 +18,7 @@ const products = [
 const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
 const page = await browser.newPage();
 let leadStatus = 200;
+let leadReturnsJson = true;
 let capturedLeadBody = null;
 let delayProof = false;
 let failProof = false;
@@ -38,8 +39,10 @@ page.on("request", async (request) => {
       capturedLeadBody = JSON.parse(request.postData() || "{}");
       return request.respond({
         status: leadStatus,
-        contentType: "application/json",
-        body: JSON.stringify(leadStatus === 200 ? { success: true, fixture: true } : { error: "Fixture failure" }),
+        contentType: leadReturnsJson ? "application/json" : "text/plain",
+        body: leadReturnsJson
+          ? JSON.stringify(leadStatus === 200 ? { success: true, fixture: true } : { error: "Fixture failure" })
+          : "accepted upstream",
       });
     }
     if (url.includes("/images/performance/home-results-640.webp") && (delayProof || failProof)) {
@@ -123,7 +126,19 @@ assert.match(capturedLeadBody.notes, /PlantPal/);
 assert.match(capturedLeadBody.notes, /Pallet \(30 x 1\.5CF\)/);
 await page.screenshot({ path: path.join(artifactDir, "quote-mobile-success.png"), fullPage: false });
 
+leadStatus = 200;
+leadReturnsJson = false;
+await page.goto(`${baseUrl}/order?utm_source=accepted-without-json-fixture`, { waitUntil: "networkidle2" });
+await page.type("#name", "Accepted Fixture");
+await page.type("#email", "accepted@example.com");
+await page.type("#phone", "6235550102");
+await page.select("#customer_category", "home-gardener");
+await page.click('button[type="submit"]');
+await page.waitForFunction(() => document.body.innerText.includes("Quote request received"));
+assert.doesNotMatch(await page.evaluate(() => document.body.innerText), /Submission Failed/);
+
 leadStatus = 500;
+leadReturnsJson = true;
 capturedLeadBody = null;
 await page.goto(`${baseUrl}/order?utm_source=failure-fixture`, { waitUntil: "networkidle2" });
 await page.type("#name", "Failure Fixture");

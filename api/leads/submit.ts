@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { randomUUID } from 'node:crypto';
 import {
   processLeadSubmission,
   LeadSubmissionError,
@@ -8,10 +9,19 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  const startedAt = Date.now();
+  const vercelRequestId = Array.isArray(req.headers['x-vercel-id'])
+    ? req.headers['x-vercel-id'][0]
+    : req.headers['x-vercel-id'];
+  const requestId = vercelRequestId || randomUUID();
+  res.setHeader('X-OSW-Request-ID', requestId);
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed', requestId });
   }
+
+  console.info(JSON.stringify({ event: 'lead_submission_started', requestId }));
 
   let payload: unknown = req.body ?? {};
 
@@ -19,7 +29,8 @@ export default async function handler(
     try {
       payload = payload ? JSON.parse(payload) : {};
     } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid JSON payload' });
+      console.warn(JSON.stringify({ event: 'lead_submission_rejected', requestId, status: 400, reason: 'invalid_json', durationMs: Date.now() - startedAt }));
+      return res.status(400).json({ error: 'Invalid JSON payload', requestId });
     }
   }
 
@@ -27,17 +38,20 @@ export default async function handler(
     const result = await processLeadSubmission(
       payload as Record<string, unknown>
     );
+    console.info(JSON.stringify({ event: 'lead_submission_succeeded', requestId, status: 200, leadId: result.leadId, durationMs: Date.now() - startedAt }));
     return res.status(200).json({
       success: true,
       message: result.message,
       leadId: result.leadId,
+      requestId,
     });
   } catch (error: unknown) {
     if (error instanceof LeadSubmissionError) {
-      return res.status(error.statusCode).json({ error: error.message });
+      console.warn(JSON.stringify({ event: 'lead_submission_rejected', requestId, status: error.statusCode, reason: error.message, durationMs: Date.now() - startedAt }));
+      return res.status(error.statusCode).json({ error: error.message, requestId });
     }
 
-    console.error('Serverless lead submission error:', error);
-    return res.status(500).json({ error: 'Failed to process lead' });
+    console.error(JSON.stringify({ event: 'lead_submission_failed', requestId, status: 500, durationMs: Date.now() - startedAt }), error);
+    return res.status(500).json({ error: 'Failed to process lead', requestId });
   }
 }

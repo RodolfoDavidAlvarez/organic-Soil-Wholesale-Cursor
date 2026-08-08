@@ -15,6 +15,7 @@
     "vercel-build": "npm install --prefix client && npm run --prefix client build",
     "grok": "node scripts/grok-cli.js",
     "test:phone-links": "node scripts/test-phone-links.mjs",
+    "test:form": "tsx scripts/test-lead-submission.ts",
     "test:pricing": "node scripts/test-osw-pricing.mjs",
     "test:ux": "node scripts/test-osw-ux.mjs"
   },
