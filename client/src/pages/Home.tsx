@@ -27,6 +27,7 @@ const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarouse
 
 function MobileResultsProof() {
   const [shouldLoad, setShouldLoad] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
 
   useEffect(() => {
     const timerId = window.setTimeout(() => setShouldLoad(true), 1000);
@@ -34,8 +35,23 @@ function MobileResultsProof() {
   }, []);
 
   return (
-    <figure className="relative aspect-[160/87] overflow-hidden rounded-2xl bg-gradient-to-br from-stone-700 via-stone-800 to-stone-950 shadow-2xl ring-1 ring-white/10">
-      {shouldLoad ? (
+    <figure className="relative aspect-[160/87] overflow-hidden rounded-2xl bg-gradient-to-br from-[#e8efe3] via-[#f5efe5] to-[#dbe7d4] shadow-2xl ring-1 ring-white/10">
+      {loadState === "loading" && (
+        <div className="absolute inset-0 overflow-hidden" role="status" aria-live="polite">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/55 to-transparent motion-safe:animate-pulse motion-reduce:animate-none" />
+          <div className="absolute inset-x-0 top-0 flex justify-between p-3" aria-hidden="true">
+            <span className="rounded-full bg-[#264027]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">Before</span>
+            <span className="rounded-full bg-[#b38a58]/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">After</span>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-[#264027] shadow-sm ring-1 ring-[#264027]/10">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#264027]/25 border-t-[#264027] motion-reduce:animate-none" aria-hidden="true" />
+              Loading customer result…
+            </span>
+          </div>
+        </div>
+      )}
+      {shouldLoad && loadState !== "error" ? (
         <img
           src="/images/performance/home-results-640.webp"
           srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-768.webp 768w, /images/performance/home-results-1280.webp 1280w"
@@ -45,13 +61,17 @@ function MobileResultsProof() {
           height="348"
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
+          onLoad={() => setLoadState("loaded")}
+          onError={() => setLoadState("error")}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 motion-reduce:transition-none ${loadState === "loaded" ? "opacity-100" : "opacity-0"}`}
         />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
-          <span className="rounded-full bg-black/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-white/80 ring-1 ring-white/15">
-            Before / after proof
-          </span>
+      ) : null}
+      {loadState === "error" && (
+        <div className="absolute inset-0 flex items-center justify-center px-6 text-center" role="status">
+          <div>
+            <p className="text-sm font-bold text-[#264027]">Customer result photo unavailable</p>
+            <p className="mt-1 text-xs text-stone-600">See verified customer stories below.</p>
+          </div>
         </div>
       )}
       <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-3 pt-10">

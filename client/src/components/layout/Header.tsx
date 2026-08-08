@@ -126,7 +126,7 @@ const Header = () => {
             <div className="flex items-center gap-3 cursor-pointer">
               <div className="flex flex-col leading-tight">
                 <span className="text-lg font-heading font-bold sm:text-2xl">
-                  Organic <span className="text-primary">Soil</span> <span className="text-[#c9a227] font-display italic">Wholesale</span>
+                  Organic <span className="text-primary">Soil</span> <span className="text-[#8f7000] font-display italic">Wholesale</span>
                 </span>
                 <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
                   by Soil Seed &amp; Water
@@ -391,7 +391,7 @@ const Header = () => {
                     <Link href="/">
                       <div className="flex flex-col leading-tight cursor-pointer">
                         <span className="text-lg font-heading font-bold">
-                          Organic <span className="text-primary">Soil</span> <span className="text-[#c9a227] font-display italic">Wholesale</span>
+                          Organic <span className="text-primary">Soil</span> <span className="text-[#8f7000] font-display italic">Wholesale</span>
                         </span>
                         <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                           by Soil Seed &amp; Water
