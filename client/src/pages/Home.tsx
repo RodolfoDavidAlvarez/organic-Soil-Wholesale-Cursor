@@ -21,9 +21,47 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { OptimizedImage } from "@/components/OptimizedImage";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
+
+function MobileResultsProof() {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => setShouldLoad(true), 1000);
+    return () => window.clearTimeout(timerId);
+  }, []);
+
+  return (
+    <figure className="relative aspect-[160/87] overflow-hidden rounded-2xl bg-gradient-to-br from-stone-700 via-stone-800 to-stone-950 shadow-2xl ring-1 ring-white/10">
+      {shouldLoad ? (
+        <img
+          src="/images/performance/home-results-640.webp"
+          srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-768.webp 768w, /images/performance/home-results-1280.webp 1280w"
+          sizes="calc(100vw - 2rem)"
+          alt="Turf Daddy before-and-after lawn transformation"
+          width="640"
+          height="348"
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <span className="rounded-full bg-black/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-white/80 ring-1 ring-white/15">
+            Before / after proof
+          </span>
+        </div>
+      )}
+      <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-3 pt-10">
+        <p className="text-sm font-bold leading-tight text-white">
+          Turf Daddy testimonial <span className="text-[#d6c1a0]">before / after results.</span>
+        </p>
+      </figcaption>
+    </figure>
+  );
+}
 
 type FeaturedProduct = {
   id: number;
@@ -166,10 +204,10 @@ const Home = () => {
             className="h-full w-full object-cover opacity-40"
             loading="eager"
             decoding="async"
-            fetchPriority="high"
+            {...{ fetchpriority: "high" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/70 to-stone-950/40" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-stone-50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 hidden h-32 bg-gradient-to-t from-stone-50 to-transparent lg:block" />
         </div>
         <div className="container mx-auto px-4 py-12 sm:py-16 md:py-28 lg:py-36">
           <div className="grid items-center gap-12 lg:grid-cols-12">
@@ -193,7 +231,7 @@ const Home = () => {
                     trackEvent("Hero CTA Clicked", { cta: "request_quote" });
                     navigate(`/order${window.location.search}`);
                   }}
-                  className="h-14 px-3 text-sm font-bold text-stone-950 sm:px-7 sm:text-base"
+                  className="h-14 min-w-0 justify-center px-2 text-[17px] font-extrabold leading-tight text-stone-950 sm:px-7 sm:text-lg"
                 >
                   Request a Quote
                 </Button>
@@ -201,11 +239,12 @@ const Home = () => {
                   size="lg"
                   onClick={() => {
                     trackEvent("Hero CTA Clicked", { cta: "shop_products" });
-                    navigate("/products");
+                    navigate(`/products${window.location.search}`);
                   }}
-                  className="h-14 gap-1.5 bg-[#d6c1a0] px-3 text-sm font-extrabold tracking-tight text-stone-950 shadow-xl ring-1 ring-white/30 hover:bg-[#c4a878] sm:px-7 sm:text-base"
+                  className="h-14 min-w-0 justify-center gap-1 bg-[#d6c1a0] px-2 text-[17px] font-extrabold leading-tight tracking-tight text-stone-950 shadow-xl ring-1 ring-white/30 hover:bg-[#c4a878] sm:gap-1.5 sm:px-7 sm:text-lg"
                 >
-                  Get Soil Today <ArrowRight className="h-4 w-4 stroke-[3] sm:h-5 sm:w-5" />
+                  <span className="whitespace-nowrap">Get Soil Today</span>
+                  <ArrowRight className="h-5 w-5 shrink-0 stroke-[3]" />
                 </Button>
               </div>
               <a
@@ -240,7 +279,7 @@ const Home = () => {
                 <figure className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/10">
                   <img
                     src="/images/performance/home-results-1280.webp"
-                    srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-1280.webp 1280w"
+                    srcSet="/images/performance/home-results-640.webp 640w, /images/performance/home-results-768.webp 768w, /images/performance/home-results-1280.webp 1280w"
                     sizes="55vw"
                     alt="Turf Daddy before-and-after lawn transformation"
                     width="1280"
@@ -260,6 +299,10 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <div className="bg-stone-900 px-4 pb-6 lg:hidden">
+        <MobileResultsProof />
+      </div>
 
       {/* Unified reviews: photo carousel + quote carousel + field strip */}
       <DeferredMount minHeight={680} rootMargin="1200px 0px">

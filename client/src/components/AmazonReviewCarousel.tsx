@@ -250,22 +250,79 @@ function ReviewMarqueeRow({
   showProductTag: boolean;
   cardClass: string;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pauseUntilRef = useRef(0);
+  const hoveredRef = useRef(false);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || reviews.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const advance = () => {
+      if (document.visibilityState !== "visible" || hoveredRef.current || Date.now() < pauseUntilRef.current) {
+        return;
+      }
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-review-card]"));
+      if (cards.length < 2) return;
+
+      const current = cards.reduce(
+        (closest, card, index) => {
+          const distance = Math.abs(card.offsetLeft - scroller.scrollLeft - 16);
+          return distance < closest.distance ? { index, distance } : closest;
+        },
+        { index: 0, distance: Number.POSITIVE_INFINITY },
+      );
+      const nextIndex = current.index >= cards.length - 1 ? 0 : current.index + 1;
+
+      scroller.scrollTo({
+        left: Math.max(cards[nextIndex].offsetLeft - 16, 0),
+        behavior: "smooth",
+      });
+    };
+
+    const intervalId = window.setInterval(advance, 3600);
+    return () => window.clearInterval(intervalId);
+  }, [reviews.length]);
+
   if (reviews.length === 0) return null;
 
+  const pauseForInteraction = () => {
+    pauseUntilRef.current = Date.now() + 6500;
+  };
+
   return (
-    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-1 sm:mx-0 sm:gap-4 sm:px-0">
-        {reviews.map((review) => (
-          <div
-            key={review.id}
-            className={cn("shrink-0 snap-start", cardClass)}
-          >
-            {mode === "photo" ? (
-              <PhotoReviewCard review={review} />
-            ) : (
-              <QuoteReviewCard review={review} showProductTag={showProductTag} />
-            )}
-          </div>
-        ))}
+    <div
+      ref={scrollerRef}
+      role="region"
+      aria-label={`${mode === "photo" ? "Photo" : "Customer quote"} reviews`}
+      tabIndex={0}
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+      }}
+      onMouseLeave={() => {
+        hoveredRef.current = false;
+      }}
+      onPointerDown={pauseForInteraction}
+      onTouchStart={pauseForInteraction}
+      onWheel={pauseForInteraction}
+      onFocusCapture={pauseForInteraction}
+      className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#264027] sm:mx-0 sm:gap-4 sm:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      {reviews.map((review) => (
+        <div
+          key={review.id}
+          data-review-card
+          className={cn("shrink-0 snap-start", cardClass)}
+        >
+          {mode === "photo" ? (
+            <PhotoReviewCard review={review} />
+          ) : (
+            <QuoteReviewCard review={review} showProductTag={showProductTag} />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
