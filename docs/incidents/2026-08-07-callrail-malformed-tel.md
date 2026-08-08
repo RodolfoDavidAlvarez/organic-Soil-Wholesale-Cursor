@@ -2,7 +2,7 @@
 
 - Discovery date: 2026-08-07
 - Severity: P0 call-conversion regression
-- Status: Mitigated in code; production deployment and physical-device verification pending
+- Status: Mitigated in production; physical-device verification pending (not Resolved)
 - Affected window: Start is not yet determinable. The defect was confirmed on production on 2026-08-07 before the corrective deployment.
 
 ## Customer-visible symptom
@@ -37,7 +37,19 @@ The React source supplied a visible number, `href`, and `aria-label` independent
 - Automated source and rendered-route regression test: `scripts/test-phone-links.mjs`.
 - CallRail fixture must convert `tel:+(602) 313-3897` to `tel:+16023133897` while retaining `(602) 313-3897` consistently in visible text and `aria-label`.
 - Mobile routes checked: header, hero, floating call button, footer, products, campaign, checkout, and quote flow.
-- Production deployment, production browser evidence, dial-intent evidence, and physical-device result must be appended before status becomes Resolved.
+- Production code deployment: `dpl_2HLkxqjdY3UP5JwCC9tQqTrKpjAC`, commit `2284badf42a30b0ea016a7f412bfa8fdf570f03b`, Ready on 2026-08-07 and aliased to `https://www.organicsoilwholesale.com`.
+- Production cold-load test at 390x844: CallRail `swap.js` and `swap_session.json` loaded; every rendered phone link used `tel:+16026370032` with `Call (602) 637-0032`; the captured browser dial intent was exactly `tel:+16026370032` and no call was placed.
+- Production routes checked: home/header/hero/floating/footer, products, campaign, checkout, and quote. No non-canonical rendered `tel:` target was found.
+- The homepage review section existed without scrolling and started at the hero boundary (both 673px); CLS was 0. The quote action preserved `utm_source`, `utm_campaign`, and `source` into `/order`.
+- Production Lighthouse mobile sanity: performance 88, LCP 3,123ms, CLS 0, TBT 222ms, transfer 1,586,765 bytes.
+- Vercel reported no production runtime errors in the 30 minutes after deployment.
+- Physical iPhone/Android dial-sheet verification is still required before changing this incident to Resolved.
+
+## Impact evidence and limits
+
+- Confirmed: the malformed production combination was observed on 2026-08-07, and website phone clicks enter the site's analytics event pipeline.
+- Not confirmed: the defect start date, affected click count, completed/connected CallRail call count, or lost-conversion count. No authenticated CallRail call-log dataset was available during remediation.
+- Inference: any mobile tap made while CallRail had produced the malformed `tel:+(602)...` target was at risk of an incorrect international dial intent. Quantification requires comparing GA4/GTM phone-click events with CallRail connected-call records for the affected window.
 
 ## Prevention controls
 
@@ -46,4 +58,3 @@ The React source supplied a visible number, `href`, and `aria-label` independent
 3. Verify displayed text, `href`, and `aria-label` after CallRail finishes loading.
 4. Never hardcode a CallRail tracking number in application code.
 5. Never place punctuation after `tel:+`; E.164 dial targets contain digits only after `+`.
-
