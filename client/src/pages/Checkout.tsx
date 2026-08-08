@@ -526,6 +526,10 @@ const Checkout: React.FC = () => {
             price: i.unitPrice,
             unit: i.unit,
             imageUrl: i.imageUrl,
+            listUnitPrice: i.listUnitPrice,
+            savingsPerUnit: i.savingsPerUnit,
+            discountPercent: i.discountPercent,
+            unitsPerPallet: i.unitsPerPallet,
           })),
           customerInfo: {
             name, company, customerCategory, email, phone, notes,
@@ -1010,10 +1014,12 @@ const Checkout: React.FC = () => {
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
                         <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
                         <p className="mt-1 text-xs text-stone-500">{fmt(item.unitPrice)} each</p>
+                        {item.discountPercent ? <p className="mt-1 text-xs font-bold text-green-700">{item.discountPercent}% pallet savings · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
                       </div>
-                      <p className="whitespace-nowrap text-right text-base font-bold text-[#264027]">
-                        {fmt(item.unitPrice * item.quantity)}
-                      </p>
+                      <div className="whitespace-nowrap text-right">
+                        {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? <p className="text-xs text-stone-400 line-through">{fmt(item.listUnitPrice * item.quantity)}</p> : null}
+                        <p className="text-base font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+                      </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <div className="inline-flex items-center gap-0.5 rounded-xl border border-stone-200 bg-white p-1 shadow-sm">

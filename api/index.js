@@ -15,6 +15,10 @@ import {
   recordCheckoutEvent,
   sendCheckoutAlert,
 } from '../shared/checkoutMonitoring.js';
+import {
+  normalizeV5CheckoutItems,
+  normalizeV5ProductRecord,
+} from '../shared/oswPricing.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -2132,7 +2136,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       const rawSizes = Array.isArray(p.size_price_options) ? p.size_price_options : [];
       const normalizedSizes = rawSizes.map(normalizeSizeOption).filter(Boolean);
       const additionalImages = filterBlockedProductImages(p.id, p.additional_images ?? p.additionalImages);
-      return {
+      return normalizeV5ProductRecord({
         ...p,
         // Provide both camelCase and snake_case so existing clients keep working
         size_price_options: normalizedSizes,
@@ -2143,7 +2147,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         additionalImages,
         productType: p.product_type ?? p.productType ?? p.name,
         displayTitle: p.display_title ?? p.displayTitle ?? p.name,
-      };
+      });
     };
 
     // Products list — heavy free-text fields stripped (only the grid needs
@@ -6488,7 +6492,13 @@ ${pages}
         }
 
         const { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } = await import('../shared/flatbedSpots.js');
-        const flatbedPricing = applyFullFlatbedProductDiscount(rawItems);
+        let canonicalItems;
+        try {
+          canonicalItems = normalizeV5CheckoutItems(rawItems);
+        } catch (pricingError) {
+          return res.status(400).json({ error: pricingError.message || 'Unsupported product format' });
+        }
+        const flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
         const items = flatbedPricing.items;
 
         const normalizedDiscount = typeof discountCode === 'string' ? discountCode.trim().toUpperCase() : null;
@@ -6644,6 +6654,10 @@ ${pages}
             size: item.sizeOption,
             quantity: item.quantity,
             price: item.price,
+            list_price: item.listUnitPrice ?? item.price,
+            savings: (item.savingsPerUnit || 0) * item.quantity,
+            discount_percent: item.discountPercent || 0,
+            units_per_pallet: item.unitsPerPallet || null,
             total: item.price * item.quantity,
           })),
         };

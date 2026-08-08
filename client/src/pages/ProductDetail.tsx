@@ -141,7 +141,7 @@ type SizeCategory = {
 };
 
 /** Volume incentive: pallet vs buying the same bags individually. */
-const PALLET_VOLUME_DISCOUNT = 0.1;
+const PALLET_VOLUME_DISCOUNT = 0.2;
 
 const applyPalletDiscount = (listPrice: number) =>
   Number((listPrice * (1 - PALLET_VOLUME_DISCOUNT)).toFixed(2));
@@ -369,7 +369,7 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "Pallet (144 x 9lb)": "/images/sizes/9lb-pallet.jpg",
   "1CF Bag": "/images/sizes/1cf-bag-single.png",
   "Pallet (50 x 1CF)": "/images/sizes/1cf-pallet.jpg",
-  "Pallet (40 x 1CF)": "/images/sizes/1cf-pallet.jpg",
+  "Pallet (30 x 1.5CF)": "/images/sizes/1cf-pallet.jpg",
   "2CF Bag": "/images/sizes/2cf-bag-single.png",
   "Pallet (25 x 2CF)": "/images/sizes/2cf-pallet.jpg",
   Tote: "/images/sizes/2-2cy-tote.png",
@@ -384,14 +384,14 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
 const productMsrpOverrides: Record<number, Record<string, { price: number; priceLabel?: string }>> = {
   1000: {
     "1CF Bag": { price: 24.9 },
-    Tote: { price: 150 },
+    Tote: { price: 149 },
     "Truckload (~24 tons)": { price: 720 },
   },
   1001: {
     "Truckload (~24 tons)": { price: 4800 },
   },
   111: {
-    "1CF Bag": { price: 10.99 },
+    "1.5CF Bag": { price: 10.99 },
   },
   3000: {
     "Truckload (22 pallets)": { price: 2700 },
@@ -406,10 +406,12 @@ const isPlantPalOrSoilCraftBag = (productId?: number | string) => {
   return id === 137 || id === 111;
 };
 
+const isOneOrOneHalfCf = (size: string) => /1(?:\.5)?\s*(?:cf|cu\s*ft)/i.test(size);
+
 const categoryLabel = (size: string, productId?: number | string) => {
   const id = normalizeProductId(productId);
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
+  if (isOneOrOneHalfCf(size)) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   if (size.includes("Tote")) return id === 137 || id === 111 || id === 3000 ? "Super Sack (2.2 cu yd)" : "Super Sack (~2,000 lb)";
   if (size.includes("Bulk Pickup")) return "Bulk Pickup";
@@ -425,7 +427,7 @@ const categoryLabel = (size: string, productId?: number | string) => {
 /** Short size/weight line reused on Step 2 (single + pallet). */
 const bagSizeMetricLabel = (size: string, productId?: number | string) => {
   if (size.includes("9lb") || size.includes("9 lb")) return "9 lb";
-  if (size.includes("1CF") || size.includes("1.5")) {
+  if (isOneOrOneHalfCf(size)) {
     return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft (~50 lb)" : "1 cu ft (~40–50 lb)";
   }
   if (size.includes("2CF") || size.includes("2 cu")) return "2 cu ft (~60 lb)";
@@ -490,19 +492,19 @@ const BULK_DUAL_UNITS: Record<
   // Light materials — same 24-ton load ≈ 60 cu yd.
   111: {
     pickupPrimaryUnit: "cu yd",
-    pickupSecondary: "$90 / ton equivalent",
+    pickupSecondary: "$200 / ton equivalent",
     truckloadSecondary: "Est. 60 cu yd per truckload · $36/cu yd",
     truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
   137: {
     pickupPrimaryUnit: "cu yd",
-    pickupSecondary: "$150 / ton equivalent",
+    pickupSecondary: "$300 / ton equivalent",
     truckloadSecondary: "Est. 60 cu yd per truckload · $60/cu yd",
     truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
   3000: {
     pickupPrimaryUnit: "cu yd",
-    pickupSecondary: "$60 / ton equivalent",
+    pickupSecondary: "$110 / ton equivalent",
     truckloadSecondary: "Est. 60 cu yd per truckload · $24/cu yd",
     truckloadVolume: "24-ton walking-floor semi · est. 60 cu yd per truckload",
   },
@@ -510,11 +512,11 @@ const BULK_DUAL_UNITS: Record<
 
 const palletSizeForBag = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return { size: "Pallet (144 x 9lb)", qty: 144, cartLabel: "Pallet of 9 lb Bags" };
-  if (size.includes("1CF")) {
-    // PlantPal / Soil Craft ship 1.5 cu ft bags at 40 per pallet (V4 pricing sheet);
+  if (isOneOrOneHalfCf(size)) {
+    // PlantPal / Soil Craft ship 1.5 cu ft bags at 30 per pallet (V5 pricing sheet);
     // standard 1CF bags stay at 50 per pallet.
     if (isPlantPalOrSoilCraftBag(productId)) {
-      return { size: "Pallet (40 x 1CF)", qty: 40, cartLabel: "Pallet of 1.5 cu ft Bags" };
+      return { size: "Pallet (30 x 1.5CF)", qty: 30, cartLabel: "Pallet of 1.5 cu ft Bags" };
     }
     return { size: "Pallet (50 x 1CF)", qty: 50, cartLabel: "Pallet of 1CF Bags" };
   }
@@ -524,7 +526,7 @@ const palletSizeForBag = (size: string, productId?: number | string) => {
 
 const singleCartLabelForSize = (size: string, productId?: number | string) => {
   if (size.includes("9lb")) return "9 lb Bag";
-  if (size.includes("1CF")) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
+  if (isOneOrOneHalfCf(size)) return isPlantPalOrSoilCraftBag(productId) ? "1.5 cu ft Bag (~50 lb)" : "40 lb Bag (1 cu ft)";
   if (size.includes("2CF")) return "2 cu ft Bag (~60 lb)";
   return categoryLabel(size, productId);
 };
@@ -555,7 +557,7 @@ const shouldHidePayPickupTier = (productId: number | string, size: string) => {
 
 const schemaTierLabel = (size: string, productId?: number | string) => {
   if (size.startsWith("Pallet") && size.includes("9lb")) return "Pallet of 9 lb Bags";
-  if (size.startsWith("Pallet") && size.includes("1CF")) {
+  if (size.startsWith("Pallet") && isOneOrOneHalfCf(size)) {
     return isPlantPalOrSoilCraftBag(productId) ? "Pallet of 1.5 cu ft bags" : "Pallet of 1 cu ft bags";
   }
   if (size.startsWith("Pallet") && size.includes("2CF")) return "Pallet of 2 cu ft Bags";
@@ -708,7 +710,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
       cartLabel,
       displayPrice,
       compareAtPrice: listPrice,
-      badge: "10% off",
+      badge: "20% off",
     });
   };
 
@@ -719,7 +721,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
 
     const baseKey = tier.size.includes("9lb")
       ? "9 lb Bag"
-      : tier.size.includes("1CF")
+      : isOneOrOneHalfCf(tier.size)
         ? categoryLabel("1CF Bag", product.id)
         : tier.size.includes("2CF")
           ? categoryLabel("2CF Bag", product.id)
@@ -1376,7 +1378,7 @@ const ProductDetail = () => {
         ? selectedChoice.subLabel
         : needsChoice
         ? selectedChoice.kind === "pallet"
-          ? `${selectedChoice.subLabel} · 10% off`
+          ? `${selectedChoice.subLabel} · 20% off`
           : selectedChoice.subLabel
         : selectedChoice.secondaryPriceLabel || undefined;
       const rawUnit = selectedChoice.unit?.replace(/^per\s/i, "") ?? "";
@@ -1523,6 +1525,12 @@ const ProductDetail = () => {
       format: selectedChoice.cartLabel,
       quantity,
       unitPrice: selectedChoice.displayPrice,
+      listUnitPrice: selectedChoice.compareAtPrice,
+      savingsPerUnit: selectedChoice.compareAtPrice != null
+        ? Number((selectedChoice.compareAtPrice - selectedChoice.displayPrice).toFixed(2))
+        : undefined,
+      discountPercent: selectedChoice.kind === "pallet" ? 20 : undefined,
+      unitsPerPallet: selectedChoice.kind === "pallet" ? selectedChoice.qty : undefined,
       unit: selectedChoice.unit || "per unit",
       mode: canPayOnline ? "pay" : "quote",
       imageUrl: HERO_BAG_PHOTO[product.id] || product.imageUrl || product.texturePhotoUrl,

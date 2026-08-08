@@ -12,6 +12,7 @@ import {
   TONS_PER_CU_YD,
 } from '../../shared/pickupSchedule.js';
 import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
+import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 
 const router = Router();
 
@@ -50,8 +51,14 @@ router.post('/create-session', async (req, res) => {
       return res.status(400).json({ error: 'No items to check out' });
     }
 
-    // Authoritative full flatbed discount (22 spots → 10% off product lines).
-    const flatbedPricing = applyFullFlatbedProductDiscount(rawItems);
+    // Canonical V5 prices first, then the additional full-flatbed discount.
+    let canonicalItems;
+    try {
+      canonicalItems = normalizeV5CheckoutItems(rawItems);
+    } catch (pricingError: any) {
+      return res.status(400).json({ error: pricingError?.message || 'Unsupported product format' });
+    }
+    const flatbedPricing = applyFullFlatbedProductDiscount(canonicalItems);
     const items = flatbedPricing.items;
 
     const isDelivery = fulfillmentType === 'delivery';
@@ -240,6 +247,10 @@ router.post('/create-session', async (req, res) => {
         unit: item.unit || null,
         quantity: item.quantity,
         price: item.price,
+        list_price: item.listUnitPrice ?? item.price,
+        savings: (item.savingsPerUnit || 0) * item.quantity,
+        discount_percent: item.discountPercent || 0,
+        units_per_pallet: item.unitsPerPallet || null,
         total: item.price * item.quantity,
       })),
     };

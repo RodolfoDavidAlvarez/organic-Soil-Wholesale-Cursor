@@ -5,6 +5,7 @@ import {
   fullLoadDiscountAmount,
   hasFullFlatbedDiscount,
 } from "@/lib/flatbedSpots";
+import { normalizeV5CartItem } from "@shared/oswPricing.js";
 
 export type CartItem = {
   productId: number;
@@ -21,6 +22,11 @@ export type CartItem = {
   /** Optional size category photo (e.g., 9lb-bag, pallet, super sack) shown as an
    *  overlay badge on top of imageUrl so the customer sees what size they picked */
   sizeImage?: string;
+  /** V5 bag-by-quantity list price for a discounted pallet. */
+  listUnitPrice?: number;
+  savingsPerUnit?: number;
+  discountPercent?: number;
+  unitsPerPallet?: number | null;
 };
 
 type QuoteCartContextValue = {
@@ -47,7 +53,8 @@ const STORAGE_KEY = "osw-quote-cart";
 const loadCart = (): CartItem[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map((item) => normalizeV5CartItem(item) as CartItem) : [];
   } catch {
     return [];
   }
@@ -70,29 +77,30 @@ export const QuoteCartProvider = ({ children }: { children: ReactNode }) => {
   }, [items]);
 
   const addItem = useCallback((newItem: CartItem) => {
+    const canonicalItem = normalizeV5CartItem(newItem) as CartItem;
     setItems((prev) => {
       const idx = prev.findIndex(
-        (i) => i.productId === newItem.productId && i.format === newItem.format
+        (i) => i.productId === canonicalItem.productId && i.format === canonicalItem.format
       );
       if (idx >= 0) {
         const updated = [...prev];
-        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + newItem.quantity };
+        updated[idx] = { ...updated[idx], ...canonicalItem, quantity: updated[idx].quantity + canonicalItem.quantity };
         return updated;
       }
-      return [...prev, newItem];
+      return [...prev, canonicalItem];
     });
     trackEvent("Cart Item Added", {
-      product_id: newItem.productId,
-      product_slug: newItem.productSlug,
-      format: newItem.format,
-      quantity: newItem.quantity,
-      unit_price: newItem.unitPrice,
-      mode: newItem.mode ?? "quote",
+      product_id: canonicalItem.productId,
+      product_slug: canonicalItem.productSlug,
+      format: canonicalItem.format,
+      quantity: canonicalItem.quantity,
+      unit_price: canonicalItem.unitPrice,
+      mode: canonicalItem.mode ?? "quote",
     });
     trackEcommerceEvent("add_to_cart", {
-      value: newItem.unitPrice * newItem.quantity,
-      items: [cartItemToEcommerceItem(newItem)],
-      mode: newItem.mode ?? "quote",
+      value: canonicalItem.unitPrice * canonicalItem.quantity,
+      items: [cartItemToEcommerceItem(canonicalItem)],
+      mode: canonicalItem.mode ?? "quote",
       pickup_sales_channel: "osw_yard",
     });
   }, []);

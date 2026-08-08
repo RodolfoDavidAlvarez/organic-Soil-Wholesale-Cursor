@@ -14,7 +14,9 @@
     "db:push": "drizzle-kit push",
     "vercel-build": "npm install --prefix client && npm run --prefix client build",
     "grok": "node scripts/grok-cli.js",
-    "test:phone-links": "node scripts/test-phone-links.mjs"
+    "test:phone-links": "node scripts/test-phone-links.mjs",
+    "test:pricing": "node scripts/test-osw-pricing.mjs",
+    "test:ux": "node scripts/test-osw-ux.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

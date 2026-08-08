@@ -131,7 +131,13 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
                 <Plus className="mx-auto h-3 w-3" />
               </button>
             </div>
-            <p className="text-sm font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+            <div className="text-right">
+              {item.listUnitPrice && item.listUnitPrice > item.unitPrice ? (
+                <p className="text-[11px] text-stone-400 line-through">{fmt(item.listUnitPrice * item.quantity)}</p>
+              ) : null}
+              <p className="text-sm font-bold text-[#264027]">{fmt(item.unitPrice * item.quantity)}</p>
+              {item.discountPercent ? <p className="text-[10px] font-bold text-green-700">{item.discountPercent}% off · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
+            </div>
           </div>
         </div>
       </div>
@@ -228,7 +234,7 @@ export const QuoteCartDrawer = () => {
       quote_total: quoteTotal,
     });
     closeDrawer();
-    navigate("/order");
+    navigate(`/order${window.location.search}`);
   };
 
   const openCallback = () => {

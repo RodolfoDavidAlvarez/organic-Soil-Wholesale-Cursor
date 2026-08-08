@@ -35,6 +35,18 @@ Authoritative references:
 | Cart/order payload | Client price is accepted by checkout | Server must validate canonical V5 product price |
 | Cart summaries | No pallet list/savings fields | List, 20% discount, savings, and subtotal must agree |
 
+## Separate distributor pricing conflict
+
+The public `/wholesale` page contains an older distributor price table. Its per-unit,
+pallet, and truckload figures are not congruent with Local Pricing V5, and V5 does
+not define the distributor discount schedule. This change corrects its physical
+PlantPal and Soil Craft pack labels to 1.5 CF / 30 per pallet, but does not invent
+new distributor prices. That table needs a separate distributor-pricing decision
+before its dollar values can be replaced safely.
+
+The internal OSW work-order size defaults were also physically stale. They are
+corrected to 30 units for 1.5 CF pallets and 25 units for 2 CF mulch pallets.
+
 The database/API values above are older wholesale values. V5 is explicitly authoritative for this OSW local-sales flow, so the website will normalize the active V5 products at the API boundary and validate checkout prices on the server. SSW World and SSW Mobile code are reference-only and must not be modified by this work.
 
 ## Canonical V5 examples
