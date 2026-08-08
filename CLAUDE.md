@@ -16,11 +16,13 @@
 
 ## Official Public Phone Number
 
-- Use **(602) 637-0032** as the official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
+- Use **(623) 263-3386** / **`tel:+16232633386`** as the sole official public customer support line for Organic Soil Wholesale / Soil Seed & Water.
+- `(602) 637-0032` is retired. It must not appear in active source, generated output, environment configuration, structured data, CTAs, forms, templates, or tests.
 - Do **not** use Rodo's personal number (`928-550-1649`) on public customer-facing pages.
 - Do **not** hardcode CallRail or other tracking numbers in React/server code. Call tracking should be handled through Google Tag Manager / tracking configuration.
 - If a phone number from CallRail appears in screenshots or old code, treat it as a tracking number unless the user confirms it is the official public line.
 - P0 prevention: read `docs/incidents/2026-08-07-callrail-malformed-tel.md` and follow `docs/RELEASE_CHECKLIST.md` before changing phone, CallRail, GTM, header, footer, hero, campaign, checkout, or quote behavior.
+- Canonical-number source and replacement procedure: `docs/PHONE_SOURCE_OF_TRUTH.md`.
 - Every source/rendered US dial target must be canonical E.164: `tel:+1` plus ten digits. After CallRail loads, visible text, `href`, and `aria-label` must match.
 
 ## Mobile-First Development Priority

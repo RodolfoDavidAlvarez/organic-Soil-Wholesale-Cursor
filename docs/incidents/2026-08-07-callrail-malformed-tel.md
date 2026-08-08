@@ -2,7 +2,7 @@
 
 - Discovery date: 2026-08-07
 - Severity: P0 call-conversion regression
-- Status: Mitigated in production; physical-device verification pending (not Resolved)
+- Status: Reopened for canonical destination correction; website deployment, CallRail destination verification, and physical-device verification pending
 - Affected window: Start is not yet determinable. The defect was confirmed on production on 2026-08-07 before the corrective deployment.
 
 ## Customer-visible symptom
@@ -25,7 +25,8 @@ The React source supplied a visible number, `href`, and `aria-label` independent
 
 ## Corrective changes
 
-- Official source number is `(602) 637-0032`; source dial target is `tel:+16026370032`.
+- Superseding canonical correction on 2026-08-07: the sole current source number is `(623) 263-3386`; source dial target is `tel:+16232633386`.
+- `(602) 637-0032` was temporarily treated as official during the first mitigation. It is now retired. References below to it are retained only as historical deployment evidence, not as active configuration.
 - All US telephone links are canonicalized to `tel:+1` plus ten digits.
 - A mutation observer synchronizes visible phone text, `href`, `aria-label`, and `data-phone-number` after CallRail changes.
 - Excluded operational/campaign/checkout routes remain locked to the official number.
@@ -44,6 +45,13 @@ The React source supplied a visible number, `href`, and `aria-label` independent
 - Production Lighthouse mobile sanity: performance 88, LCP 3,123ms, CLS 0, TBT 222ms, transfer 1,586,765 bytes.
 - Vercel reported no production runtime errors in the 30 minutes after deployment.
 - Physical iPhone/Android dial-sheet verification is still required before changing this incident to Resolved.
+
+## Canonical correction gate
+
+- Active website source, generated output, structured data, email templates, and test fixtures must use `(623) 263-3386` / `tel:+16232633386`.
+- CallRail DNI must recognize the new canonical source number and every assigned tracking number must route to `(623) 263-3386`.
+- A real test call and CallRail conversion-log confirmation require explicit approval before placing the call or changing external routing.
+- See `docs/PHONE_SOURCE_OF_TRUTH.md` for the permanent replacement checklist.
 
 ## Impact evidence and limits
 

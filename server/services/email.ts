@@ -4,6 +4,7 @@ import {
   COMPANY_ADDRESS,
   COMPANY_NAME,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
+  CUSTOMER_SUPPORT_PHONE_TEL,
 } from "../config/contact.js";
 
 // Initialize Resend with API key
@@ -13,6 +14,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = "Organic Soil Wholesale <info@soilseedandwater.com>";
 const REPLY_TO_EMAIL = "ralvarez@soilseedandwater.com";
 const COMPANY_PHONE = CUSTOMER_SUPPORT_PHONE_DISPLAY;
+const COMPANY_PHONE_TEL = CUSTOMER_SUPPORT_PHONE_TEL;
 
 // Get active admin emails for a specific notification type
 async function getAdminEmailsForNotification(notificationType: string): Promise<string[]> {
@@ -376,7 +378,7 @@ export async function sendOrderReadyEmail(email: string, orderNumber: string, pi
           <p>Your order will be held for 7 days. Please pick up at your earliest convenience.</p>
           
           <center>
-            <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}" class="button">Call Us: ${COMPANY_PHONE}</a>
+            <a href="${COMPANY_PHONE_TEL}" class="button">Call Us: ${COMPANY_PHONE}</a>
           </center>
           
           <p>Thank you for your business!</p>
@@ -1560,7 +1562,7 @@ export async function sendWelcomeEmail(email: string, name?: string) {
         <div class="contact-section">
           <h4 class="contact-title">Get in Touch</h4>
           <div class="contact-details">
-            <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}">${COMPANY_PHONE}</a><br>
+            <a href="${COMPANY_PHONE_TEL}">${COMPANY_PHONE}</a><br>
             <a href="mailto:ralvarez@soilseedandwater.com">ralvarez@soilseedandwater.com</a><br>
             Flagstaff, Arizona<br>
             Monday-Saturday, 7:00 AM - 5:00 PM
@@ -1798,7 +1800,7 @@ export async function sendFollowUpEmail(email: string, name?: string) {
             <a href="${baseUrl}/contact" class="button">Get in Touch</a>
             <br><br>
             <span class="help-text">
-              Or call us directly at <a href="tel:${COMPANY_PHONE.replace(/[^\d]/g, "")}" class="contact-link">${COMPANY_PHONE}</a>
+              Or call us directly at <a href="${COMPANY_PHONE_TEL}" class="contact-link">${COMPANY_PHONE}</a>
             </span>
           </div>
 
