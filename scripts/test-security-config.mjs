@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const ignoredDirectories = new Set([
@@ -37,6 +37,7 @@ try {
 }
 
 const violations = [];
+let scannedFileCount = 0;
 const literalServiceKeyFallback = /SUPABASE_SERVICE_ROLE_KEY\s*\|\|\s*['"`][^'"`]+['"`]/;
 const literalJwtSecretFallback = /JWT_SECRET\s*\|\|\s*['"`][^'"`]+['"`]/;
 const hardcodedPasswordComparison = /\bpassword\s*===\s*['"`][^'"`]+['"`]/i;
@@ -48,8 +49,12 @@ const jwtPattern = /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
 const sourceFile = /\.(?:cjs|js|mjs|ts|tsx)$/i;
 
 for (const file of trackedFiles) {
+  // Deployment platforms can omit tracked files through ignore rules.
+  if (!existsSync(file)) continue;
+
   const contents = readFileSync(file);
   if (contents.includes(0)) continue;
+  scannedFileCount += 1;
 
   const source = contents.toString('utf8');
 
@@ -98,4 +103,4 @@ assert.deepEqual(
   `Tracked service-role secrets found:\n${violations.join('\n')}`,
 );
 
-console.log(`Security config check passed across ${trackedFiles.length} repository files.`);
+console.log(`Security config check passed across ${scannedFileCount} repository files.`);
