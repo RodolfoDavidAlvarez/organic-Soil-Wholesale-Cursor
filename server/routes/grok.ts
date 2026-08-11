@@ -45,7 +45,7 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    const response = await grokService.chat(validMessages);
+    const response = await grokService.sendMessages(validMessages);
     res.json(response);
   } catch (error) {
     console.error("Grok chat error:", error);
@@ -73,7 +73,10 @@ router.post("/ask", async (req, res) => {
       });
     }
 
-    const answer = await grokService.askQuestion(question, context);
+    const prompt = typeof context === "string" && context.trim()
+      ? `Context: ${context.trim()}\n\nQuestion: ${question}`
+      : question;
+    const answer = await grokService.sendMessage(prompt);
     res.json({ answer });
   } catch (error) {
     console.error("Grok ask error:", error);
@@ -101,7 +104,12 @@ router.post("/recommendations", async (req, res) => {
       });
     }
 
-    const recommendations = await grokService.getProductRecommendations(soilType, plantType);
+    const plantContext = typeof plantType === "string" && plantType.trim()
+      ? ` for ${plantType.trim()}`
+      : "";
+    const recommendations = await grokService.sendMessage(
+      `Recommend Organic Soil Wholesale products for ${soilType.trim()} soil${plantContext}.`,
+    );
     res.json({ recommendations });
   } catch (error) {
     console.error("Grok recommendations error:", error);
@@ -129,7 +137,7 @@ router.post("/advice", async (req, res) => {
       });
     }
 
-    const advice = await grokService.getGardeningAdvice(topic);
+    const advice = await grokService.sendMessage(`Give practical gardening advice about ${topic.trim()}.`);
     res.json({ advice });
   } catch (error) {
     console.error("Grok advice error:", error);
@@ -157,7 +165,7 @@ router.post("/wholesale", async (req, res) => {
       });
     }
 
-    const info = await grokService.getWholesaleInfo(inquiry);
+    const info = await grokService.sendMessage(`Answer this wholesale soil inquiry: ${inquiry.trim()}`);
     res.json({ info });
   } catch (error) {
     console.error("Grok wholesale error:", error);
@@ -169,7 +177,5 @@ router.post("/wholesale", async (req, res) => {
 });
 
 export default router;
-
-
 
 

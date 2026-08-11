@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const { loadProductData } = require('../loadProducts.js');
+import { loadProductData } from '../loadProducts.js';
 
 const router = Router();
 
@@ -538,7 +535,7 @@ async function getProductsFromDatabase(params: {
 }) {
   const { category, payAndPickup, ids } = params;
 
-  let query = supabase.from<RawProduct>('products').select('*');
+  let query = supabase.from('products').select('*');
 
   const parsedIds = (Array.isArray(ids) ? ids.join(',') : ids)
     ?.split(',')
@@ -566,7 +563,7 @@ async function getProductsFromDatabase(params: {
       .order('name', { ascending: true });
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.overrideTypes<RawProduct[], { merge: false }>();
 
   if (error) {
     throw error;
@@ -582,10 +579,10 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
   }
 
   const { data: slugMatch, error: slugError } = await supabase
-    .from<RawProduct>('products')
+    .from('products')
     .select('*')
     .eq('slug', normalizedSlug)
-    .single();
+    .single<RawProduct>();
 
   if (slugMatch) {
     return slugMatch;
@@ -601,10 +598,10 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
     const productId = Number(idMatch[1]);
     if (!Number.isNaN(productId)) {
       const { data, error } = await supabase
-        .from<RawProduct>('products')
+        .from('products')
         .select('*')
         .eq('id', productId)
-        .single();
+        .single<RawProduct>();
       
       if (!error && data) {
         return data;
@@ -616,10 +613,10 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
   const numericId = Number(normalizedSlug);
   if (!Number.isNaN(numericId)) {
     const { data, error } = await supabase
-      .from<RawProduct>('products')
+      .from('products')
       .select('*')
       .eq('id', numericId)
-      .single();
+      .single<RawProduct>();
     
     if (!error && data) {
       return data;
@@ -627,7 +624,10 @@ async function findProductBySlug(slug: string): Promise<RawProduct | null> {
   }
 
   // Fallback: try to match by slug pattern
-  const { data, error } = await supabase.from<RawProduct>('products').select('*');
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .overrideTypes<RawProduct[], { merge: false }>();
   if (error) {
     throw error;
   }
@@ -816,10 +816,10 @@ router.get('/:id', async (req, res) => {
     if (!Number.isNaN(numericId)) {
       try {
         const { data, error } = await supabase
-          .from<RawProduct>('products')
+          .from('products')
           .select('*')
           .eq('id', numericId)
-          .single();
+          .single<RawProduct>();
 
         if (error) {
           throw error;

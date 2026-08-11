@@ -107,7 +107,8 @@ const ScrollToTop = () => {
   useEffect(() => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      left: 0,
+      behavior: "auto",
     });
   }, [location]);
 
@@ -133,7 +134,16 @@ const CallTrackingRouteSync = () => {
       synchronizeTrackedSupportPhones();
     };
     synchronize();
-    const observer = new MutationObserver(synchronize);
+    let scheduledFrame: number | null = null;
+    const scheduleSynchronization = () => {
+      if (scheduledFrame !== null) return;
+      scheduledFrame = window.requestAnimationFrame(() => {
+        scheduledFrame = null;
+        synchronize();
+      });
+    };
+
+    const observer = new MutationObserver(scheduleSynchronization);
     observer.observe(document.body, {
       attributes: true,
       characterData: true,
@@ -141,7 +151,10 @@ const CallTrackingRouteSync = () => {
       subtree: true,
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (scheduledFrame !== null) window.cancelAnimationFrame(scheduledFrame);
+    };
   }, [location]);
 
   return null;

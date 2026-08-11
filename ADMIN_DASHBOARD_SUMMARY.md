@@ -123,7 +123,7 @@ CREATE TABLE admin_users (
 
 3. **Default Admin Credentials**:
    - Email: `admin@organicsoilwholesale.com`
-   - Password: `admin123` (change immediately)
+   - Password: `REDACTED_ADMIN_PASSWORD` (change immediately)
 
 ## Access the Admin Panel
 

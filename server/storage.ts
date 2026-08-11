@@ -71,12 +71,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { 
+    const user = {
       ...insertUser, 
       id, 
       approved: false, 
       createdAt: new Date() 
-    };
+    } as User;
     this.users.set(id, user);
     return user;
   }
@@ -92,7 +92,9 @@ export class MemStorage implements IStorage {
   
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
     const id = this.productIdCounter++;
-    const product: Product = { ...insertProduct, id };
+    // drizzle-zod 0.5 mis-infers array/JSON columns in this non-strict TS config.
+    // Route inputs are parsed by insertProductSchema before reaching this store.
+    const product = { ...insertProduct, id } as unknown as Product;
     this.products.set(id, product);
     return product;
   }
@@ -105,12 +107,13 @@ export class MemStorage implements IStorage {
   // Onboarding request methods
   async createOnboardingRequest(insertRequest: InsertOnboardingRequest): Promise<OnboardingRequest> {
     const id = this.onboardingRequestIdCounter++;
-    const request: OnboardingRequest = { 
+    // insertOnboardingRequestSchema likewise validates productsOfInterest as string[].
+    const request = {
       ...insertRequest, 
       id, 
       createdAt: new Date(),
       status: "pending" 
-    };
+    } as unknown as OnboardingRequest;
     this.onboardingRequests.set(id, request);
     return request;
   }
@@ -118,11 +121,11 @@ export class MemStorage implements IStorage {
   // Contact message methods
   async createContactMessage(insertMessage: InsertContactMessage): Promise<ContactMessage> {
     const id = this.contactMessageIdCounter++;
-    const message: ContactMessage = { 
+    const message = {
       ...insertMessage, 
       id, 
       createdAt: new Date() 
-    };
+    } as ContactMessage;
     this.contactMessages.set(id, message);
     return message;
   }

@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supabase } from "../supabaseClient";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+import { requireJwtSecret } from "../security/jwtSecret";
 
 export interface AdminRequest extends Request {
   admin?: {
@@ -13,6 +12,30 @@ export interface AdminRequest extends Request {
   };
 }
 
+export async function verifyAdminTokenValue(token: string): Promise<AdminRequest["admin"] | null> {
+  try {
+    const decoded = jwt.verify(token, requireJwtSecret()) as { id?: string };
+    if (!decoded.id) return null;
+
+    const { data: admin, error } = await supabase
+      .from("admin_users")
+      .select("id, email, role, permissions, is_active")
+      .eq("id", decoded.id)
+      .single();
+
+    if (error || !admin || admin.is_active === false) return null;
+
+    return {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+      permissions: admin.permissions || {},
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function adminAuthMiddleware(req: AdminRequest, res: Response, next: NextFunction) {
   try {
     const token = req.headers.authorization?.replace("Bearer ", "");
@@ -21,41 +44,12 @@ export async function adminAuthMiddleware(req: AdminRequest, res: Response, next
       return res.status(401).json({ error: "No token provided" });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-
-    // Handle hardcoded users (operations and super admin)
-    if (decoded.id === "ops-user" || decoded.id === "super-admin") {
-      req.admin = {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role,
-        permissions: {},
-      };
-      return next();
-    }
-
-    // Verify admin exists in database and get full details including permissions
-    const { data: admin, error } = await supabase
-      .from("admin_users")
-      .select("id, email, role, permissions, full_name, is_active")
-      .eq("id", decoded.id)
-      .single();
-
-    if (error || !admin) {
+    const admin = await verifyAdminTokenValue(token);
+    if (!admin) {
       return res.status(401).json({ error: "Invalid admin credentials" });
     }
 
-    // Check if admin is active
-    if (!admin.is_active) {
-      return res.status(403).json({ error: "Admin account is inactive" });
-    }
-
-    req.admin = {
-      id: admin.id,
-      email: admin.email,
-      role: admin.role,
-      permissions: admin.permissions || {},
-    };
+    req.admin = admin;
     next();
   } catch (error) {
     console.error("Admin auth error:", error);
@@ -64,7 +58,7 @@ export async function adminAuthMiddleware(req: AdminRequest, res: Response, next
 }
 
 export function createAdminToken(admin: { id: string; email: string; role: string }) {
-  return jwt.sign({ id: admin.id, email: admin.email, role: admin.role }, JWT_SECRET, { expiresIn: "8h" });
+  return jwt.sign({ id: admin.id, email: admin.email, role: admin.role }, requireJwtSecret(), { expiresIn: "8h" });
 }
 
 // Middleware to require super admin role

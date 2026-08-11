@@ -4,6 +4,7 @@ import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth";
 import { sendAdminInvitationEmail } from "../../services/email";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 const router = Router();
 
@@ -106,7 +107,8 @@ router.post("/accept/:token", async (req, res) => {
         // If listing fails, try to create the user directly
       }
       
-      const existingUser = existingAuthUsers?.users?.find(u => u.email === invitation.email.toLowerCase().trim());
+      const authUsers: SupabaseUser[] = existingAuthUsers?.users ?? [];
+      const existingUser = authUsers.find(u => u.email === invitation.email.toLowerCase().trim());
       
       if (existingUser) {
         console.log("Auth user found:", { id: existingUser.id, email: invitation.email });

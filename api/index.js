@@ -61,6 +61,14 @@ async function getResend() {
   return resend;
 }
 
+function requireJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required for admin authentication');
+  }
+  return secret;
+}
+
 async function notifyCheckoutIssue(db, monitor, subject, heading, message, followUp = {}) {
   if (!monitor || monitor.immediate_alerted_at) return;
   try {
@@ -2319,17 +2327,29 @@ Use "" for fields you cannot clearly read. NEVER guess.`
     // ============ ADMIN CRM ENDPOINTS ============
 
     // Admin auth helper
-    const verifyAdminToken = async (req) => {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-      const token = authHeader.substring(7);
+    const verifyAdminTokenValue = async (token) => {
       try {
         const jwt = (await import('jsonwebtoken')).default;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        return decoded;
+        const decoded = jwt.verify(token, requireJwtSecret());
+        if (!decoded || typeof decoded !== 'object' || !decoded.id) return null;
+
+        const { data: admin, error } = await db
+          .from('admin_users')
+          .select('id, email, role, permissions, is_active')
+          .eq('id', decoded.id)
+          .single();
+
+        if (error || !admin || admin.is_active === false) return null;
+        return admin;
       } catch (e) {
         return null;
       }
+    };
+
+    const verifyAdminToken = async (req) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+      return verifyAdminTokenValue(authHeader.substring(7));
     };
 
     // GET /api/admin/representative-contacts
@@ -2652,42 +2672,15 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      // Check for hardcoded operations credentials
-      if (email === 'operations@soilseedandwater.com' && password === 'ops2026') {
-        const jwt = (await import('jsonwebtoken')).default;
-        const token = jwt.sign(
-          { id: 'ops-user', email, role: 'operations' },
-          process.env.JWT_SECRET || 'your-secret-key',
-          { expiresIn: '8h' }
-        );
-        return res.json({
-          token,
-          admin: { id: 'ops-user', email, full_name: 'Operations Team', role: 'operations' }
-        });
-      }
 
-      // Check for super admin credentials
-      if (email === 'ralvarez@soilseedandwater.com' && password === 'admin123') {
-        const jwt = (await import('jsonwebtoken')).default;
-        const token = jwt.sign(
-          { id: 'super-admin', email, role: 'super_admin' },
-          process.env.JWT_SECRET || 'your-secret-key',
-          { expiresIn: '8h' }
-        );
-        return res.json({
-          token,
-          admin: { id: 'super-admin', email, full_name: 'Rodolfo Alvarez', role: 'super_admin' }
-        });
-      }
-
-      // Check database for other users
+      // Authenticate only against managed admin records.
       const { data: admin, error: adminError } = await db
         .from('admin_users')
         .select('*')
         .eq('email', email)
         .single();
 
-      if (adminError || !admin || !admin.password_hash) {
+      if (adminError || !admin || !admin.password_hash || admin.is_active === false) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
@@ -2701,7 +2694,7 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       const jwt = (await import('jsonwebtoken')).default;
       const token = jwt.sign(
         { id: admin.id, email: admin.email, role: admin.role },
-        process.env.JWT_SECRET || 'your-secret-key',
+        requireJwtSecret(),
         { expiresIn: '8h' }
       );
 
@@ -2716,27 +2709,15 @@ Use "" for fields you cannot clearly read. NEVER guess.`
       const admin = await verifyAdminToken(req);
       if (!admin) return res.status(401).json({ error: 'Unauthorized' });
 
-      // Handle hardcoded users
-      if (admin.id === 'ops-user' || admin.id === 'super-admin') {
-        return res.json({
-          admin: {
-            id: admin.id,
-            email: admin.email,
-            full_name: admin.id === 'ops-user' ? 'Operations Team' : 'Rodolfo Alvarez',
-            role: admin.role,
-            permissions: {}
-          }
-        });
-      }
 
-      // Get from database
+      // Confirm the account still exists and remains active.
       const { data: dbAdmin, error } = await db
         .from('admin_users')
-        .select('id, email, full_name, role, permissions')
+        .select('id, email, full_name, role, permissions, is_active')
         .eq('id', admin.id)
         .single();
 
-      if (error || !dbAdmin) {
+      if (error || !dbAdmin || dbAdmin.is_active === false) {
         return res.status(401).json({ error: 'Admin not found' });
       }
 
@@ -3010,10 +2991,8 @@ Use "" for fields you cannot clearly read. NEVER guess.`
 
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-      try {
-        const jwt = (await import('jsonwebtoken')).default;
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      } catch (e) {
+      const admin = await verifyAdminTokenValue(token);
+      if (!admin) {
         return res.status(401).json({ error: 'Invalid token' });
       }
 
@@ -3487,10 +3466,8 @@ ${bol.notes?`<div class="section"><div class="section-header">Notes</div><div cl
       const token = tokenFromQuery || tokenFromHeader;
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-      try {
-        const jwt = (await import('jsonwebtoken')).default;
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      } catch (e) {
+      const admin = await verifyAdminTokenValue(token);
+      if (!admin) {
         return res.status(401).json({ error: 'Invalid token' });
       }
 
@@ -3995,10 +3972,8 @@ Total anticipated product weight: ${totalWeight.toLocaleString()} lbs${roundUpNo
 
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-      try {
-        const jwt = (await import('jsonwebtoken')).default;
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      } catch (e) {
+      const admin = await verifyAdminTokenValue(token);
+      if (!admin) {
         return res.status(401).json({ error: 'Invalid token' });
       }
 

@@ -18,7 +18,7 @@ I've created a SQL script that will set up your super admin user with authentica
 - Ensures the `admin_users` table has `password_hash` and `full_name` columns
 - Creates or updates your super admin user with:
   - **Email:** `ralvarez@soilseedandwater.com`
-  - **Password:** `admin123`
+  - **Password:** `REDACTED_ADMIN_PASSWORD`
   - **Role:** `super_admin`
   - **Full Name:** `Rodolfo Alvarez`
   - **Permissions:** Full access (`{"all": true}`)
@@ -38,7 +38,7 @@ Once the SQL script is run, you can test the login:
 2. Navigate to `/admin/login`
 3. Login with:
    - Email: `ralvarez@soilseedandwater.com`
-   - Password: `admin123`
+   - Password: `REDACTED_ADMIN_PASSWORD`
 
 ## Next Steps (After Authentication is Working)
 
@@ -57,6 +57,4 @@ Once authentication is confirmed working, we'll proceed with:
 - ⏳ Waiting for you to run the SQL script in Supabase
 - ⏳ Authentication middleware currently bypassed (needs to be re-enabled)
 - ⏳ Admin management UI needs to be created
-
-
 

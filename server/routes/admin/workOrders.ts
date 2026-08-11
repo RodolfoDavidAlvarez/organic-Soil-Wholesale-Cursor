@@ -5,10 +5,9 @@
 
 import { Router } from "express";
 import { supabase } from "../../supabaseClient.js";
-import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth.js";
+import { adminAuthMiddleware, AdminRequest, verifyAdminTokenValue } from "../../middleware/adminAuth.js";
 import { AirtableSyncService } from "../../services/airtableSyncService.js";
 import puppeteer from "puppeteer";
-import jwt from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -17,7 +16,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const FROM_EMAIL = process.env.WORK_ORDER_NOTIFICATION_FROM_EMAIL || "SSW Operations <operations@soilseedandwater.com>";
 const PUBLIC_SITE_BASE_URL = process.env.PUBLIC_SITE_BASE_URL || "https://www.organicsoilwholesale.com";
 
@@ -927,9 +925,8 @@ router.get("/:id/pdf", async (req: AdminRequest, res) => {
       return res.status(401).json({ error: "No token provided" });
     }
 
-    try {
-      jwt.verify(token, JWT_SECRET);
-    } catch (error) {
+    const admin = await verifyAdminTokenValue(token);
+    if (!admin) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 

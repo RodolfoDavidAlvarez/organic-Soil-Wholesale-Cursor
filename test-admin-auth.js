@@ -1,41 +1,38 @@
-// Test script for admin authentication
-const API_BASE = 'http://localhost:3000/api/admin/auth';
+import "dotenv/config";
+
+const API_BASE = process.env.ADMIN_API_BASE || "http://localhost:3000/api/admin/auth";
+const email = process.env.ADMIN_EMAIL?.trim();
+const password = process.env.ADMIN_PASSWORD;
+
+if (!email || !password) {
+  throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD are required");
+}
 
 async function testLogin() {
-  console.log('Testing admin login...');
-  
-  try {
-    const response = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: 'ralvarez@soilseedandwater.com',
-        password: 'Admin2024!Soil'
-      }),
-    });
+  const response = await fetch(`${API_BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-    const data = await response.json();
-    console.log('Login response:', response.status, data);
+  const data = await response.json();
+  console.log("Login response status:", response.status);
 
-    if (response.ok && data.token) {
-      console.log('Login successful! Testing session...');
-      
-      // Test session endpoint
-      const sessionResponse = await fetch(`${API_BASE}/session`, {
-        headers: {
-          'Authorization': `Bearer ${data.token}`,
-        },
-      });
+  if (!response.ok || !data.token) {
+    throw new Error("Admin login failed");
+  }
 
-      const sessionData = await sessionResponse.json();
-      console.log('Session response:', sessionResponse.status, sessionData);
-    }
-  } catch (error) {
-    console.error('Test failed:', error);
+  const sessionResponse = await fetch(`${API_BASE}/session`, {
+    headers: { Authorization: `Bearer ${data.token}` },
+  });
+  console.log("Session response status:", sessionResponse.status);
+
+  if (!sessionResponse.ok) {
+    throw new Error("Admin session validation failed");
   }
 }
 
-// Run the test
-testLogin();
+testLogin().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

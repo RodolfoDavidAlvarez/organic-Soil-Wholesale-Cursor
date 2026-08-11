@@ -27,7 +27,7 @@ type NormalizedSizeOption = {
   price: number | null;
   price_cents: number | null;
   is_active: boolean;
-  display_order?: number | null;
+  display_order: number;
 };
 
 const parseMoneyCents = (value: unknown): number | null => {

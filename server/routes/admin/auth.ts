@@ -24,48 +24,11 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Check for hardcoded operations credentials first
-    if (email === "operations@soilseedandwater.com" && password === "ops2026") {
-      const token = createAdminToken({
-        id: "ops-user",
-        email: email,
-        role: "operations",
-      });
 
-      return res.json({
-        token,
-        admin: {
-          id: "ops-user",
-          email: email,
-          full_name: "Operations Team",
-          role: "operations",
-        },
-      });
-    }
-
-    // Check for super admin credentials
-    if (email === "ralvarez@soilseedandwater.com" && password === "admin123") {
-      const token = createAdminToken({
-        id: "super-admin",
-        email: email,
-        role: "super_admin",
-      });
-
-      return res.json({
-        token,
-        admin: {
-          id: "super-admin",
-          email: email,
-          full_name: "Rodolfo Alvarez",
-          role: "super_admin",
-        },
-      });
-    }
-
-    // Get admin user from database
+    // Authenticate only against managed admin records.
     const { data: admin, error } = await supabase.from("admin_users").select("*").eq("email", email).single();
 
-    if (error || !admin) {
+    if (error || !admin || admin.is_active === false) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -258,20 +221,7 @@ router.post("/create-admin", async (req, res) => {
 // Validate token
 router.get("/validate", adminAuthMiddleware, async (req: AdminRequest, res) => {
   if (req.admin) {
-    // Handle hardcoded users (ops-user, super-admin) - no DB lookup needed
-    if (req.admin.id === "ops-user" || req.admin.id === "super-admin") {
-      return res.json({
-        admin: {
-          id: req.admin.id,
-          email: req.admin.email,
-          full_name: req.admin.id === "ops-user" ? "Operations User" : "Super Admin",
-          role: req.admin.role,
-          permissions: req.admin.permissions || {},
-        },
-      });
-    }
-
-    // Get full admin details from database for regular users
+    // Get full admin details from the managed account record.
     const { data: admin, error } = await supabase
       .from("admin_users")
       .select("id, email, full_name, role, permissions")

@@ -47,7 +47,10 @@ router.post('/stripe', async (req, res) => {
 
         // Notify Rodo via SMS
         try {
-          const twilio = (await import('twilio')).default;
+          // Twilio is optional in the legacy Express server. Keep the import
+          // indirect so the Vercel API is not activated by a server-only fix.
+          const twilioModuleName: string = 'twilio';
+          const twilio = (await import(twilioModuleName)).default;
           const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
           const { data: order } = await supabase.from('orders').select('order_number, customer_name, deposit_amount').eq('id', parseInt(orderId)).single();
           if (order) {

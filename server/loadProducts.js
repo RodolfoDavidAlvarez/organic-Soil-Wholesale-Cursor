@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-function loadProductData() {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export function loadProductData() {
   const dataDir = path.join(__dirname, '../client/src/data/json');
   const amendmentProducts = JSON.parse(fs.readFileSync(path.join(dataDir, 'Amendment Products.json'), 'utf8'));
   const pottingSoilProducts = JSON.parse(fs.readFileSync(path.join(dataDir, 'Potting Soil Products.json'), 'utf8'));
@@ -61,5 +64,3 @@ function loadProductData() {
     ...mergeProductData(concentratedAmendmentProducts, 4000),
   ];
 }
-
-module.exports = { loadProductData };

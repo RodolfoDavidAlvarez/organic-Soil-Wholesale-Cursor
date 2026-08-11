@@ -251,7 +251,7 @@ router.post("/tools/set_pickup_time", (req, res) => {
     return res.status(400).json({ error: "missing_fields" });
   }
   const validation = validatePickup(String(pickup_at));
-  if (!validation.ok) {
+  if (validation.ok === false) {
     return res.status(400).json({
       error: validation.reason,
       message: validation.message,
@@ -384,7 +384,6 @@ router.post("/create-checkout-session/:sessionId", async (req, res) => {
 
     const origin = req.headers.origin || `${req.protocol}://${req.get("host")}`;
     const session = await getStripe().checkout.sessions.create({
-      automatic_payment_methods: { enabled: true },
       line_items: lineItems,
       mode: "payment",
       customer_email: customer.email || undefined,
@@ -463,7 +462,7 @@ router.post("/order/:orderId/send-sms", async (req, res) => {
       receiptUrl: `${baseUrl}/voice-receipt?order_id=${orderId}`,
     });
     const result = await sendSms({ to: phone, body });
-    if (!result.ok) {
+    if (result.ok === false) {
       return res.status(502).json({ error: result.error });
     }
     res.json({ ok: true, sid: result.sid, sentTo: phone, body });

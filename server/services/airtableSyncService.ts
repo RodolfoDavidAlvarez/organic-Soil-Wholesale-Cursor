@@ -24,21 +24,17 @@ const INGREDIENTS_TABLE_ID = "tblujGuwLKvJzgOR4";
 const PRODUCT_TO_INGREDIENT_MAP: Record<string, string> = {
   // Worm castings products - all apostrophe and spelling variations
   "Mikey's Worm Poop": "Worm castings",
-  "Mikey's Worm Poop": "Worm castings",
   "Mikeys Worm Poop": "Worm castings",
   "Mikey Worm Poop": "Worm castings",
   "Mikey\u2019s Worm Poop": "Worm castings",
 
   // Dairy compost products - all apostrophe variations
   "Dan's Gold": "Dairy Compost",
-  "Dan's Gold": "Dairy Compost",
   "Dans Gold": "Dairy Compost",
   "Dan\u2019s Gold": "Dairy Compost",
   "Dan's Drought": "Dairy Compost",
-  "Dan's Drought": "Dairy Compost",
   "Dans Drought": "Dairy Compost",
   "Dan\u2019s Drought": "Dairy Compost",
-  "Simon's Gold": "Dairy Compost",
   "Simon's Gold": "Dairy Compost",
   "Simons Gold": "Dairy Compost",
   "Simon\u2019s Gold": "Dairy Compost",

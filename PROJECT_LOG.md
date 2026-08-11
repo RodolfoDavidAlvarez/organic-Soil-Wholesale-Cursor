@@ -239,7 +239,7 @@ Joe Roselle from AZCC shared that **HB 2819** was just dropped by Rep. Cavero. T
 
 2. **Operations Login Credentials**
    - Email: `operations@soilseedandwater.com`
-   - Password: `ops2026`
+   - Password: `REDACTED_ADMIN_PASSWORD`
 
 3. **Fixed jsonwebtoken Package**
    - Added to dependencies (was only in @types)

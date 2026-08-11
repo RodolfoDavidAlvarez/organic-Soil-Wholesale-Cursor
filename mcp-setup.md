@@ -25,7 +25,7 @@ Add this to your Claude desktop configuration file:
       "args": [
         "@modelcontextprotocol/server-supabase",
         "--url", "https://govktyrtmwzbzqkmzmrf.supabase.co",
-        "--service-role-key", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc2OTU2NiwiZXhwIjoyMDcwMzQ1NTY2fQ.Zf6HI1O9ROsRersiYukXzwznHVXALs2EDYiSGLchyVI"
+        "--service-role-key", "YOUR_LOCAL_SUPABASE_SERVICE_ROLE_KEY"
       ]
     }
   }

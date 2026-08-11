@@ -54,7 +54,7 @@ npm run dev
 ### 3. **Access Admin Panel**
 - URL: `http://localhost:5001/admin/login`
 - Email: `admin@organicsoilwholesale.com` (prefilled)
-- Password: `admin123` (prefilled)
+- Password: `REDACTED_ADMIN_PASSWORD` (prefilled)
 
 ## 📊 What the Admin Panel Includes:
 
@@ -84,7 +84,7 @@ npm run dev
 
 ## 🚨 Important Notes:
 
-1. **Change Admin Password**: After first login, change from 'admin123'
+1. **Change Admin Password**: After first login, change from 'REDACTED_ADMIN_PASSWORD'
 2. **Environment Variables**: Ensure all are set in .env
 3. **SSL/HTTPS**: Use HTTPS in production
 4. **Regular Backups**: Backup your database regularly

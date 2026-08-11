@@ -14,7 +14,7 @@ const FloatingCTA = () => {
         data-mobile-phone-cta="true"
         data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)}
         onClick={() => trackEvent("Floating CTA Clicked", { cta: "call", page: window.location.pathname })}
-        className="flex min-h-[54px] items-center justify-center gap-2 rounded-xl border border-[#264027]/20 bg-white px-2 text-[#264027] shadow-sm transition hover:bg-[#eef4eb]"
+        className="flex min-h-[54px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[#264027]/20 bg-white px-2 text-[#264027] shadow-sm transition hover:bg-[#eef4eb]"
         aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
       >
         <Phone className="h-4 w-4 shrink-0" />

@@ -271,9 +271,10 @@ const Home = () => {
                 href={CUSTOMER_SUPPORT_PHONE_TEL}
                 aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
                 data-official-support-phone="true"
+                data-hero-phone-cta="true"
                 data-phone-number={CUSTOMER_SUPPORT_PHONE_TEL.slice(4)}
                 onClick={() => trackEvent("Hero CTA Clicked", { cta: "call" })}
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white/85 underline-offset-4 hover:text-white hover:underline"
+                className="-mx-2 mt-2 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg px-2 text-sm font-semibold text-white/85 underline-offset-4 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-950"
               >
                 <Phone className="h-4 w-4" />
                 Need help? Call <span data-official-support-phone-text="true">{CUSTOMER_SUPPORT_PHONE_DISPLAY}</span>

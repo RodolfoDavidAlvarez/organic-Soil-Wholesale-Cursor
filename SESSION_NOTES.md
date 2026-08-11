@@ -23,7 +23,7 @@
 - Implement SMS notifications for arrivals
 
 ## Critical Info
-- Admin: ralvarez@soilseedandwater.com / admin123
+- Admin: ralvarez@soilseedandwater.com / REDACTED_ADMIN_PASSWORD
 - 34 products enabled, 154 inventory items available
 - Phoenix location (ID: 1) fully stocked
 - Reservation system uses 15-minute expiration

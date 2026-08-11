@@ -112,6 +112,7 @@ await page.evaluate(() => window.scrollTo(0, 0));
 await page.screenshot({ path: path.join(artifactDir, "quote-mobile-product-selected.png"), fullPage: false });
 await page.click('button[type="submit"]');
 await page.waitForFunction(() => document.body.innerText.includes("Please fix the highlighted fields"));
+await page.waitForFunction(() => document.activeElement?.id === "name");
 assert.equal(await page.evaluate(() => document.activeElement?.id), "name");
 await page.type("#name", "Preview Fixture");
 await page.type("#email", "preview@example.com");
@@ -159,6 +160,16 @@ assert.ok(mobileActions.every((action) => action.rect.height >= 44));
 const callAction = mobileActions.find((action) => action.text?.includes("Call"));
 assert.equal(callAction.href, "tel:+16232633386");
 assert.equal(callAction.aria, "Call (623) 263-3386");
+const heroCallAction = await page.$eval('[data-hero-phone-cta="true"]', (link) => ({
+  rect: link.getBoundingClientRect().toJSON(),
+  href: link.getAttribute("href"),
+  aria: link.getAttribute("aria-label"),
+  touchAction: getComputedStyle(link).touchAction,
+}));
+assert.ok(heroCallAction.rect.height >= 44, JSON.stringify(heroCallAction));
+assert.equal(heroCallAction.href, "tel:+16232633386");
+assert.equal(heroCallAction.aria, "Call (623) 263-3386");
+assert.equal(heroCallAction.touchAction, "manipulation");
 
 await page.goto(`${baseUrl}/products/plantpal`, { waitUntil: "networkidle2" });
 const productSchema = await page.evaluate(() => [...document.querySelectorAll('script[type="application/ld+json"]')]

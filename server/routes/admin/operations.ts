@@ -5,11 +5,10 @@
 
 import { Router } from "express";
 import { supabase } from "../../supabaseClient.js";
-import { adminAuthMiddleware, AdminRequest } from "../../middleware/adminAuth.js";
+import { adminAuthMiddleware, AdminRequest, verifyAdminTokenValue } from "../../middleware/adminAuth.js";
 import puppeteer from "puppeteer";
 import path from "path";
 import { fileURLToPath } from "url";
-import jwt from "jsonwebtoken";
 import workOrderRoutes from "./workOrders.js";
 import taskRoutes from "./tasks.js";
 
@@ -21,7 +20,6 @@ router.use("/work-orders", workOrderRoutes);
 router.use("/tasks", taskRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // Apply auth middleware to all routes except PDF endpoint (which handles auth separately)
 router.use((req, res, next) => {
@@ -790,9 +788,8 @@ router.get("/bols/:id/pdf", async (req: AdminRequest, res) => {
       return res.status(401).json({ error: "No token provided" });
     }
 
-    try {
-      jwt.verify(token, JWT_SECRET);
-    } catch (error) {
+    const admin = await verifyAdminTokenValue(token);
+    if (!admin) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 
@@ -1210,9 +1207,8 @@ router.get("/cods/:id/pdf", async (req: AdminRequest, res) => {
       return res.status(401).json({ error: "No token provided" });
     }
 
-    try {
-      jwt.verify(token, JWT_SECRET);
-    } catch (error) {
+    const admin = await verifyAdminTokenValue(token);
+    if (!admin) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 

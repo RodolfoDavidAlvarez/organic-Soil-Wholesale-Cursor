@@ -7,8 +7,14 @@ import { ProductSyncService } from "../services/productSyncService.js";
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
+  // Keep the established API behavior even though this Stripe SDK only types its latest version.
+  apiVersion: "2023-10-16" as Stripe.LatestApiVersion,
 });
+
+type InventoryProductSummary = {
+  name: string;
+  is_pay_and_pickup_enabled: boolean;
+};
 
 const toArrayOfStrings = (input: unknown): string[] => {
   if (Array.isArray(input)) {
@@ -126,7 +132,7 @@ const normalizeSizePriceOptions = (input: unknown) => {
         displayOrder,
       };
     })
-    .filter((option): option is { key: string; label: string; price: number | null; priceCents: number | null; isActive: boolean; displayOrder?: number } => Boolean(option))
+    .filter((option): option is { key: string; label: string; price: number | null; priceCents: number | null; isActive: boolean; displayOrder: number | undefined } => Boolean(option))
     .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
 };
 
@@ -332,13 +338,18 @@ router.post("/create-order", async (req, res) => {
         return res.status(404).json({ error: `Inventory not found for product ${productId} (${sizeOption})` });
       }
 
-      if (!inventoryItem.products?.is_pay_and_pickup_enabled) {
-        return res.status(400).json({ error: `${inventoryItem.products?.name ?? "Product"} is not available for Pay & Pickup.` });
+      const relatedProducts = inventoryItem.products as unknown;
+      const inventoryProduct = (
+        Array.isArray(relatedProducts) ? relatedProducts[0] : relatedProducts
+      ) as InventoryProductSummary | null | undefined;
+
+      if (!inventoryProduct?.is_pay_and_pickup_enabled) {
+        return res.status(400).json({ error: `${inventoryProduct?.name ?? "Product"} is not available for Pay & Pickup.` });
       }
 
       if (inventoryItem.quantity_available < quantity) {
         return res.status(400).json({
-          error: `Insufficient inventory for ${inventoryItem.products?.name ?? "product"} (${sizeOption}). Available: ${inventoryItem.quantity_available}`,
+          error: `Insufficient inventory for ${inventoryProduct?.name ?? "product"} (${sizeOption}). Available: ${inventoryItem.quantity_available}`,
         });
       }
 
@@ -349,7 +360,7 @@ router.post("/create-order", async (req, res) => {
       inventorySnapshots.push({
         inventoryId: inventoryItem.id,
         productId,
-        productName: inventoryItem.products?.name ?? item.productName ?? "Product",
+        productName: inventoryProduct?.name ?? item.productName ?? "Product",
         size_option: sizeOption,
         quantity,
         locationId: requestedLocation,

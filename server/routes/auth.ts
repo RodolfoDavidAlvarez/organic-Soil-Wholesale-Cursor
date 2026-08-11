@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email';
 
 const router = Router();
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://govktyrtmwzbzqkmzmrf.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdvdmt0eXJ0bXd6Ynpxa216bXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc2OTU2NiwiZXhwIjoyMDcwMzQ1NTY2fQ.Zf6HI1O9ROsRersiYukXzwznHVXALs2EDYiSGLchyVI';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for customer auth routes');
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -189,7 +193,8 @@ router.post('/reset-password', async (req, res) => {
 
     // Check if user exists
     const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users.users.find(u => u.email === data.email);
+    const authUsers: SupabaseUser[] = users.users;
+    const user = authUsers.find(u => u.email === data.email);
 
     if (!user) {
       // Don't reveal if user exists or not
@@ -245,7 +250,8 @@ router.post('/update-password', async (req, res) => {
 
     // Get user by email
     const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users.users.find(u => u.email === tokenData.email);
+    const authUsers: SupabaseUser[] = users.users;
+    const user = authUsers.find(u => u.email === tokenData.email);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -297,7 +303,8 @@ router.post('/verify-email/:token', async (req, res) => {
 
     // Get user and update email confirmed
     const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users.users.find(u => u.email === tokenData.email);
+    const authUsers: SupabaseUser[] = users.users;
+    const user = authUsers.find(u => u.email === tokenData.email);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

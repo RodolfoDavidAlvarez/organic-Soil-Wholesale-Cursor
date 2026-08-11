@@ -1,53 +1,37 @@
-import bcrypt from 'bcrypt';
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import bcrypt from "bcrypt";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const requireEnv = (name) => {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+};
 
 async function fixAdminLogin() {
-  try {
-    // 1. Generate a new password hash
-    const password = 'admin123';
-    const newHash = await bcrypt.hash(password, 10);
-    
-    console.log('Generated new password hash for admin123');
-    
-    // 2. Update ALL admin users with this password
-    const { data, error } = await supabase
-      .from('admin_users')
-      .update({ 
-        password_hash: newHash,
-        full_name: 'Admin User'
-      })
-      .in('email', ['ralvarez@soilseedandwater.com', 'admin@organicsoilwholesale.com']);
-    
-    if (error) {
-      console.error('Error updating admin users:', error);
-      return;
-    }
-    
-    console.log('✅ Admin password updated successfully!');
-    
-    // 3. Verify the update worked
-    const { data: admins } = await supabase
-      .from('admin_users')
-      .select('email, full_name')
-      .in('email', ['ralvarez@soilseedandwater.com', 'admin@organicsoilwholesale.com']);
-    
-    console.log('\n📧 Admin users ready to login:');
-    admins?.forEach(admin => {
-      console.log(`- Email: ${admin.email}`);
-      console.log(`  Password: admin123`);
-    });
-    
-  } catch (error) {
-    console.error('Error:', error);
-  }
+  const supabase = createClient(
+    requireEnv("SUPABASE_URL"),
+    requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  );
+  const passwordHash = await bcrypt.hash(requireEnv("ADMIN_PASSWORD"), 12);
+  const emails = requireEnv("ADMIN_EMAILS")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  const { data, error } = await supabase
+    .from("admin_users")
+    .update({ password_hash: passwordHash, is_active: true })
+    .in("email", emails)
+    .select("id");
+
+  if (error) throw error;
+  console.log(`Updated ${data?.length || 0} managed admin account(s).`);
 }
 
-fixAdminLogin();
+fixAdminLogin().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

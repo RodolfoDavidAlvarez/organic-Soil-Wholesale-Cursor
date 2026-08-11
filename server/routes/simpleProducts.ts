@@ -3,6 +3,13 @@ import { productsData } from '../../client/src/data/productData';
 
 const router = Router();
 
+type ProductWithTexturePhoto = (typeof productsData)[number] & {
+  texturePhotoUrl?: string;
+};
+
+const getTexturePhotoUrl = (product: (typeof productsData)[number]) =>
+  (product as ProductWithTexturePhoto).texturePhotoUrl;
+
 // Generate slug from product name or type
 const generateSlug = (text: string): string => {
   if (!text) return '';
@@ -25,8 +32,8 @@ router.get('/', (req, res) => {
       ...product,
       slug: getProductSlug(product),
       // Ensure we have proper URLs for images
-      imageUrl: product.imageUrl || product.texturePhotoUrl,
-      texturePhotoUrl: product.texturePhotoUrl || product.imageUrl,
+      imageUrl: product.imageUrl || getTexturePhotoUrl(product),
+      texturePhotoUrl: getTexturePhotoUrl(product) || product.imageUrl,
     }));
 
     res.json({ products: enhancedProducts });
@@ -63,8 +70,8 @@ router.get('/:identifier', (req, res) => {
     const enhancedProduct = {
       ...product,
       slug: getProductSlug(product),
-      imageUrl: product.imageUrl || product.texturePhotoUrl,
-      texturePhotoUrl: product.texturePhotoUrl || product.imageUrl,
+      imageUrl: product.imageUrl || getTexturePhotoUrl(product),
+      texturePhotoUrl: getTexturePhotoUrl(product) || product.imageUrl,
     };
 
     res.json(enhancedProduct);
