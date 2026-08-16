@@ -163,6 +163,36 @@ const itemListSchema = {
   })),
 };
 
+const fallGardenWorkshopSchema = {
+  "@context": "https://schema.org",
+  "@type": "Event",
+  name: "Grow your best fall garden in Arizona",
+  description: "A free, practical Phoenix workshop about fall planting, rebuilding summer-stressed soil, and watering with confidence.",
+  startDate: "2026-08-22T10:00:00-07:00",
+  endDate: "2026-08-22T11:30:00-07:00",
+  eventStatus: "https://schema.org/EventScheduled",
+  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  isAccessibleForFree: true,
+  url: absoluteUrl("/fall-garden-workshop"),
+  location: {
+    "@type": "Place",
+    name: "Organic Soil Wholesale",
+    address: { "@type": "PostalAddress", ...ADDRESS },
+  },
+  organizer: {
+    "@type": "Organization",
+    name: BUSINESS_NAME,
+    url: SITE_URL,
+  },
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    availability: "https://schema.org/InStock",
+    url: absoluteUrl("/fall-garden-workshop"),
+  },
+};
+
 const routes = [
   {
     path: "/",
@@ -278,6 +308,14 @@ const routes = [
       },
     ],
   },
+  ...["/fall-garden-workshop", "/classes"].map((route) => ({
+    path: route,
+    title: "Free Fall Garden Workshop in Phoenix | Organic Soil Wholesale",
+    description: "Join a free Arizona fall-garden workshop in Phoenix on Saturday, August 22, 2026, from 10:00–11:30 AM.",
+    keywords: "free garden class Phoenix, Arizona fall garden workshop, Phoenix gardening class, fall planting Arizona",
+    canonical: absoluteUrl("/fall-garden-workshop"),
+    schemas: [localBusinessSchema, fallGardenWorkshopSchema],
+  })),
   ...["/checkout", "/qr", "/check-in", "/order-confirmation", "/pay-and-pickup"].map((route) => ({
     path: route,
     title: "Organic Soil Wholesale",
