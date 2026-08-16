@@ -18,7 +18,6 @@ import {
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_TEL,
 } from "@/config/contact";
-import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
 
 type Props = { source: string };
@@ -43,7 +42,6 @@ const learningPoints = [
 ];
 
 export default function FallGardenWorkshop({ source }: Props) {
-  usePhoneNumberLock({ selector: "[data-official-support-phone]" });
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
