@@ -2,7 +2,7 @@ export const FALL_GARDEN_WORKSHOP = Object.freeze({
   key: 'fall-garden-workshop-2026-08-22',
   name: 'Grow your best fall garden in Arizona',
   startsAt: '2026-08-22T10:00:00-07:00',
-  rosterUrl: 'https://ssw-owner-command-center.vercel.app/?tab=campaigns&view=events',
+  rosterUrl: 'https://sswworld.com/?tab=campaigns&view=events',
 });
 
 const CUSTOMER_TYPES = new Set([
