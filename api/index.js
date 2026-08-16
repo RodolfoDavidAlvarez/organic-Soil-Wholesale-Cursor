@@ -4315,6 +4315,56 @@ ${pages}
 
     // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
+    // POST /api/workshops/fall-garden/register - Event RSVP with separate,
+    // optional marketing consent. The event roster is the source of truth.
+    if (path === '/api/workshops/fall-garden/register' && req.method === 'POST') {
+      const {
+        validateWorkshopRegistration,
+        saveWorkshopRegistration,
+        sendWorkshopAdminNotification,
+      } = await import('../shared/workshopRegistrations.js');
+      const validation = validateWorkshopRegistration(req.body || {});
+      if (!validation.ok) return res.status(400).json({ error: validation.error });
+      if (validation.bot) return res.json({ success: true });
+
+      try {
+        const db = await getSupabase();
+        const { subscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
+        const result = await saveWorkshopRegistration({
+          db,
+          registration: validation.registration,
+          subscribeNewsletterContact,
+        });
+
+        let notificationStatus = result.registration.admin_notification_status;
+        if (result.created) {
+          try {
+            const notification = await sendWorkshopAdminNotification({
+              db,
+              resend: process.env.RESEND_API_KEY ? await getResend() : null,
+              registration: result.registration,
+            });
+            notificationStatus = notification.status;
+          } catch (notificationError) {
+            notificationStatus = 'failed';
+            console.error('[Workshop RSVP] Admin notification error:', notificationError?.message || notificationError);
+          }
+        }
+
+        return res.status(result.created ? 201 : 200).json({
+          success: true,
+          registrationId: result.registration.id,
+          alreadyRegistered: !result.created,
+          marketingStatus: result.marketingSyncStatus,
+          notificationStatus,
+          message: result.created ? 'Your workshop spot is saved.' : 'Your workshop RSVP is already saved.',
+        });
+      } catch (error) {
+        console.error('[Workshop RSVP] Error:', error?.message || error);
+        return res.status(500).json({ error: 'We could not save your RSVP. Please try again.' });
+      }
+    }
+
     // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
       const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};

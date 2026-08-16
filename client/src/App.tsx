@@ -44,7 +44,6 @@ const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
 const YardMap = lazy(() => import("@/pages/YardMap"));
 const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
 const PublicOperationsCalendar = lazy(() => import("@/pages/PublicOperationsCalendar"));
-const Classes = lazy(() => import("@/pages/Classes"));
 const TriviaGame = lazy(() => import("@/pages/TriviaGame"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
 const OrderConfirmation = lazy(() => import("@/pages/OrderConfirmation"));
@@ -172,7 +171,7 @@ function Router() {
         <Route path="/qr" component={PayAndPickup} />
         <Route path="/check-in" component={PayAndPickup} />
         <Route path="/operations-calendar" component={PublicOperationsCalendar} />
-        <Route path="/classes" component={Classes} />
+        <Route path="/classes" component={() => <FallGardenWorkshop source="classes-page" />} />
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/drive-thru/admin" component={DriveThruAdmin} />
@@ -187,7 +186,7 @@ function Router() {
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
-        <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
+        <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={new URLSearchParams(window.location.search).get("source") || "website"} />} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
@@ -258,7 +257,8 @@ function App() {
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
   const isWormCastingsCampaign = location === "/free-worm-castings";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign;
+  const isWorkshopCampaign = location === "/fall-garden-workshop" || location === "/classes";
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isWorkshopCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

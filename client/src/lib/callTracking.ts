@@ -17,6 +17,8 @@ export function isCallTrackingExcludedPath(
   return (
     path.startsWith("/rep/") ||
     path === "/free-worm-castings" ||
+    path === "/fall-garden-workshop" ||
+    path === "/classes" ||
     (path === "/newsletter" && source === "july-community-gift") ||
     path === "/qr" ||
     path === "/check-in" ||
