@@ -19,6 +19,8 @@ const customerTypes = [
   ["other", "Other"],
 ] as const;
 
+const GOOGLE_CALENDAR_URL = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=The%20Garden%20Reset%20-%20Free%20Garden%20Class&dates=20260822T170000Z%2F20260822T183000Z&details=The%20first%20garden%20class%20of%20the%20season.%20Learn%20how%20to%20reset%20your%20soil%20and%20set%20up%20your%20Arizona%20fall%20garden.%20Register%3A%20https%3A%2F%2Fwww.organicsoilwholesale.com%2Ffall-garden-workshop&location=Organic%20Soil%20Wholesale%2C%201634%20N%2019th%20Ave%2C%20Phoenix%2C%20AZ%2085009";
+
 export default function FallGardenWorkshop({ source }: Props) {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
   const [name, setName] = useState("");
@@ -57,9 +59,9 @@ export default function FallGardenWorkshop({ source }: Props) {
     <main className="min-h-screen bg-[#f6f5ee] text-[#263527]">
       <section className="border-b border-[#d7dfd0] bg-[#264027] px-5 py-11 text-white sm:py-16">
         <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#d7b77d]">Free community garden workshop</p>
-          <h1 className="mx-auto mt-4 max-w-3xl font-heading text-4xl font-bold leading-tight sm:text-5xl">Learn how to set up your fall garden</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Register for a free, practical workshop on how to set up a healthy garden for Arizona’s fall growing season.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#d7b77d]">The first garden class of the season</p>
+          <h1 className="mx-auto mt-4 max-w-3xl font-heading text-4xl font-bold leading-tight sm:text-5xl">The Garden Reset</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Register for a free, practical class on how to reset your soil and set up a healthy Arizona fall garden.</p>
         </div>
       </section>
 
@@ -95,7 +97,7 @@ export default function FallGardenWorkshop({ source }: Props) {
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <div className="flex items-start gap-3">
                 <Gift className="mt-1 h-6 w-6 shrink-0 text-primary" />
-                <div><h3 className="font-bold text-primary">Claim your included 9 lb bag of worm castings</h3><p className="mt-1 text-sm leading-6 text-neutral-700">If you have not already received your included bag, register in advance and attend the workshop to claim it.</p></div>
+                <div><h3 className="font-bold text-primary">Claim your included 9 lb bag of worm castings</h3><p className="mt-1 text-sm leading-6 text-neutral-700">Already signed up and have not received your bag? Bring your redemption email and attend the class to claim it. If you have not signed up, <a href="/free-worm-castings?source=garden-reset-workshop" className="font-bold text-primary underline">claim your free 9 lb bag here</a>.</p></div>
               </div>
               <div className="flex items-start gap-3">
                 <BadgePercent className="mt-1 h-6 w-6 shrink-0 text-primary" />
@@ -110,16 +112,17 @@ export default function FallGardenWorkshop({ source }: Props) {
         </div>
 
         <Card className="border-0 shadow-xl"><CardContent className="p-6 sm:p-8">
-          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">Your spot is saved.</h2><p className="mt-3 leading-7 text-neutral-600">We have your RSVP for Saturday, August 22. We’ll contact you if there are any workshop updates.</p><p className="mt-4 text-sm font-semibold text-neutral-700">Attend to claim your included 9 lb bag of worm castings if you have not received it, plus 50% off PlantPal Potting Soil, limited to one pallet.</p></div> :
+          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">Your Garden Reset spot is saved.</h2><p className="mt-3 leading-7 text-neutral-600">We have your RSVP for Saturday, August 22. We’ll contact you if there are any class updates.</p><p className="mt-4 text-sm font-semibold text-neutral-700">Attend to claim your included 9 lb bag of worm castings if you have not received it, plus 50% off PlantPal Potting Soil, limited to one pallet.</p><a href={GOOGLE_CALENDAR_URL} target="_blank" rel="noreferrer" className="mt-5 inline-block rounded-md border-2 border-primary px-4 py-2 text-sm font-bold text-primary">Save to Google Calendar</a></div> :
             <form onSubmit={submit} className="space-y-5">
-              <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a42]">Space is limited</p><h2 className="mt-2 font-heading text-2xl font-bold text-primary">Reserve your spot</h2><p className="mt-2 text-sm leading-6 text-neutral-600">Save your place for this free community workshop.</p></div>
+              <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a42]">Space is limited</p><h2 className="mt-2 font-heading text-2xl font-bold text-primary">Reserve your Garden Reset spot</h2><p className="mt-2 text-sm leading-6 text-neutral-600">Save your place for the first free garden class of the season.</p></div>
               <div><label htmlFor="workshop-name" className="mb-2 block text-sm font-semibold text-neutral-800">Full name</label><Input id="workshop-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={120} /></div>
               <div><label htmlFor="workshop-email" className="mb-2 block text-sm font-semibold text-neutral-800">Email address</label><Input id="workshop-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} /></div>
               <div className="grid gap-5 sm:grid-cols-2"><div><label htmlFor="workshop-phone" className="mb-2 block text-sm font-semibold text-neutral-800">Phone number</label><Input id="workshop-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(623) 263-3386" autoComplete="tel" inputMode="tel" required maxLength={30} /></div><div><label htmlFor="workshop-category" className="mb-2 block text-sm font-semibold text-neutral-800">I’m a…</label><select id="workshop-category" value={customerCategory} onChange={(e) => setCustomerCategory(e.target.value)} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Select one</option>{customerTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></div></div>
               <div className="hidden" aria-hidden="true"><label htmlFor="workshop-website">Website</label><Input id="workshop-website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" /></div>
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-6 text-neutral-700"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-1 h-4 w-4 accent-[#264027]" /><span>I agree to receive emails from Soil Seed &amp; Water. I can unsubscribe at any time.</span></label>
               {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-              <Button type="submit" disabled={submitting} className="w-full py-6 text-base font-bold">{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving your spot…</> : "Reserve My Spot"}</Button>
+              <Button type="submit" disabled={submitting} className="w-full py-6 text-base font-bold">{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving your spot…</> : "Reserve My Garden Class Spot"}</Button>
+              <a href={GOOGLE_CALENDAR_URL} target="_blank" rel="noreferrer" className="block text-center text-sm font-bold text-primary underline">Save to Google Calendar</a>
               <p className="text-center text-xs leading-5 text-neutral-500">Free workshop. One RSVP per email. The included 9 lb worm castings benefit is for registered attendees who have not already received it. The 50% PlantPal Potting Soil discount is limited to one pallet.</p>
             </form>}
         </CardContent></Card>
