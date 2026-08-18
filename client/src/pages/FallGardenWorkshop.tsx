@@ -1,5 +1,5 @@
 import { FormEvent, useState, type ReactNode } from "react";
-import { BookOpen, CalendarDays, CheckCircle2, Clock3, Loader2, MapPin, Sprout } from "lucide-react";
+import { BadgePercent, BookOpen, CalendarDays, CheckCircle2, Clock3, Gift, Loader2, MapPin, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,8 +58,8 @@ export default function FallGardenWorkshop({ source }: Props) {
       <section className="border-b border-[#d7dfd0] bg-[#264027] px-5 py-11 text-white sm:py-16">
         <div className="mx-auto max-w-4xl text-center">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#d7b77d]">Free community garden workshop</p>
-          <h1 className="mx-auto mt-4 max-w-3xl font-heading text-4xl font-bold leading-tight sm:text-5xl">Grow your best fall garden in Arizona</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Your best Arizona garden starts before you plant. Join us at Organic Soil Wholesale for a practical, local fall-garden workshop.</p>
+          <h1 className="mx-auto mt-4 max-w-3xl font-heading text-4xl font-bold leading-tight sm:text-5xl">Learn how to set up your fall garden</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Register for a free, practical workshop on how to set up a healthy garden for Arizona’s fall growing season.</p>
         </div>
       </section>
 
@@ -89,13 +89,28 @@ export default function FallGardenWorkshop({ source }: Props) {
             <div className="flex items-start gap-3"><BookOpen className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-heading text-xl font-bold text-primary">Included with your RSVP</h2><p className="mt-2 leading-7 text-neutral-700">Take home a Fall Garden Planning Guide to help you put the workshop into action.</p></div></div>
           </div>
 
+          <div className="rounded-2xl border-2 border-[#d7b77d] bg-[#fffaf0] p-6 shadow-sm sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a42]">Register + attend</p>
+            <h2 className="mt-2 font-heading text-2xl font-bold text-primary">Workshop registration benefits</h2>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              <div className="flex items-start gap-3">
+                <Gift className="mt-1 h-6 w-6 shrink-0 text-primary" />
+                <div><h3 className="font-bold text-primary">Claim your included 9 lb bag of worm castings</h3><p className="mt-1 text-sm leading-6 text-neutral-700">If you have not already received your included bag, register in advance and attend the workshop to claim it.</p></div>
+              </div>
+              <div className="flex items-start gap-3">
+                <BadgePercent className="mt-1 h-6 w-6 shrink-0 text-primary" />
+                <div><h3 className="font-bold text-primary">50% off PlantPal Potting Soil</h3><p className="mt-1 text-sm leading-6 text-neutral-700">Workshop attendees receive 50% off, with a maximum purchase of one pallet.</p></div>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-[#d8e0d2] bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3"><MapPin className="mt-1 h-6 w-6 shrink-0 text-primary" /><div><h2 className="font-heading text-2xl font-bold text-primary">Find the Phoenix yard</h2><p className="mt-2 leading-7 text-neutral-700"><strong>1634 N 19th Ave, Phoenix, AZ 85009</strong><br />Use the south entrance from Grand Avenue and follow the yard lane to check-in.</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2"><a className="font-semibold text-primary underline" href="https://www.google.com/maps/dir/?api=1&destination=33.467333%2C-112.101250">Open directions</a><a href={CUSTOMER_SUPPORT_PHONE_TEL} data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL} data-callrail-ignore="true" data-dynamic-number-ignore="true" data-call-tracking-ignore="true" className="no-call-tracking font-semibold text-primary underline">Call {CUSTOMER_SUPPORT_PHONE_DISPLAY}</a></div></div></div>
           </div>
         </div>
 
         <Card className="border-0 shadow-xl"><CardContent className="p-6 sm:p-8">
-          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">Your spot is saved.</h2><p className="mt-3 leading-7 text-neutral-600">We have your RSVP for Saturday, August 22. We’ll contact you if there are any workshop updates.</p><p className="mt-4 text-sm font-semibold text-neutral-700">Please arrive a few minutes early to get settled.</p></div> :
+          {success ? <div className="py-8 text-center"><CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" /><h2 className="font-heading text-2xl font-bold text-primary">Your spot is saved.</h2><p className="mt-3 leading-7 text-neutral-600">We have your RSVP for Saturday, August 22. We’ll contact you if there are any workshop updates.</p><p className="mt-4 text-sm font-semibold text-neutral-700">Attend to claim your included 9 lb bag of worm castings if you have not received it, plus 50% off PlantPal Potting Soil, limited to one pallet.</p></div> :
             <form onSubmit={submit} className="space-y-5">
               <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a42]">Space is limited</p><h2 className="mt-2 font-heading text-2xl font-bold text-primary">Reserve your spot</h2><p className="mt-2 text-sm leading-6 text-neutral-600">Save your place for this free community workshop.</p></div>
               <div><label htmlFor="workshop-name" className="mb-2 block text-sm font-semibold text-neutral-800">Full name</label><Input id="workshop-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={120} /></div>
@@ -105,7 +120,7 @@ export default function FallGardenWorkshop({ source }: Props) {
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-6 text-neutral-700"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-1 h-4 w-4 accent-[#264027]" /><span>I agree to receive emails from Soil Seed &amp; Water. I can unsubscribe at any time.</span></label>
               {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
               <Button type="submit" disabled={submitting} className="w-full py-6 text-base font-bold">{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving your spot…</> : "Reserve My Spot"}</Button>
-              <p className="text-center text-xs leading-5 text-neutral-500">Free workshop. One RSVP per email.</p>
+              <p className="text-center text-xs leading-5 text-neutral-500">Free workshop. One RSVP per email. The included 9 lb worm castings benefit is for registered attendees who have not already received it. The 50% PlantPal Potting Soil discount is limited to one pallet.</p>
             </form>}
         </CardContent></Card>
       </section>
