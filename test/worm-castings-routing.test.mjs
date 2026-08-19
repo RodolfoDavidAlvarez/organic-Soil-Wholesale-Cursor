@@ -13,13 +13,18 @@ import {
   validateWormCastingsRouting,
 } from '../shared/wormCastingsRouting.js';
 import {
-  SSW_NUMBER_ALPHABET,
+  SSW_FIRST_DIGIT_ALPHABET,
   SSW_NUMBER_RE,
+  assignSswNumberForPurchase,
   ensureSswNumber,
+  findCustomerBySswLookup,
   generateSswNumber,
   isSswNumber,
+  normalizeLegacySswNumber,
+  normalizeSswNumber,
 } from '../shared/sswNumber.js';
 import { buildWormCastingsCouponEmail } from '../shared/wormCastingsCampaign.js';
+import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/purchaseThankYou.js';
 
 const validBody = {
   customerType: 'homeowner',
@@ -198,18 +203,24 @@ test('query params prefill name, email, phone, zip, and known routing answers', 
   assert.deepEqual(parseCampaignPrefill('?growing=bacchus').growing, []);
 });
 
-test('SSW numbers are random SSW-XXXX values and are reused for the same customer', async () => {
-  assert.equal(SSW_NUMBER_ALPHABET, '23456789ABCDEFGHJKMNPQRSTUVWXYZ');
-  const first = generateSswNumber(Buffer.from([0, 1, 2, 3]));
-  const second = generateSswNumber(Buffer.from([10, 20, 30, 40]));
+test('SSW numbers are random SSW-###-### values and are reused for the same customer', async () => {
+  assert.equal(SSW_FIRST_DIGIT_ALPHABET, '23456789');
+  const first = generateSswNumber(Buffer.from([0, 1, 2, 3, 4, 5]));
+  const second = generateSswNumber(Buffer.from([10, 20, 30, 40, 50, 60]));
   assert.match(first, SSW_NUMBER_RE);
   assert.match(second, SSW_NUMBER_RE);
   assert.notEqual(first, second);
-  assert.notEqual(first, 'SSW-290A');
-  assert.equal(isSswNumber('SSW-3115'), false);
+  assert.equal(first.startsWith('SSW-0') || first.startsWith('SSW-1'), false);
+  assert.equal(isSswNumber('SSW-082-194'), false);
+  assert.equal(isSswNumber('SSW-182-194'), false);
+  assert.equal(isSswNumber('SSW-NGHW'), false);
+  assert.equal(normalizeLegacySswNumber('SSW-NGHW'), 'SSW-NGHW');
+  assert.equal(normalizeSswNumber('SSW-582-194'), 'SSW-582-194');
+  assert.equal(normalizeSswNumber('582-194'), 'SSW-582-194');
+  assert.equal(normalizeSswNumber('582194'), 'SSW-582-194');
 
-  const reused = await ensureSswNumber({}, { id: 290, ssw_number: 'SSW-7K2P' });
-  assert.equal(reused, 'SSW-7K2P');
+  const reused = await ensureSswNumber({}, { id: 290, ssw_number: 'SSW-582-194' });
+  assert.equal(reused, 'SSW-582-194');
 
   const updates = [];
   const db = {
@@ -226,20 +237,152 @@ test('SSW numbers are random SSW-XXXX values and are reused for the same custome
       };
     },
   };
-  const minted = await ensureSswNumber(db, { id: 88, ssw_number: null }, () => 'SSW-4H9Q');
-  assert.equal(minted, 'SSW-4H9Q');
-  assert.equal(updates[0].ssw_number, 'SSW-4H9Q');
+  const minted = await ensureSswNumber(db, { id: 88, ssw_number: null }, () => 'SSW-582-194');
+  assert.equal(minted, 'SSW-582-194');
+  assert.equal(updates[0].ssw_number, 'SSW-582-194');
+
+  const remintUpdates = [];
+  const remintDb = {
+    from() {
+      return {
+        update(patch) {
+          remintUpdates.push(patch);
+          return this;
+        },
+        eq() { return this; },
+        is() { return this; },
+        select() { return this; },
+        maybeSingle: async () => ({ data: { ssw_number: remintUpdates.at(-1)?.ssw_number }, error: null }),
+      };
+    },
+  };
+  const reminted = await ensureSswNumber(
+    remintDb,
+    { id: 290, ssw_number: 'SSW-NGHW' },
+    () => 'SSW-704-338',
+  );
+  assert.equal(reminted, 'SSW-704-338');
+  assert.equal(remintUpdates[0].ssw_number, 'SSW-704-338');
+  assert.equal(remintUpdates[0].ssw_number_alias, 'SSW-NGHW');
+});
+
+test('SSW lookup accepts SSW-###-###, ###-###, digits only, and the old alias', async () => {
+  const matches = [];
+  const db = {
+    from() {
+      return {
+        select() { return this; },
+        or(filter) {
+          matches.push(filter);
+          return this;
+        },
+        maybeSingle: async () => ({
+          data: { id: 290, ssw_number: 'SSW-582-194', ssw_number_alias: 'SSW-NGHW' },
+          error: null,
+        }),
+      };
+    },
+  };
+  const byFull = await findCustomerBySswLookup(db, 'SSW-582-194');
+  const byGrouped = await findCustomerBySswLookup(db, '582-194');
+  const byDigits = await findCustomerBySswLookup(db, '582194');
+  const byAlias = await findCustomerBySswLookup(db, 'SSW-NGHW');
+  assert.equal(byFull.id, 290);
+  assert.equal(byGrouped.ssw_number, 'SSW-582-194');
+  assert.equal(byDigits.ssw_number, 'SSW-582-194');
+  assert.equal(byAlias.ssw_number_alias, 'SSW-NGHW');
+  assert.equal(matches[0], 'ssw_number.eq.SSW-582-194');
+  assert.equal(matches[1], 'ssw_number.eq.SSW-582-194');
+  assert.equal(matches[2], 'ssw_number.eq.SSW-582-194');
+  assert.equal(matches[3], 'ssw_number_alias.eq.SSW-NGHW');
+  assert.equal(await findCustomerBySswLookup(db, 'not-a-number'), null);
+});
+
+test('purchase checkout reuses an existing number and does not subscribe the buyer', async () => {
+  const inserts = [];
+  const existingDb = {
+    from() {
+      return {
+        select() { return this; },
+        ilike() { return this; },
+        maybeSingle: async () => ({
+          data: { id: 290, ssw_number: 'SSW-582-194', email: 'buyer@example.com' },
+          error: null,
+        }),
+        insert() { throw new Error('should reuse existing customer'); },
+      };
+    },
+  };
+  const reused = await assignSswNumberForPurchase(existingDb, {
+    email: 'buyer@example.com',
+    name: 'Buyer',
+  });
+  assert.equal(reused.customerNumber, 'SSW-582-194');
+  assert.equal(reused.created, false);
+
+  const newDb = {
+    from() {
+      return {
+        select() { return this; },
+        ilike() { return this; },
+        maybeSingle: async () => ({ data: null, error: null }),
+        insert(row) {
+          inserts.push(row);
+          return {
+            select() { return this; },
+            single: async () => ({ data: { id: 401, ssw_number: null, email: row.email }, error: null }),
+          };
+        },
+        update(patch) {
+          return {
+            eq() { return this; },
+            is() { return this; },
+            select() { return this; },
+            maybeSingle: async () => ({ data: { ssw_number: patch.ssw_number }, error: null }),
+          };
+        },
+      };
+    },
+  };
+  const created = await assignSswNumberForPurchase(newDb, {
+    email: 'newbuyer@example.com',
+    name: 'New Buyer',
+    phone: '6232633386',
+  });
+  assert.equal(created.created, true);
+  assert.match(created.customerNumber, SSW_NUMBER_RE);
+  assert.equal(inserts[0].newsletter_subscribed, false);
+  assert.equal(inserts[0].source, 'osw_checkout');
 });
 
 test('gift email shows the customer number large with the yard phone', () => {
   const coupon = buildWormCastingsCouponEmail({
     fullName: 'Rodo',
     token: '11111111-1111-4111-8111-111111111111',
-    customerNumber: 'SSW-4H9Q',
+    customerNumber: 'SSW-582-194',
   });
   assert.equal(coupon.subject, 'Your free 9-lb worm castings coupon');
-  assert.match(coupon.html, /SSW-4H9Q/);
+  assert.match(coupon.html, /SSW-582-194/);
   assert.match(coupon.html, /This is your number. Call us with it and we will pull you up./);
   assert.match(coupon.html, /tel:\+16232633386/);
   assert.match(coupon.html, /\(623\) 263-3386/);
+});
+
+test('purchase thank-you is short, from info@, and does not use Founder or em dashes', () => {
+  const email = buildPurchaseThankYouEmail({
+    fullName: 'Rodo',
+    customerNumber: 'SSW-582-194',
+    pickupLabel: 'Ready today by 2:00 PM',
+    location: '1634 N 19th Ave, Phoenix, AZ 85009',
+  });
+  assert.equal(email.from, PURCHASE_THANK_YOU_FROM);
+  assert.match(email.from, /info@soilseedandwater\.com/);
+  assert.equal(email.subject, 'Thank you. Your number is SSW-582-194');
+  assert.match(email.html, /Thank you for buying/);
+  assert.match(email.html, /SSW-582-194/);
+  assert.match(email.html, /Call \(623\) 263-3386 with this number and we will pull you up/);
+  assert.match(email.html, /tel:\+16232633386/);
+  assert.doesNotMatch(email.html, /Founder/);
+  assert.doesNotMatch(email.html, /—/);
+  assert.doesNotMatch(email.subject, /—/);
 });

@@ -537,7 +537,7 @@ function CouponSuccess({ email, status, customerNumber }: { email: string; statu
       {customerNumber ? (
         <div className="mx-auto mt-6 max-w-md rounded-2xl bg-[#264027] px-5 py-6 text-white">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f1d6a6]">Your number</p>
-          <p className="mt-2 font-heading text-4xl font-bold tracking-[0.08em] sm:text-5xl">{customerNumber}</p>
+          <p className="mt-2 font-heading text-3xl font-bold tracking-[0.06em] sm:text-4xl">{customerNumber}</p>
           <p className="mt-3 text-base leading-6 text-white/90">This is your number. Call us with it and we will pull you up.</p>
           <a
             href={CUSTOMER_SUPPORT_PHONE_TEL}

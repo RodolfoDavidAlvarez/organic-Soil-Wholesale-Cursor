@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../db/supabase.js';
-import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '../services/email.js';
+import { sendAdminOrderNotification, sendPurchaseThankYouEmail } from '../services/email.js';
+import { assignSswNumberForPurchase } from '../../shared/sswNumber.js';
 import { forwardPickupOrderToMos } from '../services/forwardPickupOrderToMos.js';
 import { quoteTrucking } from './quoteRequests.js';
 import {
@@ -573,28 +574,23 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
     .single();
 
   if (!fullOrderError && fullOrder) {
-    // Send confirmation email
     try {
-      await sendOrderConfirmationEmail(
-        fullOrder.customer_email,
-        {
-          orderNumber: fullOrder.order_number,
-          items: fullOrder.order_items.map((item: any) => ({
-            name: item.products.name,
-            quantity: item.quantity,
-            price: item.total_price
-          })),
-          subtotal: fullOrder.subtotal,
-          tax: fullOrder.tax_amount,
-          total: fullOrder.total_amount,
-          deliveryMethod: fullOrder.order_type === 'pickup' ? 'Pickup' : 'Delivery',
-          estimatedDelivery: fullOrder.order_type === 'pickup' ? 'Ready within 24-48 hours' : undefined
-        }
-      );
-      console.log(`Confirmation email sent for order ${orderId}`);
+      const assigned = await assignSswNumberForPurchase(supabase, {
+        email: fullOrder.customer_email || fullOrder.email,
+        name: fullOrder.customer_name || fullOrder.business_name,
+        phone: fullOrder.phone,
+      });
+      await sendPurchaseThankYouEmail(fullOrder.customer_email || fullOrder.email, {
+        fullName: fullOrder.customer_name || fullOrder.business_name,
+        customerNumber: assigned?.customerNumber,
+        pickupLabel: fullOrder.pickup_scheduled_at
+          ? formatReadyLabel(fullOrder.pickup_scheduled_at)
+          : (fullOrder.order_type === 'pickup' ? 'Ready within 24-48 hours' : undefined),
+        location: fullOrder.pickup_location,
+      });
+      console.log(`Purchase thank-you sent for order ${orderId}`);
     } catch (emailError) {
-      console.error('Failed to send order confirmation email:', emailError);
-      // Don't fail the order process if email fails
+      console.error('Failed to send purchase thank-you email:', emailError);
     }
 
     // Send admin notification email

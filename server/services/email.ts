@@ -342,6 +342,31 @@ export async function sendOrderConfirmationEmail(
   });
 }
 
+export async function sendPurchaseThankYouEmail(
+  email: string,
+  details: {
+    fullName?: string;
+    customerNumber?: string | null;
+    pickupLabel?: string;
+    location?: string;
+  }
+) {
+  const { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } = await import("../../shared/purchaseThankYou.js");
+  const message = buildPurchaseThankYouEmail(details);
+  const { data, error } = await resend.emails.send({
+    from: PURCHASE_THANK_YOU_FROM,
+    replyTo: REPLY_TO_EMAIL,
+    to: email,
+    subject: message.subject,
+    html: message.html,
+  });
+  if (error) {
+    console.error("Purchase thank-you send error:", error);
+    throw error;
+  }
+  return data;
+}
+
 // Order ready for pickup notification
 export async function sendOrderReadyEmail(email: string, orderNumber: string, pickupLocation: string) {
   const html = `
