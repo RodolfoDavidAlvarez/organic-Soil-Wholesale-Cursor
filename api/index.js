@@ -4583,6 +4583,33 @@ ${pages}
 
     // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
+    // POST /api/survey and /api/survey/submit - CSAT / yard feedback.
+    // Dedicated table. Never writes newsletter_subscribed.
+    if ((path === '/api/survey' || path === '/api/survey/submit') && req.method === 'POST') {
+      const { validateSurveyResponse, saveSurveyResponse } = await import('../shared/surveyResponses.js');
+      const validation = validateSurveyResponse(req.body || {}, {
+        userAgent: String(req.headers['user-agent'] || ''),
+      });
+      if (!validation.ok) return res.status(400).json({ error: validation.error });
+      if (validation.bot) return res.json({ success: true });
+
+      try {
+        const db = await getSupabase();
+        const result = await saveSurveyResponse({
+          db,
+          response: validation.response,
+        });
+        return res.status(201).json({
+          success: true,
+          responseId: result.response.id,
+          message: 'Thank you. We read these.',
+        });
+      } catch (error) {
+        console.error('[Survey] Error:', error?.message || error);
+        return res.status(500).json({ error: 'We could not save your answers. Please try again.' });
+      }
+    }
+
     // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
       const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};

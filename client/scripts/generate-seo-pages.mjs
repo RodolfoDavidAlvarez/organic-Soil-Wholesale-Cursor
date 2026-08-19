@@ -244,6 +244,14 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/survey",
+    title: "How did we do? | Organic Soil Wholesale",
+    description: "Tell Organic Soil Wholesale how your Phoenix yard visit or order felt. Short, honest feedback. Under a minute.",
+    keywords: "Organic Soil Wholesale survey, Phoenix yard feedback, Soil Seed and Water customer survey",
+    canonical: absoluteUrl("/survey"),
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/faq",
     title: "Organic Soil Wholesale FAQ | Pickup, Delivery & Bulk Soil",
     description: "Answers about Organic Soil Wholesale pickup, delivery, product formats, truckloads, pallets, super sacks, and organic soil products.",
