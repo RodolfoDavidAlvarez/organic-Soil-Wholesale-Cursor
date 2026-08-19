@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   CUSTOMER_SUPPORT_PHONE_DIAL,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
@@ -22,6 +23,12 @@ import {
 } from "@/config/contact";
 import { trackEvent } from "@/lib/analytics";
 import DeferredMount from "@/components/DeferredMount";
+import {
+  WORM_CASTINGS_CUSTOMER_TYPES,
+  WORM_CASTINGS_GARDEN_STATUSES,
+  WORM_CASTINGS_GROWING_OPTIONS,
+  parseCampaignPrefill,
+} from "@shared/wormCastingsRouting.js";
 
 type Props = { source: string };
 
@@ -32,15 +39,9 @@ const ENTRANCE_MAP_EMBED_URL =
 const PHOENIX_YARD_HOURS = "Tuesday–Saturday, 8:00 AM–4:00 PM";
 const PHOENIX_YARD_BREAK = "Closed for break from 1:00–2:00 PM";
 
-const customerTypes = [
-  ["home-gardener", "Home gardener"],
-  ["farmer", "Farmer / grower"],
-  ["landscaper", "Landscaper"],
-  ["nursery", "Nursery / greenhouse"],
-  ["contractor", "Contractor"],
-  ["municipal-commercial", "Municipal / commercial"],
-  ["other", "Other"],
-] as const;
+const customerTypes = WORM_CASTINGS_CUSTOMER_TYPES;
+const gardenStatuses = WORM_CASTINGS_GARDEN_STATUSES;
+const growingOptions = WORM_CASTINGS_GROWING_OPTIONS;
 
 const products = [
   {
@@ -106,15 +107,22 @@ function campaignTrackingProperties(source: string) {
 export default function WormCastingsCampaign({ source }: Props) {
   const trackingSource = normalizeTrackingSource(source);
   const formStartedRef = useRef(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [customerCategory, setCustomerCategory] = useState("");
+  const prefill = parseCampaignPrefill(typeof window === "undefined" ? "" : window.location.search);
+  const [name, setName] = useState(prefill.name);
+  const [email, setEmail] = useState(prefill.email);
+  const [phone, setPhone] = useState(prefill.phone);
+  const [zipCode, setZipCode] = useState(prefill.zipCode);
+  const [customerType, setCustomerType] = useState(prefill.customerType);
+  const [gardenStatus, setGardenStatus] = useState(prefill.gardenStatus);
+  const [growing, setGrowing] = useState<string[]>(prefill.growing);
+  const [growingOther, setGrowingOther] = useState(prefill.growingOther);
+  const [notes, setNotes] = useState(prefill.notes);
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [couponDeliveryStatus, setCouponDeliveryStatus] = useState("");
+  const [customerNumber, setCustomerNumber] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -134,9 +142,29 @@ export default function WormCastingsCampaign({ source }: Props) {
     trackCampaignAction("Form Started");
   }
 
+  function toggleGrowing(value: string) {
+    setGrowing((current) => (
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    ));
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     trackCampaignAction("Form Submitted");
+    if (!customerType) {
+      setError("Please tell us who you are.");
+      return;
+    }
+    if (!gardenStatus) {
+      setError("Please tell us if this is a brand new or existing garden.");
+      return;
+    }
+    if (!growing.length) {
+      setError("Please tell us what you are growing.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -147,7 +175,13 @@ export default function WormCastingsCampaign({ source }: Props) {
           name,
           email,
           phone,
-          customerCategory,
+          zipCode,
+          customerType,
+          customerCategory: customerType,
+          gardenStatus,
+          growing,
+          growingOther,
+          notes,
           consent,
           website,
           source: trackingSource,
@@ -165,6 +199,7 @@ export default function WormCastingsCampaign({ source }: Props) {
       }
       trackCampaignAction("Registered", { coupon_delivery_status: body.couponDeliveryStatus || "sent" });
       setCouponDeliveryStatus(body.couponDeliveryStatus || "sent");
+      setCustomerNumber(body.customerNumber || "");
       setSuccess(true);
     } catch (submitError: any) {
       trackCampaignAction("Form Error");
@@ -245,12 +280,12 @@ export default function WormCastingsCampaign({ source }: Props) {
             <div className="border-b border-[#e5eadf] bg-white px-6 py-5 sm:px-8">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6f39]">Private QR coupon</p>
               <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">Claim your free bag</h2>
-              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon and directions immediately.</p>
+              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon right away.</p>
             </div>
 
             <div className="p-5 sm:p-7">
               {success ? (
-                <CouponSuccess email={email} status={couponDeliveryStatus} />
+                <CouponSuccess email={email} status={couponDeliveryStatus} customerNumber={customerNumber} />
               ) : (
                 <form onSubmit={submit} onFocus={markFormStarted} className="space-y-4">
                   <div>
@@ -267,21 +302,54 @@ export default function WormCastingsCampaign({ source }: Props) {
                       <Input id="campaign-phone" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(623) 555-0123" autoComplete="tel" inputMode="tel" required maxLength={30} className="h-12 rounded-xl" />
                     </div>
                     <div>
-                      <label htmlFor="campaign-category" className="mb-1.5 block text-sm font-bold text-[#243129]">I’m a…</label>
-                      <select id="campaign-category" value={customerCategory} onChange={(event) => setCustomerCategory(event.target.value)} required className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm">
-                        <option value="">Select one</option>
-                        {customerTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-                      </select>
+                      <label htmlFor="campaign-zip" className="mb-1.5 block text-sm font-bold text-[#243129]">ZIP code</label>
+                      <Input id="campaign-zip" value={zipCode} onChange={(event) => setZipCode(event.target.value)} placeholder="85009" autoComplete="postal-code" inputMode="numeric" required maxLength={10} className="h-12 rounded-xl" />
                     </div>
                   </div>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">Who are you?</legend>
+                    <div className="grid grid-cols-3 gap-2">
+                      {customerTypes.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={customerType === value} onClick={() => setCustomerType(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">New or existing garden?</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {gardenStatuses.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={gardenStatus === value} onClick={() => setGardenStatus(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">What are you growing?</legend>
+                    <div className="grid grid-cols-3 gap-2">
+                      {growingOptions.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={growing.includes(value)} onClick={() => toggleGrowing(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                    <label htmlFor="campaign-growing-other" className="mb-1.5 mt-3 block text-sm font-semibold text-[#264027]">Other <span className="font-normal text-[#6c756d]">(optional)</span></label>
+                    <Input id="campaign-growing-other" value={growingOther} onChange={(event) => setGrowingOther(event.target.value)} placeholder="Figs, grapes" maxLength={80} className="h-12 rounded-xl border-[#d7dfd0]" />
+                  </fieldset>
                   <div className="hidden" aria-hidden="true">
                     <label htmlFor="campaign-website">Website</label>
                     <Input id="campaign-website" value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" />
                   </div>
                   <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-[#f6f7f3] p-4 text-sm leading-6 text-[#4f5b52]">
-                    <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required className="mt-1 h-5 w-5 shrink-0 accent-[#214a2c]" />
+                    <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required className="mt-1 h-5 w-5 shrink-0 accent-[#264027]" />
                     <span>Email me my QR coupon and community growing updates. I can unsubscribe any time.</span>
                   </label>
+                  <div>
+                    <label htmlFor="campaign-notes" className="mb-1.5 block text-sm font-semibold text-[#264027]">Anything else we should know? <span className="font-normal text-[#6c756d]">(optional)</span></label>
+                    <Textarea id="campaign-notes" value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={500} className="min-h-[96px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6" />
+                  </div>
                   {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
                   <Button type="submit" disabled={submitting} className="min-h-14 w-full rounded-xl text-base font-bold shadow-lg">
                     {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Creating your coupon…</> : <>Email My Private QR Coupon <ArrowRight className="ml-2 h-4 w-4" /></>}
@@ -386,6 +454,31 @@ export default function WormCastingsCampaign({ source }: Props) {
   );
 }
 
+function ChoiceButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`min-h-12 rounded-xl border px-2 text-sm font-bold ${
+        selected
+          ? "border-[#264027] bg-[#264027] text-white"
+          : "border-[#d7dfd0] bg-white text-[#264027]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function HeroProductVisual() {
   return (
     <div className="relative overflow-hidden rounded-b-[1.75rem] border-b border-white/15 bg-white shadow-2xl lg:overflow-visible lg:rounded-[2rem] lg:border">
@@ -422,7 +515,7 @@ function HeroFact({ icon, title, detail }: { icon: ReactNode; title: string; det
   );
 }
 
-function CouponSuccess({ email, status }: { email: string; status: string }) {
+function CouponSuccess({ email, status, customerNumber }: { email: string; status: string; customerNumber: string }) {
   const isResent = status === "resent";
   const isRecent = status === "recently_sent";
   const isProcessing = status === "already_processing" || status === "sending";
@@ -441,6 +534,24 @@ function CouponSuccess({ email, status }: { email: string; status: string }) {
     <div className="py-5 text-center sm:py-8">
       <CheckCircle2 className="mx-auto h-16 w-16 text-[#2f6d45]" />
       <h2 className="mt-5 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">{heading}</h2>
+      {customerNumber ? (
+        <div className="mx-auto mt-6 max-w-md rounded-2xl bg-[#264027] px-5 py-6 text-white">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f1d6a6]">Your number</p>
+          <p className="mt-2 font-heading text-3xl font-bold tracking-[0.06em] sm:text-4xl">{customerNumber}</p>
+          <p className="mt-3 text-base leading-6 text-white/90">This is your number. Call us with it and we will pull you up.</p>
+          <a
+            href={CUSTOMER_SUPPORT_PHONE_TEL}
+            aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
+            data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
+            data-callrail-ignore="true"
+            data-dynamic-number-ignore="true"
+            data-call-tracking-ignore="true"
+            className="no-call-tracking mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-[#264027]"
+          >
+            <Phone className="h-4 w-4" /> {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+          </a>
+        </div>
+      ) : null}
       <p className="mx-auto mt-4 max-w-md leading-7 text-[#5f6961]">
         {isResent ? <>We emailed the same private QR coupon to <strong>{email}</strong>. No duplicate coupon was created.</>
           : isRecent ? <>We recently emailed your private QR coupon to <strong>{email}</strong>. Please check your inbox, Spam, and Promotions folders.</>

@@ -19,3 +19,21 @@ declare module "qrcode.react" {
     }
   ): JSX.Element;
 }
+
+declare module "@shared/wormCastingsRouting.js" {
+  export const WORM_CASTINGS_OFFER: string;
+  export const WORM_CASTINGS_CUSTOMER_TYPES: ReadonlyArray<readonly [string, string]>;
+  export const WORM_CASTINGS_GARDEN_STATUSES: ReadonlyArray<readonly [string, string]>;
+  export const WORM_CASTINGS_GROWING_OPTIONS: ReadonlyArray<readonly [string, string]>;
+  export function parseCampaignPrefill(search?: string): {
+    name: string;
+    email: string;
+    phone: string;
+    zipCode: string;
+    customerType: string;
+    gardenStatus: string;
+    growing: string[];
+    growingOther: string;
+    notes: string;
+  };
+}

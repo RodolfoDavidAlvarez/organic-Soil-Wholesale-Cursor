@@ -8,6 +8,13 @@ import {
   normalizeCampaignSource,
   normalizeCampaignEmail,
 } from '../shared/wormCastingsCampaign.js';
+import {
+  persistWormCastingsRouting,
+  routingRecordColumns,
+  validateWormCastingsRouting,
+} from '../shared/wormCastingsRouting.js';
+import { assignSswNumberForPurchase, ensureSswNumber } from '../shared/sswNumber.js';
+import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/purchaseThankYou.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
@@ -171,10 +178,21 @@ async function fulfillStripeDeposit(db, orderId, session) {
   return { ok: true };
 }
 
-async function sendWormCastingsCoupon({ db, redemption }) {
+async function sendWormCastingsCoupon({ db, redemption, customerNumber }) {
+  let number = customerNumber || null;
+  if (!number && redemption.customer_id) {
+    const { data: owner, error: ownerError } = await db
+      .from('sp_customers')
+      .select('id, ssw_number, ssw_number_alias')
+      .eq('id', redemption.customer_id)
+      .maybeSingle();
+    if (ownerError) throw ownerError;
+    if (owner) number = await ensureSswNumber(db, owner);
+  }
   const email = buildWormCastingsCouponEmail({
     fullName: redemption.full_name,
     token: redemption.redemption_token,
+    customerNumber: number,
   });
   const { data: claimed, error: claimError } = await db
     .from('sp_worm_castings_redemptions')
@@ -859,22 +877,33 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     const r = await getResend();
     const dev = await getDeveloperMode();
     const customerEmail = order?.customer_email || order?.email;
-    const orderRef = order?.order_number?.slice(0, 8) || orderId;
     pickupLabel = order?.pickup_scheduled_at
       ? await formatPickupReadyLabel(order.pickup_scheduled_at)
       : null;
     if (customerEmail) {
+      let customerNumber = null;
+      try {
+        const assigned = await assignSswNumberForPurchase(db, {
+          email: customerEmail,
+          name: order?.customer_name || order?.business_name,
+          phone: order?.phone,
+        });
+        customerNumber = assigned?.customerNumber || null;
+      } catch (numberErr) {
+        console.error('[checkout fulfill] customer number failed:', numberErr?.message || numberErr);
+      }
+      const thankYou = buildPurchaseThankYouEmail({
+        fullName: order?.customer_name || order?.business_name,
+        customerNumber,
+        pickupLabel,
+        location: order?.pickup_location,
+      });
       const custResult = await r.emails.send({
-        from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+        from: PURCHASE_THANK_YOU_FROM,
         replyTo: 'ralvarez@soilseedandwater.com',
         to: dev.resolveCustomerEmail(customerEmail),
-        subject: dev.devModeSubject(`Order #${orderRef} confirmed`),
-        html: `<p>Hi ${order?.customer_name || 'there'},</p>
-          <p>Thanks! Your pay &amp; pickup order is confirmed.</p>
-          <p><strong>Estimated ready:</strong> ${pickupLabel || 'See order details'}<br>
-          <strong>Location:</strong> ${order?.pickup_location || '1634 N 19th Ave, Phoenix, AZ 85009'}</p>
-          <p>Please call (623) 263-3386 when you arrive.</p>
-          <p>Thanks,<br>Rodo Alvarez<br>Soil Seed &amp; Water</p>`,
+        subject: dev.devModeSubject(thankYou.subject),
+        html: thankYou.html,
       });
       if (custResult?.error) {
         console.error('[checkout fulfill] customer email error:', custResult.error);
@@ -4628,10 +4657,11 @@ ${pages}
       const normalizedEmail = normalizeCampaignEmail(email);
       const normalizedName = String(name || '').trim();
       const normalizedPhone = String(phone || '').trim();
-      const normalizedCustomerCategory = String(customerCategory || '').trim();
       const normalizedSource = normalizeCampaignSource(source || 'website_newsletter_signup').slice(0, 100);
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
       const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
+      let routing = null;
+      let normalizedCustomerCategory = String(customerCategory || '').trim();
 
       // Honeypot fields are silently accepted so bots do not learn how to bypass them.
       if (website) return res.json({ success: true });
@@ -4645,7 +4675,12 @@ ${pages}
       if (normalizedPhone.replace(/\D/g, '').length < 10 || normalizedPhone.length > 30) {
         return res.status(400).json({ error: 'Please enter a valid phone number.' });
       }
-      if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
+      if (campaignRequested) {
+        const validated = validateWormCastingsRouting(req.body || {});
+        if (!validated.ok) return res.status(400).json({ error: validated.error });
+        routing = validated.routing;
+        normalizedCustomerCategory = routing.customerType;
+      } else if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
         return res.status(400).json({ error: 'Please select the option that best describes you.' });
       }
 
@@ -4658,6 +4693,7 @@ ${pages}
           phone: normalizedPhone,
           customerCategory: normalizedCustomerCategory,
           source: normalizedSource,
+          zipCode: routing?.zipCode,
         });
 
         if (result.status === 'opted_out') {
@@ -4667,14 +4703,19 @@ ${pages}
         }
 
         let couponDeliveryStatus = null;
+        let customerNumber = null;
         if (campaignRequested) {
           const { data: customer, error: customerError } = await db
             .from('sp_customers')
-            .select('id, full_name, email')
+            .select('id, full_name, email, delivery_zip, newsletter_notes, ssw_number, ssw_number_alias')
             .ilike('email', normalizedEmail)
             .maybeSingle();
           if (customerError || !customer) throw customerError || new Error('Campaign subscriber could not be found');
+          const customerNumberAssigned = await ensureSswNumber(db, customer);
+          customer.ssw_number = customerNumberAssigned;
+          customerNumber = customerNumberAssigned;
 
+          const routingColumns = routing ? routingRecordColumns(routing, normalizedSource) : {};
           let { data: redemption, error: redemptionError } = await db
             .from('sp_worm_castings_redemptions')
             .select('*')
@@ -4689,6 +4730,7 @@ ${pages}
               full_name: normalizedName || String(customer.full_name || '').trim() || normalizedEmail.split('@')[0],
               email: normalizedEmail,
               email_normalized: normalizedEmail,
+              ...routingColumns,
             }).select().single();
             redemption = created.data;
             redemptionError = created.error;
@@ -4709,11 +4751,21 @@ ${pages}
             redemption = updated.data;
           }
 
+          if (routing) {
+            await persistWormCastingsRouting({
+              db,
+              customer,
+              redemptionId: redemption.id,
+              routing,
+              source: normalizedSource,
+            });
+          }
+
           // A repeat submission never creates a second coupon. It resends the
           // same private coupon, subject to a short anti-spam cooldown.
           if (['pending', 'failed'].includes(redemption.distribution_status)) {
             try {
-              const delivery = await sendWormCastingsCoupon({ db, redemption });
+              const delivery = await sendWormCastingsCoupon({ db, redemption, customerNumber });
               couponDeliveryStatus = delivery.status;
             } catch (couponError) {
               console.error('[Worm Castings] coupon delivery failed:', couponError?.message || couponError);
@@ -4747,6 +4799,12 @@ ${pages}
               customerCategory: normalizedCustomerCategory,
               source: normalizedSource,
               subscribedAt: new Date().toISOString(),
+              zipCode: routing?.zipCode,
+              gardenStatus: routing?.gardenStatus,
+              propertyProfile: routing?.propertyProfile,
+              offer: routing?.offer,
+              nextAction: routing?.nextAction,
+              customerNumber,
             },
           });
           notificationResults.forEach((notificationResult, index) => {
@@ -4762,6 +4820,7 @@ ${pages}
           success: true,
           campaign: campaignRequested ? WORM_CASTINGS_CAMPAIGN_KEY : null,
           couponDeliveryStatus,
+          customerNumber,
           message: campaignRequested
             ? (couponDeliveryStatus === 'resent'
               ? 'Your existing private coupon was emailed again.'

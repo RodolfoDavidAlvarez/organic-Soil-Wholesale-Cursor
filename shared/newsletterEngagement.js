@@ -121,18 +121,19 @@ async function updateNewsletterSend(supabase, { resendEmailId, email, newsletter
 
 export async function subscribeNewsletterContact(
   supabase,
-  { email, name, phone, customerCategory, source = 'website_newsletter_signup' },
+  { email, name, phone, customerCategory, source = 'website_newsletter_signup', zipCode },
 ) {
   const normalizedEmail = normalizeEmail(email)
   const normalizedName = String(name || '').trim().slice(0, 120)
   const normalizedPhone = String(phone || '').trim().slice(0, 30)
   const normalizedCustomerCategory = String(customerCategory || '').trim().slice(0, 60)
+  const normalizedZip = String(zipCode || '').trim().slice(0, 10)
   const now = new Date().toISOString()
 
   const { data: existing, error: lookupError } = await supabase
     .from('sp_customers')
     .select(
-      'id, full_name, newsletter_subscribed, newsletter_unsubscribed_at, newsletter_verification_status, newsletter_source, newsletter_notes',
+      'id, full_name, newsletter_subscribed, newsletter_unsubscribed_at, newsletter_verification_status, newsletter_source, newsletter_notes, delivery_zip',
     )
     .ilike('email', normalizedEmail)
     .maybeSingle()
@@ -157,6 +158,7 @@ export async function subscribeNewsletterContact(
     if (!existing.full_name && normalizedName) patch.full_name = normalizedName
     if (normalizedPhone) patch.phone = normalizedPhone
     if (normalizedCustomerCategory) patch.newsletter_contact_type = normalizedCustomerCategory
+    if (normalizedZip && !String(existing.delivery_zip || '').trim()) patch.delivery_zip = normalizedZip
 
     const { error } = await supabase.from('sp_customers').update(patch).eq('id', existing.id)
     if (error) throw error
@@ -167,6 +169,7 @@ export async function subscribeNewsletterContact(
     full_name: normalizedName || normalizedEmail.split('@')[0],
     email: normalizedEmail,
     phone: normalizedPhone || null,
+    delivery_zip: normalizedZip || null,
     source: 'email_marketing',
     stage: 'lead',
     newsletter_subscribed: true,

@@ -64,3 +64,23 @@ test('customer coupon email subjects are unchanged', () => {
   assert.equal(coupon.subject, 'Your free 9-lb worm castings coupon');
   assert.notEqual(coupon.subject, STAFF_SIGNUP_SUBJECT);
 });
+
+test('worm castings routing still uses the generic staff subject', () => {
+  const message = buildNewsletterAdminNotification({
+    subscriber: {
+      name: 'Sam Patel',
+      email: 'sam@example.com',
+      source: 'community-print',
+      customerCategory: 'homeowner',
+      zipCode: '85009',
+      gardenStatus: 'existing',
+      propertyProfile: 'Turf/grass, Palms',
+      offer: 'free-9lb-mikeys-worm-poop',
+      nextAction: 'yard_pickup_then_existing_garden_upsell',
+    },
+    testing: true,
+  });
+  assert.equal(message.subject, 'SSW signup');
+  assert.match(message.html, /85009/);
+  assert.match(message.html, /Turf\/grass, Palms/);
+});

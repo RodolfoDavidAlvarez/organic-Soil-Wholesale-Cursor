@@ -20,6 +20,7 @@
     "test:pricing": "node scripts/test-osw-pricing.mjs",
     "test:ux": "node scripts/test-osw-ux.mjs",
     "test:worm-day3": "node --test test/worm-castings-day3-reminders.test.mjs",
+    "test:worm-routing": "node --test test/worm-castings-routing.test.mjs",
     "test:survey": "node --test test/survey-responses.test.mjs",
     "test:signup-alerts": "node --test test/newsletter-notifications.test.mjs"
   },

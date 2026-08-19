@@ -2,15 +2,19 @@ import { Router } from "express";
 import { supabase } from "../supabaseClient";
 import { subscribeNewsletterContact } from "../../shared/newsletterEngagement.js";
 import { getNewsletterAdminRecipients, sendNewsletterAdminNotifications } from "../../shared/newsletterNotifications.js";
+import { isWormCastingsCampaignSource } from "../../shared/wormCastingsCampaign.js";
+import { validateWormCastingsRouting } from "../../shared/wormCastingsRouting.js";
 
 const router = Router();
 
 router.post("/subscribe", async (req, res) => {
-  const { email, name, phone, customerCategory, consent, website, source } = req.body || {};
+  const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};
   const normalizedEmail = String(email || "").toLowerCase().trim();
   const normalizedPhone = String(phone || "").trim();
-  const normalizedCustomerCategory = String(customerCategory || "").trim();
+  const campaignRequested = campaign === "free-worm-castings-2026-08" || isWormCastingsCampaignSource(source);
   const allowedCustomerCategories = new Set(["home-gardener", "farmer", "landscaper", "nursery", "contractor", "municipal-commercial", "other"]);
+  let routing = null;
+  let normalizedCustomerCategory = String(customerCategory || "").trim();
 
   if (website) return res.json({ success: true });
   if (!consent) return res.status(400).json({ error: "Please confirm that you want to receive emails." });
@@ -20,7 +24,12 @@ router.post("/subscribe", async (req, res) => {
   if (normalizedPhone.replace(/\D/g, "").length < 10 || normalizedPhone.length > 30) {
     return res.status(400).json({ error: "Please enter a valid phone number." });
   }
-  if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
+  if (campaignRequested) {
+    const validated = validateWormCastingsRouting(req.body || {});
+    if (!validated.ok) return res.status(400).json({ error: validated.error });
+    routing = validated.routing;
+    normalizedCustomerCategory = routing.customerType;
+  } else if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
     return res.status(400).json({ error: "Please select the option that best describes you." });
   }
 
@@ -31,6 +40,7 @@ router.post("/subscribe", async (req, res) => {
       phone: normalizedPhone,
       customerCategory: normalizedCustomerCategory,
       source: String(source || "website_newsletter_signup").slice(0, 100),
+      zipCode: routing?.zipCode,
     });
 
     if (result.status === "opted_out") {
@@ -54,6 +64,11 @@ router.post("/subscribe", async (req, res) => {
             customerCategory: normalizedCustomerCategory,
             source: String(source || "website_newsletter_signup").slice(0, 100),
             subscribedAt: new Date().toISOString(),
+            zipCode: routing?.zipCode,
+            gardenStatus: routing?.gardenStatus,
+            propertyProfile: routing?.propertyProfile,
+            offer: routing?.offer,
+            nextAction: routing?.nextAction,
           },
         });
         notificationResults.forEach((notificationResult, index) => {
