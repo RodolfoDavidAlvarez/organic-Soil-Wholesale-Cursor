@@ -63,6 +63,7 @@ const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
+const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 
 // Admin Pages
@@ -206,6 +207,7 @@ function Router() {
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
         <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
+        <Route path="/survey" component={ClientSurvey} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
@@ -276,7 +278,8 @@ function App() {
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
   const isWormCastingsCampaign = location === "/free-worm-castings";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign;
+  const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

@@ -1,3 +1,7 @@
+import { isWormCastingsCampaignSource } from './wormCastingsCampaign.js';
+
+export const STAFF_SIGNUP_SUBJECT = 'SSW signup';
+
 const ADMIN_TEAM = Object.freeze([
   { name: 'Rodolfo Alvarez', email: 'ralvarez@soilseedandwater.com' },
   { name: 'Kerry Cooper', email: 'kcooper@soilseedandwater.com' },
@@ -42,12 +46,19 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
         dateStyle: 'medium',
         timeStyle: 'short',
       });
-  const testPrefix = testing ? '[INTERNAL TEST] ' : '';
   const isGardenClassRegistration = /^fall-garden-workshop(?:-|$)/i.test(source);
+  const isWormCastingsSignup = isWormCastingsCampaignSource(source);
+  const signupType = isGardenClassRegistration
+    ? 'Garden class'
+    : isWormCastingsSignup
+      ? 'Worm castings'
+      : 'Newsletter';
   const notificationTitle = isGardenClassRegistration
     ? 'New Garden Class Registration'
-    : 'New newsletter subscriber';
-  const notificationLabel = isGardenClassRegistration ? 'Garden class' : 'Community newsletter';
+    : isWormCastingsSignup
+      ? 'New worm castings signup'
+      : 'New newsletter subscriber';
+  const notificationLabel = signupType;
   const notificationBadge = isGardenClassRegistration ? 'New registration' : 'New signup';
   const notificationHeading = isGardenClassRegistration ? 'New Garden Class Registration' : 'New subscriber';
   const personLabel = isGardenClassRegistration ? 'registrant' : 'subscriber';
@@ -56,7 +67,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
     : `${escapeHtml(name)} signed up through <strong>${escapeHtml(sourceLabel)}</strong>.`;
 
   return {
-    subject: `${testPrefix}${notificationTitle} — ${name === 'Not provided' ? email : name}`,
+    subject: STAFF_SIGNUP_SUBJECT,
     html: `<!doctype html>
 <html lang="en">
   <head>
@@ -85,7 +96,8 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
           <tr><td style="padding:24px 26px;">
             ${testing ? '<div style="margin-bottom:18px;padding:11px 13px;background:#fff8e7;border:1px solid #ead8a8;border-radius:9px;color:#684e12;font-size:13px;"><strong>Internal test mode:</strong> currently delivered only to Rodolfo.</div>' : ''}
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8df;border-radius:12px;border-collapse:separate;overflow:hidden;">
-              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:32%;">Name</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;font-weight:700;color:#243229;">${escapeHtml(name)}</td></tr>
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:32%;">Type</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;font-weight:700;color:#243229;">${escapeHtml(signupType)}</td></tr>
+              <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Name</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;font-weight:700;color:#243229;">${escapeHtml(name)}</td></tr>
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Email</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="mailto:${escapeHtml(email)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(email)}</a></td></tr>
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Phone</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="tel:${escapeHtml(phone)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(phone)}</a></td></tr>
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Customer</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;color:#243229;">${escapeHtml(customerCategoryLabel)}</td></tr>

@@ -99,7 +99,7 @@ try {
   ];
   for (const viewport of viewports) {
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: 1 });
-    for (const route of ["/", "/products", "/free-worm-castings", "/checkout", "/order"]) {
+    for (const route of ["/", "/products", "/free-worm-castings", "/survey", "/checkout", "/order"]) {
       await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle2" });
       const pageState = await page.evaluate(() => ({
         text: document.body.innerText,
