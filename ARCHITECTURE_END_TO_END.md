@@ -121,9 +121,9 @@ Mobile MOS "Print Receipt" button on an order  →  POST /api/orders/:id/print-r
 OSW pickup webhook (auto)                       →  inline in /pickup-orders handler
                                                     │
                                                     ▼
-MOS backend resolves the print server URL
-  ├── Read sp_settings.print_tunnel_url (current Pi tunnel)
-  ├── Fall back to env PRINT_SERVER_URL
+MOS backend resolves a healthy print server URL
+  ├── Prefer env PRINT_SERVER_STABLE_URL (`https://print.soilseedandwater.com`)
+  ├── Health-check sp_settings.print_tunnel_url and legacy PRINT_SERVER_URL as fallbacks
   └── POST {url}/print/sales-receipt with X-Print-Secret + receipt JSON
                                                     │
                                                     ▼
@@ -133,7 +133,7 @@ Pi (ssw-print.local) print server
   └── Writes directly to /dev/usb/lp0 — printer cuts & ejects in ~2s
 ```
 
-The cloudflared "quick tunnel" URL rotates whenever cloudflared restarts. **Self-healing watcher** on the Pi (`ssw-tunnel-watcher.service`) detects the URL change every 30s and POSTs the new URL to `/api/admin/print-tunnel-url`, which writes it to `sp_settings`. No human action required, no Vercel redeploy required.
+Production uses a **named Cloudflare Tunnel** at `https://print.soilseedandwater.com`; its DNS hostname does not rotate when cloudflared restarts. The Pi runs `ssw-print-tunnel.service` plus `ssw-print-tunnel-health.timer`. Every two minutes the heartbeat verifies local and public health, securely registers the stable URL with `/api/admin/print-tunnel-url`, and triggers bounded tunnel recovery on failure. Rotating `*.trycloudflare.com` Quick Tunnels are emergency-only and disabled by default.
 
 ---
 
@@ -213,7 +213,8 @@ Inside `sp_orders` the `subtotal`, `delivery_fee`, `tax_cents` columns are all C
 | MOS API base | `MOS_API_BASE` = `https://myorganicsoil.com/api` | — | Where OSW posts |
 
 Plus on MOS (Vercel) — already set, don't change without knowing what you're doing:
-- `PRINT_SERVER_URL` (legacy fallback; sp_settings.print_tunnel_url takes priority)
+- `PRINT_SERVER_STABLE_URL` (`https://print.soilseedandwater.com`; primary)
+- `PRINT_SERVER_URL` (legacy emergency fallback; used only after health verification)
 - `PRINT_SERVER_SECRET` (for /print/* auth)
 - `SHOP_DISPLAY_KEY` (for the dashboard URL)
 
@@ -225,9 +226,9 @@ Plus on MOS (Vercel) — already set, don't change without knowing what you're d
 |---|---|
 | OSW lead/quote form submits but nothing appears in mobile | Check OSW backend logs — is it actually hitting MOS? Check MOS Vercel logs for the lead POST. Check `LEAD_INGEST_SECRET` matches both sides. |
 | Pickup order in OSW but no print + no mobile notification | Check `/api/pickup-orders` returned 201. Check `osw_order_id` was set + unique. Check shop dashboard — if pickup appears there, the issue is downstream (push delivery / printer). |
-| Print receipt fires but printer doesn't print | SSH to Pi → `curl localhost:3940/health` → check service status → check `journalctl -u ssw-print-server` |
-| Dashboard says "Reconnecting…" | Cloudflared tunnel down — `ssh pi@ssw-print.local 'sudo systemctl restart ssw-print-tunnel'` and watcher will catch up in 30s |
-| Mobile app says "Printer not connected" | Same as dashboard reconnecting — tunnel + watcher need to recover |
+| Print receipt fires but printer doesn't print | Check Shop Control bridge diagnostics, then Pi `curl localhost:3940/health` and `journalctl -u ssw-print-server` |
+| Dashboard says "Reconnecting…" | Check `systemctl status ssw-print-tunnel` and `journalctl -u ssw-print-tunnel-health`; the timer performs bounded recovery every two minutes |
+| Mobile app says "Printer not connected" | Confirm `https://print.soilseedandwater.com/health` and local Pi `/health`; distinguish the named tunnel from the CUPS printer connection |
 | Money shows wrong (e.g., $0.30 instead of $30) | Cents/dollars mismatch in OSW payload. Fix to CENTS at OSW side. |
 
 ---
@@ -240,11 +241,12 @@ Plus on MOS (Vercel) — already set, don't change without knowing what you're d
 | `myorganicsoil.com/api/document-payload.js` | Quote + invoice payload builders for PDF + email |
 | `myorganicsoil.com/api/quote-pdf.js` | Quote PDF generator |
 | `myorganicsoil.com/api/quote-email.js` | Quote email HTML |
-| `myorganicsoil.com/print-server/lib/receipt-pro.js` | Receipt template for Star raster printer |
-| `myorganicsoil.com/print-server/lib/star-raster.js` | TSP100IIIU raster command encoder |
+| `myorganicsoil.com/print-server/lib/receipt-v4.js` | Canonical PDF receipt template |
+| `myorganicsoil.com/print-server/systemd/` | Named tunnel, heartbeat timer, and recovery units |
+| `myorganicsoil.com/print-server/NAMED_TUNNEL_RUNBOOK.md` | Stable tunnel activation and verification |
 | `myorganicsoil.com/client/public/shop-dashboard.html` | HDMI dashboard (single file) |
 | `Credentials/raspberry-pi-print-server.md` | Pi credentials + recovery procedures |
 
 ---
 
-_Last updated: 2026-05-22_
+_Last updated: 2026-08-08_
