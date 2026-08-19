@@ -76,11 +76,20 @@ export function normalizeCouponGreetingName(value) {
     : 'Neighbor';
 }
 
-export function buildWormCastingsCouponEmail({ fullName, token }) {
+export function buildWormCastingsCouponEmail({ fullName, token, customerNumber }) {
   const name = escapeHtml(normalizeCouponGreetingName(fullName));
   const privateCouponUrl = couponUrl(token);
   const qrUrl = couponQrUrl(token);
   const backupCode = escapeHtml(token);
+  const number = escapeHtml(String(customerNumber || '').trim());
+  const numberBlock = number
+    ? `<tr><td style="padding:26px 28px;background:#264027;text-align:center;">
+    <p style="margin:0 0 8px;color:#f1d6a6;font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;">Your number</p>
+    <p style="margin:0;color:#fff;font-size:42px;line-height:1.1;font-weight:800;letter-spacing:2px;">${number}</p>
+    <p style="margin:12px auto 0;max-width:420px;color:#dce8d8;font-size:16px;line-height:1.5;">This is your number. Call us with it and we will pull you up.</p>
+    <p style="margin:12px 0 0;"><a href="tel:+16232633386" style="color:#fff;font-size:18px;font-weight:800;text-decoration:none;">(623) 263-3386</a></p>
+  </td></tr>`
+    : '';
 
   return {
     subject: 'Your free 9-lb worm castings coupon',
@@ -96,6 +105,7 @@ export function buildWormCastingsCouponEmail({ fullName, token }) {
     <h1 style="margin:0;color:#264027;font-size:31px;line-height:1.16;">Your free 9-lb bag of worm castings</h1>
     <p style="margin:14px auto 0;max-width:480px;color:#4d5c4d;font-size:16px;line-height:1.55;">Hi ${name}, your private coupon is ready. Bring it to the Phoenix yard between August 1 and August 31, 2026.</p>
   </td></tr>
+  ${numberBlock}
   <tr><td style="padding:30px 28px;text-align:center;">
     <p style="margin:0 0 14px;color:#96703f;font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;">Show this QR at the yard</p>
     <a href="${privateCouponUrl}" style="text-decoration:none;"><img src="${qrUrl}" alt="Your private redemption QR code" width="260" height="260" style="display:block;width:260px;max-width:100%;height:auto;margin:0 auto 20px;padding:10px;border:1px solid #d8dfd4;border-radius:12px;"></a>

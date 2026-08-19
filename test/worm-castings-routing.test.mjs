@@ -6,11 +6,20 @@ import {
   WORM_CASTINGS_GROWING_OPTIONS,
   WORM_CASTINGS_OFFER,
   nextActionForGardenStatus,
+  parseCampaignPrefill,
   persistWormCastingsRouting,
   propertyProfileFromGrowing,
   routingRecordColumns,
   validateWormCastingsRouting,
 } from '../shared/wormCastingsRouting.js';
+import {
+  SSW_NUMBER_ALPHABET,
+  SSW_NUMBER_RE,
+  ensureSswNumber,
+  generateSswNumber,
+  isSswNumber,
+} from '../shared/sswNumber.js';
+import { buildWormCastingsCouponEmail } from '../shared/wormCastingsCampaign.js';
 
 const validBody = {
   customerType: 'homeowner',
@@ -63,6 +72,7 @@ test('signup record columns match CRM fields due Aug 25', () => {
     'next_action',
     'offer',
     'property_profile',
+    'signup_notes',
     'source',
     'zip_code',
   ]);
@@ -154,6 +164,10 @@ test('/free-worm-castings asks routing questions and does not change /survey', a
   assert.match(page, /New or existing garden\?/);
   assert.match(page, /What are you growing\?/);
   assert.match(page, /ZIP code/);
+  assert.match(page, /parseCampaignPrefill/);
+  assert.match(page, /This is your number. Call us with it and we will pull you up./);
+  assert.match(page, /campaign-notes/);
+  assert.match(page, /border-\[#264027\] bg-\[#264027\] text-white/);
   assert.match(page, /campaign: "free-worm-castings-2026-08"/);
   assert.doesNotMatch(page, /Founder/);
   assert.doesNotMatch(page, /nowell/i);
@@ -164,5 +178,68 @@ test('/free-worm-castings asks routing questions and does not change /survey', a
   assert.doesNotMatch(survey, /newsletter\/subscribe/);
   assert.match(api, /persistWormCastingsRouting/);
   assert.match(api, /validateWormCastingsRouting/);
+  assert.match(api, /ensureSswNumber/);
   assert.doesNotMatch(api, /Dan Nowell/);
+});
+
+test('query params prefill name, email, phone, zip, and known routing answers', () => {
+  const prefill = parseCampaignPrefill(
+    '?email=rodolfodavid110@gmail.com&name=Rodo&phone=6232633386&zip=85009&customerType=homeowner&gardenStatus=existing&growing=food-garden,palms&other=figs',
+  );
+  assert.equal(prefill.name, 'Rodo');
+  assert.equal(prefill.email, 'rodolfodavid110@gmail.com');
+  assert.equal(prefill.phone, '6232633386');
+  assert.equal(prefill.zipCode, '85009');
+  assert.equal(prefill.customerType, 'homeowner');
+  assert.equal(prefill.gardenStatus, 'existing');
+  assert.deepEqual(prefill.growing, ['food-garden', 'palms']);
+  assert.equal(prefill.growingOther, 'figs');
+  assert.equal(parseCampaignPrefill('?customerType=home-gardener&growing=bacchus').customerType, '');
+  assert.deepEqual(parseCampaignPrefill('?growing=bacchus').growing, []);
+});
+
+test('SSW numbers are random SSW-XXXX values and are reused for the same customer', async () => {
+  assert.equal(SSW_NUMBER_ALPHABET, '23456789ABCDEFGHJKMNPQRSTUVWXYZ');
+  const first = generateSswNumber(Buffer.from([0, 1, 2, 3]));
+  const second = generateSswNumber(Buffer.from([10, 20, 30, 40]));
+  assert.match(first, SSW_NUMBER_RE);
+  assert.match(second, SSW_NUMBER_RE);
+  assert.notEqual(first, second);
+  assert.notEqual(first, 'SSW-290A');
+  assert.equal(isSswNumber('SSW-3115'), false);
+
+  const reused = await ensureSswNumber({}, { id: 290, ssw_number: 'SSW-7K2P' });
+  assert.equal(reused, 'SSW-7K2P');
+
+  const updates = [];
+  const db = {
+    from() {
+      return {
+        update(patch) {
+          updates.push(patch);
+          return this;
+        },
+        eq() { return this; },
+        is() { return this; },
+        select() { return this; },
+        maybeSingle: async () => ({ data: { ssw_number: updates.at(-1)?.ssw_number }, error: null }),
+      };
+    },
+  };
+  const minted = await ensureSswNumber(db, { id: 88, ssw_number: null }, () => 'SSW-4H9Q');
+  assert.equal(minted, 'SSW-4H9Q');
+  assert.equal(updates[0].ssw_number, 'SSW-4H9Q');
+});
+
+test('gift email shows the customer number large with the yard phone', () => {
+  const coupon = buildWormCastingsCouponEmail({
+    fullName: 'Rodo',
+    token: '11111111-1111-4111-8111-111111111111',
+    customerNumber: 'SSW-4H9Q',
+  });
+  assert.equal(coupon.subject, 'Your free 9-lb worm castings coupon');
+  assert.match(coupon.html, /SSW-4H9Q/);
+  assert.match(coupon.html, /This is your number. Call us with it and we will pull you up./);
+  assert.match(coupon.html, /tel:\+16232633386/);
+  assert.match(coupon.html, /\(623\) 263-3386/);
 });

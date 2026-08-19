@@ -13,6 +13,7 @@ import {
   routingRecordColumns,
   validateWormCastingsRouting,
 } from '../shared/wormCastingsRouting.js';
+import { ensureSswNumber } from '../shared/sswNumber.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
@@ -176,10 +177,21 @@ async function fulfillStripeDeposit(db, orderId, session) {
   return { ok: true };
 }
 
-async function sendWormCastingsCoupon({ db, redemption }) {
+async function sendWormCastingsCoupon({ db, redemption, customerNumber }) {
+  let number = customerNumber || null;
+  if (!number && redemption.customer_id) {
+    const { data: owner, error: ownerError } = await db
+      .from('sp_customers')
+      .select('id, ssw_number')
+      .eq('id', redemption.customer_id)
+      .maybeSingle();
+    if (ownerError) throw ownerError;
+    if (owner) number = await ensureSswNumber(db, owner);
+  }
   const email = buildWormCastingsCouponEmail({
     fullName: redemption.full_name,
     token: redemption.redemption_token,
+    customerNumber: number,
   });
   const { data: claimed, error: claimError } = await db
     .from('sp_worm_castings_redemptions')
@@ -4679,13 +4691,17 @@ ${pages}
         }
 
         let couponDeliveryStatus = null;
+        let customerNumber = null;
         if (campaignRequested) {
           const { data: customer, error: customerError } = await db
             .from('sp_customers')
-            .select('id, full_name, email, delivery_zip, newsletter_notes')
+            .select('id, full_name, email, delivery_zip, newsletter_notes, ssw_number')
             .ilike('email', normalizedEmail)
             .maybeSingle();
           if (customerError || !customer) throw customerError || new Error('Campaign subscriber could not be found');
+          const customerNumberAssigned = await ensureSswNumber(db, customer);
+          customer.ssw_number = customerNumberAssigned;
+          customerNumber = customerNumberAssigned;
 
           const routingColumns = routing ? routingRecordColumns(routing, normalizedSource) : {};
           let { data: redemption, error: redemptionError } = await db
@@ -4737,7 +4753,7 @@ ${pages}
           // same private coupon, subject to a short anti-spam cooldown.
           if (['pending', 'failed'].includes(redemption.distribution_status)) {
             try {
-              const delivery = await sendWormCastingsCoupon({ db, redemption });
+              const delivery = await sendWormCastingsCoupon({ db, redemption, customerNumber });
               couponDeliveryStatus = delivery.status;
             } catch (couponError) {
               console.error('[Worm Castings] coupon delivery failed:', couponError?.message || couponError);
@@ -4776,6 +4792,7 @@ ${pages}
               propertyProfile: routing?.propertyProfile,
               offer: routing?.offer,
               nextAction: routing?.nextAction,
+              customerNumber,
             },
           });
           notificationResults.forEach((notificationResult, index) => {
@@ -4791,6 +4808,7 @@ ${pages}
           success: true,
           campaign: campaignRequested ? WORM_CASTINGS_CAMPAIGN_KEY : null,
           couponDeliveryStatus,
+          customerNumber,
           message: campaignRequested
             ? (couponDeliveryStatus === 'resent'
               ? 'Your existing private coupon was emailed again.'

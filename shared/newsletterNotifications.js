@@ -42,6 +42,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
   const propertyProfile = String(subscriber?.propertyProfile || '').trim();
   const offer = String(subscriber?.offer || '').trim();
   const nextAction = String(subscriber?.nextAction || '').trim();
+  const customerNumber = String(subscriber?.customerNumber || '').trim();
   const customerCategoryLabel = customerCategory
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -51,6 +52,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
   const gardenLabel = labelForGardenStatus(gardenStatus) || gardenStatus;
   const nextActionDisplay = nextActionLabel(nextAction) || nextAction;
   const extraRows = [
+    customerNumber ? routingRow('Number', customerNumber) : '',
     zipCode ? routingRow('ZIP', zipCode) : '',
     gardenLabel ? routingRow('Garden', gardenLabel) : '',
     propertyProfile ? routingRow('Property', propertyProfile) : '',

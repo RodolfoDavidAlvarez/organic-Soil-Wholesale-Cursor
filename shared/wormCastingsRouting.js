@@ -87,8 +87,9 @@ export function validateWormCastingsRouting(body = {}) {
   const customerType = String(body.customerType || body.customerCategory || '').trim();
   const gardenStatus = String(body.gardenStatus || '').trim();
   const growing = normalizeGrowingSelection(body.growing);
-  const growingOther = String(body.growingOther || '').trim().slice(0, 120);
+  const growingOther = String(body.growingOther || '').trim().slice(0, 80);
   const zipCode = normalizeZipCode(body.zipCode || body.zip);
+  const signupNotes = String(body.notes || body.signupNotes || '').trim().slice(0, 500);
 
   if (!CUSTOMER_TYPE_VALUES.has(customerType)) {
     return { ok: false, error: 'Please tell us who you are.' };
@@ -117,7 +118,30 @@ export function validateWormCastingsRouting(body = {}) {
       propertyProfile,
       offer: WORM_CASTINGS_OFFER,
       nextAction,
+      signupNotes: signupNotes || null,
     },
+  };
+}
+
+export function parseCampaignPrefill(search = '') {
+  const params = new URLSearchParams(String(search || '').replace(/^\?/, ''));
+  const growingRaw = [...params.getAll('growing'), params.get('plants') || '']
+    .flatMap((value) => String(value || '').split(/[,\s]+/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const customerType = String(params.get('customerType') || params.get('who') || params.get('customer_type') || '').trim();
+  const gardenStatus = String(params.get('gardenStatus') || params.get('garden') || params.get('garden_status') || '').trim();
+
+  return {
+    name: String(params.get('name') || '').trim().slice(0, 120),
+    email: String(params.get('email') || '').trim().slice(0, 254),
+    phone: String(params.get('phone') || '').trim().slice(0, 30),
+    zipCode: String(params.get('zip') || params.get('zipCode') || params.get('zip_code') || '').trim().slice(0, 10),
+    customerType: CUSTOMER_TYPE_VALUES.has(customerType) ? customerType : '',
+    gardenStatus: GARDEN_STATUS_VALUES.has(gardenStatus) ? gardenStatus : '',
+    growing: normalizeGrowingSelection(growingRaw),
+    growingOther: String(params.get('growingOther') || params.get('other') || '').trim().slice(0, 80),
+    notes: String(params.get('notes') || params.get('note') || '').trim().slice(0, 500),
   };
 }
 
@@ -132,6 +156,7 @@ export function routingRecordColumns(routing, source) {
     offer: routing.offer || WORM_CASTINGS_OFFER,
     source: source || null,
     next_action: routing.nextAction,
+    signup_notes: routing.signupNotes || null,
   };
 }
 
@@ -144,7 +169,8 @@ export function routingNotesBlock(routing, now = new Date().toISOString()) {
     `ZIP: ${routing.zipCode}`,
     `Offer: ${WORM_CASTINGS_OFFER}`,
     `Next action: ${nextActionLabel(routing.nextAction)}`,
-  ].join('\n');
+    routing.signupNotes ? `Notes: ${routing.signupNotes}` : null,
+  ].filter(Boolean).join('\n');
 }
 
 export async function persistWormCastingsRouting({ db, customer, redemptionId, routing, source }) {

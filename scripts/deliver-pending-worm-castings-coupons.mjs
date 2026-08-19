@@ -17,11 +17,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 await client.connect();
 try {
   const pending = await client.query(`
-    SELECT id, full_name, email, redemption_token, distribution_status, distribution_attempts
-    FROM public.sp_worm_castings_redemptions
-    WHERE campaign_key = $1
-      AND distribution_status IN ('pending', 'failed')
-    ORDER BY issued_at ASC
+    SELECT r.id, r.full_name, r.email, r.redemption_token, r.distribution_status, r.distribution_attempts, customer.ssw_number
+    FROM public.sp_worm_castings_redemptions r
+    LEFT JOIN public.sp_customers customer ON customer.id = r.customer_id
+    WHERE r.campaign_key = $1
+      AND r.distribution_status IN ('pending', 'failed')
+    ORDER BY r.issued_at ASC
   `, [WORM_CASTINGS_CAMPAIGN_KEY]);
 
   if (!apply) {
@@ -43,7 +44,11 @@ try {
     if (!claimed.rowCount) continue;
 
     const coupon = claimed.rows[0];
-    const message = buildWormCastingsCouponEmail({ fullName: coupon.full_name, token: coupon.redemption_token });
+    const message = buildWormCastingsCouponEmail({
+      fullName: coupon.full_name,
+      token: coupon.redemption_token,
+      customerNumber: coupon.ssw_number || row.ssw_number,
+    });
     try {
       const response = await resend.emails.send({
         from: process.env.WORM_CASTINGS_EMAIL_FROM || 'Soil Seed & Water <info@soilseedandwater.com>',

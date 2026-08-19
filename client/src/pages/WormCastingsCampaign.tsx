@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   CUSTOMER_SUPPORT_PHONE_DIAL,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
@@ -26,6 +27,7 @@ import {
   WORM_CASTINGS_CUSTOMER_TYPES,
   WORM_CASTINGS_GARDEN_STATUSES,
   WORM_CASTINGS_GROWING_OPTIONS,
+  parseCampaignPrefill,
 } from "@shared/wormCastingsRouting.js";
 
 type Props = { source: string };
@@ -105,19 +107,22 @@ function campaignTrackingProperties(source: string) {
 export default function WormCastingsCampaign({ source }: Props) {
   const trackingSource = normalizeTrackingSource(source);
   const formStartedRef = useRef(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [customerType, setCustomerType] = useState("");
-  const [gardenStatus, setGardenStatus] = useState("");
-  const [growing, setGrowing] = useState<string[]>([]);
-  const [growingOther, setGrowingOther] = useState("");
+  const prefill = parseCampaignPrefill(typeof window === "undefined" ? "" : window.location.search);
+  const [name, setName] = useState(prefill.name);
+  const [email, setEmail] = useState(prefill.email);
+  const [phone, setPhone] = useState(prefill.phone);
+  const [zipCode, setZipCode] = useState(prefill.zipCode);
+  const [customerType, setCustomerType] = useState(prefill.customerType);
+  const [gardenStatus, setGardenStatus] = useState(prefill.gardenStatus);
+  const [growing, setGrowing] = useState<string[]>(prefill.growing);
+  const [growingOther, setGrowingOther] = useState(prefill.growingOther);
+  const [notes, setNotes] = useState(prefill.notes);
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [couponDeliveryStatus, setCouponDeliveryStatus] = useState("");
+  const [customerNumber, setCustomerNumber] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -176,6 +181,7 @@ export default function WormCastingsCampaign({ source }: Props) {
           gardenStatus,
           growing,
           growingOther,
+          notes,
           consent,
           website,
           source: trackingSource,
@@ -193,6 +199,7 @@ export default function WormCastingsCampaign({ source }: Props) {
       }
       trackCampaignAction("Registered", { coupon_delivery_status: body.couponDeliveryStatus || "sent" });
       setCouponDeliveryStatus(body.couponDeliveryStatus || "sent");
+      setCustomerNumber(body.customerNumber || "");
       setSuccess(true);
     } catch (submitError: any) {
       trackCampaignAction("Form Error");
@@ -273,12 +280,12 @@ export default function WormCastingsCampaign({ source }: Props) {
             <div className="border-b border-[#e5eadf] bg-white px-6 py-5 sm:px-8">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6f39]">Private QR coupon</p>
               <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">Claim your free bag</h2>
-              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon and directions immediately. A few questions help us send useful soil advice later.</p>
+              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon right away.</p>
             </div>
 
             <div className="p-5 sm:p-7">
               {success ? (
-                <CouponSuccess email={email} status={couponDeliveryStatus} />
+                <CouponSuccess email={email} status={couponDeliveryStatus} customerNumber={customerNumber} />
               ) : (
                 <form onSubmit={submit} onFocus={markFormStarted} className="space-y-4">
                   <div>
@@ -300,8 +307,8 @@ export default function WormCastingsCampaign({ source }: Props) {
                     </div>
                   </div>
                   <fieldset>
-                    <legend className="mb-2 block text-sm font-bold text-[#243129]">Who are you?</legend>
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">Who are you?</legend>
+                    <div className="grid grid-cols-3 gap-2">
                       {customerTypes.map(([value, label]) => (
                         <ChoiceButton key={value} selected={customerType === value} onClick={() => setCustomerType(value)}>
                           {label}
@@ -310,7 +317,7 @@ export default function WormCastingsCampaign({ source }: Props) {
                     </div>
                   </fieldset>
                   <fieldset>
-                    <legend className="mb-2 block text-sm font-bold text-[#243129]">New or existing garden?</legend>
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">New or existing garden?</legend>
                     <div className="grid grid-cols-2 gap-2">
                       {gardenStatuses.map(([value, label]) => (
                         <ChoiceButton key={value} selected={gardenStatus === value} onClick={() => setGardenStatus(value)}>
@@ -320,26 +327,29 @@ export default function WormCastingsCampaign({ source }: Props) {
                     </div>
                   </fieldset>
                   <fieldset>
-                    <legend className="mb-2 block text-sm font-bold text-[#243129]">What are you growing?</legend>
-                    <p className="mb-2 text-xs leading-5 text-[#6c756d]">Check everything that fits. This does not change your free bag.</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <legend className="mb-2 block text-sm font-semibold text-[#264027]">What are you growing?</legend>
+                    <div className="grid grid-cols-3 gap-2">
                       {growingOptions.map(([value, label]) => (
                         <ChoiceButton key={value} selected={growing.includes(value)} onClick={() => toggleGrowing(value)}>
                           {label}
                         </ChoiceButton>
                       ))}
                     </div>
-                    <label htmlFor="campaign-growing-other" className="mb-1.5 mt-3 block text-sm font-bold text-[#243129]">Other <span className="font-normal text-[#6c756d]">(optional)</span></label>
-                    <Input id="campaign-growing-other" value={growingOther} onChange={(event) => setGrowingOther(event.target.value)} placeholder="Anything else we should know" maxLength={120} className="h-12 rounded-xl" />
+                    <label htmlFor="campaign-growing-other" className="mb-1.5 mt-3 block text-sm font-semibold text-[#264027]">Other <span className="font-normal text-[#6c756d]">(optional)</span></label>
+                    <Input id="campaign-growing-other" value={growingOther} onChange={(event) => setGrowingOther(event.target.value)} placeholder="Figs, grapes" maxLength={80} className="h-12 rounded-xl border-[#d7dfd0]" />
                   </fieldset>
                   <div className="hidden" aria-hidden="true">
                     <label htmlFor="campaign-website">Website</label>
                     <Input id="campaign-website" value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" />
                   </div>
                   <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-[#f6f7f3] p-4 text-sm leading-6 text-[#4f5b52]">
-                    <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required className="mt-1 h-5 w-5 shrink-0 accent-[#214a2c]" />
+                    <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required className="mt-1 h-5 w-5 shrink-0 accent-[#264027]" />
                     <span>Email me my QR coupon and community growing updates. I can unsubscribe any time.</span>
                   </label>
+                  <div>
+                    <label htmlFor="campaign-notes" className="mb-1.5 block text-sm font-semibold text-[#264027]">Anything else we should know? <span className="font-normal text-[#6c756d]">(optional)</span></label>
+                    <Textarea id="campaign-notes" value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={500} className="min-h-[96px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6" />
+                  </div>
                   {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
                   <Button type="submit" disabled={submitting} className="min-h-14 w-full rounded-xl text-base font-bold shadow-lg">
                     {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Creating your coupon…</> : <>Email My Private QR Coupon <ArrowRight className="ml-2 h-4 w-4" /></>}
@@ -458,10 +468,10 @@ function ChoiceButton({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`min-h-12 rounded-xl border px-3 text-sm font-bold leading-5 ${
+      className={`min-h-12 rounded-xl border px-2 text-sm font-bold ${
         selected
-          ? "border-[#214a2c] bg-[#214a2c] text-white"
-          : "border-[#d8e1d4] bg-white text-[#243129]"
+          ? "border-[#264027] bg-[#264027] text-white"
+          : "border-[#d7dfd0] bg-white text-[#264027]"
       }`}
     >
       {children}
@@ -505,7 +515,7 @@ function HeroFact({ icon, title, detail }: { icon: ReactNode; title: string; det
   );
 }
 
-function CouponSuccess({ email, status }: { email: string; status: string }) {
+function CouponSuccess({ email, status, customerNumber }: { email: string; status: string; customerNumber: string }) {
   const isResent = status === "resent";
   const isRecent = status === "recently_sent";
   const isProcessing = status === "already_processing" || status === "sending";
@@ -524,6 +534,24 @@ function CouponSuccess({ email, status }: { email: string; status: string }) {
     <div className="py-5 text-center sm:py-8">
       <CheckCircle2 className="mx-auto h-16 w-16 text-[#2f6d45]" />
       <h2 className="mt-5 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">{heading}</h2>
+      {customerNumber ? (
+        <div className="mx-auto mt-6 max-w-md rounded-2xl bg-[#264027] px-5 py-6 text-white">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f1d6a6]">Your number</p>
+          <p className="mt-2 font-heading text-4xl font-bold tracking-[0.08em] sm:text-5xl">{customerNumber}</p>
+          <p className="mt-3 text-base leading-6 text-white/90">This is your number. Call us with it and we will pull you up.</p>
+          <a
+            href={CUSTOMER_SUPPORT_PHONE_TEL}
+            aria-label={`Call ${CUSTOMER_SUPPORT_PHONE_DISPLAY}`}
+            data-phone-number={CUSTOMER_SUPPORT_PHONE_DIAL}
+            data-callrail-ignore="true"
+            data-dynamic-number-ignore="true"
+            data-call-tracking-ignore="true"
+            className="no-call-tracking mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-[#264027]"
+          >
+            <Phone className="h-4 w-4" /> {CUSTOMER_SUPPORT_PHONE_DISPLAY}
+          </a>
+        </div>
+      ) : null}
       <p className="mx-auto mt-4 max-w-md leading-7 text-[#5f6961]">
         {isResent ? <>We emailed the same private QR coupon to <strong>{email}</strong>. No duplicate coupon was created.</>
           : isRecent ? <>We recently emailed your private QR coupon to <strong>{email}</strong>. Please check your inbox, Spam, and Promotions folders.</>
