@@ -22,6 +22,11 @@ import {
 } from "@/config/contact";
 import { trackEvent } from "@/lib/analytics";
 import DeferredMount from "@/components/DeferredMount";
+import {
+  WORM_CASTINGS_CUSTOMER_TYPES,
+  WORM_CASTINGS_GARDEN_STATUSES,
+  WORM_CASTINGS_GROWING_OPTIONS,
+} from "@shared/wormCastingsRouting.js";
 
 type Props = { source: string };
 
@@ -32,15 +37,9 @@ const ENTRANCE_MAP_EMBED_URL =
 const PHOENIX_YARD_HOURS = "Tuesday–Saturday, 8:00 AM–4:00 PM";
 const PHOENIX_YARD_BREAK = "Closed for break from 1:00–2:00 PM";
 
-const customerTypes = [
-  ["home-gardener", "Home gardener"],
-  ["farmer", "Farmer / grower"],
-  ["landscaper", "Landscaper"],
-  ["nursery", "Nursery / greenhouse"],
-  ["contractor", "Contractor"],
-  ["municipal-commercial", "Municipal / commercial"],
-  ["other", "Other"],
-] as const;
+const customerTypes = WORM_CASTINGS_CUSTOMER_TYPES;
+const gardenStatuses = WORM_CASTINGS_GARDEN_STATUSES;
+const growingOptions = WORM_CASTINGS_GROWING_OPTIONS;
 
 const products = [
   {
@@ -109,7 +108,11 @@ export default function WormCastingsCampaign({ source }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [customerCategory, setCustomerCategory] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [customerType, setCustomerType] = useState("");
+  const [gardenStatus, setGardenStatus] = useState("");
+  const [growing, setGrowing] = useState<string[]>([]);
+  const [growingOther, setGrowingOther] = useState("");
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -134,9 +137,29 @@ export default function WormCastingsCampaign({ source }: Props) {
     trackCampaignAction("Form Started");
   }
 
+  function toggleGrowing(value: string) {
+    setGrowing((current) => (
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    ));
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     trackCampaignAction("Form Submitted");
+    if (!customerType) {
+      setError("Please tell us who you are.");
+      return;
+    }
+    if (!gardenStatus) {
+      setError("Please tell us if this is a brand new or existing garden.");
+      return;
+    }
+    if (!growing.length) {
+      setError("Please tell us what you are growing.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -147,7 +170,12 @@ export default function WormCastingsCampaign({ source }: Props) {
           name,
           email,
           phone,
-          customerCategory,
+          zipCode,
+          customerType,
+          customerCategory: customerType,
+          gardenStatus,
+          growing,
+          growingOther,
           consent,
           website,
           source: trackingSource,
@@ -245,7 +273,7 @@ export default function WormCastingsCampaign({ source }: Props) {
             <div className="border-b border-[#e5eadf] bg-white px-6 py-5 sm:px-8">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6f39]">Private QR coupon</p>
               <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">Claim your free bag</h2>
-              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon and directions immediately.</p>
+              <p className="mt-2 text-sm leading-6 text-[#647064]">We’ll email the QR coupon and directions immediately. A few questions help us send useful soil advice later.</p>
             </div>
 
             <div className="p-5 sm:p-7">
@@ -267,13 +295,43 @@ export default function WormCastingsCampaign({ source }: Props) {
                       <Input id="campaign-phone" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(623) 555-0123" autoComplete="tel" inputMode="tel" required maxLength={30} className="h-12 rounded-xl" />
                     </div>
                     <div>
-                      <label htmlFor="campaign-category" className="mb-1.5 block text-sm font-bold text-[#243129]">I’m a…</label>
-                      <select id="campaign-category" value={customerCategory} onChange={(event) => setCustomerCategory(event.target.value)} required className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm">
-                        <option value="">Select one</option>
-                        {customerTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-                      </select>
+                      <label htmlFor="campaign-zip" className="mb-1.5 block text-sm font-bold text-[#243129]">ZIP code</label>
+                      <Input id="campaign-zip" value={zipCode} onChange={(event) => setZipCode(event.target.value)} placeholder="85009" autoComplete="postal-code" inputMode="numeric" required maxLength={10} className="h-12 rounded-xl" />
                     </div>
                   </div>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-bold text-[#243129]">Who are you?</legend>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {customerTypes.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={customerType === value} onClick={() => setCustomerType(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-bold text-[#243129]">New or existing garden?</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {gardenStatuses.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={gardenStatus === value} onClick={() => setGardenStatus(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend className="mb-2 block text-sm font-bold text-[#243129]">What are you growing?</legend>
+                    <p className="mb-2 text-xs leading-5 text-[#6c756d]">Check everything that fits. This does not change your free bag.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {growingOptions.map(([value, label]) => (
+                        <ChoiceButton key={value} selected={growing.includes(value)} onClick={() => toggleGrowing(value)}>
+                          {label}
+                        </ChoiceButton>
+                      ))}
+                    </div>
+                    <label htmlFor="campaign-growing-other" className="mb-1.5 mt-3 block text-sm font-bold text-[#243129]">Other <span className="font-normal text-[#6c756d]">(optional)</span></label>
+                    <Input id="campaign-growing-other" value={growingOther} onChange={(event) => setGrowingOther(event.target.value)} placeholder="Anything else we should know" maxLength={120} className="h-12 rounded-xl" />
+                  </fieldset>
                   <div className="hidden" aria-hidden="true">
                     <label htmlFor="campaign-website">Website</label>
                     <Input id="campaign-website" value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" />
@@ -383,6 +441,31 @@ export default function WormCastingsCampaign({ source }: Props) {
       </section>
       </DeferredMount>
     </div>
+  );
+}
+
+function ChoiceButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`min-h-12 rounded-xl border px-3 text-sm font-bold leading-5 ${
+        selected
+          ? "border-[#214a2c] bg-[#214a2c] text-white"
+          : "border-[#d8e1d4] bg-white text-[#243129]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

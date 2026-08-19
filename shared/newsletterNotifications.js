@@ -1,4 +1,5 @@
 import { isWormCastingsCampaignSource } from './wormCastingsCampaign.js';
+import { labelForGardenStatus, nextActionLabel } from './wormCastingsRouting.js';
 
 export const STAFF_SIGNUP_SUBJECT = 'SSW signup';
 
@@ -22,6 +23,10 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function routingRow(label, value) {
+  return `<tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">${escapeHtml(label)}</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;color:#243229;">${escapeHtml(value)}</td></tr>`;
+}
+
 export function getNewsletterAdminRecipients(active = process.env.NEWSLETTER_ADMIN_NOTIFICATIONS_ACTIVE) {
   return String(active || '').toLowerCase() === 'true' ? ADMIN_TEAM : INTERNAL_TEST_RECIPIENTS;
 }
@@ -32,12 +37,26 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
   const phone = String(subscriber?.phone || '').trim() || 'Not provided';
   const customerCategory = String(subscriber?.customerCategory || '').trim() || 'Not provided';
   const source = String(subscriber?.source || 'website_newsletter_signup').trim();
+  const zipCode = String(subscriber?.zipCode || '').trim();
+  const gardenStatus = String(subscriber?.gardenStatus || '').trim();
+  const propertyProfile = String(subscriber?.propertyProfile || '').trim();
+  const offer = String(subscriber?.offer || '').trim();
+  const nextAction = String(subscriber?.nextAction || '').trim();
   const customerCategoryLabel = customerCategory
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
   const sourceLabel = source
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const gardenLabel = labelForGardenStatus(gardenStatus) || gardenStatus;
+  const nextActionDisplay = nextActionLabel(nextAction) || nextAction;
+  const extraRows = [
+    zipCode ? routingRow('ZIP', zipCode) : '',
+    gardenLabel ? routingRow('Garden', gardenLabel) : '',
+    propertyProfile ? routingRow('Property', propertyProfile) : '',
+    offer ? routingRow('Offer', offer.replace(/[-_]+/g, ' ')) : '',
+    nextActionDisplay ? routingRow('Next action', nextActionDisplay) : '',
+  ].join('');
   const subscribedAt = subscriber?.subscribedAt ? new Date(subscriber.subscribedAt) : new Date();
   const when = Number.isNaN(subscribedAt.getTime())
     ? 'Just now'
@@ -101,6 +120,7 @@ export function buildNewsletterAdminNotification({ subscriber, testing = true })
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Email</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="mailto:${escapeHtml(email)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(email)}</a></td></tr>
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Phone</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;"><a href="tel:${escapeHtml(phone)}" style="color:#315d3a;text-decoration:none;font-weight:700;">${escapeHtml(phone)}</a></td></tr>
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Customer</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;color:#243229;">${escapeHtml(customerCategoryLabel)}</td></tr>
+              ${extraRows}
               <tr><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Source</td><td style="padding:13px 15px;border-bottom:1px solid #e8ece6;font-size:15px;color:#243229;">${escapeHtml(sourceLabel)}</td></tr>
               <tr><td style="padding:13px 15px;color:#758078;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">${isGardenClassRegistration ? 'Registered' : 'Joined'}</td><td style="padding:13px 15px;font-size:15px;color:#243229;">${escapeHtml(when)} AZ</td></tr>
             </table>

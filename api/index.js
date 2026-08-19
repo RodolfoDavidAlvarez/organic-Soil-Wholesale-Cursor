@@ -8,6 +8,11 @@ import {
   normalizeCampaignSource,
   normalizeCampaignEmail,
 } from '../shared/wormCastingsCampaign.js';
+import {
+  persistWormCastingsRouting,
+  routingRecordColumns,
+  validateWormCastingsRouting,
+} from '../shared/wormCastingsRouting.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
@@ -4628,10 +4633,11 @@ ${pages}
       const normalizedEmail = normalizeCampaignEmail(email);
       const normalizedName = String(name || '').trim();
       const normalizedPhone = String(phone || '').trim();
-      const normalizedCustomerCategory = String(customerCategory || '').trim();
       const normalizedSource = normalizeCampaignSource(source || 'website_newsletter_signup').slice(0, 100);
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
       const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
+      let routing = null;
+      let normalizedCustomerCategory = String(customerCategory || '').trim();
 
       // Honeypot fields are silently accepted so bots do not learn how to bypass them.
       if (website) return res.json({ success: true });
@@ -4645,7 +4651,12 @@ ${pages}
       if (normalizedPhone.replace(/\D/g, '').length < 10 || normalizedPhone.length > 30) {
         return res.status(400).json({ error: 'Please enter a valid phone number.' });
       }
-      if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
+      if (campaignRequested) {
+        const validated = validateWormCastingsRouting(req.body || {});
+        if (!validated.ok) return res.status(400).json({ error: validated.error });
+        routing = validated.routing;
+        normalizedCustomerCategory = routing.customerType;
+      } else if (!allowedCustomerCategories.has(normalizedCustomerCategory)) {
         return res.status(400).json({ error: 'Please select the option that best describes you.' });
       }
 
@@ -4658,6 +4669,7 @@ ${pages}
           phone: normalizedPhone,
           customerCategory: normalizedCustomerCategory,
           source: normalizedSource,
+          zipCode: routing?.zipCode,
         });
 
         if (result.status === 'opted_out') {
@@ -4670,11 +4682,12 @@ ${pages}
         if (campaignRequested) {
           const { data: customer, error: customerError } = await db
             .from('sp_customers')
-            .select('id, full_name, email')
+            .select('id, full_name, email, delivery_zip, newsletter_notes')
             .ilike('email', normalizedEmail)
             .maybeSingle();
           if (customerError || !customer) throw customerError || new Error('Campaign subscriber could not be found');
 
+          const routingColumns = routing ? routingRecordColumns(routing, normalizedSource) : {};
           let { data: redemption, error: redemptionError } = await db
             .from('sp_worm_castings_redemptions')
             .select('*')
@@ -4689,6 +4702,7 @@ ${pages}
               full_name: normalizedName || String(customer.full_name || '').trim() || normalizedEmail.split('@')[0],
               email: normalizedEmail,
               email_normalized: normalizedEmail,
+              ...routingColumns,
             }).select().single();
             redemption = created.data;
             redemptionError = created.error;
@@ -4707,6 +4721,16 @@ ${pages}
               throw updated.error || new Error('Could not update the private coupon owner');
             }
             redemption = updated.data;
+          }
+
+          if (routing) {
+            await persistWormCastingsRouting({
+              db,
+              customer,
+              redemptionId: redemption.id,
+              routing,
+              source: normalizedSource,
+            });
           }
 
           // A repeat submission never creates a second coupon. It resends the
@@ -4747,6 +4771,11 @@ ${pages}
               customerCategory: normalizedCustomerCategory,
               source: normalizedSource,
               subscribedAt: new Date().toISOString(),
+              zipCode: routing?.zipCode,
+              gardenStatus: routing?.gardenStatus,
+              propertyProfile: routing?.propertyProfile,
+              offer: routing?.offer,
+              nextAction: routing?.nextAction,
             },
           });
           notificationResults.forEach((notificationResult, index) => {
