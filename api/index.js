@@ -4581,6 +4581,17 @@ ${pages}
       return res.status(200).send(svg);
     }
 
+    const surveyQrMatch = path.match(/^\/api\/public\/survey-coupon\/qr\/(SSW30-[A-HJ-NP-Z2-9]{8})\.(svg|png)$/i);
+    if (surveyQrMatch && req.method === 'GET') {
+      const { buildSurveyCouponQr, sendSurveyCouponQr } = await import('../shared/surveyCouponQr.js');
+      const db = await getSupabase();
+      const result = await buildSurveyCouponQr({
+        db,
+        fileName: `${surveyQrMatch[1]}.${surveyQrMatch[2]}`,
+      });
+      return sendSurveyCouponQr(res, result);
+    }
+
     // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
     // POST /api/survey and /api/survey/submit - CSAT / yard feedback.
@@ -4603,6 +4614,7 @@ ${pages}
           success: true,
           responseId: result.response.id,
           message: 'Thank you. We read these.',
+          coupon: result.coupon,
         });
       } catch (error) {
         console.error('[Survey] Error:', error?.message || error);
