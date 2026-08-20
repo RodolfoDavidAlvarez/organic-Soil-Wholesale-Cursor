@@ -19,6 +19,7 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { HomepagePromoBand } from "@/pages/GardenPromosHub";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -320,6 +321,8 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <HomepagePromoBand />
 
       <div className="bg-stone-900 px-4 pb-6 lg:hidden">
         <MobileResultsProof />

@@ -13,7 +13,7 @@ import {
   TONS_PER_CU_YD,
 } from '../../shared/pickupSchedule.js';
 import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
-import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
+import { gardenPromoStripeDescription, gardenPromoYardNote, normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 
 const router = Router();
 
@@ -158,6 +158,7 @@ router.post('/create-session', async (req, res) => {
       isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room — call before dispatching.' : null,
       !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
       customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
+      gardenPromoYardNote(items),
     ].filter(Boolean).join('\n');
 
     // Validate inventory availability — skipped on TEST discount so QA flows don't
@@ -353,12 +354,14 @@ router.post('/create-session', async (req, res) => {
     // Create Stripe line items
     const lineItems = items.map((item: any) => {
       const img = absolutizeImage(item.imageUrl);
+      const description = gardenPromoStripeDescription(item.productId)
+        || [item.sizeOption, item.unit].filter(Boolean).join(' · ');
       return {
         price_data: {
           currency: 'usd',
           product_data: {
             name: item.name,
-            description: [item.sizeOption, item.unit].filter(Boolean).join(' · '),
+            description,
             ...(img ? { images: [img] } : {}),
           },
           unit_amount: Math.round(item.price * 100),

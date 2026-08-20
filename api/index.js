@@ -26,6 +26,8 @@ import {
   shouldAlertUnmatchedInput,
 } from '../shared/checkoutMonitoring.js';
 import {
+  gardenPromoStripeDescription,
+  gardenPromoYardNote,
   normalizeV5CheckoutItems,
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
@@ -6702,6 +6704,7 @@ ${pages}
           isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room - call before dispatching.' : null,
           !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
           customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
+          gardenPromoYardNote(items),
         ].filter(Boolean).join('\n');
 
         const checkoutLocationId = locationId || 1;
@@ -6913,12 +6916,13 @@ ${pages}
 
         const lineItems = items.map((item) => {
           const img = absolutizeImage(item.imageUrl);
+          const description = gardenPromoStripeDescription(item.productId) || item.sizeOption;
           return {
             price_data: {
               currency: 'usd',
               product_data: {
                 name: item.name,
-                description: item.sizeOption,
+                description,
                 ...(img ? { images: [img] } : {}),
               },
               unit_amount: Math.round(item.price * 100),
