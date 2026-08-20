@@ -4651,6 +4651,34 @@ ${pages}
       }
     }
 
+    // POST /api/workshops/fall-garden/register — persist the class roster first,
+    // then send the class staff alert. Marketing subscribe never sends a second staff email.
+    if (path === '/api/workshops/fall-garden/register' && req.method === 'POST') {
+      try {
+        const { subscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
+        const { submitGardenClassRegistration } = await import('../shared/workshopRegistrations.js');
+        const result = await submitGardenClassRegistration({
+          db: await getSupabase(),
+          input: req.body || {},
+          subscribeNewsletterContact,
+          resend: process.env.RESEND_API_KEY ? await getResend() : null,
+        });
+        if (!result.ok) return res.status(result.status || 400).json({ error: result.error });
+        if (result.bot) return res.json({ success: true });
+        return res.status(result.created ? 201 : 200).json({
+          success: true,
+          registrationId: result.registration.id,
+          alreadyRegistered: !result.created,
+          marketingStatus: result.marketingSyncStatus,
+          notificationStatus: result.notificationStatus,
+          message: result.created ? 'Your workshop spot is saved.' : 'Your workshop RSVP is already saved.',
+        });
+      } catch (error) {
+        console.error('[Workshop RSVP] Error:', error?.message || error);
+        return res.status(500).json({ error: 'We could not save your RSVP. Please try again.' });
+      }
+    }
+
     // POST /api/newsletter/subscribe - Explicit website newsletter opt-in
     if (path === '/api/newsletter/subscribe' && req.method === 'POST') {
       const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};
@@ -4658,6 +4686,39 @@ ${pages}
       const normalizedName = String(name || '').trim();
       const normalizedPhone = String(phone || '').trim();
       const normalizedSource = normalizeCampaignSource(source || 'website_newsletter_signup').slice(0, 100);
+      const { isGardenClassRegistrationSource } = await import('../shared/newsletterNotifications.js');
+
+      // The public Garden Reset form currently posts here. Persist the class
+      // roster before any staff email, and never also send "SSW signup".
+      if (isGardenClassRegistrationSource(normalizedSource)) {
+        if (website) return res.json({ success: true });
+        try {
+          const { subscribeNewsletterContact } = await import('../shared/newsletterEngagement.js');
+          const { submitGardenClassRegistration } = await import('../shared/workshopRegistrations.js');
+          const result = await submitGardenClassRegistration({
+            db: await getSupabase(),
+            input: {
+              name: normalizedName,
+              email: normalizedEmail,
+              phone: normalizedPhone,
+              customerCategory,
+              source: normalizedSource,
+              eventUpdatesConsent: true,
+              marketingConsent: Boolean(consent),
+              website,
+            },
+            subscribeNewsletterContact,
+            resend: process.env.RESEND_API_KEY ? await getResend() : null,
+          });
+          if (!result.ok) return res.status(result.status || 400).json({ error: result.error });
+          if (result.bot) return res.json({ success: true });
+          return res.json({ success: true, message: "You're subscribed." });
+        } catch (error) {
+          console.error('[Workshop RSVP] Error:', error?.message || error);
+          return res.status(500).json({ error: 'We could not save your RSVP. Please try again.' });
+        }
+      }
+
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
       const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
       let routing = null;
