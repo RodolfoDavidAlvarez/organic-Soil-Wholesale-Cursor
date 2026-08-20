@@ -6,7 +6,21 @@
  * checkout payloads use dollars. Calculations convert to cents before rounding.
  */
 
+import {
+  GARDEN_PROMO_IDS,
+  GARDEN_PROMOS,
+  gardenPromoStripeDescription,
+  gardenPromoYardNote,
+} from "./gardenPromos.js";
+
 export const PALLET_VOLUME_DISCOUNT = 0.2;
+
+export {
+  GARDEN_PROMOS,
+  GARDEN_PROMO_IDS,
+  gardenPromoStripeDescription,
+  gardenPromoYardNote,
+};
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const cents = (value) => Math.round(Number(value) * 100);
@@ -81,6 +95,18 @@ export const V5_PRODUCT_PRICING = Object.freeze({
       option("Truckload (~24 tons)", "Truckload (~24 tons)", 4800, "per truckload"),
     ],
   },
+  ...Object.fromEntries(
+    GARDEN_PROMOS.map((promo) => [
+      promo.productId,
+      {
+        name: promo.title,
+        aliases: promo.aliases,
+        options: [
+          option(promo.format, promo.format, promo.salePrice, "per package", { listPrice: promo.listPrice }),
+        ],
+      },
+    ]),
+  ),
 });
 
 const normalizedText = (value) => String(value || "").toLowerCase().replace(/[’]/g, "'").replace(/[^a-z0-9]+/g, " ").trim();
@@ -99,6 +125,15 @@ function matchOption(productId, format) {
   const product = V5_PRODUCT_PRICING[productId];
   if (!product) return null;
   const value = normalizedText(format);
+  const exact = product.options.find((entry) => {
+    const label = normalizedText(entry.label);
+    const key = normalizedText(entry.key);
+    return Boolean(value) && (label === value || key === value);
+  });
+  if (exact) return exact;
+  if (GARDEN_PROMO_IDS.includes(productId)) {
+    return product.options[0] || null;
+  }
   const isPallet = value.includes("pallet");
   const isNinePound = /(?:^| )9 ?lb(?: |$)/.test(value);
   const isTwoCf = value.includes("2cf") || value.includes("2 cf") || value.includes("2 cu ft");

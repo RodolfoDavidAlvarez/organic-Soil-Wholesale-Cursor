@@ -561,6 +561,7 @@ function CouponSuccess({ email, status, customerNumber }: { email: string; statu
       </p>
       {!isRedeemed && <div className="mx-auto mt-6 max-w-md rounded-2xl bg-[#edf3e9] p-5 text-left"><p className="font-bold text-[#183a23]">What to do next</p><p className="mt-1 text-sm leading-6 text-[#5f6961]">Open the email on your phone, then show the private QR to our yard team between August 1 and August 31.</p></div>}
       {!isRedeemed && <div className="mx-auto mt-3 max-w-md rounded-2xl border border-[#d9e1d5] bg-white p-5 text-left"><p className="font-bold text-[#183a23]">Pickup hours</p><p className="mt-1 text-sm leading-6 text-[#5f6961]">{PHOENIX_YARD_HOURS}. {PHOENIX_YARD_BREAK}. Your email also includes the exact entrance pin and yard map.</p></div>}
+      {!isRedeemed && <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#5f6961]">After you pick up the free bag, <a href="/promos" className="font-bold text-[#183a23] underline underline-offset-4">see the garden packages</a>.</p>}
       <p className="mt-5 text-sm font-bold text-[#39463c]">One free 9-lb bag per person/email · Phoenix pickup only</p>
     </div>
   );

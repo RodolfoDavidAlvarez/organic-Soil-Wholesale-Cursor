@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
+import { gardenPromoCartImage } from "@shared/gardenPromos.js";
 import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
@@ -39,6 +40,9 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+  4100: gardenPromoCartImage(4100),
+  4101: gardenPromoCartImage(4101),
+  4102: gardenPromoCartImage(4102),
 };
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
 

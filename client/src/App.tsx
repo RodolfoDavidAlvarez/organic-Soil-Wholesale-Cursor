@@ -65,6 +65,8 @@ const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
+const GardenPromoPage = lazy(() => import("@/pages/GardenPromoPage"));
+const GardenPromosHub = lazy(() => import("@/pages/GardenPromosHub"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -208,6 +210,11 @@ function Router() {
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
         <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
         <Route path="/survey" component={ClientSurvey} />
+        <Route path="/promos" component={GardenPromosHub} />
+        <Route path="/garden-refresh" component={() => <GardenPromoPage slug="garden-refresh" />} />
+        <Route path="/garden-refresh-plus" component={() => <GardenPromoPage slug="garden-refresh-plus" />} />
+        <Route path="/big-garden-setup" component={() => <GardenPromoPage slug="big-garden-setup" />} />
+        <Route path="/garden-setup" component={() => <GardenPromoPage slug="big-garden-setup" />} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
@@ -279,6 +286,12 @@ function App() {
   const isOperationsCalendar = location.startsWith("/operations-calendar");
   const isWormCastingsCampaign = location === "/free-worm-castings";
   const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
+  const isGardenPromo =
+    location === "/promos" ||
+    location === "/garden-refresh" ||
+    location === "/garden-refresh-plus" ||
+    location === "/big-garden-setup" ||
+    location === "/garden-setup";
   const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey;
 
   useEffect(() => {
@@ -326,7 +339,7 @@ function App() {
                     <ScrollToTop />
                     <CallTrackingRouteSync />
                     <Analytics />
-                    {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isGardenPromo && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
                     {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                   </div>

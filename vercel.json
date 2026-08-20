@@ -78,6 +78,36 @@
       "source": "/unsubscribe/1/:token*",
       "destination": "/unsubscribe",
       "permanent": false
+    },
+    {
+      "source": "/garden-setup",
+      "destination": "/big-garden-setup",
+      "permanent": true
+    },
+    {
+      "source": "/offers",
+      "destination": "/promos",
+      "permanent": false
+    },
+    {
+      "source": "/offers/garden-refresh",
+      "destination": "/garden-refresh",
+      "permanent": true
+    },
+    {
+      "source": "/offers/raised-bed-refresh",
+      "destination": "/garden-refresh",
+      "permanent": true
+    },
+    {
+      "source": "/offers/big-garden-setup",
+      "destination": "/big-garden-setup",
+      "permanent": true
+    },
+    {
+      "source": "/offers/garden-bed-builder",
+      "destination": "/big-garden-setup",
+      "permanent": true
     }
   ],
   "rewrites": [

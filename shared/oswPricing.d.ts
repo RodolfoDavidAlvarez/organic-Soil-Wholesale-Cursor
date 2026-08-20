@@ -11,6 +11,12 @@ export type V5CartPricing = {
 };
 
 export const PALLET_VOLUME_DISCOUNT: number;
+export {
+  GARDEN_PROMOS,
+  GARDEN_PROMO_IDS,
+  gardenPromoStripeDescription,
+  gardenPromoYardNote,
+} from "./gardenPromos.js";
 export const V5_PRODUCT_PRICING: Readonly<Record<number, { name: string; aliases: string[]; options: Array<Record<string, unknown>> }>>;
 export function resolveV5ProductId(productId?: number | string | null, productName?: string | null): number | null;
 export function resolveV5CartPricing(item: Record<string, unknown>): V5CartPricing | null;

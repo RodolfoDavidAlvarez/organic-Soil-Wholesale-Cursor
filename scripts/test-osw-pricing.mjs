@@ -7,6 +7,7 @@ import {
   resolveV5CartPricing,
 } from "../shared/oswPricing.js";
 import { applyFullFlatbedProductDiscount } from "../shared/flatbedSpots.js";
+import { GARDEN_PROMOS, gardenPromoStripeDescription, gardenPromoYardNote } from "../shared/gardenPromos.js";
 
 const line = (productId, productName, sizeOption, quantity = 1, price = 0.01) => ({
   productId,
@@ -96,6 +97,26 @@ assert.throws(
   /Unsupported V5 format/,
 );
 
+assert.equal(GARDEN_PROMOS.length, 3);
+const expectedSales = { "garden-refresh": 99, "garden-refresh-plus": 149, "big-garden-setup": 399 };
+for (const promo of GARDEN_PROMOS) {
+  const catalogMath = Number(promo.contents.reduce((sum, item) => sum + item.bags * item.unitPrice, 0).toFixed(2));
+  assert.equal(catalogMath, promo.listPrice, `${promo.slug} catalog math`);
+  assert.equal(promo.salePrice, expectedSales[promo.slug], `${promo.slug} flyer price`);
+  const pricing = resolveV5CartPricing(line(promo.productId, promo.title, "flyer pack", 1, 0.01));
+  assert.ok(pricing, `${promo.slug} resolves`);
+  assert.equal(pricing.unitPrice, promo.salePrice);
+  assert.equal(pricing.listUnitPrice, promo.listPrice);
+  const locked = normalizeV5CheckoutItems([line(promo.productId, promo.title, "scan to order", 2, 0.01)]);
+  assert.equal(locked[0].price, promo.salePrice);
+  assert.match(gardenPromoStripeDescription(promo.productId), new RegExp(String(promo.bagCount)));
+}
+
+assert.match(gardenPromoYardNote([
+  line(4100, "Garden Refresh", "10-Bag Package", 1),
+  line(4102, "Big Garden Setup", "40-Bag Package", 2),
+]), /1 Garden Refresh[\s\S]*2 Big Garden Setup packages/);
+
 const wholesaleSource = readFileSync(new URL("../client/src/pages/Wholesale.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(wholesaleSource, /PlantPal[^\n]*(?:1CF|50\/pallet)/, "PlantPal wholesale request option uses the V5 physical pack");
 assert.match(wholesaleSource, /PlantPal Potting Mix \(1\.5CF, 30\/pallet\)/);
@@ -103,4 +124,4 @@ const workOrderSource = readFileSync(new URL("../client/src/pages/admin/CreateWo
 assert.match(workOrderSource, /code: '1\.5cf'.*unitsPerPallet: 30/);
 assert.match(workOrderSource, /code: '2cf'.*unitsPerPallet: 25/);
 
-console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, and tamper normalization ok");
+console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, garden promos, and tamper normalization ok");

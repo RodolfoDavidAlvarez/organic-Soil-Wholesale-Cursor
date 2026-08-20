@@ -14,6 +14,7 @@ import {
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
+import { gardenPromoCartImage } from "@shared/gardenPromos.js";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
@@ -31,6 +32,9 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+  4100: gardenPromoCartImage(4100),
+  4101: gardenPromoCartImage(4101),
+  4102: gardenPromoCartImage(4102),
 };
 
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
