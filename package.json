@@ -12,7 +12,7 @@
     "start": "NODE_ENV=production node dist/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "vercel-build": "npm install --prefix client && npm run test:security-config && npm run test:signup-alerts && npm run --prefix client build",
+    "vercel-build": "npm install --prefix client && npm run test:security-config && node scripts/check-signup-alerts.mjs && npm run --prefix client build",
     "grok": "node scripts/grok-cli.js",
     "test:phone-links": "node scripts/test-phone-links.mjs",
     "test:security-config": "node scripts/test-security-config.mjs",
@@ -22,7 +22,7 @@
     "test:worm-day3": "node --test test/worm-castings-day3-reminders.test.mjs",
     "test:worm-routing": "node --test test/worm-castings-routing.test.mjs",
     "test:survey": "node --test test/survey-responses.test.mjs",
-    "test:signup-alerts": "node --test test/newsletter-notifications.test.mjs test/workshop-registrations.test.mjs"
+    "test:signup-alerts": "node --test test/newsletter-notifications.test.mjs test/workshop-registrations.test.mjs && node scripts/check-signup-alerts.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
