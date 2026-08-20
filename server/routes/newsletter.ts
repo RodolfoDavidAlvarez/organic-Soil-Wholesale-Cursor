@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { Resend } from "resend";
 import { supabase } from "../supabaseClient";
 import { subscribeNewsletterContact } from "../../shared/newsletterEngagement.js";
-import { getNewsletterAdminRecipients, sendNewsletterAdminNotifications } from "../../shared/newsletterNotifications.js";
+import { getNewsletterAdminRecipients, isGardenClassRegistrationSource, sendNewsletterAdminNotifications } from "../../shared/newsletterNotifications.js";
+import { submitGardenClassRegistration } from "../../shared/workshopRegistrations.js";
 import { isWormCastingsCampaignSource } from "../../shared/wormCastingsCampaign.js";
 import { validateWormCastingsRouting } from "../../shared/wormCastingsRouting.js";
 
@@ -11,12 +13,38 @@ router.post("/subscribe", async (req, res) => {
   const { email, name, phone, customerCategory, consent, website, source, campaign } = req.body || {};
   const normalizedEmail = String(email || "").toLowerCase().trim();
   const normalizedPhone = String(phone || "").trim();
+  const normalizedSource = String(source || "website_newsletter_signup").slice(0, 100);
   const campaignRequested = campaign === "free-worm-castings-2026-08" || isWormCastingsCampaignSource(source);
   const allowedCustomerCategories = new Set(["home-gardener", "farmer", "landscaper", "nursery", "contractor", "municipal-commercial", "other"]);
   let routing = null;
   let normalizedCustomerCategory = String(customerCategory || "").trim();
 
   if (website) return res.json({ success: true });
+  if (isGardenClassRegistrationSource(normalizedSource)) {
+    try {
+      const result = await submitGardenClassRegistration({
+        db: supabase,
+        input: {
+          name,
+          email: normalizedEmail,
+          phone: normalizedPhone,
+          customerCategory,
+          source: normalizedSource,
+          eventUpdatesConsent: true,
+          marketingConsent: Boolean(consent),
+          website,
+        },
+        subscribeNewsletterContact,
+        resend: process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null,
+      });
+      if (!result.ok) return res.status(result.status || 400).json({ error: result.error });
+      if (result.bot) return res.json({ success: true });
+      return res.json({ success: true, message: "You're subscribed." });
+    } catch (error: any) {
+      console.error("[Workshop RSVP] Error:", error?.message || error);
+      return res.status(500).json({ error: "We could not save your RSVP. Please try again." });
+    }
+  }
   if (!consent) return res.status(400).json({ error: "Please confirm that you want to receive emails." });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 254) {
     return res.status(400).json({ error: "Please enter a valid email address." });
