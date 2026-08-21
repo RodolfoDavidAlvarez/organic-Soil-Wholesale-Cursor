@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ArrowRight, CalendarDays, ExternalLink, Gift, ShoppingBag, Sprout } from "lucide-react";
+import { ArrowRight, CalendarDays, ExternalLink, Gift } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
@@ -82,7 +82,6 @@ export default function InstagramLinks() {
             onClick={() => recordClick("organic-soil-wholesale")}
             className="group flex min-h-20 items-center gap-4 rounded-2xl bg-[#dce8d6] px-5 py-4 transition-transform active:scale-[0.99]"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white"><ShoppingBag className="h-5 w-5" /></span>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block font-heading text-lg font-bold text-[#20251f] sm:text-xl">
                 Organic <span className="text-primary">Soil</span>{" "}
@@ -99,8 +98,10 @@ export default function InstagramLinks() {
             onClick={() => recordClick("soil-seed-and-water")}
             className="group flex min-h-20 items-center gap-4 rounded-2xl border border-[#cad2c5] bg-white px-5 py-4 transition-transform active:scale-[0.99]"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f4f0e3]"><Sprout className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block font-bold">Visit SoilSeedAndWater.com</span><span className="mt-0.5 block text-xs text-[#526457]">Our ecommerce retail store</span></span>
+            <span className="min-w-0 flex-1">
+              <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water" className="h-auto w-44 max-w-full object-contain object-left" />
+              <span className="mt-1 block text-xs text-[#526457]">Our ecommerce retail store</span>
+            </span>
             <ExternalLink className="h-5 w-5 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </a>
         </section>
