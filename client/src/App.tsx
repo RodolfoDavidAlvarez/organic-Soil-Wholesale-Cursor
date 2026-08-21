@@ -65,6 +65,7 @@ const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
+const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -165,6 +166,8 @@ function Router() {
   return (
     <Suspense fallback={<div className="flex min-h-[calc(100vh-var(--app-header-height,5rem))] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
+        <Route path="/ig" component={InstagramLinks} />
+        <Route path="/links/instagram" component={InstagramLinks} />
         <Route path="/" component={Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
@@ -279,7 +282,8 @@ function App() {
   const isOperationsCalendar = location.startsWith("/operations-calendar");
   const isWormCastingsCampaign = location === "/free-worm-castings";
   const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey;
+  const isSocialLinks = location === "/ig" || location === "/links/instagram";
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey && !isSocialLinks;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

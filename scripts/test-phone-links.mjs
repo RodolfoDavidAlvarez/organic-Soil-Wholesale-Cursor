@@ -101,6 +101,15 @@ try {
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: 1 });
     for (const route of ["/", "/products", "/free-worm-castings", "/survey", "/checkout", "/order"]) {
       await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle2" });
+      if (route === "/free-worm-castings") {
+        await page.evaluate(async () => {
+          for (let y = 0; y <= document.body.scrollHeight; y += 400) {
+            window.scrollTo(0, y);
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            if (document.querySelector('a[data-official-support-phone="true"]')) break;
+          }
+        });
+      }
       const pageState = await page.evaluate(() => ({
         text: document.body.innerText,
         official: [...document.querySelectorAll('a[data-official-support-phone="true"]')].map((link) => ({
@@ -109,6 +118,9 @@ try {
         })),
       }));
       assert.doesNotMatch(pageState.text, /\(602\) 637-0032/, `${viewport.name} ${route}: retired number rendered`);
+      if (route === "/free-worm-castings") {
+        assert.ok(pageState.official.length > 0, `${viewport.name} ${route}: campaign support phone must use the official-number lock`);
+      }
       for (const link of pageState.official) {
         assert.deepEqual(link, {
           href: "tel:+16232633386",
