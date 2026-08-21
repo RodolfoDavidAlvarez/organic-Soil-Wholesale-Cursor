@@ -8,7 +8,7 @@ import {
 export const FALL_GARDEN_WORKSHOP = Object.freeze({
   key: 'fall-garden-workshop-2026-08-22',
   name: 'The Garden Reset',
-  startsAt: '2026-08-22T10:00:00-07:00',
+  startsAt: '2026-08-22T08:00:00-07:00',
 });
 
 const CUSTOMER_TYPES = new Set([

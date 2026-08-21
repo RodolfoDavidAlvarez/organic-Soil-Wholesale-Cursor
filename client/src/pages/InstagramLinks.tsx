@@ -72,7 +72,7 @@ export default function InstagramLinks() {
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#8b6940]"><CalendarDays className="h-4 w-4" /> Free garden class</span>
               <span className="mt-1 block font-heading text-xl font-bold leading-tight sm:text-2xl">Register for The Garden Reset</span>
-              <span className="mt-2 block text-sm font-semibold text-[#526457]">Saturday · 10:00–11:30 AM</span>
+              <span className="mt-2 block text-sm font-semibold text-[#526457]">Saturday · 8:00–9:30 AM · New time</span>
             </span>
             <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
           </a>

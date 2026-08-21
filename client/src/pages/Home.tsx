@@ -350,8 +350,8 @@ const Home = () => {
                 </div>
                 <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
                   <Clock3 className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">10:00–11:30 AM</p>
-                  <p className="mt-1 text-xs text-white/65">Arrive early to check in</p>
+                  <p className="mt-3 font-bold">8:00–9:30 AM</p>
+                  <p className="mt-1 text-xs text-white/65">New heat-safety time</p>
                 </div>
                 <div className="col-span-2 rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 sm:col-span-1">
                   <Sprout className="h-5 w-5 text-[#d7b77d]" />
