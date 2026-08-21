@@ -80,7 +80,8 @@ export default function InstagramLinks() {
           <a
             href={links.organicSoil}
             onClick={() => recordClick("organic-soil-wholesale")}
-            className="group flex min-h-20 items-center gap-4 rounded-2xl bg-[#dce8d6] px-5 py-4 transition-transform active:scale-[0.99]"
+            aria-label="Shop Organic Soil Wholesale for local soil sales"
+            className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#9fbb93] bg-[#dce8d6] px-5 py-4 shadow-[0_8px_22px_rgba(19,61,42,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(19,61,42,0.16)] active:scale-[0.99]"
           >
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block font-heading text-lg font-bold text-[#20251f] sm:text-xl">
@@ -88,21 +89,22 @@ export default function InstagramLinks() {
                 <span className="font-display italic text-[#8f7000]">Wholesale</span>
               </span>
               <span className="mt-0.5 block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#6b746c]">by Soil Seed &amp; Water</span>
-              <span className="mt-1.5 block text-xs text-[#526457]">Local soil sales</span>
+              <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#133d2a] shadow-sm">Local soil sales</span>
             </span>
-            <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#133d2a] text-white shadow-sm"><ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" /></span>
           </a>
 
           <a
             href={links.soilSeedWater}
             onClick={() => recordClick("soil-seed-and-water")}
-            className="group flex min-h-20 items-center gap-4 rounded-2xl border border-[#cad2c5] bg-white px-5 py-4 transition-transform active:scale-[0.99]"
+            aria-label="Visit the Soil Seed and Water ecommerce retail store"
+            className="group flex min-h-24 items-center gap-4 rounded-2xl border-2 border-[#d6b470] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(87,62,29,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(87,62,29,0.16)] active:scale-[0.99]"
           >
             <span className="min-w-0 flex-1">
               <img src="/images/soil-seed-and-water-logo.png" alt="Soil Seed and Water" className="h-auto w-44 max-w-full object-contain object-left" />
-              <span className="mt-1 block text-xs text-[#526457]">Our ecommerce retail store</span>
+              <span className="mt-2 inline-flex rounded-full bg-[#f4e6c6] px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-[#6d4c25]">Ecommerce retail store</span>
             </span>
-            <ExternalLink className="h-5 w-5 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8b6940] text-white shadow-sm"><ExternalLink className="h-5 w-5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
           </a>
         </section>
 
