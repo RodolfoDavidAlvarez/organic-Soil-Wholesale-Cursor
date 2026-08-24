@@ -167,6 +167,12 @@ test("source stays on the osw-survey namespace", () => {
   assert.equal(normalizeSurveyResponse({ source: "gate-sign" }).source, "osw-survey:gate-sign");
 });
 
+test("garden class survey keeps source garden-class-2026-08 and does not prefix osw-survey", () => {
+  assert.equal(normalizeSurveyResponse({ source: "garden-class-2026-08" }).source, "garden-class-2026-08");
+  assert.equal(normalizeSurveyResponse({ source: "garden-class" }).source, "garden-class-2026-08");
+  assert.equal(normalizeSurveyResponse({ source: "osw-survey:garden-class-2026-08" }).source, "garden-class-2026-08");
+});
+
 test("inserts a row with a unique coupon and allows repeat answers without a second code", async () => {
   const db = createSurveyDb();
   const first = validateSurveyResponse(validAnswers, { userAgent: "SurveyTest/1.0" });
@@ -367,4 +373,95 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(page, /SSW30-[A-Z0-9]{8}/);
   assert.doesNotMatch(route, /resend/i);
   assert.doesNotMatch(survey, /resend/i);
+});
+
+const classAnswers = {
+  firstName: "Rodo",
+  email: "rodo@example.com",
+  source: "garden-class-2026-08",
+  visitFeedback: "The fan helped.",
+  whatFeltEasy: "great",
+  whatFeltConfusing: "yes",
+  whatToAddNext: "loved-it",
+  wouldComeBack: "yes",
+};
+
+test("garden class survey requires chips, not a yard visit writeup", () => {
+  const missingChip = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    visitFeedback: "The fan helped.",
+  });
+  assert.equal(missingChip.ok, false);
+
+  const ok = validateSurveyResponse(classAnswers);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.bot, false);
+  assert.equal(ok.response.source, "garden-class-2026-08");
+  assert.equal(ok.response.whatFeltEasy, "great");
+  assert.equal(ok.response.whatFeltConfusing, "yes");
+  assert.equal(ok.response.whatToAddNext, "loved-it");
+  assert.equal(ok.response.wouldComeBack, "yes");
+  assert.equal(ok.response.visitFeedback, "The fan helped.");
+});
+
+test("garden class survey comment can be blank", () => {
+  const ok = validateSurveyResponse({ ...classAnswers, visitFeedback: "" });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.response.visitFeedback, "");
+});
+
+test("garden class survey writes to sp_survey_responses with no coupon", async () => {
+  const db = createSurveyDb();
+  const validation = validateSurveyResponse(classAnswers);
+  let couponCalls = 0;
+  const saved = await saveSurveyResponse({
+    db,
+    response: validation.response,
+    createCouponCode() {
+      couponCalls += 1;
+      return "SSW30-SHOULDNT";
+    },
+  });
+  assert.equal(couponCalls, 0);
+  assert.equal(saved.coupon, null);
+  assert.equal(db.rows.length, 1);
+  assert.equal(db.rows[0].source, "garden-class-2026-08");
+  assert.equal(db.rows[0].visit_feedback, "The fan helped.");
+  assert.equal(db.rows[0].what_felt_easy, "great");
+  assert.equal(db.rows[0].what_felt_confusing, "yes");
+  assert.equal(db.rows[0].what_to_add_next, "loved-it");
+  assert.equal(db.rows[0].would_come_back, "yes");
+  assert.equal(db.rows[0].coupon_code, null);
+});
+
+test("garden class survey page is not the yard apology coupon form", async () => {
+  const page = await readFile(new URL("../client/src/pages/GardenClassSurvey.tsx", import.meta.url), "utf8");
+  const entry = await readFile(new URL("../client/src/pages/SurveyEntry.tsx", import.meta.url), "utf8");
+  const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
+  const sources = await readFile(new URL("../shared/surveySources.js", import.meta.url), "utf8");
+  const contact = await readFile(new URL("../client/src/config/contact.ts", import.meta.url), "utf8");
+  const ig = await readFile(new URL("../client/src/pages/InstagramLinks.tsx", import.meta.url), "utf8");
+  assert.match(page, /How did Saturday feel\?/);
+  assert.match(page, /Was moving to 8am for the heat the right call\?/);
+  assert.match(page, /Anything else you want us to hear\?/);
+  assert.match(page, /GARDEN_CLASS_SURVEY_SOURCE/);
+  assert.match(sources, /garden-class-2026-08/);
+  assert.match(page, /PHOENIX_YARD_ADDRESS/);
+  assert.match(page, /CUSTOMER_SUPPORT_PHONE_DISPLAY/);
+  assert.match(page, /Tue-Sat, 8 AM-4 PM, closed 1-2 PM/);
+  assert.match(contact, /1634 N 19th Ave/);
+  assert.match(contact, /\(623\) 263-3386/);
+  assert.doesNotMatch(page, /30%/);
+  assert.doesNotMatch(page, /SSW30/);
+  assert.doesNotMatch(page, /Finish this and we'll give you/);
+  assert.doesNotMatch(page, /2 minutes|takes a minute|under a minute/i);
+  assert.doesNotMatch(page, /We owe you an apology/);
+  assert.doesNotMatch(page, /How did the yard feel\?/);
+  assert.match(entry, /isGardenClassSurveySource/);
+  assert.match(app, /path="\/survey\/garden-class"/);
+  assert.match(ig, /Tell me about the next class/);
+  assert.doesNotMatch(ig, /Register for The Garden Reset/);
+  assert.doesNotMatch(ig, /Aug 22/);
 });

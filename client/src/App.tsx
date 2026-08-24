@@ -62,7 +62,7 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
-const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
+const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
 
@@ -210,7 +210,8 @@ function Router() {
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
         <Route path="/fall-garden-workshop" component={Classes} />
-        <Route path="/survey" component={ClientSurvey} />
+        <Route path="/survey/garden-class" component={SurveyEntry} />
+        <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />

@@ -99,7 +99,7 @@ try {
   ];
   for (const viewport of viewports) {
     await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: 1 });
-    for (const route of ["/", "/products", "/free-worm-castings", "/survey", "/checkout", "/order"]) {
+    for (const route of ["/", "/products", "/free-worm-castings", "/survey", "/survey/garden-class", "/checkout", "/order"]) {
       await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle2" });
       if (route === "/free-worm-castings") {
         await page.evaluate(async () => {

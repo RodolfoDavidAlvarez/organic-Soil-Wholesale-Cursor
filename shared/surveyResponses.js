@@ -1,6 +1,18 @@
 import { randomBytes } from 'node:crypto';
+import {
+  GARDEN_CLASS_SURVEY_SOURCE,
+  SURVEY_SOURCE,
+  isGardenClassSurveySource,
+  normalizeSurveySource,
+} from './surveySources.js';
 
-export const SURVEY_SOURCE = 'osw-survey';
+export {
+  GARDEN_CLASS_SURVEY_SOURCE,
+  SURVEY_SOURCE,
+  isGardenClassSurveySource,
+  normalizeSurveySource,
+};
+
 export const SURVEY_COUPON_LABEL = 'SSW survey thank-you';
 export const SURVEY_COUPON_OFFER = '30% off one item, one time, Phoenix yard pickup.';
 export const SURVEY_COUPON_RESTRICTIONS =
@@ -11,6 +23,10 @@ export const SURVEY_COUPON_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const SURVEY_COUPON_CODE_RE = /^SSW30-[A-HJ-NP-Z2-9]{8}$/;
 
 const YES_NO = new Set(['yes', 'no', 'not-sure']);
+export const GARDEN_CLASS_SATURDAY_FEEL = new Set(['great', 'okay', 'rough']);
+export const GARDEN_CLASS_HEAT_CALL = new Set(['yes', 'not-sure', 'no']);
+export const GARDEN_CLASS_TEACHING = new Set(['loved-it', 'fine', 'lost-me']);
+export const GARDEN_CLASS_COME_AGAIN = new Set(['yes', 'maybe', 'no']);
 const COUPON_SELECT =
   'id, first_name, email, coupon_code, coupon_issued_at, coupon_expires_at, coupon_redeemed_at';
 
@@ -21,7 +37,6 @@ function trimText(value, max) {
 export function normalizeSurveyResponse(input = {}, extras = {}) {
   const wouldComeBack = String(input.wouldComeBack || input.would_come_back || '').trim().toLowerCase();
   const wouldSendFriend = String(input.wouldSendFriend || input.would_send_friend || '').trim().toLowerCase();
-  const source = trimText(input.source, 120) || SURVEY_SOURCE;
 
   return {
     firstName: trimText(input.firstName || input.first_name || input.name, 80),
@@ -31,17 +46,17 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     whatFeltEasy: trimText(input.whatFeltEasy || input.what_felt_easy || input.q2, 500),
     whatFeltConfusing: trimText(input.whatFeltConfusing || input.what_felt_confusing || input.q3, 500),
     whatToAddNext: trimText(input.whatToAddNext || input.what_to_add_next || input.q4, 500),
-    wouldComeBack: YES_NO.has(wouldComeBack) ? wouldComeBack : trimText(wouldComeBack, 80),
+    wouldComeBack: YES_NO.has(wouldComeBack) || GARDEN_CLASS_COME_AGAIN.has(wouldComeBack)
+      ? wouldComeBack
+      : trimText(wouldComeBack, 80),
     wouldSendFriend: YES_NO.has(wouldSendFriend) ? wouldSendFriend : trimText(wouldSendFriend, 80),
-    source: source.startsWith(SURVEY_SOURCE) ? source : `${SURVEY_SOURCE}:${source}`.slice(0, 120),
+    source: normalizeSurveySource(input.source),
     website: String(input.website || '').trim(),
     userAgent: trimText(extras.userAgent || input.userAgent || input.user_agent, 400),
   };
 }
 
-export function validateSurveyResponse(input = {}, extras = {}) {
-  const response = normalizeSurveyResponse(input, extras);
-  if (response.website) return { ok: true, bot: true, response };
+function validateContactFields(response) {
   if (response.firstName.length < 1) return { ok: false, error: 'Please enter your first name.' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(response.email)) {
     return { ok: false, error: 'Please enter a valid email address.' };
@@ -49,6 +64,35 @@ export function validateSurveyResponse(input = {}, extras = {}) {
   if (response.phone && response.phone.replace(/\D/g, '').length < 10) {
     return { ok: false, error: 'Please enter a valid phone number, or leave it blank.' };
   }
+  return null;
+}
+
+function validateGardenClassSurvey(response) {
+  const contactError = validateContactFields(response);
+  if (contactError) return contactError;
+  if (!GARDEN_CLASS_SATURDAY_FEEL.has(response.whatFeltEasy)) {
+    return { ok: false, error: 'Please tell us how Saturday felt.' };
+  }
+  if (!GARDEN_CLASS_HEAT_CALL.has(response.whatFeltConfusing)) {
+    return { ok: false, error: 'Please tell us if 8am was the right call.' };
+  }
+  if (!GARDEN_CLASS_TEACHING.has(response.whatToAddNext)) {
+    return { ok: false, error: 'Please tell us how the teaching felt.' };
+  }
+  if (!GARDEN_CLASS_COME_AGAIN.has(response.wouldComeBack)) {
+    return { ok: false, error: 'Please tell us if you would come to another class.' };
+  }
+  return { ok: true, bot: false, response };
+}
+
+export function validateSurveyResponse(input = {}, extras = {}) {
+  const response = normalizeSurveyResponse(input, extras);
+  if (response.website) return { ok: true, bot: true, response };
+  if (isGardenClassSurveySource(response.source)) {
+    return validateGardenClassSurvey(response);
+  }
+  const contactError = validateContactFields(response);
+  if (contactError) return contactError;
   if (response.visitFeedback.length < 2) {
     return { ok: false, error: 'Please tell us how your visit or order went.' };
   }
@@ -190,6 +234,13 @@ export async function saveSurveyResponse({
   createCouponCode = generateSurveyCouponCode,
 } = {}) {
   const customerId = await findCustomerId(db, response.email);
+
+  if (isGardenClassSurveySource(response.source)) {
+    const { saved, error } = await insertSurveyRow(db, surveyRow(response, customerId));
+    if (error) throw error;
+    return { response: saved, coupon: null };
+  }
+
   const existingCoupon = await findSurveyCouponByEmail(db, response.email);
 
   if (existingCoupon?.coupon_code) {
