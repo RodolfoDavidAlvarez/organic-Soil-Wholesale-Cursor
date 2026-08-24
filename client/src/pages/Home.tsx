@@ -328,35 +328,35 @@ const Home = () => {
         <MobileResultsProof />
       </div>
 
-      <section aria-labelledby="garden-reset-heading" className="border-y border-[#d9dfd4] bg-[#f4f0e5] px-4 py-9 sm:py-12">
+      <section aria-labelledby="garden-classes-heading" className="border-y border-[#d9dfd4] bg-[#f4f0e5] px-4 py-9 sm:py-12">
         <div className="container mx-auto overflow-hidden rounded-[1.75rem] bg-[#264027] text-white shadow-xl ring-1 ring-[#264027]/10">
           <div className="grid lg:grid-cols-[1.18fr_0.82fr]">
             <div className="p-6 sm:p-9 lg:p-11">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#d7b77d] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.16em] text-[#263527]">
-                <CalendarDays className="h-4 w-4" /> Free class this Saturday
+                <CalendarDays className="h-4 w-4" /> Free Garden Classes · Phoenix
               </div>
-              <h2 id="garden-reset-heading" className="mt-5 max-w-2xl font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
-                Get your Arizona fall garden ready at The Garden Reset.
+              <h2 id="garden-classes-heading" className="mt-5 max-w-2xl font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
+                Be first to hear about the next Garden Class.
               </h2>
               <p className="mt-4 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
-                Join us at the Phoenix yard for a welcoming garden lesson, hands-on soil work, and time to ask your questions. Chairs and water will be available.
+                Our first Garden Reset brought Phoenix gardeners together for practical soil and growing lessons. Join the alert list for future dates—and tell us which topics you want next.
               </p>
 
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
                   <CalendarDays className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">August 22</p>
-                  <p className="mt-1 text-xs text-white/65">Saturday</p>
+                  <p className="mt-3 font-bold">New dates</p>
+                  <p className="mt-1 text-xs text-white/65">Get alerted first</p>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
                   <Clock3 className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">8:00–9:30 AM</p>
-                  <p className="mt-1 text-xs text-white/65">New heat-safety time</p>
+                  <p className="mt-3 font-bold">Your topics</p>
+                  <p className="mt-1 text-xs text-white/65">Help shape the schedule</p>
                 </div>
                 <div className="col-span-2 rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 sm:col-span-1">
                   <Sprout className="h-5 w-5 text-[#d7b77d]" />
                   <p className="mt-3 font-bold">Hands-on</p>
-                  <p className="mt-1 text-xs text-white/65">Learn, practice, ask</p>
+                  <p className="mt-1 text-xs text-white/65">Arizona-specific lessons</p>
                 </div>
               </div>
 
@@ -364,23 +364,23 @@ const Home = () => {
                 size="lg"
                 onClick={() => {
                   trackEvent("Homepage Garden Class CTA Clicked", { source: "homepage-class-card" });
-                  navigate("/fall-garden-workshop?source=homepage-class-card");
+                  navigate("/classes?source=homepage-class-card");
                 }}
                 className="mt-7 h-14 w-full bg-[#d7b77d] px-7 text-base font-extrabold text-[#263527] shadow-lg hover:bg-[#e2c794] sm:w-auto"
               >
-                Reserve My Free Spot <ArrowRight className="ml-2 h-5 w-5" />
+                Alert Me About New Classes <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <p className="mt-3 text-sm text-white/65">1634 N 19th Ave, Phoenix · Space is limited</p>
+              <p className="mt-3 text-sm text-white/65">Free alerts · Choose your interests · Unsubscribe anytime</p>
             </div>
 
             <div className="border-t border-white/10 bg-[#1d3422] p-6 sm:p-9 lg:border-l lg:border-t-0 lg:p-11">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d7b77d]">What to expect</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d7b77d]">Topics you can request</p>
               <ol className="mt-6 space-y-5">
                 {[
-                  ["01", "Meet your neighbors", "Check in, grab a name tag, and share what you are growing."],
-                  ["02", "Learn the fall basics", "Understand Arizona planting, soil amendments, mulch, and watering."],
-                  ["03", "Work in the garden", "Put the lesson into practice with guided, hands-on soil work."],
-                  ["04", "Leave with a plan", "Ask questions and take home a Fall Garden Planning Guide."],
+                  ["01", "Soil and compost", "Reset beds, use amendments, and build living soil."],
+                  ["02", "Arizona planting", "Choose seasonal crops, seeds, and transplants."],
+                  ["03", "Water and pests", "Read moisture, protect roots, and manage pests naturally."],
+                  ["04", "Containers and trees", "Grow in small spaces or care for perennial gardens."],
                 ].map(([number, title, detail]) => (
                   <li key={number} className="flex gap-4">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#d7b77d] text-xs font-black text-[#263527]">{number}</span>

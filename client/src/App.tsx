@@ -62,7 +62,6 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
-const FallGardenWorkshop = lazy(() => import("@/pages/FallGardenWorkshop"));
 const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
@@ -195,6 +194,7 @@ function Router() {
         <Route path="/check-in" component={PayAndPickup} />
         <Route path="/operations-calendar" component={PublicOperationsCalendar} />
         <Route path="/classes" component={Classes} />
+        <Route path="/garden-classes" component={Classes} />
         <Route path="/trivia" component={TriviaGame} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/drive-thru/admin" component={DriveThruAdmin} />
@@ -209,7 +209,7 @@ function Router() {
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
-        <Route path="/fall-garden-workshop" component={() => <FallGardenWorkshop source={`fall-garden-workshop-2026-08-${new URLSearchParams(window.location.search).get("source") || "website"}`} />} />
+        <Route path="/fall-garden-workshop" component={Classes} />
         <Route path="/survey" component={ClientSurvey} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />

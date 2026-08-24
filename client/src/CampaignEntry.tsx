@@ -29,7 +29,7 @@ function CampaignNavigation() {
         <nav aria-label="Organic Soil Wholesale navigation" className="hidden items-center gap-5 sm:flex">
           <a href="/" className="min-h-11 content-center font-semibold text-[#263527] hover:text-[#264027]">Home</a>
           <a href="/products" className="min-h-11 content-center font-semibold text-[#263527] hover:text-[#264027]">Products</a>
-          <a href="/fall-garden-workshop?source=worm-castings-nav" className="min-h-11 content-center rounded-xl bg-[#264027] px-4 text-sm font-bold text-white hover:bg-[#17381f]">Garden Class</a>
+          <a href="/classes?source=worm-castings-nav" className="min-h-11 content-center rounded-xl bg-[#264027] px-4 text-sm font-bold text-white hover:bg-[#17381f]">Garden Classes</a>
         </nav>
 
         <a href="/products" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#264027] px-4 text-sm font-bold text-white sm:hidden">
