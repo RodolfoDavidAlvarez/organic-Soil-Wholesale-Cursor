@@ -12,7 +12,7 @@ import {
 } from "@/config/contact";
 import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
-import { GARDEN_CLASS_SURVEY_SOURCE } from "@shared/surveySources.js";
+import { GARDEN_CLASS_EVENT_KEY, GARDEN_CLASS_SURVEY_SOURCE } from "@shared/surveySources.js";
 
 const FIELD_CLASS = "h-12 min-h-12 w-full rounded-xl border-[#d7dfd0] bg-white text-base";
 const TEXTAREA_CLASS = "min-h-[120px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6";
@@ -68,13 +68,14 @@ export default function GardenClassSurvey() {
         body: JSON.stringify({
           firstName,
           email,
-          visitFeedback: notes,
-          whatFeltEasy: saturdayFeel,
-          whatFeltConfusing: heatCall,
-          whatToAddNext: teaching,
-          wouldComeBack: comeAgain,
+          notes,
+          saturdayFeel,
+          heatCall,
+          teaching,
+          comeAgain,
           website,
           source: GARDEN_CLASS_SURVEY_SOURCE,
+          eventKey: GARDEN_CLASS_EVENT_KEY,
         }),
       });
       const body = await response.json();

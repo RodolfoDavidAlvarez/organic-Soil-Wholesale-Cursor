@@ -77,6 +77,7 @@ const AdminCustomers = lazy(() => import("@/pages/admin/Customers"));
 const AdminInventory = lazy(() => import("@/pages/admin/Inventory"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
+const AdminSurveys = lazy(() => import("@/pages/admin/Surveys"));
 const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"));
 const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
 const AdminOperations = lazy(() => import("@/pages/admin/Operations"));
@@ -237,6 +238,7 @@ function Router() {
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/notifications" component={AdminNotifications} />
+        <Route path="/admin/surveys" component={AdminSurveys} />
         <Route path="/admin/representatives" component={AdminRepresentatives} />
         <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
         <Route path="/admin/operations/bols/new" component={AdminCreateBOL} />

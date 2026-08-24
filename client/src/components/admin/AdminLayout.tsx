@@ -1,6 +1,7 @@
 import React, { useState, ReactNode } from "react";
 import { useLocation } from "wouter";
 import {
+  ClipboardList,
   LayoutDashboard,
   Package,
   ShoppingCart,
@@ -63,6 +64,11 @@ const navItems: NavItem[] = [
     label: "Notifications",
     icon: <Bell className="w-5 h-5" />,
     href: "/admin/notifications",
+  },
+  {
+    label: "Surveys",
+    icon: <ClipboardList className="w-5 h-5" />,
+    href: "/admin/surveys",
   },
   {
     label: "Rep. Contact Cards",
