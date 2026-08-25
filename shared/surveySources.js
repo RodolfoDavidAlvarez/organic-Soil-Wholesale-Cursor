@@ -34,3 +34,22 @@ export function normalizeSurveyKindFilter(value) {
   if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(kind) && kind.length <= 40) return kind;
   return 'all';
 }
+
+export function readGardenClassSurveyPrefill(search) {
+  const raw = String(search || '');
+  const params = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw);
+  const pick = (...keys) => {
+    for (const key of keys) {
+      const value = params.get(key);
+      if (value != null && String(value).trim()) return String(value).trim();
+    }
+    return '';
+  };
+
+  const email = pick('email');
+  const lastName = pick('last_name', 'lastName');
+  const firstFromKey = pick('first_name', 'firstName');
+  const fullName = pick('name');
+  const firstName = firstFromKey || (fullName ? fullName.split(/\s+/)[0] || '' : '');
+  return { firstName, email, lastName };
+}

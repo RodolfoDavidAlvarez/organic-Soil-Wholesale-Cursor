@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { CheckCircle2, Loader2, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,29 +12,15 @@ import {
 } from "@/config/contact";
 import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
-import { GARDEN_CLASS_EVENT_KEY, GARDEN_CLASS_SURVEY_SOURCE } from "@shared/surveySources.js";
+import {
+  GARDEN_CLASS_EVENT_KEY,
+  GARDEN_CLASS_SURVEY_SOURCE,
+  readGardenClassSurveyPrefill,
+} from "@shared/surveySources.js";
 
 const FIELD_CLASS = "h-12 min-h-12 w-full rounded-xl border-[#d7dfd0] bg-white text-base";
 const TEXTAREA_CLASS = "min-h-[120px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6";
 const YARD_HOURS = "Tue-Sat, 8 AM-4 PM, closed 1-2 PM";
-
-const SATURDAY_OPTIONS = [
-  ["great", "Great"],
-  ["okay", "Okay"],
-  ["rough", "Rough"],
-] as const;
-
-const HEAT_OPTIONS = [
-  ["yes", "Yes"],
-  ["not-sure", "Not sure"],
-  ["no", "No"],
-] as const;
-
-const TEACHING_OPTIONS = [
-  ["loved-it", "Loved it"],
-  ["fine", "Fine"],
-  ["lost-me", "Lost me"],
-] as const;
 
 const COME_AGAIN_OPTIONS = [
   ["yes", "Yes"],
@@ -42,13 +28,19 @@ const COME_AGAIN_OPTIONS = [
   ["no", "No"],
 ] as const;
 
+function scoreWord(n: number, low: string, high: string) {
+  if (n <= 3) return low;
+  if (n >= 8) return high;
+  return "in the middle";
+}
+
 export default function GardenClassSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
-  const [saturdayFeel, setSaturdayFeel] = useState("");
-  const [heatCall, setHeatCall] = useState("");
-  const [teaching, setTeaching] = useState("");
+  const [saturday, setSaturday] = useState<number | null>(null);
+  const [heat, setHeat] = useState<number | null>(null);
+  const [teaching, setTeaching] = useState<number | null>(null);
   const [comeAgain, setComeAgain] = useState("");
   const [notes, setNotes] = useState("");
   const [website, setWebsite] = useState("");
@@ -56,8 +48,19 @@ export default function GardenClassSurvey() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const prefill = readGardenClassSurveyPrefill(window.location.search);
+    if (prefill.firstName) setFirstName((current) => current || prefill.firstName);
+    if (prefill.email) setEmail((current) => current || prefill.email);
+  }, []);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (saturday == null || heat == null || teaching == null || !comeAgain) {
+      setError("Please slide each score and tell us if you would come again.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -69,13 +72,15 @@ export default function GardenClassSurvey() {
           firstName,
           email,
           notes,
-          saturdayFeel,
-          heatCall,
+          saturday,
+          heat,
           teaching,
           comeAgain,
+          saturdayFeel: saturday,
           website,
           source: GARDEN_CLASS_SURVEY_SOURCE,
           eventKey: GARDEN_CLASS_EVENT_KEY,
+          scores: { saturday, heat, teaching, comeAgain },
         }),
       });
       const body = await response.json();
@@ -100,7 +105,7 @@ export default function GardenClassSurvey() {
         <link rel="canonical" href="https://www.organicsoilwholesale.com/survey/garden-class" />
       </Helmet>
 
-      <section className="bg-[#264027] px-5 py-10 text-white">
+      <section className="bg-[#264027] px-5 py-11 text-white">
         <div className="mx-auto max-w-md">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#d7b77d]">The Garden Reset</p>
           <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">How did Saturday feel?</h1>
@@ -122,30 +127,12 @@ export default function GardenClassSurvey() {
             </div>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-6">
+          <form onSubmit={submit} className="space-y-7">
             <p className="text-base leading-7 text-neutral-700">
-              Tap what is true. Add a note if you want. That is enough.
+              Name and email first so we know who wrote this. Change them if they are not you. Then slide what is true.
             </p>
 
-            <ChipRow legend="How did Saturday feel?" value={saturdayFeel} onChange={setSaturdayFeel} options={SATURDAY_OPTIONS} />
-            <ChipRow legend="Was moving to 8am for the heat the right call?" value={heatCall} onChange={setHeatCall} options={HEAT_OPTIONS} />
-            <ChipRow legend="Teaching?" value={teaching} onChange={setTeaching} options={TEACHING_OPTIONS} />
-            <ChipRow legend="Would you come to another class?" value={comeAgain} onChange={setComeAgain} options={COME_AGAIN_OPTIONS} />
-
-            <div>
-              <label htmlFor="class-survey-notes" className="mb-2 block text-sm font-semibold text-[#264027]">
-                Anything else you want us to hear?
-              </label>
-              <Textarea
-                id="class-survey-notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                maxLength={500}
-                className={TEXTAREA_CLASS}
-              />
-            </div>
-
-            <div className="grid gap-4">
+            <div className="grid gap-4 rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
               <div>
                 <label htmlFor="class-survey-first-name" className="mb-2 block text-sm font-semibold text-[#264027]">
                   First name
@@ -154,6 +141,7 @@ export default function GardenClassSurvey() {
                   id="class-survey-first-name"
                   value={firstName}
                   onChange={(event) => setFirstName(event.target.value)}
+                  onFocus={(event) => event.currentTarget.select()}
                   autoComplete="given-name"
                   required
                   maxLength={80}
@@ -169,6 +157,7 @@ export default function GardenClassSurvey() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  onFocus={(event) => event.currentTarget.select()}
                   autoComplete="email"
                   inputMode="email"
                   required
@@ -176,6 +165,46 @@ export default function GardenClassSurvey() {
                   className={FIELD_CLASS}
                 />
               </div>
+            </div>
+
+            <ScoreSlider
+              id="class-survey-saturday"
+              legend="How did Saturday feel?"
+              lowLabel="rough"
+              highLabel="great"
+              value={saturday}
+              onChange={setSaturday}
+            />
+            <ScoreSlider
+              id="class-survey-heat"
+              legend="Was it too hot?"
+              lowLabel="way too hot"
+              highLabel="comfortable"
+              value={heat}
+              onChange={setHeat}
+            />
+            <ScoreSlider
+              id="class-survey-teaching"
+              legend="How was the teaching?"
+              lowLabel="lost me"
+              highLabel="loved it"
+              value={teaching}
+              onChange={setTeaching}
+            />
+
+            <ChipRow legend="Would you come to another class?" value={comeAgain} onChange={setComeAgain} options={COME_AGAIN_OPTIONS} />
+
+            <div>
+              <label htmlFor="class-survey-notes" className="mb-2 block text-sm font-semibold text-[#264027]">
+                Anything else you want us to hear?
+              </label>
+              <Textarea
+                id="class-survey-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                maxLength={500}
+                className={TEXTAREA_CLASS}
+              />
             </div>
 
             <div className="hidden" aria-hidden="true">
@@ -252,6 +281,93 @@ function YardInvite() {
         </a>
       </p>
     </div>
+  );
+}
+
+function ScoreSlider({
+  id,
+  legend,
+  lowLabel,
+  highLabel,
+  value,
+  onChange,
+}: {
+  id: string;
+  legend: string;
+  lowLabel: string;
+  highLabel: string;
+  value: number | null;
+  onChange: (next: number) => void;
+}) {
+  const visual = value ?? 5;
+  const selected = value != null;
+  const pct = ((visual - 1) / 9) * 100;
+  const label = selected ? scoreWord(value, lowLabel, highLabel) : "Slide to choose";
+
+  return (
+    <fieldset className="rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
+      <legend className="float-left mb-4 w-full px-0 text-base font-semibold text-[#264027]">{legend}</legend>
+      <div className="clear-both text-center">
+        <p
+          className={`font-heading text-5xl font-bold tabular-nums leading-none ${
+            selected ? "text-[#264027]" : "text-[#264027]/20"
+          }`}
+        >
+          {selected ? value : visual}
+        </p>
+        <p className={`mt-2 min-h-5 text-sm font-semibold ${selected ? "text-[#b38a58]" : "text-neutral-400"}`}>
+          {label}
+        </p>
+      </div>
+      <div className="relative mt-6 h-11">
+        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
+        <div
+          className="pointer-events-none absolute left-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-[#264027]"
+          style={{ width: selected ? `${pct}%` : 0 }}
+        />
+        <input
+          id={id}
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={visual}
+          aria-valuemin={1}
+          aria-valuemax={10}
+          aria-valuenow={selected ? value : undefined}
+          aria-valuetext={selected ? `${value} of 10, ${label}` : "Not set yet"}
+          aria-label={legend}
+          onChange={(event) => onChange(Number(event.target.value))}
+          onPointerUp={() => {
+            if (value == null) onChange(visual);
+          }}
+          className={`garden-score-slider absolute inset-0 w-full ${selected ? "is-set" : ""}`}
+        />
+      </div>
+      <div className="mt-3 flex justify-between gap-3 text-xs font-semibold leading-4 text-neutral-600">
+        <span>1 {lowLabel}</span>
+        <span className="text-right">10 {highLabel}</span>
+      </div>
+      <div className="mt-1 flex justify-between">
+        {Array.from({ length: 10 }, (_, index) => {
+          const n = index + 1;
+          const active = selected && value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              aria-label={`${n}, ${legend}`}
+              className={`min-h-11 min-w-[1.35rem] text-[11px] font-semibold tabular-nums ${
+                active ? "text-[#264027]" : "text-neutral-400"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
