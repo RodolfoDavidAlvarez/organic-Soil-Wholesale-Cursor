@@ -74,10 +74,15 @@ function scoreWord(n: number, low: string, high: string) {
   return "in the middle";
 }
 
+function readYardPrefill() {
+  if (typeof window === "undefined") return { firstName: "", email: "" };
+  return readSurveyPrefill(window.location.search);
+}
+
 export default function ClientSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState(() => readYardPrefill().firstName);
+  const [email, setEmail] = useState(() => readYardPrefill().email);
   const [phone, setPhone] = useState("");
   const [experience, setExperience] = useState<number | null>(null);
   const [findingUs, setFindingUs] = useState<number | null>(null);
@@ -92,7 +97,7 @@ export default function ClientSurvey() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const prefill = readSurveyPrefill(window.location.search);
+    const prefill = readYardPrefill();
     if (prefill.firstName) setFirstName((current) => current || prefill.firstName);
     if (prefill.email) setEmail((current) => current || prefill.email);
   }, []);

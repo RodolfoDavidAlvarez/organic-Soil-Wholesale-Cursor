@@ -323,6 +323,10 @@ test("yard survey prefill reads first_name and email", () => {
     readSurveyPrefill("?source=apology-2026-08&first_name=Haylee&email=haylee@example.com"),
     { firstName: "Haylee", email: "haylee@example.com" },
   );
+  assert.deepEqual(
+    readSurveyPrefill("?first_name=Rodo&email=ralvarez@soilseedandwater.com"),
+    { firstName: "Rodo", email: "ralvarez@soilseedandwater.com" },
+  );
   assert.equal(readSurveyPrefill("?firstName=Haylee&email=haylee@example.com").firstName, "Haylee");
   assert.equal(readSurveyPrefill("?name=Haylee%20Smith&email=haylee@example.com").firstName, "Haylee");
 });
@@ -674,6 +678,8 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(yard, /30% off/);
   assert.match(yard, /Finding the yard \/ entrance/);
   assert.match(yard, /readSurveyPrefill/);
+  assert.match(yard, /readYardPrefill\(\)\.firstName/);
+  assert.match(yard, /readYardPrefill\(\)\.email/);
   assert.match(yard, /findingUs/);
   assert.match(yard, /workedWell/);
   assert.match(yard, /improveMost/);
@@ -683,6 +689,9 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.doesNotMatch(yard, /What felt easy/);
   assert.doesNotMatch(yard, /What felt confusing/);
   assert.doesNotMatch(yard, /Would you send a friend/);
+  assert.doesNotMatch(yard, /What should we add next/);
+  assert.doesNotMatch(yard, /survey-q1/);
+  assert.doesNotMatch(yard, /const \[firstName, setFirstName\] = useState\(""\)/);
 });
 
 test("garden class named scores write saturday, heat, teaching, comeAgain and no coupon", async () => {
