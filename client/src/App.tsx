@@ -62,7 +62,7 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
-const ClientSurvey = lazy(() => import("@/pages/ClientSurvey"));
+const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
 
@@ -77,6 +77,7 @@ const AdminCustomers = lazy(() => import("@/pages/admin/Customers"));
 const AdminInventory = lazy(() => import("@/pages/admin/Inventory"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/Analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
+const AdminSurveys = lazy(() => import("@/pages/admin/Surveys"));
 const AdminRepresentatives = lazy(() => import("@/pages/admin/Representatives"));
 const AdminRepresentativeContacts = lazy(() => import("@/pages/admin/RepresentativeContacts"));
 const AdminOperations = lazy(() => import("@/pages/admin/Operations"));
@@ -210,7 +211,8 @@ function Router() {
         <Route path="/unsubscribe" component={Unsubscribe} />
         <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
         <Route path="/fall-garden-workshop" component={Classes} />
-        <Route path="/survey" component={ClientSurvey} />
+        <Route path="/survey/garden-class" component={SurveyEntry} />
+        <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
@@ -236,6 +238,7 @@ function Router() {
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/notifications" component={AdminNotifications} />
+        <Route path="/admin/surveys" component={AdminSurveys} />
         <Route path="/admin/representatives" component={AdminRepresentatives} />
         <Route path="/admin/representative-contacts" component={AdminRepresentativeContacts} />
         <Route path="/admin/operations/bols/new" component={AdminCreateBOL} />

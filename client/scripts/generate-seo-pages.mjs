@@ -252,6 +252,14 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/survey/garden-class",
+    title: "How did Saturday feel? | The Garden Reset",
+    description: "Honest notes on The Garden Reset at Organic Soil Wholesale. For people who registered or came on Saturday, August 22.",
+    keywords: "Garden Reset survey, Phoenix garden class feedback, Organic Soil Wholesale class",
+    canonical: absoluteUrl("/survey/garden-class"),
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/faq",
     title: "Organic Soil Wholesale FAQ | Pickup, Delivery & Bulk Soil",
     description: "Answers about Organic Soil Wholesale pickup, delivery, product formats, truckloads, pallets, super sacks, and organic soil products.",

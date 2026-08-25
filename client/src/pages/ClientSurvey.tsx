@@ -81,6 +81,7 @@ export default function ClientSurvey() {
           email,
           phone,
           visitFeedback,
+          notes: visitFeedback,
           whatFeltEasy,
           whatFeltConfusing,
           whatToAddNext,

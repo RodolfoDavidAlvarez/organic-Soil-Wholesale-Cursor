@@ -6,10 +6,14 @@ import {
   SURVEY_COUPON_OFFER,
   SURVEY_COUPON_RESTRICTIONS,
   SURVEY_COUPON_VALID_DAYS,
+  SURVEY_KIND_GARDEN_CLASS,
+  SURVEY_KIND_PURCHASE,
   SURVEY_SOURCE,
+  GARDEN_CLASS_EVENT_KEY,
   buildPublicSurveyCoupon,
   generateSurveyCouponCode,
   isSurveyCouponCode,
+  listSurveyInbox,
   normalizeSurveyResponse,
   parseSurveyCouponQrRequest,
   saveSurveyResponse,
@@ -34,7 +38,7 @@ function createSurveyDb({ customerId = 42 } = {}) {
         };
       }
       if (table === "sp_survey_responses") {
-        const state = { filters: {}, notNull: null, insertRow: null };
+        const state = { filters: {}, notNull: null, insertRow: null, orderCol: null, orderAsc: false, limitN: null };
         const matches = (row) => {
           for (const [col, val] of Object.entries(state.filters)) {
             if (row[col] !== val) return false;
@@ -42,16 +46,45 @@ function createSurveyDb({ customerId = 42 } = {}) {
           if (state.notNull && (row[state.notNull] == null || row[state.notNull] === "")) return false;
           return true;
         };
+        const snapshot = () => {
+          let result = rows.filter(matches);
+          if (state.orderCol) {
+            result = [...result].sort((a, b) => {
+              const av = a[state.orderCol];
+              const bv = b[state.orderCol];
+              if (av < bv) return state.orderAsc ? -1 : 1;
+              if (av > bv) return state.orderAsc ? 1 : -1;
+              return 0;
+            });
+          }
+          if (state.limitN != null) result = result.slice(0, state.limitN);
+          if (state.selectCols === "survey_kind") {
+            result = result.map((row) => ({ survey_kind: row.survey_kind }));
+          }
+          return { data: result, error: null };
+        };
         const api = {
-          select() { return api; },
+          select(cols) { state.selectCols = cols; return api; },
           eq(col, val) { state.filters[col] = val; return api; },
           not(col, kind, val) {
             if (kind === "is" && val == null) state.notNull = col;
             return api;
           },
+          order(col, { ascending } = {}) {
+            state.orderCol = col;
+            state.orderAsc = Boolean(ascending);
+            return api;
+          },
+          limit(n) {
+            state.limitN = n;
+            return api;
+          },
           insert(row) {
             state.insertRow = row;
             return api;
+          },
+          then(resolve, reject) {
+            return Promise.resolve(snapshot()).then(resolve, reject);
           },
           maybeSingle: async () => {
             const match = rows.find(matches);
@@ -89,6 +122,10 @@ function createSurveyDb({ customerId = 42 } = {}) {
               coupon_issued_at: null,
               coupon_expires_at: null,
               coupon_redeemed_at: null,
+              survey_kind: "purchase",
+              event_key: null,
+              scores: {},
+              notes: null,
               ...row,
             };
             rows.push(saved);
@@ -136,6 +173,8 @@ test("requires first name, email, and visit feedback", () => {
   assert.equal(ok.bot, false);
   assert.equal(ok.response.email, "alex@example.com");
   assert.equal(ok.response.source, SURVEY_SOURCE);
+  assert.equal(ok.response.surveyKind, SURVEY_KIND_PURCHASE);
+  assert.equal(ok.response.eventKey, "");
 });
 
 test("phone is optional but validated when present", () => {
@@ -167,6 +206,12 @@ test("source stays on the osw-survey namespace", () => {
   assert.equal(normalizeSurveyResponse({ source: "gate-sign" }).source, "osw-survey:gate-sign");
 });
 
+test("garden class survey keeps source garden-class-2026-08 and does not prefix osw-survey", () => {
+  assert.equal(normalizeSurveyResponse({ source: "garden-class-2026-08" }).source, "garden-class-2026-08");
+  assert.equal(normalizeSurveyResponse({ source: "garden-class" }).source, "garden-class-2026-08");
+  assert.equal(normalizeSurveyResponse({ source: "osw-survey:garden-class-2026-08" }).source, "garden-class-2026-08");
+});
+
 test("inserts a row with a unique coupon and allows repeat answers without a second code", async () => {
   const db = createSurveyDb();
   const first = validateSurveyResponse(validAnswers, { userAgent: "SurveyTest/1.0" });
@@ -181,6 +226,11 @@ test("inserts a row with a unique coupon and allows repeat answers without a sec
   assert.equal(db.rows.length, 1);
   assert.equal(db.rows[0].source, SURVEY_SOURCE);
   assert.equal(db.rows[0].user_agent, "SurveyTest/1.0");
+  assert.equal(db.rows[0].survey_kind, SURVEY_KIND_PURCHASE);
+  assert.equal(db.rows[0].event_key, null);
+  assert.equal(db.rows[0].notes, "Pickup was quick.");
+  assert.equal(db.rows[0].scores.wouldComeBack, "yes");
+  assert.equal(db.rows[0].scores.wouldSendFriend, "yes");
   assert.equal("newsletter_subscribed" in db.rows[0], false);
   assert.equal(saved.coupon.code, "SSW30-ABCD2EFG");
   assert.equal(saved.coupon.reused, false);
@@ -367,4 +417,180 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(page, /SSW30-[A-Z0-9]{8}/);
   assert.doesNotMatch(route, /resend/i);
   assert.doesNotMatch(survey, /resend/i);
+});
+
+const classAnswers = {
+  firstName: "Rodo",
+  email: "rodo@example.com",
+  source: "garden-class-2026-08",
+  visitFeedback: "The fan helped.",
+  whatFeltEasy: "great",
+  whatFeltConfusing: "yes",
+  whatToAddNext: "loved-it",
+  wouldComeBack: "yes",
+};
+
+test("garden class survey requires chips, not a yard visit writeup", () => {
+  const missingChip = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    visitFeedback: "The fan helped.",
+  });
+  assert.equal(missingChip.ok, false);
+
+  const ok = validateSurveyResponse(classAnswers);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.bot, false);
+  assert.equal(ok.response.source, "garden-class-2026-08");
+  assert.equal(ok.response.surveyKind, SURVEY_KIND_GARDEN_CLASS);
+  assert.equal(ok.response.eventKey, GARDEN_CLASS_EVENT_KEY);
+  assert.equal(ok.response.whatFeltEasy, "great");
+  assert.equal(ok.response.whatFeltConfusing, "yes");
+  assert.equal(ok.response.whatToAddNext, "loved-it");
+  assert.equal(ok.response.wouldComeBack, "yes");
+  assert.equal(ok.response.notes, "The fan helped.");
+  assert.equal(ok.response.visitFeedback, "The fan helped.");
+  assert.deepEqual(ok.response.scores, {
+    saturdayFeel: "great",
+    heatCall: "yes",
+    teaching: "loved-it",
+    comeAgain: "yes",
+  });
+});
+
+test("garden class survey comment can be blank", () => {
+  const ok = validateSurveyResponse({ ...classAnswers, visitFeedback: "" });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.response.visitFeedback, "");
+  assert.equal(ok.response.notes, "");
+});
+
+test("garden class survey writes to sp_survey_responses with no coupon", async () => {
+  const db = createSurveyDb();
+  const validation = validateSurveyResponse(classAnswers);
+  let couponCalls = 0;
+  const saved = await saveSurveyResponse({
+    db,
+    response: validation.response,
+    createCouponCode() {
+      couponCalls += 1;
+      return "SSW30-SHOULDNT";
+    },
+  });
+  assert.equal(couponCalls, 0);
+  assert.equal(saved.coupon, null);
+  assert.equal(db.rows.length, 1);
+  assert.equal(db.rows[0].source, "garden-class-2026-08");
+  assert.equal(db.rows[0].survey_kind, SURVEY_KIND_GARDEN_CLASS);
+  assert.equal(db.rows[0].event_key, GARDEN_CLASS_EVENT_KEY);
+  assert.equal(db.rows[0].visit_feedback, "The fan helped.");
+  assert.equal(db.rows[0].notes, "The fan helped.");
+  assert.equal(db.rows[0].what_felt_easy, "great");
+  assert.equal(db.rows[0].what_felt_confusing, "yes");
+  assert.equal(db.rows[0].what_to_add_next, "loved-it");
+  assert.equal(db.rows[0].would_come_back, "yes");
+  assert.equal(db.rows[0].coupon_code, null);
+  assert.deepEqual(db.rows[0].scores, {
+    saturdayFeel: "great",
+    heatCall: "yes",
+    teaching: "loved-it",
+    comeAgain: "yes",
+  });
+});
+
+test("garden class survey page is not the yard apology coupon form", async () => {
+  const page = await readFile(new URL("../client/src/pages/GardenClassSurvey.tsx", import.meta.url), "utf8");
+  const entry = await readFile(new URL("../client/src/pages/SurveyEntry.tsx", import.meta.url), "utf8");
+  const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
+  const sources = await readFile(new URL("../shared/surveySources.js", import.meta.url), "utf8");
+  const contact = await readFile(new URL("../client/src/config/contact.ts", import.meta.url), "utf8");
+  const ig = await readFile(new URL("../client/src/pages/InstagramLinks.tsx", import.meta.url), "utf8");
+  assert.match(page, /How did Saturday feel\?/);
+  assert.match(page, /Was moving to 8am for the heat the right call\?/);
+  assert.match(page, /Anything else you want us to hear\?/);
+  assert.match(page, /GARDEN_CLASS_SURVEY_SOURCE/);
+  assert.match(page, /GARDEN_CLASS_EVENT_KEY/);
+  assert.match(sources, /garden-class-2026-08/);
+  assert.match(page, /PHOENIX_YARD_ADDRESS/);
+  assert.match(page, /CUSTOMER_SUPPORT_PHONE_DISPLAY/);
+  assert.match(page, /Tue-Sat, 8 AM-4 PM, closed 1-2 PM/);
+  assert.match(contact, /1634 N 19th Ave/);
+  assert.match(contact, /\(623\) 263-3386/);
+  assert.doesNotMatch(page, /30%/);
+  assert.doesNotMatch(page, /SSW30/);
+  assert.doesNotMatch(page, /Finish this and we'll give you/);
+  assert.doesNotMatch(page, /2 minutes|takes a minute|under a minute/i);
+  assert.doesNotMatch(page, /We owe you an apology/);
+  assert.doesNotMatch(page, /How did the yard feel\?/);
+  assert.match(entry, /isGardenClassSurveySource/);
+  assert.match(app, /path="\/survey\/garden-class"/);
+  assert.match(app, /path="\/admin\/surveys"/);
+  assert.match(ig, /Tell me about the next class/);
+  assert.doesNotMatch(ig, /Register for The Garden Reset/);
+  assert.doesNotMatch(ig, /Aug 22/);
+});
+
+test("garden class named chips write scores, notes, event_key, and no coupon", async () => {
+  const db = createSurveyDb();
+  const validation = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    notes: "The fan helped.",
+    saturdayFeel: "great",
+    heatCall: "yes",
+    teaching: "loved-it",
+    comeAgain: "yes",
+    eventKey: GARDEN_CLASS_EVENT_KEY,
+  });
+  assert.equal(validation.ok, true);
+  const saved = await saveSurveyResponse({
+    db,
+    response: validation.response,
+    createCouponCode: () => "SSW30-SHOULDNT",
+  });
+  assert.equal(saved.coupon, null);
+  assert.equal(db.rows[0].survey_kind, SURVEY_KIND_GARDEN_CLASS);
+  assert.equal(db.rows[0].event_key, "fall-garden-workshop-2026-08-22");
+  assert.equal(db.rows[0].notes, "The fan helped.");
+  assert.equal(db.rows[0].coupon_code, null);
+});
+
+test("inbox lists all rows and can filter class-only", async () => {
+  const db = createSurveyDb();
+  await saveSurveyResponse({
+    db,
+    response: validateSurveyResponse(validAnswers).response,
+    createCouponCode: () => "SSW30-PURCHASE",
+  });
+  await saveSurveyResponse({
+    db,
+    response: validateSurveyResponse(classAnswers).response,
+  });
+
+  const all = await listSurveyInbox(db, { kind: "all" });
+  assert.equal(all.counts.all, 2);
+  assert.equal(all.counts.purchase, 1);
+  assert.equal(all.counts["garden-class"], 1);
+  assert.equal(all.rows.length, 2);
+
+  const classes = await listSurveyInbox(db, { kind: "garden-class" });
+  assert.equal(classes.kind, "garden-class");
+  assert.equal(classes.rows.length, 1);
+  assert.equal(classes.rows[0].survey_kind, SURVEY_KIND_GARDEN_CLASS);
+  assert.equal(classes.rows[0].notes, "The fan helped.");
+});
+
+test("one landing table: class and purchase share sp_survey_responses", async () => {
+  const survey = await readFile(new URL("../shared/surveyResponses.js", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../supabase/migrations/20260824_survey_kinds.sql", import.meta.url), "utf8");
+  const api = await readFile(new URL("../api/index.js", import.meta.url), "utf8");
+  assert.match(survey, /from\('sp_survey_responses'\)/);
+  assert.doesNotMatch(survey, /sp_garden_class_survey/);
+  assert.doesNotMatch(migration, /create table/i);
+  assert.match(migration, /survey_kind/);
+  assert.match(migration, /event_key/);
+  assert.match(migration, /sp_survey_garden_class/);
+  assert.match(api, /\/api\/admin\/surveys/);
 });

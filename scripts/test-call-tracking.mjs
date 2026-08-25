@@ -9,6 +9,7 @@ function isCallTrackingExcludedPath(pathname, search = "") {
     path.startsWith("/rep/") ||
     path === "/free-worm-castings" ||
     path === "/survey" ||
+    path.startsWith("/survey/") ||
     (path === "/newsletter" && source === "july-community-gift") ||
     path === "/qr" ||
     path === "/check-in" ||
@@ -31,5 +32,6 @@ assert.equal(isCallTrackingExcludedPath("/newsletter"), false);
 assert.equal(isCallTrackingExcludedPath("/newsletter", "?source=july-community-gift"), true);
 assert.equal(isCallTrackingExcludedPath("/free-worm-castings"), true);
 assert.equal(isCallTrackingExcludedPath("/survey"), true);
+assert.equal(isCallTrackingExcludedPath("/survey/garden-class"), true);
 
 console.log("call-tracking path exclusions: ok");

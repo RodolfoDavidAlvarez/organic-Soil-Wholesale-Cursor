@@ -4623,8 +4623,25 @@ ${pages}
 
     // Newsletter contacts SoT: Supabase sp_customers (Airtable email base retired)
 
-    // POST /api/survey and /api/survey/submit - CSAT / yard feedback.
-    // Dedicated table. Never writes newsletter_subscribed.
+    // GET /api/admin/surveys - one-table inbox grouped by survey_kind.
+    if (path === '/api/admin/surveys' && req.method === 'GET') {
+      const admin = await verifyAdminToken(req);
+      if (!admin) return res.status(401).json({ error: 'Unauthorized' });
+      try {
+        const { listSurveyInbox } = await import('../shared/surveyResponses.js');
+        const inbox = await listSurveyInbox(db, {
+          kind: url.searchParams.get('kind') || 'all',
+          limit: url.searchParams.get('limit'),
+        });
+        return res.json(inbox);
+      } catch (error) {
+        console.error('[Admin surveys]', error?.message || error);
+        return res.status(500).json({ error: 'Could not load surveys.' });
+      }
+    }
+
+    // POST /api/survey and /api/survey/submit - CSAT / yard / class feedback.
+    // One table: sp_survey_responses. Never writes newsletter_subscribed.
     if ((path === '/api/survey' || path === '/api/survey/submit') && req.method === 'POST') {
       const { validateSurveyResponse, saveSurveyResponse } = await import('../shared/surveyResponses.js');
       const validation = validateSurveyResponse(req.body || {}, {
