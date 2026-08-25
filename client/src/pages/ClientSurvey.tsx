@@ -1,4 +1,4 @@
-import { FormEvent, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { CheckCircle2, Loader2, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,31 @@ import {
 } from "@/config/contact";
 import { usePhoneNumberLock } from "@/hooks/usePhoneNumberLock";
 import { trackEvent } from "@/lib/analytics";
+import { readSurveyPrefill } from "@shared/surveySources.js";
 
-const FIELD_CLASS =
-  "h-12 min-h-12 w-full rounded-xl border-[#d7dfd0] bg-white text-base";
-const TEXTAREA_CLASS =
-  "min-h-[96px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6";
+const FIELD_CLASS = "h-12 min-h-12 w-full rounded-xl border-[#d7dfd0] bg-white text-base";
+const TEXTAREA_CLASS = "min-h-[120px] w-full rounded-xl border-[#d7dfd0] bg-white text-base leading-6";
 
-type Choice = "yes" | "no" | "not-sure" | "";
+const WORKED_WELL_OPTIONS = [
+  "Finding the yard / entrance",
+  "Staff",
+  "Loading / pickup",
+  "Product quality",
+  "Paying online",
+  "Hours",
+  "Prices",
+] as const;
+
+const IMPROVE_OPTIONS = [
+  "Finding the yard / entrance",
+  "Signs / directions",
+  "Wait time",
+  "Loading",
+  "Product selection",
+  "Website / ordering",
+  "Hours",
+  "Nothing to change",
+] as const;
 
 type SurveyCoupon = {
   code: string;
@@ -50,25 +68,48 @@ function surveySource() {
   return tag ? `osw-survey:${tag.slice(0, 80)}` : "osw-survey";
 }
 
+function scoreWord(n: number, low: string, high: string) {
+  if (n <= 3) return low;
+  if (n >= 8) return high;
+  return "in the middle";
+}
+
 export default function ClientSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [visitFeedback, setVisitFeedback] = useState("");
-  const [whatFeltEasy, setWhatFeltEasy] = useState("");
-  const [whatFeltConfusing, setWhatFeltConfusing] = useState("");
-  const [whatToAddNext, setWhatToAddNext] = useState("");
-  const [wouldComeBack, setWouldComeBack] = useState<Choice>("");
-  const [wouldSendFriend, setWouldSendFriend] = useState<Choice>("");
+  const [experience, setExperience] = useState<number | null>(null);
+  const [findingUs, setFindingUs] = useState<number | null>(null);
+  const [comeBack, setComeBack] = useState<number | null>(null);
+  const [workedWell, setWorkedWell] = useState<string[]>([]);
+  const [improveMost, setImproveMost] = useState("");
+  const [notes, setNotes] = useState("");
   const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [coupon, setCoupon] = useState<SurveyCoupon | null>(null);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const prefill = readSurveyPrefill(window.location.search);
+    if (prefill.firstName) setFirstName((current) => current || prefill.firstName);
+    if (prefill.email) setEmail((current) => current || prefill.email);
+  }, []);
+
+  function toggleWorkedWell(option: string) {
+    setWorkedWell((current) =>
+      current.includes(option) ? current.filter((item) => item !== option) : [...current, option],
+    );
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (experience == null || findingUs == null || comeBack == null) {
+      setError("Please slide each score.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -80,15 +121,15 @@ export default function ClientSurvey() {
           firstName,
           email,
           phone,
-          visitFeedback,
-          notes: visitFeedback,
-          whatFeltEasy,
-          whatFeltConfusing,
-          whatToAddNext,
-          wouldComeBack,
-          wouldSendFriend,
+          notes,
+          experienceScore: experience,
+          findingUs,
+          comeBack,
+          workedWell,
+          improveMost,
           website,
           source: surveySource(),
+          scores: { experience, findingUs, comeBack },
         }),
       });
       const body = await response.json();
@@ -96,30 +137,30 @@ export default function ClientSurvey() {
       trackEvent("Client Survey Submitted", { source: surveySource() });
       setCoupon(body.coupon || null);
       setSuccess(true);
-    } catch (submitError: any) {
-      setError(submitError?.message || "Please try again.");
+    } catch (submitError: unknown) {
+      setError(submitError instanceof Error ? submitError.message : "Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-[#f8f9fa] text-[#264027]">
+    <main className="min-h-screen bg-[#f3f0e6] text-[#264027]">
       <Helmet>
         <title>How did we do? | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Tell Organic Soil Wholesale how your Phoenix yard visit or order felt. Short, honest feedback. Under a minute."
+          content="Honest feedback on your Phoenix yard visit or order with Organic Soil Wholesale."
         />
         <link rel="canonical" href="https://www.organicsoilwholesale.com/survey" />
       </Helmet>
 
-      <section className="bg-[#264027] px-5 py-10 text-white">
+      <section className="bg-[#264027] px-5 py-11 text-white">
         <div className="mx-auto max-w-md">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b38a58]">A minute of truth</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b38a58]">Soil Seed &amp; Water</p>
           <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">How did the yard feel?</h1>
           <p className="mt-4 text-base leading-7 text-white/90">
-            We owe you an apology. We opened the Phoenix yard and did not stop to ask how it felt. This takes under a minute. We want the truth.
+            Honest feedback. About one minute. Three quick taps.
           </p>
         </div>
       </section>
@@ -158,109 +199,116 @@ export default function ClientSurvey() {
             </p>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-5">
+          <form onSubmit={submit} className="space-y-7">
             <p className="text-base leading-7 text-neutral-700">
-              Honest notes help us run Organic Soil Wholesale the way a landscaper would want it run. Keep, cut, or add. Say it straight.
+              Name and email first so we know who wrote this. Change them if they are not you. Then slide what is true.
             </p>
             <p className="text-sm leading-6 text-neutral-600">
               Finish this and we'll give you 30% off one item at the yard.
             </p>
 
-            <Field label="First name" htmlFor="survey-first-name" required>
-              <Input
-                id="survey-first-name"
-                value={firstName}
-                onChange={(event) => setFirstName(event.target.value)}
-                autoComplete="given-name"
-                required
-                maxLength={80}
-                className={FIELD_CLASS}
-              />
-            </Field>
+            <div className="grid gap-4 rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
+              <div>
+                <label htmlFor="survey-first-name" className="mb-2 block text-sm font-semibold text-[#264027]">
+                  First name
+                </label>
+                <Input
+                  id="survey-first-name"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  autoComplete="given-name"
+                  required
+                  maxLength={80}
+                  className={FIELD_CLASS}
+                />
+              </div>
+              <div>
+                <label htmlFor="survey-email" className="mb-2 block text-sm font-semibold text-[#264027]">
+                  Email
+                </label>
+                <Input
+                  id="survey-email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  maxLength={254}
+                  className={FIELD_CLASS}
+                />
+              </div>
+              <div>
+                <label htmlFor="survey-phone" className="mb-2 block text-sm font-semibold text-[#264027]">
+                  Phone <span className="font-normal text-neutral-500">Optional</span>
+                </label>
+                <Input
+                  id="survey-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={30}
+                  className={FIELD_CLASS}
+                />
+              </div>
+            </div>
 
-            <Field label="Email" htmlFor="survey-email" required>
-              <Input
-                id="survey-email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-                inputMode="email"
-                required
-                maxLength={254}
-                className={FIELD_CLASS}
-              />
-            </Field>
-
-            <Field label="Phone" htmlFor="survey-phone" hint="Optional">
-              <Input
-                id="survey-phone"
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                autoComplete="tel"
-                inputMode="tel"
-                maxLength={30}
-                placeholder={CUSTOMER_SUPPORT_PHONE_DISPLAY}
-                className={FIELD_CLASS}
-              />
-            </Field>
-
-            <Field label="How was your visit or order?" htmlFor="survey-q1" required>
-              <Textarea
-                id="survey-q1"
-                value={visitFeedback}
-                onChange={(event) => setVisitFeedback(event.target.value)}
-                required
-                maxLength={500}
-                className={TEXTAREA_CLASS}
-              />
-            </Field>
-
-            <Field label="What felt easy?" htmlFor="survey-q2">
-              <Textarea
-                id="survey-q2"
-                value={whatFeltEasy}
-                onChange={(event) => setWhatFeltEasy(event.target.value)}
-                maxLength={500}
-                className={TEXTAREA_CLASS}
-              />
-            </Field>
-
-            <Field label="What felt confusing or slow?" htmlFor="survey-q3">
-              <Textarea
-                id="survey-q3"
-                value={whatFeltConfusing}
-                onChange={(event) => setWhatFeltConfusing(event.target.value)}
-                maxLength={500}
-                className={TEXTAREA_CLASS}
-              />
-            </Field>
-
-            <Field
-              label="What should we add next?"
-              htmlFor="survey-q4"
-              hint="Products, hours, classes, delivery"
-            >
-              <Textarea
-                id="survey-q4"
-                value={whatToAddNext}
-                onChange={(event) => setWhatToAddNext(event.target.value)}
-                maxLength={500}
-                className={TEXTAREA_CLASS}
-              />
-            </Field>
-
-            <ChoiceRow
+            <ScoreSlider
+              id="survey-experience"
+              legend="How was your visit or order?"
+              lowLabel="rough"
+              highLabel="great"
+              value={experience}
+              onChange={setExperience}
+            />
+            <ScoreSlider
+              id="survey-finding-us"
+              legend="How easy was it to find us / get here?"
+              lowLabel="hard to find"
+              highLabel="easy"
+              value={findingUs}
+              onChange={setFindingUs}
+            />
+            <ScoreSlider
+              id="survey-come-back"
               legend="Would you come back?"
-              value={wouldComeBack}
-              onChange={setWouldComeBack}
+              lowLabel="no way"
+              highLabel="absolutely"
+              value={comeBack}
+              onChange={setComeBack}
             />
-            <ChoiceRow
-              legend="Would you send a friend?"
-              value={wouldSendFriend}
-              onChange={setWouldSendFriend}
+
+            <ChipGroup
+              legend="What worked?"
+              hint="Tap any that fit"
+              options={WORKED_WELL_OPTIONS}
+              selected={workedWell}
+              onToggle={toggleWorkedWell}
             />
+            <ChipGroup
+              legend="What should we improve most?"
+              hint="Tap one"
+              options={IMPROVE_OPTIONS}
+              selected={improveMost ? [improveMost] : []}
+              onToggle={(option) => setImproveMost((current) => (current === option ? "" : option))}
+            />
+
+            <div>
+              <label htmlFor="survey-notes" className="mb-2 block text-sm font-semibold text-[#264027]">
+                Anything else you want us to hear?
+              </label>
+              <Textarea
+                id="survey-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                maxLength={500}
+                className={TEXTAREA_CLASS}
+              />
+            </div>
 
             <div className="hidden" aria-hidden="true">
               <label htmlFor="survey-website">Website</label>
@@ -274,16 +322,16 @@ export default function ClientSurvey() {
               />
             </div>
 
-            {error && (
+            {error ? (
               <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
                 {error}
               </p>
-            )}
+            ) : null}
 
             <Button
               type="submit"
               disabled={submitting}
-              className="h-14 w-full rounded-xl bg-[#264027] text-base font-bold text-white hover:bg-[#1d301e]"
+              className="h-14 min-h-14 w-full rounded-xl bg-[#264027] text-base font-bold text-white hover:bg-[#1d301e]"
             >
               {submitting ? (
                 <>
@@ -395,64 +443,128 @@ function SurveyCouponCard({ coupon }: { coupon: SurveyCoupon }) {
   );
 }
 
-function Field({
-  label,
-  htmlFor,
-  required,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  required?: boolean;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-[#264027]">
-        {label}
-        {required ? <span className="text-[#b38a58]"> *</span> : null}
-        {hint ? <span className="ml-2 font-normal text-neutral-500">{hint}</span> : null}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-function ChoiceRow({
+function ScoreSlider({
+  id,
   legend,
+  lowLabel,
+  highLabel,
   value,
   onChange,
 }: {
+  id: string;
   legend: string;
-  value: Choice;
-  onChange: (next: Choice) => void;
+  lowLabel: string;
+  highLabel: string;
+  value: number | null;
+  onChange: (next: number) => void;
 }) {
-  const options: Array<[Choice, string]> = [
-    ["yes", "Yes"],
-    ["no", "No"],
-    ["not-sure", "Not sure"],
-  ];
+  const visual = value ?? 5;
+  const selected = value != null;
+  const pct = ((visual - 1) / 9) * 100;
+  const label = selected ? scoreWord(value, lowLabel, highLabel) : "Slide to choose";
+
+  return (
+    <fieldset className="rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
+      <legend className="float-left mb-4 w-full px-0 text-base font-semibold text-[#264027]">{legend}</legend>
+      <div className="clear-both text-center">
+        <p
+          className={`font-heading text-5xl font-bold tabular-nums leading-none ${
+            selected ? "text-[#264027]" : "text-[#264027]/20"
+          }`}
+        >
+          {selected ? value : visual}
+        </p>
+        <p className={`mt-2 min-h-5 text-sm font-semibold ${selected ? "text-[#b38a58]" : "text-neutral-400"}`}>
+          {label}
+        </p>
+      </div>
+      <div className="relative mt-6 h-11">
+        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
+        <div
+          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#264027]"
+          style={{ width: selected ? `${pct}%` : 0 }}
+        />
+        <input
+          id={id}
+          type="range"
+          min={1}
+          max={10}
+          step={1}
+          value={visual}
+          aria-valuemin={1}
+          aria-valuemax={10}
+          aria-valuenow={selected ? value : undefined}
+          aria-valuetext={selected ? `${value} of 10, ${label}` : "Not set yet"}
+          aria-label={legend}
+          onChange={(event) => onChange(Number(event.target.value))}
+          onPointerUp={() => {
+            if (value == null) onChange(visual);
+          }}
+          className={`garden-score-slider absolute inset-0 w-full ${selected ? "is-set" : ""}`}
+        />
+      </div>
+      <div className="mt-3 flex justify-between gap-3 text-xs font-semibold leading-4 text-neutral-600">
+        <span>1 {lowLabel}</span>
+        <span className="text-right">10 {highLabel}</span>
+      </div>
+      <div className="mt-1 flex justify-between">
+        {Array.from({ length: 10 }, (_, index) => {
+          const n = index + 1;
+          const active = selected && value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              aria-label={`${n}, ${legend}`}
+              className={`min-h-11 min-w-[1.35rem] text-[11px] font-semibold tabular-nums ${
+                active ? "text-[#264027]" : "text-neutral-400"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function ChipGroup({
+  legend,
+  hint,
+  options,
+  selected,
+  onToggle,
+}: {
+  legend: string;
+  hint?: string;
+  options: readonly string[];
+  selected: string[];
+  onToggle: (option: string) => void;
+}) {
   return (
     <fieldset>
-      <legend className="mb-2 block text-sm font-semibold text-[#264027]">{legend}</legend>
-      <div className="grid grid-cols-3 gap-2">
-        {options.map(([option, label]) => {
-          const selected = value === option;
+      <legend className="mb-2 block text-sm font-semibold text-[#264027]">
+        {legend}
+        {hint ? <span className="ml-2 font-normal text-neutral-500">{hint}</span> : null}
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const isOn = selected.includes(option);
           return (
             <button
               key={option}
               type="button"
-              onClick={() => onChange(option)}
-              aria-pressed={selected}
-              className={`min-h-12 rounded-xl border px-2 text-sm font-bold ${
-                selected
+              onClick={() => onToggle(option)}
+              aria-pressed={isOn}
+              className={`inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold leading-5 ${
+                isOn
                   ? "border-[#264027] bg-[#264027] text-white"
                   : "border-[#d7dfd0] bg-white text-[#264027]"
               }`}
             >
-              {label}
+              {option}
             </button>
           );
         })}

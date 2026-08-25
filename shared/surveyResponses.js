@@ -9,6 +9,7 @@ import {
   normalizeSurveyKindFilter,
   normalizeSurveySource,
   readGardenClassSurveyPrefill,
+  readSurveyPrefill,
   surveyKindFromSource,
 } from './surveySources.js';
 
@@ -22,6 +23,7 @@ export {
   normalizeSurveyKindFilter,
   normalizeSurveySource,
   readGardenClassSurveyPrefill,
+  readSurveyPrefill,
   surveyKindFromSource,
 };
 
@@ -44,6 +46,10 @@ export function parseGardenClassScore(value) {
   return n;
 }
 
+export function parseSurveyScore(value) {
+  return parseGardenClassScore(value);
+}
+
 function pickClassScore(input, keys) {
   const nested = input && typeof input.scores === 'object' && input.scores ? input.scores : {};
   for (const key of keys) {
@@ -57,7 +63,7 @@ const COUPON_SELECT =
   'id, first_name, email, coupon_code, coupon_issued_at, coupon_expires_at, coupon_redeemed_at';
 const SAVED_SELECT = `${COUPON_SELECT}, created_at, customer_id, survey_kind, event_key, scores, notes, source`;
 const INBOX_SELECT =
-  'id, created_at, survey_kind, event_key, source, first_name, email_normalized, customer_id, would_come_back, notes, scores, user_agent, coupon_code';
+  'id, created_at, survey_kind, event_key, source, first_name, email_normalized, customer_id, would_come_back, notes, scores, user_agent, coupon_code, experience_score, finding_us, worked_well, improve_most';
 
 function trimText(value, max) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -69,6 +75,27 @@ function compactScores(values) {
     if (value === 0 || value) scores[key] = value;
   }
   return scores;
+}
+
+function normalizeStringArray(value, maxItems = 12, maxLen = 80) {
+  const list = Array.isArray(value) ? value : value ? [value] : [];
+  const out = [];
+  const seen = new Set();
+  for (const item of list) {
+    const text = trimText(item, maxLen);
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(text);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+function yardScoreSummary(experienceScore, findingUsScore, comeBackScore) {
+  if (experienceScore == null || findingUsScore == null || comeBackScore == null) return '';
+  return `Experience ${experienceScore}/10. Finding us ${findingUsScore}/10. Come back ${comeBackScore}/10.`;
 }
 
 export function normalizeSurveyResponse(input = {}, extras = {}) {
@@ -87,13 +114,30 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     input.comeAgain || input.come_again || input.wouldComeBack || input.would_come_back,
     40,
   ).toLowerCase();
-  const wouldComeBack = isClass
+  const experienceScore = isClass
+    ? null
+    : pickClassScore(input, ['experienceScore', 'experience_score', 'experience']);
+  const findingUsScore = isClass
+    ? null
+    : pickClassScore(input, ['findingUs', 'finding_us']);
+  const comeBackScore = isClass
+    ? null
+    : pickClassScore(input, ['comeBack', 'come_back']);
+  const workedWell = isClass ? [] : normalizeStringArray(input.workedWell || input.worked_well);
+  const improveMost = isClass ? '' : trimText(input.improveMost || input.improve_most, 80);
+  const findingUs = findingUsScore != null ? String(findingUsScore) : '';
+  const rawWouldComeBack = isClass
     ? comeAgain
-    : String(input.wouldComeBack || input.would_come_back || '').trim().toLowerCase();
-  const notes = trimText(input.notes || input.comment || input.visitFeedback || input.visit_feedback, 500);
+    : comeBackScore != null
+      ? String(comeBackScore)
+      : String(input.wouldComeBack || input.would_come_back || '').trim().toLowerCase();
+  const notes = isClass
+    ? trimText(input.notes || input.comment || input.visitFeedback || input.visit_feedback, 500)
+    : trimText(input.notes || input.comment, 500);
+  const scoreSummary = yardScoreSummary(experienceScore, findingUsScore, comeBackScore);
   const visitFeedback = isClass
     ? notes
-    : trimText(input.visitFeedback || input.visit_feedback || input.q1, 500);
+    : scoreSummary || trimText(input.visitFeedback || input.visit_feedback || input.q1, 500);
   const eventKey = trimText(input.eventKey || input.event_key, 80) || (isClass ? GARDEN_CLASS_EVENT_KEY : '');
   const saturdayLabel = saturday != null ? String(saturday) : '';
   const heatLabel = heat != null ? String(heat) : '';
@@ -105,16 +149,22 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     phone: trimText(input.phone, 30),
     visitFeedback,
     notes,
-    whatFeltEasy: isClass ? saturdayLabel : trimText(input.whatFeltEasy || input.what_felt_easy || input.q2, 500),
+    whatFeltEasy: isClass
+      ? saturdayLabel
+      : workedWell.join(', ') || trimText(input.whatFeltEasy || input.what_felt_easy || input.q2, 500),
     whatFeltConfusing: isClass
       ? heatLabel
       : trimText(input.whatFeltConfusing || input.what_felt_confusing || input.q3, 500),
-    whatToAddNext: isClass ? teachingLabel : trimText(input.whatToAddNext || input.what_to_add_next || input.q4, 500),
+    whatToAddNext: isClass
+      ? teachingLabel
+      : improveMost || trimText(input.whatToAddNext || input.what_to_add_next || input.q4, 500),
     wouldComeBack: isClass
-      ? (GARDEN_CLASS_COME_AGAIN.has(wouldComeBack) ? wouldComeBack : trimText(wouldComeBack, 80))
-      : YES_NO.has(wouldComeBack)
-        ? wouldComeBack
-        : trimText(wouldComeBack, 80),
+      ? (GARDEN_CLASS_COME_AGAIN.has(rawWouldComeBack) ? rawWouldComeBack : trimText(rawWouldComeBack, 80))
+      : comeBackScore != null
+        ? String(comeBackScore)
+        : YES_NO.has(rawWouldComeBack)
+          ? rawWouldComeBack
+          : trimText(rawWouldComeBack, 80),
     wouldSendFriend: YES_NO.has(wouldSendFriend) ? wouldSendFriend : trimText(wouldSendFriend, 80),
     saturday,
     heat,
@@ -122,11 +172,19 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     heatCall: heat,
     teaching,
     comeAgain,
+    experienceScore,
+    findingUs,
+    findingUsScore,
+    comeBack: comeBackScore,
+    workedWell,
+    improveMost,
     scores: isClass
       ? compactScores({ saturday, heat, teaching: teachingScore, comeAgain })
       : compactScores({
-          wouldComeBack: YES_NO.has(wouldComeBack) ? wouldComeBack : '',
-          wouldSendFriend: YES_NO.has(wouldSendFriend) ? wouldSendFriend : '',
+          experience: experienceScore,
+          findingUs: findingUsScore,
+          comeBack: comeBackScore,
+          improveMost,
         }),
     surveyKind: surveyKindFromSource(source),
     eventKey,
@@ -165,18 +223,28 @@ function validateGardenClassSurvey(response) {
   return { ok: true, bot: false, response };
 }
 
+function validateYardSurvey(response) {
+  const contactError = validateContactFields(response);
+  if (contactError) return contactError;
+  if (parseSurveyScore(response.experienceScore) == null) {
+    return { ok: false, error: 'Please tell us how the yard felt.' };
+  }
+  if (parseSurveyScore(response.findingUsScore) == null) {
+    return { ok: false, error: 'Please tell us how easy it was to find us.' };
+  }
+  if (parseSurveyScore(response.comeBack) == null) {
+    return { ok: false, error: 'Please tell us if you would come back.' };
+  }
+  return { ok: true, bot: false, response };
+}
+
 export function validateSurveyResponse(input = {}, extras = {}) {
   const response = normalizeSurveyResponse(input, extras);
   if (response.website) return { ok: true, bot: true, response };
   if (isGardenClassSurveySource(response.source)) {
     return validateGardenClassSurvey(response);
   }
-  const contactError = validateContactFields(response);
-  if (contactError) return contactError;
-  if (response.visitFeedback.length < 2) {
-    return { ok: false, error: 'Please tell us how your visit or order went.' };
-  }
-  return { ok: true, bot: false, response };
+  return validateYardSurvey(response);
 }
 
 export function generateSurveyCouponCode(bytes = randomBytes(8)) {
@@ -290,6 +358,14 @@ function surveyRow(response, customerId, coupon = null) {
     source: response.source || SURVEY_SOURCE,
     user_agent: response.userAgent || null,
     customer_id: customerId,
+    ...(isClass
+      ? {}
+      : {
+          experience_score: response.experienceScore,
+          worked_well: Array.isArray(response.workedWell) ? response.workedWell : [],
+          finding_us: response.findingUs || null,
+          improve_most: response.improveMost || null,
+        }),
     ...(coupon || {}),
   };
 }
