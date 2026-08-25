@@ -450,6 +450,30 @@ test("garden class survey requires 1-10 scores, not a yard visit writeup", () =>
     comeAgain: "yes",
   });
   assert.equal(oldHeatChip.ok, false);
+  assert.equal(oldHeatChip.error, "Please tell us how the heat felt.");
+  assert.doesNotMatch(oldHeatChip.error || "", /8am/);
+
+  const oldSaturdayChip = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    saturdayFeel: "great",
+    heat: 4,
+    teaching: 9,
+    comeAgain: "yes",
+  });
+  assert.equal(oldSaturdayChip.ok, false);
+
+  const oldTeachingChip = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    saturday: 8,
+    heat: 4,
+    teaching: "loved-it",
+    comeAgain: "yes",
+  });
+  assert.equal(oldTeachingChip.ok, false);
 
   const ok = validateSurveyResponse(classAnswers);
   assert.equal(ok.ok, true);
@@ -648,4 +672,17 @@ test("one landing table: class and purchase share sp_survey_responses", async ()
   assert.match(migration, /event_key/);
   assert.match(migration, /sp_survey_garden_class/);
   assert.match(api, /\/api\/admin\/surveys/);
+});
+
+test("garden class validator no longer requires chip enums or the 8am heatCall error", async () => {
+  const survey = await readFile(new URL("../shared/surveyResponses.js", import.meta.url), "utf8");
+  assert.match(survey, /parseGardenClassScore/);
+  assert.match(survey, /Please tell us how the heat felt\./);
+  assert.doesNotMatch(survey, /8am was the right call/);
+  assert.doesNotMatch(survey, /GARDEN_CLASS_SATURDAY_FEEL/);
+  assert.doesNotMatch(survey, /GARDEN_CLASS_HEAT_CALL/);
+  assert.doesNotMatch(survey, /GARDEN_CLASS_TEACHING/);
+  assert.doesNotMatch(survey, /loved-it/);
+  assert.doesNotMatch(survey, /new Set\(\['great', 'okay', 'rough'\]\)/);
+  assert.doesNotMatch(survey, /new Set\(\['yes', 'not-sure', 'no'\]\)/);
 });
