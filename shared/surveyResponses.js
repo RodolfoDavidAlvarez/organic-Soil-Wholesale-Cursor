@@ -8,6 +8,7 @@ import {
   isGardenClassSurveySource,
   normalizeSurveyKindFilter,
   normalizeSurveySource,
+  readGardenClassSurveyPrefill,
   surveyKindFromSource,
 } from './surveySources.js';
 
@@ -20,6 +21,7 @@ export {
   isGardenClassSurveySource,
   normalizeSurveyKindFilter,
   normalizeSurveySource,
+  readGardenClassSurveyPrefill,
   surveyKindFromSource,
 };
 
@@ -33,10 +35,24 @@ export const SURVEY_COUPON_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const SURVEY_COUPON_CODE_RE = /^SSW30-[A-HJ-NP-Z2-9]{8}$/;
 
 const YES_NO = new Set(['yes', 'no', 'not-sure']);
-export const GARDEN_CLASS_SATURDAY_FEEL = new Set(['great', 'okay', 'rough']);
-export const GARDEN_CLASS_HEAT_CALL = new Set(['yes', 'not-sure', 'no']);
-export const GARDEN_CLASS_TEACHING = new Set(['loved-it', 'fine', 'lost-me']);
 export const GARDEN_CLASS_COME_AGAIN = new Set(['yes', 'maybe', 'no']);
+
+export function parseGardenClassScore(value) {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(String(value).trim());
+  if (!Number.isInteger(n) || n < 1 || n > 10) return null;
+  return n;
+}
+
+function pickClassScore(input, keys) {
+  const nested = input && typeof input.scores === 'object' && input.scores ? input.scores : {};
+  for (const key of keys) {
+    const parsed = parseGardenClassScore(input?.[key] ?? nested[key]);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
 const COUPON_SELECT =
   'id, first_name, email, coupon_code, coupon_issued_at, coupon_expires_at, coupon_redeemed_at';
 const SAVED_SELECT = `${COUPON_SELECT}, created_at, customer_id, survey_kind, event_key, scores, notes, source`;
@@ -50,7 +66,7 @@ function trimText(value, max) {
 function compactScores(values) {
   const scores = {};
   for (const [key, value] of Object.entries(values)) {
-    if (value) scores[key] = value;
+    if (value === 0 || value) scores[key] = value;
   }
   return scores;
 }
@@ -59,18 +75,14 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
   const source = normalizeSurveySource(input.source);
   const isClass = isGardenClassSurveySource(source);
   const wouldSendFriend = String(input.wouldSendFriend || input.would_send_friend || '').trim().toLowerCase();
-  const saturdayFeel = trimText(
-    input.saturdayFeel || input.saturday_feel || (isClass ? input.whatFeltEasy || input.what_felt_easy : ''),
-    40,
-  ).toLowerCase();
-  const heatCall = trimText(
-    input.heatCall || input.heat_call || (isClass ? input.whatFeltConfusing || input.what_felt_confusing : ''),
-    40,
-  ).toLowerCase();
-  const teaching = trimText(
-    input.teaching || (isClass ? input.whatToAddNext || input.what_to_add_next : ''),
-    40,
-  ).toLowerCase();
+  const saturday = isClass
+    ? pickClassScore(input, ['saturday', 'saturdayFeel', 'saturday_feel'])
+    : null;
+  const heat = isClass ? pickClassScore(input, ['heat', 'heatCall', 'heat_call']) : null;
+  const teachingScore = isClass ? pickClassScore(input, ['teaching']) : null;
+  const teaching = isClass
+    ? teachingScore
+    : trimText(input.teaching || '', 40).toLowerCase();
   const comeAgain = trimText(
     input.comeAgain || input.come_again || input.wouldComeBack || input.would_come_back,
     40,
@@ -83,6 +95,9 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     ? notes
     : trimText(input.visitFeedback || input.visit_feedback || input.q1, 500);
   const eventKey = trimText(input.eventKey || input.event_key, 80) || (isClass ? GARDEN_CLASS_EVENT_KEY : '');
+  const saturdayLabel = saturday != null ? String(saturday) : '';
+  const heatLabel = heat != null ? String(heat) : '';
+  const teachingLabel = teachingScore != null ? String(teachingScore) : '';
 
   return {
     firstName: trimText(input.firstName || input.first_name || input.name, 80),
@@ -90,23 +105,25 @@ export function normalizeSurveyResponse(input = {}, extras = {}) {
     phone: trimText(input.phone, 30),
     visitFeedback,
     notes,
-    whatFeltEasy: isClass ? saturdayFeel : trimText(input.whatFeltEasy || input.what_felt_easy || input.q2, 500),
+    whatFeltEasy: isClass ? saturdayLabel : trimText(input.whatFeltEasy || input.what_felt_easy || input.q2, 500),
     whatFeltConfusing: isClass
-      ? heatCall
+      ? heatLabel
       : trimText(input.whatFeltConfusing || input.what_felt_confusing || input.q3, 500),
-    whatToAddNext: isClass ? teaching : trimText(input.whatToAddNext || input.what_to_add_next || input.q4, 500),
+    whatToAddNext: isClass ? teachingLabel : trimText(input.whatToAddNext || input.what_to_add_next || input.q4, 500),
     wouldComeBack: isClass
       ? (GARDEN_CLASS_COME_AGAIN.has(wouldComeBack) ? wouldComeBack : trimText(wouldComeBack, 80))
       : YES_NO.has(wouldComeBack)
         ? wouldComeBack
         : trimText(wouldComeBack, 80),
     wouldSendFriend: YES_NO.has(wouldSendFriend) ? wouldSendFriend : trimText(wouldSendFriend, 80),
-    saturdayFeel,
-    heatCall,
+    saturday,
+    heat,
+    saturdayFeel: saturday,
+    heatCall: heat,
     teaching,
     comeAgain,
     scores: isClass
-      ? compactScores({ saturdayFeel, heatCall, teaching, comeAgain })
+      ? compactScores({ saturday, heat, teaching: teachingScore, comeAgain })
       : compactScores({
           wouldComeBack: YES_NO.has(wouldComeBack) ? wouldComeBack : '',
           wouldSendFriend: YES_NO.has(wouldSendFriend) ? wouldSendFriend : '',
@@ -133,13 +150,13 @@ function validateContactFields(response) {
 function validateGardenClassSurvey(response) {
   const contactError = validateContactFields(response);
   if (contactError) return contactError;
-  if (!GARDEN_CLASS_SATURDAY_FEEL.has(response.saturdayFeel || response.whatFeltEasy)) {
+  if (parseGardenClassScore(response.saturday) == null) {
     return { ok: false, error: 'Please tell us how Saturday felt.' };
   }
-  if (!GARDEN_CLASS_HEAT_CALL.has(response.heatCall || response.whatFeltConfusing)) {
-    return { ok: false, error: 'Please tell us if 8am was the right call.' };
+  if (parseGardenClassScore(response.heat) == null) {
+    return { ok: false, error: 'Please tell us how the heat felt.' };
   }
-  if (!GARDEN_CLASS_TEACHING.has(response.teaching || response.whatToAddNext)) {
+  if (parseGardenClassScore(response.teaching) == null) {
     return { ok: false, error: 'Please tell us how the teaching felt.' };
   }
   if (!GARDEN_CLASS_COME_AGAIN.has(response.comeAgain || response.wouldComeBack)) {

@@ -19,7 +19,7 @@ type SurveyRow = {
   customer_id: number | null;
   would_come_back: string | null;
   notes: string | null;
-  scores: Record<string, string> | null;
+  scores: Record<string, string | number> | null;
   user_agent: string | null;
   coupon_code: string | null;
 };

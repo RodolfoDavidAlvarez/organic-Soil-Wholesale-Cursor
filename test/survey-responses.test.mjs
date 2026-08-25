@@ -16,6 +16,7 @@ import {
   listSurveyInbox,
   normalizeSurveyResponse,
   parseSurveyCouponQrRequest,
+  readGardenClassSurveyPrefill,
   saveSurveyResponse,
   surveyCouponExpiresAt,
   surveyCouponQrPath,
@@ -423,21 +424,32 @@ const classAnswers = {
   firstName: "Rodo",
   email: "rodo@example.com",
   source: "garden-class-2026-08",
-  visitFeedback: "The fan helped.",
-  whatFeltEasy: "great",
-  whatFeltConfusing: "yes",
-  whatToAddNext: "loved-it",
-  wouldComeBack: "yes",
+  notes: "The fan helped.",
+  saturday: 8,
+  heat: 4,
+  teaching: 9,
+  comeAgain: "yes",
 };
 
-test("garden class survey requires chips, not a yard visit writeup", () => {
-  const missingChip = validateSurveyResponse({
+test("garden class survey requires 1-10 scores, not a yard visit writeup", () => {
+  const missingScore = validateSurveyResponse({
     firstName: "Rodo",
     email: "rodo@example.com",
     source: "garden-class-2026-08",
-    visitFeedback: "The fan helped.",
+    notes: "The fan helped.",
   });
-  assert.equal(missingChip.ok, false);
+  assert.equal(missingScore.ok, false);
+
+  const oldHeatChip = validateSurveyResponse({
+    firstName: "Rodo",
+    email: "rodo@example.com",
+    source: "garden-class-2026-08",
+    saturday: 8,
+    heatCall: "yes",
+    teaching: 9,
+    comeAgain: "yes",
+  });
+  assert.equal(oldHeatChip.ok, false);
 
   const ok = validateSurveyResponse(classAnswers);
   assert.equal(ok.ok, true);
@@ -445,22 +457,22 @@ test("garden class survey requires chips, not a yard visit writeup", () => {
   assert.equal(ok.response.source, "garden-class-2026-08");
   assert.equal(ok.response.surveyKind, SURVEY_KIND_GARDEN_CLASS);
   assert.equal(ok.response.eventKey, GARDEN_CLASS_EVENT_KEY);
-  assert.equal(ok.response.whatFeltEasy, "great");
-  assert.equal(ok.response.whatFeltConfusing, "yes");
-  assert.equal(ok.response.whatToAddNext, "loved-it");
+  assert.equal(ok.response.saturday, 8);
+  assert.equal(ok.response.heat, 4);
+  assert.equal(ok.response.teaching, 9);
   assert.equal(ok.response.wouldComeBack, "yes");
   assert.equal(ok.response.notes, "The fan helped.");
   assert.equal(ok.response.visitFeedback, "The fan helped.");
   assert.deepEqual(ok.response.scores, {
-    saturdayFeel: "great",
-    heatCall: "yes",
-    teaching: "loved-it",
+    saturday: 8,
+    heat: 4,
+    teaching: 9,
     comeAgain: "yes",
   });
 });
 
 test("garden class survey comment can be blank", () => {
-  const ok = validateSurveyResponse({ ...classAnswers, visitFeedback: "" });
+  const ok = validateSurveyResponse({ ...classAnswers, notes: "", visitFeedback: "" });
   assert.equal(ok.ok, true);
   assert.equal(ok.response.visitFeedback, "");
   assert.equal(ok.response.notes, "");
@@ -486,15 +498,15 @@ test("garden class survey writes to sp_survey_responses with no coupon", async (
   assert.equal(db.rows[0].event_key, GARDEN_CLASS_EVENT_KEY);
   assert.equal(db.rows[0].visit_feedback, "The fan helped.");
   assert.equal(db.rows[0].notes, "The fan helped.");
-  assert.equal(db.rows[0].what_felt_easy, "great");
-  assert.equal(db.rows[0].what_felt_confusing, "yes");
-  assert.equal(db.rows[0].what_to_add_next, "loved-it");
+  assert.equal(db.rows[0].what_felt_easy, "8");
+  assert.equal(db.rows[0].what_felt_confusing, "4");
+  assert.equal(db.rows[0].what_to_add_next, "9");
   assert.equal(db.rows[0].would_come_back, "yes");
   assert.equal(db.rows[0].coupon_code, null);
   assert.deepEqual(db.rows[0].scores, {
-    saturdayFeel: "great",
-    heatCall: "yes",
-    teaching: "loved-it",
+    saturday: 8,
+    heat: 4,
+    teaching: 9,
     comeAgain: "yes",
   });
 });
@@ -506,9 +518,20 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   const sources = await readFile(new URL("../shared/surveySources.js", import.meta.url), "utf8");
   const contact = await readFile(new URL("../client/src/config/contact.ts", import.meta.url), "utf8");
   const ig = await readFile(new URL("../client/src/pages/InstagramLinks.tsx", import.meta.url), "utf8");
+  const yard = await readFile(new URL("../client/src/pages/ClientSurvey.tsx", import.meta.url), "utf8");
   assert.match(page, /How did Saturday feel\?/);
-  assert.match(page, /Was moving to 8am for the heat the right call\?/);
+  assert.match(page, /Was it too hot\?/);
+  assert.match(page, /How was the teaching\?/);
+  assert.match(page, /Would you come to another class\?/);
   assert.match(page, /Anything else you want us to hear\?/);
+  assert.match(page, /type="range"/);
+  assert.match(page, /window\.location\.search/);
+  assert.match(page, /readGardenClassSurveyPrefill/);
+  assert.match(sources, /first_name/);
+  assert.match(sources, /firstName/);
+  assert.match(sources, /last_name/);
+  assert.match(sources, /params\.get\('name'\)|pick\('name'\)/);
+  assert.match(sources, /pick\('email'\)/);
   assert.match(page, /GARDEN_CLASS_SURVEY_SOURCE/);
   assert.match(page, /GARDEN_CLASS_EVENT_KEY/);
   assert.match(sources, /garden-class-2026-08/);
@@ -517,30 +540,40 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(page, /Tue-Sat, 8 AM-4 PM, closed 1-2 PM/);
   assert.match(contact, /1634 N 19th Ave/);
   assert.match(contact, /\(623\) 263-3386/);
+  assert.ok(page.indexOf("class-survey-first-name") < page.indexOf("class-survey-saturday"));
+  assert.ok(page.indexOf("class-survey-email") < page.indexOf("class-survey-saturday"));
+  assert.doesNotMatch(page, /moving to 8am/i);
+  assert.doesNotMatch(page, /moving the class/i);
+  assert.doesNotMatch(page, /right call/);
+  assert.doesNotMatch(page, /readOnly|disabled=\{true\}/);
   assert.doesNotMatch(page, /30%/);
   assert.doesNotMatch(page, /SSW30/);
   assert.doesNotMatch(page, /Finish this and we'll give you/);
   assert.doesNotMatch(page, /2 minutes|takes a minute|under a minute/i);
   assert.doesNotMatch(page, /We owe you an apology/);
   assert.doesNotMatch(page, /How did the yard feel\?/);
+  assert.doesNotMatch(page, /\u2014/);
   assert.match(entry, /isGardenClassSurveySource/);
   assert.match(app, /path="\/survey\/garden-class"/);
+  assert.match(app, /path="\/survey"/);
   assert.match(app, /path="\/admin\/surveys"/);
   assert.match(ig, /Tell me about the next class/);
   assert.doesNotMatch(ig, /Register for The Garden Reset/);
   assert.doesNotMatch(ig, /Aug 22/);
+  assert.match(yard, /We owe you an apology/);
+  assert.match(yard, /30% off/);
 });
 
-test("garden class named chips write scores, notes, event_key, and no coupon", async () => {
+test("garden class named scores write saturday, heat, teaching, comeAgain and no coupon", async () => {
   const db = createSurveyDb();
   const validation = validateSurveyResponse({
     firstName: "Rodo",
     email: "rodo@example.com",
     source: "garden-class-2026-08",
     notes: "The fan helped.",
-    saturdayFeel: "great",
-    heatCall: "yes",
-    teaching: "loved-it",
+    saturday: 8,
+    heat: 4,
+    teaching: 9,
     comeAgain: "yes",
     eventKey: GARDEN_CLASS_EVENT_KEY,
   });
@@ -555,6 +588,28 @@ test("garden class named chips write scores, notes, event_key, and no coupon", a
   assert.equal(db.rows[0].event_key, "fall-garden-workshop-2026-08-22");
   assert.equal(db.rows[0].notes, "The fan helped.");
   assert.equal(db.rows[0].coupon_code, null);
+  assert.deepEqual(db.rows[0].scores, {
+    saturday: 8,
+    heat: 4,
+    teaching: 9,
+    comeAgain: "yes",
+  });
+});
+
+test("garden class survey prefill reads first_name, name, and email without locking", () => {
+  assert.deepEqual(
+    readGardenClassSurveyPrefill(
+      "?source=garden-class-2026-08&first_name=Haylee&email=haylee@example.com",
+    ),
+    { firstName: "Haylee", email: "haylee@example.com", lastName: "" },
+  );
+  assert.equal(readGardenClassSurveyPrefill("?firstName=Haylee&email=haylee@example.com").firstName, "Haylee");
+  assert.equal(readGardenClassSurveyPrefill("?name=Haylee%20Smith&email=haylee@example.com").firstName, "Haylee");
+  assert.equal(
+    readGardenClassSurveyPrefill("?first_name=Haylee&last_name=Smith&email=haylee@example.com").lastName,
+    "Smith",
+  );
+  assert.equal(readGardenClassSurveyPrefill("?name=Haylee&first_name=Rodo").firstName, "Rodo");
 });
 
 test("inbox lists all rows and can filter class-only", async () => {
