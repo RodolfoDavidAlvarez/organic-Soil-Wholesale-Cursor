@@ -320,7 +320,7 @@ footer {
 }
 
 .garden-score-slider::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 6px;
   background: transparent;
   border: none;
 }
@@ -328,38 +328,38 @@ footer {
 .garden-score-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 28px;
-  height: 28px;
-  margin-top: -10px;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
   border-radius: 999px;
   background: #264027;
-  border: 3px solid #d7b77d;
-  box-shadow: 0 2px 8px rgba(38, 64, 39, 0.28);
+  border: 2px solid #d7b77d;
+  box-shadow: 0 2px 6px rgba(38, 64, 39, 0.24);
   cursor: pointer;
 }
 
 .garden-score-slider:not(.is-set)::-webkit-slider-thumb {
   background: #f4f0e3;
-  border: 3px solid #b38a58;
+  border: 2px solid #b38a58;
 }
 
 .garden-score-slider::-moz-range-track {
-  height: 8px;
+  height: 6px;
   background: transparent;
   border: none;
 }
 
 .garden-score-slider::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  border: 3px solid #d7b77d;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d7b77d;
   border-radius: 999px;
   background: #264027;
-  box-shadow: 0 2px 8px rgba(38, 64, 39, 0.28);
+  box-shadow: 0 2px 6px rgba(38, 64, 39, 0.24);
   cursor: pointer;
 }
 
 .garden-score-slider:not(.is-set)::-moz-range-thumb {
   background: #f4f0e3;
-  border: 3px solid #b38a58;
+  border: 2px solid #b38a58;
 }

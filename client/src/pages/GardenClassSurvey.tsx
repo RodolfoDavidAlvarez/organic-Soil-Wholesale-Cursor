@@ -320,9 +320,9 @@ function ScoreSlider({
         </p>
       </div>
       <div className="relative mt-6 h-11">
-        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
+        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
         <div
-          className="pointer-events-none absolute left-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-[#264027]"
+          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#264027]"
           style={{ width: selected ? `${pct}%` : 0 }}
         />
         <input
@@ -385,7 +385,7 @@ function ChipRow({
   return (
     <fieldset>
       <legend className="mb-2 block text-sm font-semibold text-[#264027]">{legend}</legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {options.map(([option, label]) => {
           const selected = value === option;
           return (
@@ -394,7 +394,7 @@ function ChipRow({
               type="button"
               onClick={() => onChange(option)}
               aria-pressed={selected}
-              className={`min-h-12 rounded-xl border px-2 text-sm font-bold ${
+              className={`flex h-9 min-h-9 items-center justify-center rounded-lg border px-1.5 text-sm font-bold leading-none whitespace-nowrap ${
                 selected
                   ? "border-[#264027] bg-[#264027] text-white"
                   : "border-[#d7dfd0] bg-white text-[#264027]"
