@@ -22,9 +22,11 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import OfferFlyerImage, { prefetchOfferImage } from "@/components/OfferFlyerImage";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { PROMO_BUNDLES } from "@shared/promoBundles.js";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
 
@@ -400,12 +402,11 @@ const Home = () => {
         <div className="container mx-auto">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
-              <h2 id="garden-bundles-heading" className="mt-3 max-w-2xl font-heading text-3xl font-extrabold leading-tight text-[#183a23] sm:text-4xl">
-                Fall garden bundles. Pay now, pick up at the yard.
+              <h2 id="garden-bundles-heading" className="font-heading text-3xl font-extrabold leading-tight text-[#183a23] sm:text-4xl">
+                Fall pickup bundles
               </h2>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-[#5f6c62]">
-                Three DIY soil packages for 4×8 beds. Add the bundle to your order, keep shopping Products, and check out together.
+              <p className="mt-2 max-w-xl text-base text-[#5f6c62]">
+                Three setups. Add one to your order, then keep shopping if you want.
               </p>
             </div>
             <Button
@@ -417,62 +418,40 @@ const Home = () => {
               }}
               className="h-12 min-h-12 border-[#183a23]/20 bg-white px-5 font-extrabold text-[#183a23] hover:bg-[#eaf0e6]"
             >
-              All garden bundles <ArrowRight className="ml-2 h-4 w-4" />
+              All bundles
             </Button>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                href: "/offers/garden-refresh",
-                title: "Garden Refresh",
-                price: "$69",
-                was: "$91",
-                detail: "7 bags · 10 cu ft · one 4×8 bed",
-                image: "/images/offers/garden-refresh.png",
-                event: "garden-refresh",
-              },
-              {
-                href: "/offers/garden-refresh-plus",
-                title: "Garden Refresh Plus",
-                price: "$149",
-                was: "$247",
-                detail: "16 bags · 24 cu ft · mix, not just compost",
-                image: "/images/offers/garden-refresh-plus.png",
-                event: "garden-refresh-plus",
-              },
-              {
-                href: "/offers/big-garden-setup",
-                title: "Big Garden Setup",
-                price: "$459",
-                was: "$642",
-                detail: "1 tote + 10 bags · 2–3 beds",
-                image: "/images/offers/big-garden-setup.png",
-                event: "big-garden-setup",
-              },
-            ].map((bundle) => (
-              <button
-                key={bundle.href}
-                type="button"
-                onClick={() => {
-                  trackEvent("Homepage Bundle CTA Clicked", { bundle: bundle.event, source: "homepage-bundles" });
-                  navigate(bundle.href);
-                }}
-                className="group overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl"
-              >
-                <img src={bundle.image} alt="" className="aspect-[3/4] w-full bg-[#f4f2eb] object-contain" loading="lazy" />
-                <div className="p-5">
-                  <p className="font-heading text-xl font-bold text-[#183a23]">{bundle.title}</p>
-                  <p className="mt-1 text-sm text-[#657066]">{bundle.detail}</p>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-2xl font-extrabold text-[#183a23]">{bundle.price}</span>
-                    <span className="pb-0.5 text-sm text-[#758077] line-through">{bundle.was}</span>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {PROMO_BUNDLES.map((offer) => {
+              const href = `/offers/${offer.slug}`;
+              return (
+                <button
+                  key={href}
+                  type="button"
+                  onClick={() => {
+                    trackEvent("Homepage Bundle CTA Clicked", { bundle: offer.slug, source: "homepage-bundles" });
+                    navigate(href);
+                  }}
+                  onMouseEnter={() => prefetchOfferImage(offer.heroImage)}
+                  onFocus={() => prefetchOfferImage(offer.heroImage)}
+                  className="group overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-1 ring-[#dfe5dc]"
+                >
+                  <OfferFlyerImage
+                    src={offer.cardImage}
+                    alt=""
+                    loading="lazy"
+                    wrapperClassName="aspect-[3/4] w-full"
+                    className="aspect-[3/4] w-full object-contain"
+                  />
+                  <div className="p-4">
+                    <p className="font-heading text-xl font-bold text-[#183a23]">{offer.cardName}</p>
+                    <p className="mt-1 text-2xl font-extrabold text-[#183a23]">${offer.salePrice}</p>
+                    <p className="mt-1 text-sm text-[#657066]">{offer.line}</p>
+                    <span className="mt-4 inline-flex min-h-11 items-center font-bold text-[#215330]">View</span>
                   </div>
-                  <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#215330]">
-                    Open offer <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

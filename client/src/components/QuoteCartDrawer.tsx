@@ -32,9 +32,9 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
-  4100: "/images/offers/garden-refresh.png",
-  4101: "/images/offers/garden-refresh-plus.png",
-  4102: "/images/offers/big-garden-setup.png",
+  4100: "/images/offers/garden-refresh-800.webp",
+  4101: "/images/offers/garden-refresh-plus-800.webp",
+  4102: "/images/offers/big-garden-setup-800.webp",
 };
 
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";

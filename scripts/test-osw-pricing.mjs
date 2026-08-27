@@ -130,10 +130,52 @@ const bundleWithTote = applyPromoBundlePricing(line(4102, "Big Garden Setup", "T
 const flatbedOnBundle = applyFullFlatbedProductDiscount(Array.from({ length: 22 }, () => ({ ...bundleWithTote })));
 assert.equal(flatbedOnBundle.items[0].price, 459, "already-priced bundles keep the freeze sale price on a full flatbed");
 
+assert.equal(bundleWithTote.imageUrl, "/images/offers/big-garden-setup-800.webp");
+
+assert.equal(getPromoBundleBySlug("garden-refresh")?.headline, "One 4x8 bed. $69.");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.headline, "One 4x8 bed. $149.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.headline, "2 to 3 beds. $459.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.line, "1 PlantPal tote + 10 bags.");
+assert.doesNotMatch(JSON.stringify(PROMO_BUNDLES), /\$99|\$399|40 bags/i);
+
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
-assert.match(bundleOffersSource, /Add to order/);
+assert.match(bundleOffersSource, /offer\.ctaLabel/);
+assert.match(JSON.stringify(PROMO_BUNDLES), /Add to order · \$69/);
+assert.match(bundleOffersSource, /Fall pickup bundles/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
+assert.doesNotMatch(bundleOffersSource, /Build a better garden/);
+assert.doesNotMatch(bundleOffersSource, /The more you buy/);
+assert.doesNotMatch(bundleOffersSource, /survey 30%/i);
+assert.match(bundleOffersSource, /OfferFlyerImage/);
+assert.doesNotMatch(bundleOffersSource, /garden-refresh\.png/);
+
+const appSource = readFileSync(new URL("../client/src/App.tsx", import.meta.url), "utf8");
+assert.match(appSource, /import BundleOffers from "@\/pages\/BundleOffers"/);
+assert.doesNotMatch(appSource, /lazy\(\(\) => import\("@\/pages\/BundleOffers"\)\)/);
+assert.match(appSource, /const Home = lazy\(\(\) => import\("@\/pages\/Home"\)\)/);
+assert.match(appSource, /const Products = lazy\(\(\) => import\("@\/pages\/Products"\)\)/);
+assert.match(appSource, /const Checkout = lazy\(\(\) => import\("@\/pages\/Checkout"\)\)/);
+
+const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+assert.match(homeSource, /const AmazonReviewCarousel = lazy/);
+assert.match(homeSource, /DeferredMount/);
+assert.match(homeSource, /LazyYouTube/);
+assert.match(homeSource, /prefetchOfferImage\(offer\.heroImage\)/);
+assert.match(homeSource, /Fall pickup bundles/);
+assert.match(homeSource, /offer\.cardName/);
+assert.match(homeSource, /offer\.line/);
+assert.doesNotMatch(homeSource, /garden-refresh\.png/);
+
+for (const bundle of PROMO_BUNDLES) {
+  assert.match(bundle.heroImage, /-1200\.webp$/);
+  assert.match(bundle.cardImage, /-800\.webp$/);
+  assert.notEqual(bundle.heroImage, bundle.cardImage);
+  const heroBytes = readFileSync(new URL(`../client/public${bundle.heroImage}`, import.meta.url));
+  const cardBytes = readFileSync(new URL(`../client/public${bundle.cardImage}`, import.meta.url));
+  assert.ok(heroBytes.byteLength < 400_000, `${bundle.slug} hero stays under 400KB`);
+  assert.ok(cardBytes.byteLength < 200_000, `${bundle.slug} card stays under 200KB`);
+}
 
 const vercelConfig = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promos")?.destination, "/offers");
