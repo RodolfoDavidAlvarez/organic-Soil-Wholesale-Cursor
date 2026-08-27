@@ -477,6 +477,8 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   const route = await readFile(new URL("../server/routes/survey.ts", import.meta.url), "utf8");
   const newsletter = await readFile(new URL("../server/routes/newsletter.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../client/src/pages/ClientSurvey.tsx", import.meta.url), "utf8");
+  const slider = await readFile(new URL("../client/src/components/survey/ScoreSlider.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../client/src/index.css", import.meta.url), "utf8");
   const api = await readFile(new URL("../api/index.js", import.meta.url), "utf8");
   const notifications = await readFile(new URL("../shared/newsletterNotifications.js", import.meta.url), "utf8");
   assert.doesNotMatch(survey, /newsletter/i);
@@ -495,8 +497,16 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.match(page, /Finish this and we'll give you 30% off one item at the yard/);
   assert.match(page, /Show this at the yard/);
   assert.match(page, /Honest feedback\. Three quick taps/);
-  assert.match(page, /type="range"/);
   assert.match(page, /window\.location\.search/);
+  assert.match(slider, /type="range"/);
+  assert.match(slider, /garden-score-slider/);
+  assert.match(css, /width: 32px/);
+  assert.match(css, /height: 8px/);
+  assert.doesNotMatch(page, /survey-phone/);
+  assert.doesNotMatch(page, /setPhone/);
+  assert.doesNotMatch(page, /\bphone,/);
+  assert.match(page, /This is you\? Change it if not\./);
+  assert.match(page, /ssw-logo-letter\.png/);
   assert.match(survey, /finding_us: response\.findingUs/);
   assert.match(survey, /experience_score: response\.experienceScore/);
   assert.match(survey, /worked_well:/);
@@ -629,6 +639,7 @@ test("garden class survey writes to sp_survey_responses with no coupon", async (
 
 test("garden class survey page is not the yard apology coupon form", async () => {
   const page = await readFile(new URL("../client/src/pages/GardenClassSurvey.tsx", import.meta.url), "utf8");
+  const slider = await readFile(new URL("../client/src/components/survey/ScoreSlider.tsx", import.meta.url), "utf8");
   const entry = await readFile(new URL("../client/src/pages/SurveyEntry.tsx", import.meta.url), "utf8");
   const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
   const sources = await readFile(new URL("../shared/surveySources.js", import.meta.url), "utf8");
@@ -640,7 +651,8 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(page, /How was the teaching\?/);
   assert.match(page, /Would you come to another class\?/);
   assert.match(page, /Anything else you want us to hear\?/);
-  assert.match(page, /type="range"/);
+  assert.match(slider, /type="range"/);
+  assert.match(page, /ScoreSlider/);
   assert.match(page, /window\.location\.search/);
   assert.match(page, /readGardenClassSurveyPrefill/);
   assert.match(sources, /first_name/);
@@ -680,8 +692,9 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(yard, /30% off/);
   assert.match(yard, /Finding the yard \/ entrance/);
   assert.match(yard, /readSurveyPrefill/);
-  assert.match(yard, /readYardPrefill\(\)\.firstName/);
-  assert.match(yard, /readYardPrefill\(\)\.email/);
+  assert.match(yard, /readYardPrefill/);
+  assert.match(yard, /identityPrefill\.firstName/);
+  assert.match(yard, /identityPrefill\.email/);
   assert.match(yard, /findingUs/);
   assert.match(yard, /workedWell/);
   assert.match(yard, /improveMost/);
