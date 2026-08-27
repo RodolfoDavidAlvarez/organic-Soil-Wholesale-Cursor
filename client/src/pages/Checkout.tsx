@@ -27,6 +27,11 @@ import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkout
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import { nonBundleProductSubtotal } from "@shared/promoBundles.js";
 import {
+  CART_LOAD_GROUP_HINTS,
+  CART_LOAD_GROUP_LABELS,
+  partitionPayCartItems,
+} from "@shared/cartLoadGroups.js";
+import {
   ArrowLeft, CreditCard, Loader2, ShoppingBag, Tag, CheckCircle2, X, Package,
   Calendar, User as UserIcon, MapPin, Truck, ArrowRight, Navigation, Clock, ChevronDown,
   Minus, Plus, Trash2,
@@ -45,6 +50,15 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   4102: "/images/offers/big-garden-setup.png",
 };
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
+
+function CartGroupHeading({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div>
+      <p className="text-sm font-bold text-stone-900">{title}</p>
+      <p className="text-[11px] leading-snug text-stone-500">{hint}</p>
+    </div>
+  );
+}
 
 type Fulfillment = "pickup" | "delivery";
 type CheckoutStep = "fulfillment" | "timing" | "customer" | "review";
@@ -113,6 +127,11 @@ const Checkout: React.FC = () => {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
 
   const payItems = useMemo(() => items.filter((i) => i.mode === "pay"), [items]);
+  const payGroups = useMemo(() => partitionPayCartItems(payItems), [payItems]);
+  const groupedPayItems = useMemo(
+    () => (payGroups.offerItems.length > 0 ? [...payGroups.offerItems, ...payGroups.otherItems] : payItems),
+    [payGroups, payItems],
+  );
   const monitorSessionId = useMemo(() => getCheckoutMonitorId(), []);
   /** Only loose walking-floor truckloads force delivery — never flatbed pallets/totes. */
   const hasWalkingFloorDelivery = useMemo(
@@ -1001,8 +1020,15 @@ const Checkout: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 p-4 sm:p-5">
-                {payItems.map((item) => (
-                  <div key={`${item.productId}-${item.format}`} className="rounded-xl bg-white">
+                {groupedPayItems.map((item, index) => (
+                  <React.Fragment key={`${item.productId}-${item.format}`}>
+                    {index === 0 && payGroups.offerItems.length > 0 ? (
+                      <CartGroupHeading
+                        title={CART_LOAD_GROUP_LABELS.offers}
+                        hint={CART_LOAD_GROUP_HINTS.offers}
+                      />
+                    ) : null}
+                  <div className="rounded-xl bg-white">
                     <div className="grid grid-cols-[64px_1fr_auto] gap-3 sm:grid-cols-[72px_1fr_auto]">
                       {item.imageUrl ? (
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200 sm:h-[72px] sm:w-[72px]">
@@ -1074,6 +1100,7 @@ const Checkout: React.FC = () => {
                         </Link>
                     </div>
                   </div>
+                  </React.Fragment>
                 ))}
               </CardContent>
             </Card>}
@@ -1528,7 +1555,7 @@ const Checkout: React.FC = () => {
                 )}
                 {(showSummaryItems || activeStep === "fulfillment") && (
                   <div className="space-y-2 border-t border-stone-100 pt-2">
-                    {payItems.map((item) => {
+                    {groupedPayItems.map((item, index) => {
                       const lineSpots = spotsForFormat(item.format, item.quantity);
                       const isWalkingFloorBulk = isWalkingFloorDeliveryFormat(item.format);
                       const canEditQty = !isWalkingFloorBulk;
@@ -1536,8 +1563,14 @@ const Checkout: React.FC = () => {
                       const sizeThumb =
                         item.sizeImage || (isWalkingFloorBulk ? WALKING_FLOOR_IMAGE : undefined);
                       return (
+                        <React.Fragment key={`summary-${item.productId}-${item.format}`}>
+                        {index === 0 && payGroups.offerItems.length > 0 ? (
+                          <CartGroupHeading
+                            title={CART_LOAD_GROUP_LABELS.offers}
+                            hint={CART_LOAD_GROUP_HINTS.offers}
+                          />
+                        ) : null}
                         <div
-                          key={`summary-${item.productId}-${item.format}`}
                           className="rounded-xl border border-stone-200 bg-white px-2.5 py-2 shadow-sm"
                         >
                           <div className="flex items-stretch gap-2">
@@ -1666,6 +1699,7 @@ const Checkout: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>
