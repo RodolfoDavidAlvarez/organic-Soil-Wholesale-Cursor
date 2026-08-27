@@ -547,6 +547,9 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.match(route, /processSurveySubmission/);
   assert.match(staff, /resend/i);
   assert.match(staff, /STAFF_YARD_SURVEY_SUBJECT/);
+  assert.match(staff, /ADMIN_TEAM/);
+  assert.doesNotMatch(staff, /getNewsletterAdminRecipients/);
+  assert.doesNotMatch(staff, /INTERNAL_TEST_RECIPIENTS/);
   assert.doesNotMatch(staff, /newsletter\/subscribe/);
   assert.match(staff, /dn@soilseedandwater\.com/);
   assert.match(api, /Never email the customer here/);
@@ -988,14 +991,21 @@ test("staff mail failure still returns 201 and leaves follow_up_alerted_at null"
 
 test("survey alert recipients reuse ADMIN_TEAM and drop Nowell and Nancy", () => {
   const overridden = getSurveyAlertRecipients({
-    envRecipients: "ralvarez@soilseedandwater.com, dn@soilseedandwater.com, nancy@example.com, kcooper@soilseedandwater.com",
+    envRecipients: "ralvarez@soilseedandwater.com, dn@soilseedandwater.com, nancy@example.com, kcooper@soilseedandwater.com, johnathan@example.com, luis@example.com, simon@example.com, jesus@example.com",
   });
   assert.deepEqual(overridden.map((person) => person.email), [
     "ralvarez@soilseedandwater.com",
     "kcooper@soilseedandwater.com",
   ]);
-  const fromTeam = getSurveyAlertRecipients({ envRecipients: "", newsletterActive: "true" });
-  assert.equal(fromTeam.some((person) => /nowell|nancy|dn@/i.test(`${person.name} ${person.email}`)), false);
-  assert.ok(fromTeam.some((person) => person.email === "ralvarez@soilseedandwater.com"));
-  assert.ok(fromTeam.some((person) => person.email === "kcooper@soilseedandwater.com"));
+  const fromTeam = getSurveyAlertRecipients({ envRecipients: "" });
+  assert.deepEqual(fromTeam.map((person) => person.email), [
+    "ralvarez@soilseedandwater.com",
+    "kcooper@soilseedandwater.com",
+    "sabrina@soilseedandwater.com",
+    "kash@soilseedandwater.com",
+    "gperez@soilseedandwater.com",
+    "alejandrapatriciaalvarez@gmail.com",
+  ]);
+  assert.equal(fromTeam.length, 6);
+  assert.equal(fromTeam.some((person) => /nowell|nancy|johnathan|luis|\bsimon\b|jesus|dn@/i.test(`${person.name} ${person.email}`)), false);
 });

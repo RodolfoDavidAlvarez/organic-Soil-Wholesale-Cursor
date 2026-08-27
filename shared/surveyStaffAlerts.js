@@ -1,11 +1,11 @@
 import {
+  ADMIN_TEAM,
   STAFF_ALERT_FROM,
   STAFF_ALERT_REPLY_TO,
   STAFF_GARDEN_CLASS_SUBJECT,
   STAFF_GARDEN_CLASS_THREAD_ID,
   STAFF_NEWSLETTER_THREAD_ID,
   STAFF_SIGNUP_SUBJECT,
-  getNewsletterAdminRecipients,
   staffAlertThreadingHeaders,
 } from './newsletterNotifications.js';
 import {
@@ -23,6 +23,7 @@ export const SURVEY_ADMIN_INBOX_URL = 'https://www.organicsoilwholesale.com/admi
 export const BLOCKED_SURVEY_ALERT_EMAILS = Object.freeze([
   'dn@soilseedandwater.com',
 ]);
+const BLOCKED_SURVEY_ALERT_PERSON_RE = /nowell|nancy|johnathan|jonathan|luis|\bsimon\b|\bjesus\b/i;
 
 const ADMIN_INBOX_PATH = '/admin/surveys';
 
@@ -54,8 +55,7 @@ export function isBlockedSurveyAlertRecipient(person) {
   const hay = `${person?.name || ''} ${email}`;
   if (!email) return true;
   if (BLOCKED_SURVEY_ALERT_EMAILS.includes(email)) return true;
-  if (/nowell/i.test(hay)) return true;
-  if (/nancy/i.test(hay)) return true;
+  if (BLOCKED_SURVEY_ALERT_PERSON_RE.test(hay)) return true;
   return false;
 }
 
@@ -69,12 +69,9 @@ export function parseSurveyAlertRecipientEnv(value) {
 
 export function getSurveyAlertRecipients({
   envRecipients = process.env.SURVEY_ALERT_RECIPIENTS,
-  newsletterActive = process.env.NEWSLETTER_ADMIN_NOTIFICATIONS_ACTIVE,
 } = {}) {
   const fromEnv = parseSurveyAlertRecipientEnv(envRecipients);
-  const source = fromEnv.length > 0
-    ? fromEnv
-    : getNewsletterAdminRecipients(newsletterActive);
+  const source = fromEnv.length > 0 ? fromEnv : ADMIN_TEAM;
   const seen = new Set();
   const recipients = [];
   for (const person of source) {
