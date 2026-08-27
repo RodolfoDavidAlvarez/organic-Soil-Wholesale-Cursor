@@ -175,11 +175,40 @@ const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffer
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
 assert.match(bundleOffersSource, /Add to order/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
+assert.match(bundleOffersSource, /<title>Deals \| Organic Soil Wholesale<\/title>/);
+assert.match(bundleOffersSource, /Three setups\. Tap one\./);
+assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
+assert.doesNotMatch(bundleOffersSource, /Garden Bundles \|/);
+
+const headerSource = readFileSync(new URL("../client/src/components/layout/Header.tsx", import.meta.url), "utf8");
+assert.match(headerSource, /name: "Deals"/);
+assert.doesNotMatch(headerSource, /name: "Bundles"/);
+assert.doesNotMatch(headerSource, /Garden bundles/);
+assert.match(headerSource, /<DealList/);
+
+const dealListSource = readFileSync(new URL("../client/src/components/DealList.tsx", import.meta.url), "utf8");
+assert.match(dealListSource, /deal\.listCaption/);
+assert.match(dealListSource, /href=\{`\/offers\/\$\{deal\.slug\}`\}/);
+
+assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.listCaption, "A little soil with worm castings and mulch. Fill and feed one bed.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.listCaption, "A tote of soil with feed and mulch. Two to three beds.");
+assert.equal(PROMO_BUNDLES.map((bundle) => bundle.salePrice).join(","), "69,149,459");
+
+const footerSource = readFileSync(new URL("../client/src/components/layout/Footer.tsx", import.meta.url), "utf8");
+assert.match(footerSource, />\s*Deals\s*</);
+assert.doesNotMatch(footerSource, /Garden Bundles/);
 
 const vercelConfig = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promos")?.destination, "/offers");
 assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promo")?.destination, "/offers");
 assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promos/:path*")?.destination, "/offers/:path*");
+assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/deals")?.destination, "/offers");
+assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/deals/:path*")?.destination, "/offers/:path*");
+
+const appSource = readFileSync(new URL("../client/src/App.tsx", import.meta.url), "utf8");
+assert.match(appSource, /path="\/deals"/);
+assert.match(appSource, /path="\/deals\/:slug"/);
 
 const wholesaleSource = readFileSync(new URL("../client/src/pages/Wholesale.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(wholesaleSource, /PlantPal[^\n]*(?:1CF|50\/pallet)/, "PlantPal wholesale request option uses the V5 physical pack");

@@ -10,6 +10,7 @@ import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL } from "@/config/contact";
 import { isCallTrackingExcludedPath } from "@/lib/callTracking";
+import DealList, { DealRowContent, PROMO_BUNDLES } from "@/components/DealList";
 
 const MENU_PRODUCTS = [
   {
@@ -38,6 +39,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDealsMenuOpen, setIsDealsMenuOpen] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
   const { totalItems, openDrawer } = useQuoteCart();
   const headerRef = useRef<HTMLElement | null>(null);
@@ -83,19 +85,28 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   }, [location]);
 
+  const isDealsPath = (path: string) =>
+    path === "/offers" ||
+    path.startsWith("/offers/") ||
+    path === "/deals" ||
+    path.startsWith("/deals/") ||
+    path === "/promos" ||
+    path.startsWith("/promos/");
+
   const isActive = (path: string) => {
-    if (path === "/offers") return location === "/offers" || location.startsWith("/offers/");
+    if (path === "/offers") return isDealsPath(location);
     return location === path;
   };
 
   const navLinks = [
     { name: "Products", path: "/products" },
-    { name: "Bundles", path: "/offers" },
+    { name: "Deals", path: "/offers" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
     ...(GROK_ASSISTANT_ENABLED ? [{ name: "AI Assistant", path: "/grok" }] : []),
   ];
+  const secondaryNavLinks = navLinks.slice(2);
 
   useLayoutEffect(() => {
     updateHeaderHeight();
@@ -200,17 +211,6 @@ const Header = () => {
                   <DropdownMenuItem
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      setLocation("/offers");
-                    }}
-                    className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium cursor-pointer hover:bg-primary/5 hover:text-primary transition-colors duration-200"
-                  >
-                    <span>Garden bundles</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </DropdownMenuItem>
-                  <div className="h-px w-full bg-border my-1"></div>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
                       setLocation("/products#request-quote");
                     }}
                     className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium cursor-pointer hover:bg-primary/5 hover:text-primary transition-colors duration-200"
@@ -256,8 +256,55 @@ const Header = () => {
               </DropdownMenu>
             </div>
 
+            {/* Deals Dropdown */}
+            <div className="relative group flex items-center">
+              <Link href="/offers">
+                <div
+                  className={`relative font-medium transition-colors duration-200 cursor-pointer flex items-center ${
+                    isActive("/offers") ? "text-primary" : "text-foreground hover:text-primary"
+                  }`}
+                >
+                  Deals
+                  <span
+                    className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${
+                      isActive("/offers") ? "w-full" : "group-hover:w-full"
+                    }`}
+                  ></span>
+                </div>
+              </Link>
+              <DropdownMenu open={isDealsMenuOpen} onOpenChange={setIsDealsMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={`p-1 ml-1 rounded hover:bg-primary/10 transition-colors duration-200 ${
+                      isActive("/offers") ? "text-primary" : "text-foreground hover:text-primary"
+                    }`}
+                    aria-label="Deals dropdown"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-80 p-1.5 bg-white border border-border shadow-lg rounded-xl"
+                >
+                  {PROMO_BUNDLES.map((deal) => (
+                    <DropdownMenuItem
+                      key={deal.slug}
+                      onClick={() => {
+                        setIsDealsMenuOpen(false);
+                        setLocation(`/offers/${deal.slug}`);
+                      }}
+                      className="flex cursor-pointer flex-col items-stretch gap-0.5 rounded-lg px-3 py-2.5 text-sm hover:bg-primary/5 hover:text-primary focus:bg-primary/5"
+                    >
+                      <DealRowContent deal={deal} />
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             {/* Other Navigation Links */}
-            {navLinks.slice(1).map((link) => (
+            {secondaryNavLinks.map((link) => (
               <Link key={link.path} href={link.path}>
                 <div
                   className={`relative font-medium transition-colors duration-200 cursor-pointer group ${
@@ -484,8 +531,24 @@ const Header = () => {
                       </div>
                     </div>
 
+                    {/* Deals Section */}
+                    <div className="space-y-1">
+                      <Link href="/offers">
+                        <div
+                          className={`py-3 px-4 rounded-md font-medium transition-all duration-200 cursor-pointer ${
+                            isActive("/offers")
+                              ? "bg-primary/10 text-primary font-semibold"
+                              : "text-foreground hover:bg-primary/5 hover:text-primary"
+                          }`}
+                        >
+                          Deals
+                        </div>
+                      </Link>
+                      <DealList className="pl-1" />
+                    </div>
+
                     {/* Other Navigation Links */}
-                    {navLinks.slice(1).map((link) => (
+                    {secondaryNavLinks.map((link) => (
                       <Link key={link.path} href={link.path}>
                         <div
                           className={`py-3 px-4 rounded-md font-medium transition-all duration-200 cursor-pointer ${

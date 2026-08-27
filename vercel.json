@@ -97,6 +97,16 @@
       "source": "/promo/:path*",
       "destination": "/offers/:path*",
       "permanent": false
+    },
+    {
+      "source": "/deals",
+      "destination": "/offers",
+      "permanent": false
+    },
+    {
+      "source": "/deals/:path*",
+      "destination": "/offers/:path*",
+      "permanent": false
     }
   ],
   "rewrites": [

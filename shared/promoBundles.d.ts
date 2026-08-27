@@ -14,6 +14,7 @@ export type PromoBundle = {
   eyebrow: string;
   title: string;
   shortTitle: string;
+  listCaption: string;
   description: string;
   heroImage: string;
   heroAlt: string;

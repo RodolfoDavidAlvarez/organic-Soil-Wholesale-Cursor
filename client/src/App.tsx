@@ -223,6 +223,8 @@ function Router() {
         <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
+        <Route path="/deals/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
+        <Route path="/deals">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/promos/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
         <Route path="/promos">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/promo/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
@@ -291,6 +293,7 @@ function App() {
   const isProductFlow = location.startsWith("/products");
   const isOfferFlow =
     location.startsWith("/offers") ||
+    location.startsWith("/deals") ||
     location.startsWith("/promos") ||
     location === "/promo" ||
     location.startsWith("/promo/");

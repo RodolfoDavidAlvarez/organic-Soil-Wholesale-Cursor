@@ -4,7 +4,6 @@ import { Link, useLocation, useRoute } from "wouter";
 import {
   ArrowRight,
   Check,
-  Clock3,
   Leaf,
   MapPinned,
   Phone,
@@ -22,6 +21,7 @@ import { useQuoteCart } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { trackEvent } from "@/lib/analytics";
+import DealList from "@/components/DealList";
 import {
   getPromoBundleBySlug,
   promoBundleCartItem,
@@ -51,71 +51,17 @@ function OffersIndex() {
   return (
     <main className="bg-[#f7f5ef] py-10 sm:py-16">
       <Helmet>
-        <title>Garden Bundles | Organic Soil Wholesale</title>
+        <title>Deals | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Phoenix pickup garden bundles from Organic Soil Wholesale by Soil Seed & Water. Garden Refresh $69, Garden Refresh Plus $149, and Big Garden Setup $459."
+          content="Phoenix pickup deals from Organic Soil Wholesale by Soil Seed & Water. Garden Refresh $69, Garden Refresh Plus $149, and Big Garden Setup $459."
         />
         <link rel="canonical" href="https://organicsoilwholesale.com/offers" />
       </Helmet>
-      <div className="mx-auto max-w-7xl px-4 sm:px-8">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup bundles</p>
-        <h1 className="mt-3 max-w-3xl font-heading text-4xl font-bold text-[#183a23] sm:text-5xl">
-          Build a better garden for less.
-        </h1>
-        <p className="mt-4 max-w-2xl text-lg leading-8 text-[#657066]">
-          Arizona-made soil, compost, worm castings, and mulch—bundled for a real bed job and priced for yard pickup.
-          The more you buy, the more you save. Keep shopping Products and check out together.
-        </p>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {PROMO_BUNDLES.map((offer) => (
-            <OfferCard offer={offer} key={offer.slug} />
-          ))}
-        </div>
-
-        <section className="mt-10 overflow-hidden rounded-3xl bg-[#183a23] text-white shadow-xl ring-1 ring-[#183a23]/20">
-          <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="p-6 sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e9c66c]">Wholesale · bulk · landscapers</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold sm:text-3xl">Need a truckload, not a bundle?</h2>
-              <p className="mt-3 max-w-xl text-base leading-7 text-white/80">
-                24-ton Simon&apos;s Gold walking-floor loads and bulk delivery stay quote-only. Pickup is available at the Phoenix yard. Delivery is available across Arizona. Call now and we&apos;ll price the load.
-              </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href={CUSTOMER_SUPPORT_PHONE_TEL}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#e9c66c] px-5 py-3 text-base font-extrabold text-[#183a23]"
-                >
-                  <Phone className="h-4 w-4" />
-                  {CUSTOMER_SUPPORT_PHONE_DISPLAY}
-                </a>
-                <Link
-                  href="/landscapers"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 px-5 py-3 text-base font-bold text-white"
-                >
-                  Landscaper supplies <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-            <div className="border-t border-white/10 bg-[#0f2918] p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e9c66c]">Yard hours</p>
-              <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/85">
-                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#e9c66c]" />
-                Tue–Sat · 8am–1pm and 2pm–4pm
-              </p>
-              <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/85">
-                <MapPinned className="mt-0.5 h-4 w-4 shrink-0 text-[#e9c66c]" />
-                {PHOENIX_YARD_ADDRESS}
-              </p>
-              <a
-                href={PHOENIX_YARD_DIRECTIONS_URL}
-                className="mt-5 inline-flex min-h-11 items-center gap-2 font-bold text-[#e9c66c] underline underline-offset-4"
-              >
-                Open the entrance pin <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-        </section>
+      <div className="mx-auto max-w-xl px-4 sm:px-6">
+        <h1 className="font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Deals</h1>
+        <p className="mt-2 text-base text-[#657066]">Three setups. Tap one.</p>
+        <DealList variant="page" className="mt-6" />
       </div>
     </main>
   );
@@ -186,7 +132,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
         <div className="mx-auto grid max-w-7xl lg:grid-cols-2">
           <div className="order-2 px-4 py-8 sm:px-8 sm:py-14 lg:order-1 lg:py-16 xl:pl-12">
             <Link href="/offers" className="text-sm font-bold text-[#f1d6a6] underline underline-offset-4">
-              All garden bundles
+              All deals
             </Link>
             <p className="mt-6 inline-flex rounded-full border border-[#f1d6a6]/35 bg-[#f1d6a6]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#f6e5c4]">
               {offer.eyebrow}

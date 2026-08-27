@@ -42,6 +42,7 @@ export const PROMO_BUNDLES = Object.freeze([
     eyebrow: "The 4×8 raised-bed reset",
     title: "Garden Refresh",
     shortTitle: "Garden Refresh",
+    listCaption: "Perfect for an existing garden. Quick soil feed and replenishment.",
     description:
       "Ten cubic feet across seven bags: compost, worm castings, and mulch—exactly what one 4×8 raised bed needs for fall.",
     heroImage: "/images/offers/garden-refresh.png",
@@ -73,6 +74,7 @@ export const PROMO_BUNDLES = Object.freeze([
     eyebrow: "Mix, not just compost",
     title: "Garden Refresh Plus",
     shortTitle: "Garden Refresh Plus",
+    listCaption: "A little soil with worm castings and mulch. Fill and feed one bed.",
     description:
       "Twenty-four cubic feet across sixteen bags: PlantPal mix, three free mulch bags, and worm castings for one 4×8 raised bed.",
     heroImage: "/images/offers/garden-refresh-plus.png",
@@ -102,6 +104,7 @@ export const PROMO_BUNDLES = Object.freeze([
     eyebrow: "Fill the beds. Feed the soil. Finish the surface.",
     title: "Big Garden Setup",
     shortTitle: "Big Garden Setup",
+    listCaption: "A tote of soil with feed and mulch. Two to three beds.",
     description:
       "One 2.2-cubic-yard PlantPal tote plus ten bags of compost, worm castings, and mulch for two to three 4×8 beds.",
     heroImage: "/images/offers/big-garden-setup.png",

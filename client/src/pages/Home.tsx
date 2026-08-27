@@ -417,7 +417,7 @@ const Home = () => {
               }}
               className="h-12 min-h-12 border-[#183a23]/20 bg-white px-5 font-extrabold text-[#183a23] hover:bg-[#eaf0e6]"
             >
-              All garden bundles <ArrowRight className="ml-2 h-4 w-4" />
+              All deals <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
