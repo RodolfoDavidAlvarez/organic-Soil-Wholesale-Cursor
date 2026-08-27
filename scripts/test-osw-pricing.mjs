@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import {
   calculateV5OrderTotals,
   normalizeV5CheckoutItems,
@@ -176,24 +176,43 @@ assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
 assert.match(bundleOffersSource, /Add to order/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
 assert.match(bundleOffersSource, /<title>Deals \| Organic Soil Wholesale<\/title>/);
-assert.match(bundleOffersSource, /Three setups\. Tap one\./);
+assert.match(bundleOffersSource, /<DealHubCards/);
+assert.match(bundleOffersSource, /Add to order/);
+assert.match(bundleOffersSource, /Tue–Sat 8–1 and 2–4/);
+assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
 assert.doesNotMatch(bundleOffersSource, /Garden Bundles \|/);
 
 const headerSource = readFileSync(new URL("../client/src/components/layout/Header.tsx", import.meta.url), "utf8");
-assert.match(headerSource, /name: "Deals"/);
+assert.match(headerSource, />Deals</);
+assert.match(headerSource, /<DealList/);
 assert.doesNotMatch(headerSource, /name: "Bundles"/);
 assert.doesNotMatch(headerSource, /Garden bundles/);
-assert.match(headerSource, /<DealList/);
 
 const dealListSource = readFileSync(new URL("../client/src/components/DealList.tsx", import.meta.url), "utf8");
 assert.match(dealListSource, /deal\.listCaption/);
 assert.match(dealListSource, /href=\{`\/offers\/\$\{deal\.slug\}`\}/);
+assert.match(dealListSource, /Buy Now/);
+assert.match(dealListSource, /deal\.bannerImage/);
+assert.match(dealListSource, /fmtDealPrice\(deal\.salePrice\)/);
 
 assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.listCaption, "A little soil with worm castings and mulch. Fill and feed one bed.");
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.listCaption, "A tote of soil with feed and mulch. Two to three beds.");
 assert.equal(PROMO_BUNDLES.map((bundle) => bundle.salePrice).join(","), "69,149,459");
+assert.equal(getPromoBundleBySlug("garden-refresh")?.lpHeadline, "One 4×8 bed.");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.lpHeadline, "One 4×8 bed.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.lpHeadline, "2 to 3 beds.");
+assert.match(getPromoBundleBySlug("big-garden-setup")?.lpLine || "", /1 PlantPal tote \+ 10 bags/);
+
+for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {
+  const flyer = statSync(new URL(`../client/public/images/offers/flyers/${slug}.webp`, import.meta.url));
+  const banner = statSync(new URL(`../client/public/images/offers/banners/${slug}.webp`, import.meta.url));
+  assert.ok(flyer.size < 350_000, `${slug} flyer webp too large: ${flyer.size}`);
+  assert.ok(banner.size < 150_000, `${slug} banner webp too large: ${banner.size}`);
+  assert.match(getPromoBundleBySlug(slug)?.heroImage || "", new RegExp(`/images/offers/flyers/${slug}\\.webp`));
+  assert.match(getPromoBundleBySlug(slug)?.bannerImage || "", new RegExp(`/images/offers/banners/${slug}\\.webp`));
+}
 
 const footerSource = readFileSync(new URL("../client/src/components/layout/Footer.tsx", import.meta.url), "utf8");
 assert.match(footerSource, />\s*Deals\s*</);

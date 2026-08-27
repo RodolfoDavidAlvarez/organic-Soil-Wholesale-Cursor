@@ -428,7 +428,7 @@ const Home = () => {
                 price: "$69",
                 was: "$91",
                 detail: "7 bags · 10 cu ft · one 4×8 bed",
-                image: "/images/offers/garden-refresh.png",
+                image: "/images/offers/flyers/garden-refresh.webp",
                 event: "garden-refresh",
               },
               {
@@ -437,7 +437,7 @@ const Home = () => {
                 price: "$149",
                 was: "$247",
                 detail: "16 bags · 24 cu ft · mix, not just compost",
-                image: "/images/offers/garden-refresh-plus.png",
+                image: "/images/offers/flyers/garden-refresh-plus.webp",
                 event: "garden-refresh-plus",
               },
               {
@@ -446,7 +446,7 @@ const Home = () => {
                 price: "$459",
                 was: "$642",
                 detail: "1 tote + 10 bags · 2–3 beds",
-                image: "/images/offers/big-garden-setup.png",
+                image: "/images/offers/flyers/big-garden-setup.webp",
                 event: "big-garden-setup",
               },
             ].map((bundle) => (
