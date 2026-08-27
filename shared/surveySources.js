@@ -53,3 +53,8 @@ export function readGardenClassSurveyPrefill(search) {
   const firstName = firstFromKey || (fullName ? fullName.split(/\s+/)[0] || '' : '');
   return { firstName, email, lastName };
 }
+
+export function readSurveyPrefill(search) {
+  const prefill = readGardenClassSurveyPrefill(search);
+  return { firstName: prefill.firstName, email: prefill.email };
+}

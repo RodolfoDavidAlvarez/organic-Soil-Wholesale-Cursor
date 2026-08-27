@@ -17,6 +17,7 @@ import {
   normalizeSurveyResponse,
   parseSurveyCouponQrRequest,
   readGardenClassSurveyPrefill,
+  readSurveyPrefill,
   saveSurveyResponse,
   surveyCouponExpiresAt,
   surveyCouponQrPath,
@@ -143,10 +144,12 @@ function createSurveyDb({ customerId = 42 } = {}) {
 const validAnswers = {
   firstName: "Jordan",
   email: "jordan@example.com",
-  visitFeedback: "Pickup was quick.",
-  whatFeltEasy: "Finding the pile.",
-  wouldComeBack: "yes",
-  wouldSendFriend: "yes",
+  experienceScore: 8,
+  findingUs: 7,
+  comeBack: 9,
+  workedWell: ["Staff", "Loading / pickup"],
+  improveMost: "Signs / directions",
+  notes: "Pickup was quick.",
 };
 
 test("honeypot submissions look successful and never write", async () => {
@@ -160,15 +163,22 @@ test("honeypot submissions look successful and never write", async () => {
   assert.equal(validation.bot, true);
 });
 
-test("requires first name, email, and visit feedback", () => {
-  assert.equal(validateSurveyResponse({ email: "a@b.com", visitFeedback: "Good" }).ok, false);
-  assert.equal(validateSurveyResponse({ firstName: "Alex", visitFeedback: "Good" }).ok, false);
-  assert.equal(validateSurveyResponse({ firstName: "Alex", email: "not-an-email", visitFeedback: "Good" }).ok, false);
+test("requires first name, email, and the three yard scores", () => {
+  assert.equal(validateSurveyResponse({ email: "a@b.com", experienceScore: 8, findingUs: 7, comeBack: 9 }).ok, false);
+  assert.equal(validateSurveyResponse({ firstName: "Alex", experienceScore: 8, findingUs: 7, comeBack: 9 }).ok, false);
+  assert.equal(validateSurveyResponse({ firstName: "Alex", email: "not-an-email", experienceScore: 8, findingUs: 7, comeBack: 9 }).ok, false);
   assert.equal(validateSurveyResponse({ firstName: "Alex", email: "alex@example.com" }).ok, false);
+  assert.equal(validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    visitFeedback: "Yard was easy.",
+  }).ok, false);
   const ok = validateSurveyResponse({
     firstName: "Alex",
     email: "Alex@Example.com",
-    visitFeedback: "Yard was easy.",
+    experienceScore: 8,
+    findingUs: 6,
+    comeBack: 9,
   });
   assert.equal(ok.ok, true);
   assert.equal(ok.bot, false);
@@ -176,27 +186,37 @@ test("requires first name, email, and visit feedback", () => {
   assert.equal(ok.response.source, SURVEY_SOURCE);
   assert.equal(ok.response.surveyKind, SURVEY_KIND_PURCHASE);
   assert.equal(ok.response.eventKey, "");
+  assert.equal(ok.response.experienceScore, 8);
+  assert.equal(ok.response.findingUs, "6");
+  assert.equal(ok.response.comeBack, 9);
+  assert.equal(ok.response.notes, "");
 });
 
 test("phone is optional but validated when present", () => {
   const blank = validateSurveyResponse({
     firstName: "Alex",
     email: "alex@example.com",
-    visitFeedback: "Fine",
+    experienceScore: 8,
+    findingUs: 7,
+    comeBack: 9,
   });
   assert.equal(blank.ok, true);
   const bad = validateSurveyResponse({
     firstName: "Alex",
     email: "alex@example.com",
     phone: "123",
-    visitFeedback: "Fine",
+    experienceScore: 8,
+    findingUs: 7,
+    comeBack: 9,
   });
   assert.equal(bad.ok, false);
   const good = validateSurveyResponse({
     firstName: "Alex",
     email: "alex@example.com",
     phone: "(623) 555-1212",
-    visitFeedback: "Fine",
+    experienceScore: 8,
+    findingUs: 7,
+    comeBack: 9,
   });
   assert.equal(good.ok, true);
 });
@@ -230,8 +250,15 @@ test("inserts a row with a unique coupon and allows repeat answers without a sec
   assert.equal(db.rows[0].survey_kind, SURVEY_KIND_PURCHASE);
   assert.equal(db.rows[0].event_key, null);
   assert.equal(db.rows[0].notes, "Pickup was quick.");
-  assert.equal(db.rows[0].scores.wouldComeBack, "yes");
-  assert.equal(db.rows[0].scores.wouldSendFriend, "yes");
+  assert.equal(db.rows[0].experience_score, 8);
+  assert.equal(db.rows[0].finding_us, "7");
+  assert.deepEqual(db.rows[0].worked_well, ["Staff", "Loading / pickup"]);
+  assert.equal(db.rows[0].improve_most, "Signs / directions");
+  assert.equal(db.rows[0].would_come_back, "9");
+  assert.equal(db.rows[0].scores.experience, 8);
+  assert.equal(db.rows[0].scores.findingUs, 7);
+  assert.equal(db.rows[0].scores.comeBack, 9);
+  assert.equal(db.rows[0].visit_feedback, "Experience 8/10. Finding us 7/10. Come back 9/10.");
   assert.equal("newsletter_subscribed" in db.rows[0], false);
   assert.equal(saved.coupon.code, "SSW30-ABCD2EFG");
   assert.equal(saved.coupon.reused, false);
@@ -258,13 +285,62 @@ test("inserts a row with a unique coupon and allows repeat answers without a sec
   assert.equal(second.coupon.issuedAt, "2026-08-19T17:00:00.000Z");
 });
 
+test("yard survey comment can be blank and still writes finding_us", async () => {
+  const db = createSurveyDb();
+  const validation = validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    source: "apology-2026-08",
+    experienceScore: 4,
+    findingUs: 2,
+    comeBack: 5,
+    workedWell: ["Finding the yard / entrance"],
+    improveMost: "Finding the yard / entrance",
+    notes: "",
+  });
+  assert.equal(validation.ok, true);
+  assert.equal(validation.response.notes, "");
+  assert.equal(validation.response.source, "osw-survey:apology-2026-08");
+  const saved = await saveSurveyResponse({
+    db,
+    response: validation.response,
+    createCouponCode: () => "SSW30-FINDING1",
+  });
+  assert.equal(saved.coupon.code, "SSW30-FINDING1");
+  assert.equal(db.rows[0].experience_score, 4);
+  assert.equal(db.rows[0].finding_us, "2");
+  assert.deepEqual(db.rows[0].worked_well, ["Finding the yard / entrance"]);
+  assert.equal(db.rows[0].improve_most, "Finding the yard / entrance");
+  assert.equal(db.rows[0].would_come_back, "5");
+  assert.equal(db.rows[0].notes, null);
+  assert.equal(db.rows[0].survey_kind, SURVEY_KIND_PURCHASE);
+  assert.equal(db.rows[0].source, "osw-survey:apology-2026-08");
+  assert.match(db.rows[0].coupon_code, /^SSW30-/);
+});
+
+test("yard survey prefill reads first_name and email", () => {
+  assert.deepEqual(
+    readSurveyPrefill("?source=apology-2026-08&first_name=Haylee&email=haylee@example.com"),
+    { firstName: "Haylee", email: "haylee@example.com" },
+  );
+  assert.deepEqual(
+    readSurveyPrefill("?first_name=Rodo&email=ralvarez@soilseedandwater.com"),
+    { firstName: "Rodo", email: "ralvarez@soilseedandwater.com" },
+  );
+  assert.equal(readSurveyPrefill("?firstName=Haylee&email=haylee@example.com").firstName, "Haylee");
+  assert.equal(readSurveyPrefill("?name=Haylee%20Smith&email=haylee@example.com").firstName, "Haylee");
+});
+
 test("a second email still earns its own coupon", async () => {
   const db = createSurveyDb();
   const jordan = validateSurveyResponse(validAnswers);
   const sam = validateSurveyResponse({
     firstName: "Sam",
     email: "sam@example.com",
-    visitFeedback: "First time at the yard.",
+    experienceScore: 7,
+    findingUs: 5,
+    comeBack: 8,
+    notes: "First time at the yard.",
   });
   const first = await saveSurveyResponse({
     db,
@@ -294,6 +370,9 @@ test("retries when a generated coupon code already exists", async () => {
     firstName: "Sam",
     email: "sam@example.com",
     visitFeedback: "Good yard.",
+    experienceScore: 8,
+    findingUs: 7,
+    comeBack: 9,
   });
   const saved = await saveSurveyResponse({
     db,
@@ -312,7 +391,10 @@ test("missing customer rows do not fail the insert", async () => {
   const validation = validateSurveyResponse({
     firstName: "Sam",
     email: "new-neighbor@example.com",
-    visitFeedback: "First time at the yard.",
+    experienceScore: 8,
+    findingUs: 6,
+    comeBack: 9,
+    notes: "First time at the yard.",
   });
   const saved = await saveSurveyResponse({
     db,
@@ -412,6 +494,16 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.match(api, /survey-coupon/);
   assert.match(page, /Finish this and we'll give you 30% off one item at the yard/);
   assert.match(page, /Show this at the yard/);
+  assert.match(page, /Honest feedback\. Three quick taps/);
+  assert.match(page, /type="range"/);
+  assert.match(page, /window\.location\.search/);
+  assert.match(survey, /finding_us: response\.findingUs/);
+  assert.match(survey, /experience_score: response\.experienceScore/);
+  assert.match(survey, /worked_well:/);
+  assert.doesNotMatch(page, /2 minutes/);
+  assert.doesNotMatch(page, /about one minute/i);
+  assert.doesNotMatch(page, /takes under a minute/i);
+  assert.doesNotMatch(page, /minute/);
   assert.match(survey, /SSW survey thank-you/);
   assert.match(page, /coupon\.label/);
   assert.match(page, /coupon\.qrUrl/);
@@ -584,8 +676,28 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(ig, /Tell me about the next class/);
   assert.doesNotMatch(ig, /Register for The Garden Reset/);
   assert.doesNotMatch(ig, /Aug 22/);
-  assert.match(yard, /We owe you an apology/);
+  assert.match(yard, /Honest feedback\. Three quick taps/);
   assert.match(yard, /30% off/);
+  assert.match(yard, /Finding the yard \/ entrance/);
+  assert.match(yard, /readSurveyPrefill/);
+  assert.match(yard, /readYardPrefill\(\)\.firstName/);
+  assert.match(yard, /readYardPrefill\(\)\.email/);
+  assert.match(yard, /findingUs/);
+  assert.match(yard, /workedWell/);
+  assert.match(yard, /improveMost/);
+  assert.match(yard, /survey-notes/);
+  assert.equal((yard.match(/<Textarea/g) || []).length, 1);
+  assert.doesNotMatch(yard, /We owe you an apology/);
+  assert.doesNotMatch(yard, /2 minutes/);
+  assert.doesNotMatch(yard, /about one minute/i);
+  assert.doesNotMatch(yard, /under a minute/i);
+  assert.doesNotMatch(yard, /minute/);
+  assert.doesNotMatch(yard, /What felt easy/);
+  assert.doesNotMatch(yard, /What felt confusing/);
+  assert.doesNotMatch(yard, /Would you send a friend/);
+  assert.doesNotMatch(yard, /What should we add next/);
+  assert.doesNotMatch(yard, /survey-q1/);
+  assert.doesNotMatch(yard, /const \[firstName, setFirstName\] = useState\(""\)/);
 });
 
 test("garden class named scores write saturday, heat, teaching, comeAgain and no coupon", async () => {

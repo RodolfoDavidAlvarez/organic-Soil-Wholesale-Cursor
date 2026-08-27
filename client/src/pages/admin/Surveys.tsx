@@ -22,6 +22,10 @@ type SurveyRow = {
   scores: Record<string, string | number> | null;
   user_agent: string | null;
   coupon_code: string | null;
+  experience_score: number | null;
+  finding_us: string | null;
+  worked_well: string[] | null;
+  improve_most: string | null;
 };
 
 type SurveyInbox = {
@@ -121,9 +125,34 @@ export default function AdminSurveys() {
                     <span className="ml-auto text-xs text-gray-500">{phoenixStamp(row.created_at)}</span>
                   </div>
                   <p className="mt-2 break-all text-sm text-gray-700">{row.email_normalized}</p>
+                  {row.experience_score != null ? (
+                    <p className="mt-1 text-sm text-gray-700">
+                      Experience: <span className="font-medium">{row.experience_score}/10</span>
+                      {row.finding_us ? (
+                        <>
+                          {" "}
+                          · Finding us: <span className="font-medium">{row.finding_us}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  ) : row.finding_us ? (
+                    <p className="mt-1 text-sm text-gray-700">
+                      Finding us: <span className="font-medium">{row.finding_us}</span>
+                    </p>
+                  ) : null}
                   {row.would_come_back ? (
                     <p className="mt-1 text-sm text-gray-700">
                       Would come back: <span className="font-medium">{row.would_come_back}</span>
+                    </p>
+                  ) : null}
+                  {row.worked_well?.length ? (
+                    <p className="mt-1 text-sm text-gray-700">
+                      Worked: <span className="font-medium">{row.worked_well.join(", ")}</span>
+                    </p>
+                  ) : null}
+                  {row.improve_most ? (
+                    <p className="mt-1 text-sm text-gray-700">
+                      Improve: <span className="font-medium">{row.improve_most}</span>
                     </p>
                   ) : null}
                   {row.notes ? <p className="mt-2 text-sm leading-6 text-gray-800">{row.notes}</p> : null}
