@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ScoreSlider } from "@/components/survey/ScoreSlider";
 import {
   CUSTOMER_SUPPORT_PHONE_DIAL,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
@@ -68,12 +69,6 @@ function surveySource() {
   return tag ? `osw-survey:${tag.slice(0, 80)}` : "osw-survey";
 }
 
-function scoreWord(n: number, low: string, high: string) {
-  if (n <= 3) return low;
-  if (n >= 8) return high;
-  return "in the middle";
-}
-
 function readYardPrefill() {
   if (typeof window === "undefined") return { firstName: "", email: "" };
   return readSurveyPrefill(window.location.search);
@@ -81,9 +76,9 @@ function readYardPrefill() {
 
 export default function ClientSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
-  const [firstName, setFirstName] = useState(() => readYardPrefill().firstName);
-  const [email, setEmail] = useState(() => readYardPrefill().email);
-  const [phone, setPhone] = useState("");
+  const [identityPrefill] = useState(() => readYardPrefill());
+  const [firstName, setFirstName] = useState(() => identityPrefill.firstName);
+  const [email, setEmail] = useState(() => identityPrefill.email);
   const [experience, setExperience] = useState<number | null>(null);
   const [findingUs, setFindingUs] = useState<number | null>(null);
   const [comeBack, setComeBack] = useState<number | null>(null);
@@ -95,6 +90,7 @@ export default function ClientSurvey() {
   const [success, setSuccess] = useState(false);
   const [coupon, setCoupon] = useState<SurveyCoupon | null>(null);
   const [error, setError] = useState("");
+  const hasPrefill = Boolean(identityPrefill.firstName || identityPrefill.email);
 
   useEffect(() => {
     const prefill = readYardPrefill();
@@ -125,7 +121,6 @@ export default function ClientSurvey() {
         body: JSON.stringify({
           firstName,
           email,
-          phone,
           notes,
           experienceScore: experience,
           findingUs,
@@ -150,7 +145,7 @@ export default function ClientSurvey() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f0e6] text-[#264027]">
+    <main className="min-h-screen bg-[#fffdf7] text-[#264027]">
       <Helmet>
         <title>How did we do? | Organic Soil Wholesale</title>
         <meta
@@ -160,20 +155,33 @@ export default function ClientSurvey() {
         <link rel="canonical" href="https://www.organicsoilwholesale.com/survey" />
       </Helmet>
 
-      <section className="bg-[#264027] px-5 py-11 text-white">
+      <div className="bg-[#fffdf7] px-5 py-4">
         <div className="mx-auto max-w-md">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b38a58]">Soil Seed &amp; Water</p>
+          <img
+            src="/email-assets/ssw-logo-letter.png"
+            alt="Soil Seed & Water / Organic Soil Wholesale"
+            width={1758}
+            height={419}
+            className="h-9 w-auto max-w-[220px]"
+          />
+        </div>
+      </div>
+
+      <section className="relative bg-[#264027] px-5 py-11 text-white">
+        <div className="mx-auto max-w-md">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#d7b77d]">Soil Seed &amp; Water</p>
           <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">How did the yard feel?</h1>
           <p className="mt-4 text-base leading-7 text-white/90">
             Honest feedback. Three quick taps.
           </p>
         </div>
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-[#b38a58] to-[#d7b77d]" />
       </section>
 
       <section className="mx-auto max-w-md px-5 py-8">
         {success ? (
           <div className="space-y-5">
-            <div className="rounded-2xl border border-[#d7dfd0] bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-[#e6dcc8] bg-white p-6 shadow-[0_8px_24px_rgba(38,64,39,0.06)]">
               <CheckCircle2 className="mb-4 h-12 w-12 text-[#264027]" />
               <h2 className="font-heading text-2xl font-bold">Thank you. We read these.</h2>
               <p className="mt-3 text-base leading-7 text-neutral-700">
@@ -206,13 +214,18 @@ export default function ClientSurvey() {
         ) : (
           <form onSubmit={submit} className="space-y-7">
             <p className="text-base leading-7 text-neutral-700">
-              Name and email first so we know who wrote this. Change them if they are not you. Then slide what is true.
+              {hasPrefill
+                ? "Name and email first so we know who wrote this. Then slide what is true."
+                : "Name and email first so we know who wrote this. Change them if they are not you. Then slide what is true."}
             </p>
-            <p className="text-sm leading-6 text-neutral-600">
+            <p className="text-base font-semibold leading-7 text-[#264027]">
               Finish this and we'll give you 30% off one item at the yard.
             </p>
 
-            <div className="grid gap-4 rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
+            <div className="grid gap-4 rounded-2xl border border-[#e6dcc8] bg-white p-5 shadow-[0_8px_24px_rgba(38,64,39,0.06)]">
+              {hasPrefill ? (
+                <p className="text-sm leading-6 text-neutral-500">This is you? Change it if not.</p>
+              ) : null}
               <div>
                 <label htmlFor="survey-first-name" className="mb-2 block text-sm font-semibold text-[#264027]">
                   First name
@@ -242,21 +255,6 @@ export default function ClientSurvey() {
                   inputMode="email"
                   required
                   maxLength={254}
-                  className={FIELD_CLASS}
-                />
-              </div>
-              <div>
-                <label htmlFor="survey-phone" className="mb-2 block text-sm font-semibold text-[#264027]">
-                  Phone <span className="font-normal text-neutral-500">Optional</span>
-                </label>
-                <Input
-                  id="survey-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  autoComplete="tel"
-                  inputMode="tel"
-                  maxLength={30}
                   className={FIELD_CLASS}
                 />
               </div>
@@ -354,7 +352,7 @@ export default function ClientSurvey() {
         )}
       </section>
 
-      <footer className="border-t border-[#d7dfd0] bg-white px-5 py-8">
+      <footer className="border-t border-[#e6dcc8] bg-[#f7f3e8] px-5 py-8">
         <div className="mx-auto max-w-md space-y-3 text-sm leading-6 text-neutral-700">
           <p className="flex items-start gap-2">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#b38a58]" />
@@ -448,93 +446,6 @@ function SurveyCouponCard({ coupon }: { coupon: SurveyCoupon }) {
   );
 }
 
-function ScoreSlider({
-  id,
-  legend,
-  lowLabel,
-  highLabel,
-  value,
-  onChange,
-}: {
-  id: string;
-  legend: string;
-  lowLabel: string;
-  highLabel: string;
-  value: number | null;
-  onChange: (next: number) => void;
-}) {
-  const visual = value ?? 5;
-  const selected = value != null;
-  const pct = ((visual - 1) / 9) * 100;
-  const label = selected ? scoreWord(value, lowLabel, highLabel) : "Slide to choose";
-
-  return (
-    <fieldset className="rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
-      <legend className="float-left mb-4 w-full px-0 text-base font-semibold text-[#264027]">{legend}</legend>
-      <div className="clear-both text-center">
-        <p
-          className={`font-heading text-5xl font-bold tabular-nums leading-none ${
-            selected ? "text-[#264027]" : "text-[#264027]/20"
-          }`}
-        >
-          {selected ? value : visual}
-        </p>
-        <p className={`mt-2 min-h-5 text-sm font-semibold ${selected ? "text-[#b38a58]" : "text-neutral-400"}`}>
-          {label}
-        </p>
-      </div>
-      <div className="relative mt-6 h-11">
-        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
-        <div
-          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#264027]"
-          style={{ width: selected ? `${pct}%` : 0 }}
-        />
-        <input
-          id={id}
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          value={visual}
-          aria-valuemin={1}
-          aria-valuemax={10}
-          aria-valuenow={selected ? value : undefined}
-          aria-valuetext={selected ? `${value} of 10, ${label}` : "Not set yet"}
-          aria-label={legend}
-          onChange={(event) => onChange(Number(event.target.value))}
-          onPointerUp={() => {
-            if (value == null) onChange(visual);
-          }}
-          className={`garden-score-slider absolute inset-0 w-full ${selected ? "is-set" : ""}`}
-        />
-      </div>
-      <div className="mt-3 flex justify-between gap-3 text-xs font-semibold leading-4 text-neutral-600">
-        <span>1 {lowLabel}</span>
-        <span className="text-right">10 {highLabel}</span>
-      </div>
-      <div className="mt-1 flex justify-between">
-        {Array.from({ length: 10 }, (_, index) => {
-          const n = index + 1;
-          const active = selected && value === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(n)}
-              aria-label={`${n}, ${legend}`}
-              className={`min-h-11 min-w-[1.35rem] text-[11px] font-semibold tabular-nums ${
-                active ? "text-[#264027]" : "text-neutral-400"
-              }`}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
-
 function ChipGroup({
   legend,
   hint,
@@ -563,10 +474,10 @@ function ChipGroup({
               type="button"
               onClick={() => onToggle(option)}
               aria-pressed={isOn}
-              className={`inline-flex min-h-11 items-center rounded-xl border px-3 text-sm font-bold leading-5 ${
+              className={`inline-flex min-h-12 items-center rounded-2xl border-2 px-4 py-2.5 text-base font-bold leading-5 ${
                 isOn
                   ? "border-[#264027] bg-[#264027] text-white"
-                  : "border-[#d7dfd0] bg-white text-[#264027]"
+                  : "border-[#8aa089] bg-[#fffdf7] text-[#264027]"
               }`}
             >
               {option}

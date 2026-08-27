@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ScoreSlider } from "@/components/survey/ScoreSlider";
 import {
   CUSTOMER_SUPPORT_PHONE_DIAL,
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
@@ -27,12 +28,6 @@ const COME_AGAIN_OPTIONS = [
   ["maybe", "Maybe"],
   ["no", "No"],
 ] as const;
-
-function scoreWord(n: number, low: string, high: string) {
-  if (n <= 3) return low;
-  if (n >= 8) return high;
-  return "in the middle";
-}
 
 export default function GardenClassSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
@@ -281,93 +276,6 @@ function YardInvite() {
         </a>
       </p>
     </div>
-  );
-}
-
-function ScoreSlider({
-  id,
-  legend,
-  lowLabel,
-  highLabel,
-  value,
-  onChange,
-}: {
-  id: string;
-  legend: string;
-  lowLabel: string;
-  highLabel: string;
-  value: number | null;
-  onChange: (next: number) => void;
-}) {
-  const visual = value ?? 5;
-  const selected = value != null;
-  const pct = ((visual - 1) / 9) * 100;
-  const label = selected ? scoreWord(value, lowLabel, highLabel) : "Slide to choose";
-
-  return (
-    <fieldset className="rounded-2xl border border-[#d7dfd0] bg-white p-5 shadow-sm">
-      <legend className="float-left mb-4 w-full px-0 text-base font-semibold text-[#264027]">{legend}</legend>
-      <div className="clear-both text-center">
-        <p
-          className={`font-heading text-5xl font-bold tabular-nums leading-none ${
-            selected ? "text-[#264027]" : "text-[#264027]/20"
-          }`}
-        >
-          {selected ? value : visual}
-        </p>
-        <p className={`mt-2 min-h-5 text-sm font-semibold ${selected ? "text-[#b38a58]" : "text-neutral-400"}`}>
-          {label}
-        </p>
-      </div>
-      <div className="relative mt-6 h-11">
-        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#d7dfd0]" />
-        <div
-          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[#264027]"
-          style={{ width: selected ? `${pct}%` : 0 }}
-        />
-        <input
-          id={id}
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          value={visual}
-          aria-valuemin={1}
-          aria-valuemax={10}
-          aria-valuenow={selected ? value : undefined}
-          aria-valuetext={selected ? `${value} of 10, ${label}` : "Not set yet"}
-          aria-label={legend}
-          onChange={(event) => onChange(Number(event.target.value))}
-          onPointerUp={() => {
-            if (value == null) onChange(visual);
-          }}
-          className={`garden-score-slider absolute inset-0 w-full ${selected ? "is-set" : ""}`}
-        />
-      </div>
-      <div className="mt-3 flex justify-between gap-3 text-xs font-semibold leading-4 text-neutral-600">
-        <span>1 {lowLabel}</span>
-        <span className="text-right">10 {highLabel}</span>
-      </div>
-      <div className="mt-1 flex justify-between">
-        {Array.from({ length: 10 }, (_, index) => {
-          const n = index + 1;
-          const active = selected && value === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(n)}
-              aria-label={`${n}, ${legend}`}
-              className={`min-h-11 min-w-[1.35rem] text-[11px] font-semibold tabular-nums ${
-                active ? "text-[#264027]" : "text-neutral-400"
-              }`}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
   );
 }
 
