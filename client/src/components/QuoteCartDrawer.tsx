@@ -15,6 +15,11 @@ import {
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
 import { promoBundleHref } from "@shared/promoBundles.js";
+import {
+  CART_LOAD_GROUP_HINTS,
+  CART_LOAD_GROUP_LABELS,
+  partitionPayCartItems,
+} from "@shared/cartLoadGroups.js";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
@@ -198,25 +203,15 @@ export const QuoteCartDrawer = () => {
   const flatbedDiscount = useMemo(() => fullLoadDiscountAmount(payItems), [payItems]);
   const payTotal = payGross - flatbedDiscount;
   const quoteTotal = useMemo(() => quoteItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), [quoteItems]);
-  const walkingFloorItems = useMemo(
-    () => payItems.filter((item) => isWalkingFloorFormat(item.format)),
-    [payItems],
-  );
-  const flatbedItems = useMemo(
-    () => payItems.filter((item) => spotsForFormat(item.format, item.quantity) > 0),
-    [payItems],
-  );
-  const yardItems = useMemo(
-    () =>
-      payItems.filter(
-        (item) => !isWalkingFloorFormat(item.format) && spotsForFormat(item.format, item.quantity) <= 0,
-      ),
+  const { offerItems, walkingFloorItems, flatbedItems, yardItems } = useMemo(
+    () => partitionPayCartItems(payItems),
     [payItems],
   );
 
   const hasDeliveryTrucks = flatbedItems.length > 0 && walkingFloorItems.length > 0;
   const hasMixedLoads =
-    (walkingFloorItems.length > 0 ? 1 : 0) +
+    (offerItems.length > 0 ? 1 : 0) +
+      (walkingFloorItems.length > 0 ? 1 : 0) +
       (flatbedItems.length > 0 ? 1 : 0) +
       (yardItems.length > 0 ? 1 : 0) >
     1;
@@ -302,7 +297,21 @@ export const QuoteCartDrawer = () => {
           ) : (
             <>
               <div className="flex-1 space-y-3 overflow-y-auto py-4">
-                {/* Flatbed first — mixable load, meter, 10% off. Number trucks only when both exist. */}
+                {offerItems.length > 0 && (
+                  <LoadSection
+                    title={CART_LOAD_GROUP_LABELS.offers}
+                    hint={CART_LOAD_GROUP_HINTS.offers}
+                    image={
+                      offerItems[0]?.imageUrl ||
+                      CART_IMAGE_FALLBACKS[offerItems[0].productId] ||
+                      FLATBED_IMAGE
+                    }
+                  >
+                    {renderLines(offerItems)}
+                  </LoadSection>
+                )}
+
+                {/* Flatbed next — mixable load, meter, 10% off. Number trucks only when both exist. */}
                 {flatbedItems.length > 0 && (
                   <LoadSection
                     title={
@@ -335,8 +344,8 @@ export const QuoteCartDrawer = () => {
 
                 {yardItems.length > 0 && (
                   <LoadSection
-                    title="Bags & small items"
-                    hint="Pickup or delivery at checkout"
+                    title={CART_LOAD_GROUP_LABELS.bags}
+                    hint={CART_LOAD_GROUP_HINTS.bags}
                     image={
                       yardItems[0]?.imageUrl ||
                       CART_IMAGE_FALLBACKS[yardItems[0].productId] ||
@@ -383,7 +392,10 @@ export const QuoteCartDrawer = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     <p className="text-center text-[11px] leading-relaxed text-stone-500">
-                      {walkingFloorItems.length > 0 && flatbedItems.length === 0 && yardItems.length === 0
+                      {walkingFloorItems.length > 0 &&
+                      flatbedItems.length === 0 &&
+                      yardItems.length === 0 &&
+                      offerItems.length === 0
                         ? "Next: delivery ZIP, street, and pay."
                         : walkingFloorItems.length > 0
                           ? "Walking-floor is delivery. Flatbed pickup needs a scheduled heads-up."

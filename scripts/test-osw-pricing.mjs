@@ -13,6 +13,11 @@ import {
   nonBundleProductSubtotal,
   PROMO_BUNDLES,
 } from "../shared/promoBundles.js";
+import {
+  CART_LOAD_GROUP_HINTS,
+  CART_LOAD_GROUP_LABELS,
+  partitionPayCartItems,
+} from "../shared/cartLoadGroups.js";
 
 const line = (productId, productName, sizeOption, quantity = 1, price = 0.01) => ({
   productId,
@@ -129,6 +134,42 @@ assert.equal(mixedDiscountBase, 10.99);
 const bundleWithTote = applyPromoBundlePricing(line(4102, "Big Garden Setup", "Tote", 1, 1));
 const flatbedOnBundle = applyFullFlatbedProductDiscount(Array.from({ length: 22 }, () => ({ ...bundleWithTote })));
 assert.equal(flatbedOnBundle.items[0].price, 459, "already-priced bundles keep the freeze sale price on a full flatbed");
+
+assert.equal(CART_LOAD_GROUP_LABELS.offers, "Offers");
+assert.equal(CART_LOAD_GROUP_HINTS.offers, "Pickup or delivery at checkout");
+assert.equal(CART_LOAD_GROUP_LABELS.bags, "Bags & small items");
+
+const groupedCart = partitionPayCartItems([
+  { productId: 4100, format: "7-bag Phoenix pickup bundle", quantity: 1 },
+  { productId: 4101, format: "16-bag Phoenix pickup bundle", quantity: 1 },
+  { productId: 4102, format: "1 tote + 10 bags · Phoenix pickup", quantity: 1 },
+  { productId: 1000, format: "1CF Bag", quantity: 2 },
+  { productId: 111, format: "Pallet (30 x 1.5CF)", quantity: 1 },
+  { productId: 1000, format: "Truckload 24 ton walking floor", quantity: 1 },
+]);
+assert.deepEqual(
+  groupedCart.offerItems.map((item) => item.productId),
+  [4100, 4101, 4102],
+  "freeze promo bundles group under Offers, including the tote bundle",
+);
+assert.deepEqual(groupedCart.yardItems.map((item) => item.productId), [1000]);
+assert.deepEqual(groupedCart.flatbedItems.map((item) => item.productId), [111]);
+assert.equal(groupedCart.walkingFloorItems.length, 1);
+assert.deepEqual(
+  groupedCart.otherItems.map((item) => item.productId),
+  [1000, 111, 1000],
+  "regular bags/totes stay out of Offers",
+);
+
+const drawerSource = readFileSync(new URL("../client/src/components/QuoteCartDrawer.tsx", import.meta.url), "utf8");
+assert.match(drawerSource, /CART_LOAD_GROUP_LABELS\.offers/);
+assert.match(drawerSource, /partitionPayCartItems/);
+assert.doesNotMatch(drawerSource, /title="Bags & small items"/);
+
+const checkoutSource = readFileSync(new URL("../client/src/pages/Checkout.tsx", import.meta.url), "utf8");
+assert.match(checkoutSource, /CART_LOAD_GROUP_LABELS\.offers/);
+assert.match(checkoutSource, /partitionPayCartItems/);
+assert.match(checkoutSource, /CART_LOAD_GROUP_HINTS\.offers/);
 
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
