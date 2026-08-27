@@ -350,7 +350,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
         </section>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d9e1d5] bg-[#f7f5ef]/95 p-3 shadow-[0_-10px_30px_rgba(24,58,35,0.12)] backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d9e1d5] bg-[#f7f5ef]/95 px-3 pt-3 shadow-[0_-10px_30px_rgba(24,58,35,0.12)] backdrop-blur lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-none text-[#183a23]">{fmt(offer.salePrice)}</p>

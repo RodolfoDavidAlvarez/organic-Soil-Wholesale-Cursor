@@ -135,6 +135,11 @@ assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
 assert.match(bundleOffersSource, /Add to order/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
 
+const vercelConfig = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promos")?.destination, "/offers");
+assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promo")?.destination, "/offers");
+assert.equal(vercelConfig.redirects.find((rule) => rule.source === "/promos/:path*")?.destination, "/offers/:path*");
+
 const wholesaleSource = readFileSync(new URL("../client/src/pages/Wholesale.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(wholesaleSource, /PlantPal[^\n]*(?:1CF|50\/pallet)/, "PlantPal wholesale request option uses the V5 physical pack");
 assert.match(wholesaleSource, /PlantPal Potting Mix \(1\.5CF, 30\/pallet\)/);

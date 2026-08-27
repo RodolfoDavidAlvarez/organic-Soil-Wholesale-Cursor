@@ -289,6 +289,11 @@ function App() {
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isQuoteFlow = location.startsWith("/order");
   const isProductFlow = location.startsWith("/products");
+  const isOfferFlow =
+    location.startsWith("/offers") ||
+    location.startsWith("/promos") ||
+    location === "/promo" ||
+    location.startsWith("/promo/");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
   const isRepresentativeLanding = location.startsWith("/rep/");
@@ -345,7 +350,7 @@ function App() {
                     <ScrollToTop />
                     <CallTrackingRouteSync />
                     <Analytics />
-                    {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
                     {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                   </div>

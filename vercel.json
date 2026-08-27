@@ -93,7 +93,7 @@
       "source": "/promo/:path*",
       "destination": "/offers/:path*",
       "permanent": false
-    },
+    }
   ],
   "rewrites": [
     {
