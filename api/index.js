@@ -16,6 +16,8 @@ import {
 import { assignSswNumberForPurchase, ensureSswNumber } from '../shared/sswNumber.js';
 import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/purchaseThankYou.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
+import { processPortalSurveyLetters } from '../shared/portalSurveyLetter.js';
+import { processSurveySubmission } from '../shared/surveyStaffAlerts.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
   CHECKOUT_ALERT_TO,
@@ -1276,6 +1278,32 @@ export default async function handler(req, res) {
       }).in('session_id', stale.map((entry) => entry.session_id));
       console.log(JSON.stringify({ event: 'checkout_abandonment_digest_sent', count: stale.length }));
       return res.json({ ok: true, abandoned: stale.length, alerted: true });
+    }
+
+    // Hourly 24h post-purchase survey letter for new SSW Sales Portal buyers.
+    // Customer send is off unless SURVEY_LETTER_SEND_ACTIVE=true.
+    if (path === '/api/cron/portal-survey-letter' && req.method === 'GET') {
+      const cronSecret = process.env.CRON_SECRET;
+      if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { default: pg } = await import('pg');
+      const { Resend } = await import('resend');
+      const client = new pg.Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+      });
+      const resendClient = new Resend(process.env.RESEND_API_KEY);
+      const limit = Math.min(Number(url.searchParams.get('limit') || 50), 100);
+
+      await client.connect();
+      try {
+        const summary = await processPortalSurveyLetters(client, resendClient, { limit });
+        return res.json(summary);
+      } finally {
+        await client.end();
+      }
     }
 
     // Public site flags (developer mode banner on checkout, etc.)
@@ -4643,26 +4671,16 @@ ${pages}
 
     // POST /api/survey and /api/survey/submit - CSAT / yard / class feedback.
     // One table: sp_survey_responses. Never writes newsletter_subscribed.
+    // After a successful save, ping staff internally. Never email the customer here.
     if ((path === '/api/survey' || path === '/api/survey/submit') && req.method === 'POST') {
-      const { validateSurveyResponse, saveSurveyResponse } = await import('../shared/surveyResponses.js');
-      const validation = validateSurveyResponse(req.body || {}, {
-        userAgent: String(req.headers['user-agent'] || ''),
-      });
-      if (!validation.ok) return res.status(400).json({ error: validation.error });
-      if (validation.bot) return res.json({ success: true });
-
       try {
-        const db = await getSupabase();
-        const result = await saveSurveyResponse({
-          db,
-          response: validation.response,
+        const result = await processSurveySubmission({
+          db: await getSupabase(),
+          body: req.body || {},
+          userAgent: String(req.headers['user-agent'] || ''),
+          resend: process.env.RESEND_API_KEY ? await getResend() : null,
         });
-        return res.status(201).json({
-          success: true,
-          responseId: result.response.id,
-          message: 'Thank you. We read these.',
-          coupon: result.coupon,
-        });
+        return res.status(result.status).json(result.json);
       } catch (error) {
         console.error('[Survey] Error:', error?.message || error);
         return res.status(500).json({ error: 'We could not save your answers. Please try again.' });

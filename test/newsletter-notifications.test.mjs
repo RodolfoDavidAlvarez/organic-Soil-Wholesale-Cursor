@@ -12,6 +12,12 @@ import {
   sendGardenClassAdminNotifications,
   sendNewsletterAdminNotifications,
 } from '../shared/newsletterNotifications.js';
+import {
+  STAFF_CLASS_SURVEY_SUBJECT,
+  STAFF_CLASS_SURVEY_THREAD_ID,
+  STAFF_YARD_SURVEY_SUBJECT,
+  STAFF_YARD_SURVEY_THREAD_ID,
+} from '../shared/surveyStaffAlerts.js';
 import { buildWormCastingsCouponEmail } from '../shared/wormCastingsCampaign.js';
 
 test('newsletter and class staff alerts never share a subject', () => {
@@ -39,6 +45,12 @@ test('newsletter and class staff alerts never share a subject', () => {
   assert.equal(gardenClass.subject, 'New Garden Class Registration');
   assert.equal(STAFF_GARDEN_CLASS_SUBJECT, 'New Garden Class Registration');
   assert.notEqual(newsletter.subject, gardenClass.subject);
+  assert.notEqual(STAFF_YARD_SURVEY_SUBJECT, STAFF_SIGNUP_SUBJECT);
+  assert.notEqual(STAFF_CLASS_SURVEY_SUBJECT, STAFF_GARDEN_CLASS_SUBJECT);
+  assert.notEqual(STAFF_YARD_SURVEY_THREAD_ID, STAFF_NEWSLETTER_THREAD_ID);
+  assert.notEqual(STAFF_CLASS_SURVEY_THREAD_ID, STAFF_GARDEN_CLASS_THREAD_ID);
+  assert.equal(STAFF_YARD_SURVEY_SUBJECT, 'New yard survey');
+  assert.equal(STAFF_CLASS_SURVEY_SUBJECT, 'New class survey');
   assert.equal(wormCastings.subject, STAFF_SIGNUP_SUBJECT);
   assert.doesNotMatch(newsletter.subject, /Alex|Rivera|Jordan|Lee|Sam|Patel/i);
   assert.doesNotMatch(gardenClass.subject, /Alex|Rivera|Jordan|Lee|Sam|Patel/i);
