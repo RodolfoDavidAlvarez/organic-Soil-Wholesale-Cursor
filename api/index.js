@@ -29,6 +29,7 @@ import {
   normalizeV5CheckoutItems,
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
+import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -6779,6 +6780,9 @@ ${pages}
           // of the pre-checked semi-access question, so we MUST call before dispatch.
           isDelivery && deliveryAddress?.semiAccess === false ? 'SEMI-TRUCK ACCESS: customer says NOT enough room - call before dispatching.' : null,
           !isDelivery && pickupLocation ? `Pickup at: ${pickupLocation}` : null,
+          items.some((item) => resolvePromoBundle(item))
+            ? 'Includes already-priced Phoenix pickup garden bundle (no extra percent off that line).'
+            : null,
           customerInfo?.notes ? `Customer notes: ${customerInfo.notes}` : null,
         ].filter(Boolean).join('\n');
 
@@ -6787,7 +6791,10 @@ ${pages}
         const productSubtotalDollars = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
         const rawSubtotal = productSubtotalDollars + truckingDollars;
-        const totalDollars = Math.max(0, rawSubtotal * (1 - discountPercent / 100));
+        const discountBase = discountPercent === 100
+          ? rawSubtotal
+          : nonBundleProductSubtotal(items);
+        const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100));
         const totalCents = Math.round(totalDollars * 100);
         const isFreeOrder = totalCents === 0 && discountPercent > 0;
 

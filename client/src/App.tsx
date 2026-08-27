@@ -162,6 +162,14 @@ const CallTrackingRouteSync = () => {
   return null;
 };
 
+const RedirectTo = ({ href }: { href: string }) => {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(href);
+  }, [href, setLocation]);
+  return null;
+};
+
 function Router() {
   return (
     <Suspense fallback={<div className="flex min-h-[calc(100vh-var(--app-header-height,5rem))] items-center justify-center text-muted-foreground">Loading...</div>}>
@@ -215,6 +223,10 @@ function Router() {
         <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
+        <Route path="/promos/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
+        <Route path="/promos">{() => <RedirectTo href="/offers" />}</Route>
+        <Route path="/promo/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
+        <Route path="/promo">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
         <Route path="/newsletter" component={NewsletterSignup} />
 
@@ -277,6 +289,11 @@ function App() {
   const isCheckoutFlow = location.startsWith("/checkout") || location.startsWith("/order-confirmation") || location.startsWith("/quick-order");
   const isQuoteFlow = location.startsWith("/order");
   const isProductFlow = location.startsWith("/products");
+  const isOfferFlow =
+    location.startsWith("/offers") ||
+    location.startsWith("/promos") ||
+    location === "/promo" ||
+    location.startsWith("/promo/");
   const isDriveThruAdmin = location.startsWith("/drive-thru/admin");
   const isAdminPanel = location.startsWith("/admin");
   const isRepresentativeLanding = location.startsWith("/rep/");
@@ -333,7 +350,7 @@ function App() {
                     <ScrollToTop />
                     <CallTrackingRouteSync />
                     <Analytics />
-                    {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
                     {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                   </div>

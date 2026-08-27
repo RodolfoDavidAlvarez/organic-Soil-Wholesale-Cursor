@@ -6,6 +6,8 @@
  * checkout payloads use dollars. Calculations convert to cents before rounding.
  */
 
+import { applyPromoBundlePricing, resolvePromoBundle } from "./promoBundles.js";
+
 export const PALLET_VOLUME_DISCOUNT = 0.2;
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -130,6 +132,7 @@ function matchOption(productId, format) {
 }
 
 export function resolveV5CartPricing(item) {
+  if (resolvePromoBundle(item)) return null;
   const productId = resolveV5ProductId(item?.productId ?? item?.product_id, item?.productName ?? item?.name);
   if (!productId) return null;
   const matched = matchOption(productId, item?.sizeOption ?? item?.format ?? item?.size);
@@ -149,6 +152,7 @@ export function resolveV5CartPricing(item) {
 }
 
 export function normalizeV5CartItem(item) {
+  if (resolvePromoBundle(item)) return applyPromoBundlePricing(item);
   const pricing = resolveV5CartPricing(item);
   if (!pricing) return item;
   return {
@@ -170,6 +174,7 @@ export function normalizeV5CartItem(item) {
 
 export function normalizeV5CheckoutItems(items) {
   return (items || []).map((item) => {
+    if (resolvePromoBundle(item)) return applyPromoBundlePricing(item);
     const productId = resolveV5ProductId(item?.productId ?? item?.product_id, item?.productName ?? item?.name);
     if (!productId) return item;
     const pricing = resolveV5CartPricing(item);

@@ -1,3 +1,5 @@
+import { resolvePromoBundle } from "./promoBundles.js";
+
 /** Flatbed / Moffett: 1 pallet or tote = 1 spot. Full load = 22 spots → 10% product discount. */
 export const FLATBED_CAPACITY = 22;
 export const FULL_LOAD_PRODUCT_DISCOUNT = 0.1;
@@ -84,6 +86,7 @@ export function applyFullFlatbedProductDiscount(items) {
 
   let discountAmount = 0;
   const priced = (items || []).map((item) => {
+    if (resolvePromoBundle(item)) return item;
     const format = item.format || item.sizeOption || '';
     const spotsOnLine = spotsForFormat(format, item.quantity);
     if (spotsOnLine <= 0) return item;
