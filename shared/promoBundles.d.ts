@@ -16,6 +16,7 @@ export type PromoBundle = {
   shortTitle: string;
   description: string;
   heroImage: string;
+  cardImage: string;
   heroAlt: string;
   listPrice: number;
   salePrice: number;

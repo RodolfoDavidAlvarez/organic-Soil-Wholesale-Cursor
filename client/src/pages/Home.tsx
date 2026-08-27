@@ -22,11 +22,19 @@ import { generateProductSlug } from "@/utils/generateSlug";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import OfferFlyerImage, { prefetchOfferImage } from "@/components/OfferFlyerImage";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { PROMO_BUNDLES } from "@shared/promoBundles.js";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
+
+const HOMEPAGE_BUNDLE_DETAILS: Record<string, string> = {
+  "garden-refresh": "7 bags · 10 cu ft · one 4×8 bed",
+  "garden-refresh-plus": "16 bags · 24 cu ft · mix, not just compost",
+  "big-garden-setup": "1 tote + 10 bags · 2–3 beds",
+};
 
 function MobileResultsProof() {
   const [shouldLoad, setShouldLoad] = useState(false);
@@ -421,58 +429,41 @@ const Home = () => {
             </Button>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                href: "/offers/garden-refresh",
-                title: "Garden Refresh",
-                price: "$69",
-                was: "$91",
-                detail: "7 bags · 10 cu ft · one 4×8 bed",
-                image: "/images/offers/garden-refresh.png",
-                event: "garden-refresh",
-              },
-              {
-                href: "/offers/garden-refresh-plus",
-                title: "Garden Refresh Plus",
-                price: "$149",
-                was: "$247",
-                detail: "16 bags · 24 cu ft · mix, not just compost",
-                image: "/images/offers/garden-refresh-plus.png",
-                event: "garden-refresh-plus",
-              },
-              {
-                href: "/offers/big-garden-setup",
-                title: "Big Garden Setup",
-                price: "$459",
-                was: "$642",
-                detail: "1 tote + 10 bags · 2–3 beds",
-                image: "/images/offers/big-garden-setup.png",
-                event: "big-garden-setup",
-              },
-            ].map((bundle) => (
-              <button
-                key={bundle.href}
-                type="button"
-                onClick={() => {
-                  trackEvent("Homepage Bundle CTA Clicked", { bundle: bundle.event, source: "homepage-bundles" });
-                  navigate(bundle.href);
-                }}
-                className="group overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl"
-              >
-                <img src={bundle.image} alt="" className="aspect-[3/4] w-full bg-[#f4f2eb] object-contain" loading="lazy" />
-                <div className="p-5">
-                  <p className="font-heading text-xl font-bold text-[#183a23]">{bundle.title}</p>
-                  <p className="mt-1 text-sm text-[#657066]">{bundle.detail}</p>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-2xl font-extrabold text-[#183a23]">{bundle.price}</span>
-                    <span className="pb-0.5 text-sm text-[#758077] line-through">{bundle.was}</span>
+            {PROMO_BUNDLES.map((offer) => {
+              const href = `/offers/${offer.slug}`;
+              return (
+                <button
+                  key={href}
+                  type="button"
+                  onClick={() => {
+                    trackEvent("Homepage Bundle CTA Clicked", { bundle: offer.slug, source: "homepage-bundles" });
+                    navigate(href);
+                  }}
+                  onMouseEnter={() => prefetchOfferImage(offer.heroImage)}
+                  onFocus={() => prefetchOfferImage(offer.heroImage)}
+                  className="group overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <OfferFlyerImage
+                    src={offer.cardImage}
+                    alt=""
+                    loading="lazy"
+                    wrapperClassName="aspect-[3/4] w-full"
+                    className="aspect-[3/4] w-full object-contain"
+                  />
+                  <div className="p-5">
+                    <p className="font-heading text-xl font-bold text-[#183a23]">{offer.shortTitle}</p>
+                    <p className="mt-1 text-sm text-[#657066]">{HOMEPAGE_BUNDLE_DETAILS[offer.slug]}</p>
+                    <div className="mt-3 flex items-end gap-2">
+                      <span className="text-2xl font-extrabold text-[#183a23]">${offer.salePrice}</span>
+                      <span className="pb-0.5 text-sm text-[#758077] line-through">${offer.listPrice}</span>
+                    </div>
+                    <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#215330]">
+                      Open offer <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                    </span>
                   </div>
-                  <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#215330]">
-                    Open offer <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

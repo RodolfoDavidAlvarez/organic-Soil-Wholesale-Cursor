@@ -17,6 +17,8 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
+// Eager: homepage/hub → /offers/* must not wait on a JS chunk. Other routes stay lazy.
+import BundleOffers from "@/pages/BundleOffers";
 import {
   enforceOfficialSupportPhones,
   isCallTrackingExcludedPath,
@@ -63,7 +65,6 @@ const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
-const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
 
 // Admin Pages

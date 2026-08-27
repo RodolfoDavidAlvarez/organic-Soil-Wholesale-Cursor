@@ -44,7 +44,8 @@ export const PROMO_BUNDLES = Object.freeze([
     shortTitle: "Garden Refresh",
     description:
       "Ten cubic feet across seven bags: compost, worm castings, and mulch—exactly what one 4×8 raised bed needs for fall.",
-    heroImage: "/images/offers/garden-refresh.png",
+    heroImage: "/images/offers/garden-refresh-1200.webp",
+    cardImage: "/images/offers/garden-refresh-800.webp",
     heroAlt: "Garden Refresh offer: seven bags for one 4 by 8 raised bed, $69 pickup price",
     listPrice: 91,
     salePrice: 69,
@@ -75,7 +76,8 @@ export const PROMO_BUNDLES = Object.freeze([
     shortTitle: "Garden Refresh Plus",
     description:
       "Twenty-four cubic feet across sixteen bags: PlantPal mix, three free mulch bags, and worm castings for one 4×8 raised bed.",
-    heroImage: "/images/offers/garden-refresh-plus.png",
+    heroImage: "/images/offers/garden-refresh-plus-1200.webp",
+    cardImage: "/images/offers/garden-refresh-plus-800.webp",
     heroAlt: "Garden Refresh Plus offer: sixteen bags including free mulch, $149 pickup price",
     listPrice: 247,
     salePrice: 149,
@@ -104,7 +106,8 @@ export const PROMO_BUNDLES = Object.freeze([
     shortTitle: "Big Garden Setup",
     description:
       "One 2.2-cubic-yard PlantPal tote plus ten bags of compost, worm castings, and mulch for two to three 4×8 beds.",
-    heroImage: "/images/offers/big-garden-setup.png",
+    heroImage: "/images/offers/big-garden-setup-1200.webp",
+    cardImage: "/images/offers/big-garden-setup-800.webp",
     heroAlt: "Big Garden Setup offer: one PlantPal tote and ten bags for $459",
     listPrice: 642,
     salePrice: 459,
@@ -189,7 +192,7 @@ export function promoBundleCartItem(bundle, quantity = 1) {
     discountPercent: 0,
     unit: bundle.unit,
     mode: "pay",
-    imageUrl: bundle.heroImage,
+    imageUrl: bundle.cardImage,
   };
 }
 

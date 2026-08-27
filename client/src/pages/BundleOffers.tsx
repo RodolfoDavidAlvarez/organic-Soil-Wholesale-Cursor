@@ -29,6 +29,7 @@ import {
   PROMO_BUNDLES,
 } from "@shared/promoBundles.js";
 import type { CartItem } from "@/contexts/QuoteCartContext";
+import OfferFlyerImage from "@/components/OfferFlyerImage";
 
 const fmt = (value: number) => `$${value.toFixed(0)}`;
 
@@ -127,7 +128,13 @@ function OfferCard({ offer }: { offer: PromoBundle }) {
       href={`/offers/${offer.slug}`}
       className="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl"
     >
-      <img src={offer.heroImage} alt={offer.heroAlt} loading="lazy" className="aspect-[3/4] w-full bg-[#f4f2eb] object-contain" />
+      <OfferFlyerImage
+        src={offer.cardImage}
+        alt={offer.heroAlt}
+        loading="lazy"
+        wrapperClassName="aspect-[3/4] w-full"
+        className="aspect-[3/4] w-full object-contain"
+      />
       <div className="p-5 sm:p-6">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a6f39]">{offer.badge}</p>
         <h2 className="mt-2 font-heading text-2xl font-bold text-[#183a23]">{offer.shortTitle}</h2>
@@ -221,7 +228,15 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
             ) : null}
           </div>
           <div className="order-1 min-h-[280px] bg-[#f4f2eb] lg:order-2 lg:min-h-full">
-            <img src={offer.heroImage} alt={offer.heroAlt} className="h-full min-h-[280px] w-full object-contain" fetchPriority="high" />
+            <OfferFlyerImage
+              src={offer.heroImage}
+              alt={offer.heroAlt}
+              fetchPriority="high"
+              loading="eager"
+              decoding="async"
+              wrapperClassName="h-full min-h-[280px] w-full"
+              className="h-full min-h-[280px] w-full object-contain"
+            />
           </div>
         </div>
       </section>
