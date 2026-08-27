@@ -3,6 +3,7 @@ export const PROMO_BUNDLE_PRODUCT_IDS: readonly number[];
 export type PromoBundleItem = {
   name: string;
   amount: string;
+  listLabel: string;
   image: string;
   alt: string;
 };
@@ -14,6 +15,12 @@ export type PromoBundle = {
   eyebrow: string;
   title: string;
   shortTitle: string;
+  cardName: string;
+  headline: string;
+  line: string;
+  useLine: string;
+  ctaLabel: string;
+  priceTalk: string;
   description: string;
   heroImage: string;
   cardImage: string;

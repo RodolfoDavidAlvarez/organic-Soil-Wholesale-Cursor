@@ -132,10 +132,21 @@ assert.equal(flatbedOnBundle.items[0].price, 459, "already-priced bundles keep t
 
 assert.equal(bundleWithTote.imageUrl, "/images/offers/big-garden-setup-800.webp");
 
+assert.equal(getPromoBundleBySlug("garden-refresh")?.headline, "One 4x8 bed. $69.");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.headline, "One 4x8 bed. $149.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.headline, "2 to 3 beds. $459.");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.line, "1 PlantPal tote + 10 bags.");
+assert.doesNotMatch(JSON.stringify(PROMO_BUNDLES), /\$99|\$399|40 bags/i);
+
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
-assert.match(bundleOffersSource, /Add to order/);
+assert.match(bundleOffersSource, /offer\.ctaLabel/);
+assert.match(JSON.stringify(PROMO_BUNDLES), /Add to order · \$69/);
+assert.match(bundleOffersSource, /Fall pickup bundles/);
 assert.doesNotMatch(bundleOffersSource, /coupon/i);
+assert.doesNotMatch(bundleOffersSource, /Build a better garden/);
+assert.doesNotMatch(bundleOffersSource, /The more you buy/);
+assert.doesNotMatch(bundleOffersSource, /survey 30%/i);
 assert.match(bundleOffersSource, /OfferFlyerImage/);
 assert.doesNotMatch(bundleOffersSource, /garden-refresh\.png/);
 
@@ -151,7 +162,9 @@ assert.match(homeSource, /const AmazonReviewCarousel = lazy/);
 assert.match(homeSource, /DeferredMount/);
 assert.match(homeSource, /LazyYouTube/);
 assert.match(homeSource, /prefetchOfferImage\(offer\.heroImage\)/);
-assert.match(homeSource, /offer\.cardImage/);
+assert.match(homeSource, /Fall pickup bundles/);
+assert.match(homeSource, /offer\.cardName/);
+assert.match(homeSource, /offer\.line/);
 assert.doesNotMatch(homeSource, /garden-refresh\.png/);
 
 for (const bundle of PROMO_BUNDLES) {
