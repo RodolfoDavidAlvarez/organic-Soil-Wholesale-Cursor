@@ -13,6 +13,12 @@ import {
   FALL_GARDEN_WORKSHOP,
   submitGardenClassRegistration,
 } from '../shared/workshopRegistrations.js';
+import {
+  STAFF_CLASS_SURVEY_SUBJECT,
+  STAFF_CLASS_SURVEY_THREAD_ID,
+  STAFF_YARD_SURVEY_SUBJECT,
+  STAFF_YARD_SURVEY_THREAD_ID,
+} from '../shared/surveyStaffAlerts.js';
 
 const newsletter = buildNewsletterAdminNotification({
   subscriber: { name: 'Alex Rivera', email: 'alex@example.com', source: 'website_newsletter_signup' },
@@ -131,6 +137,12 @@ assert.equal(rows[0].event_key, FALL_GARDEN_WORKSHOP.key);
 assert.equal(sent.length, 1);
 assert.equal(sent[0].subject, STAFF_GARDEN_CLASS_SUBJECT);
 assert.notEqual(sent[0].subject, STAFF_SIGNUP_SUBJECT);
+assert.notEqual(STAFF_YARD_SURVEY_SUBJECT, STAFF_SIGNUP_SUBJECT);
+assert.notEqual(STAFF_CLASS_SURVEY_SUBJECT, STAFF_GARDEN_CLASS_SUBJECT);
+assert.notEqual(STAFF_YARD_SURVEY_THREAD_ID, STAFF_NEWSLETTER_THREAD_ID);
+assert.notEqual(STAFF_CLASS_SURVEY_THREAD_ID, STAFF_GARDEN_CLASS_THREAD_ID);
+assert.equal(STAFF_YARD_SURVEY_SUBJECT, 'New yard survey');
+assert.equal(STAFF_CLASS_SURVEY_SUBJECT, 'New class survey');
 
 await assert.rejects(
   () => sendNewsletterAdminNotifications({

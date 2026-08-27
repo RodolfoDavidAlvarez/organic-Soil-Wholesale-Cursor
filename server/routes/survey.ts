@@ -1,28 +1,18 @@
 import { Router } from "express";
 import { supabase } from "../supabaseClient";
-import { saveSurveyResponse, validateSurveyResponse } from "../../shared/surveyResponses.js";
 import { buildSurveyCouponQr, sendSurveyCouponQr } from "../../shared/surveyCouponQr.js";
+import { processSurveySubmission } from "../../shared/surveyStaffAlerts.js";
 
 const router = Router();
 
 router.post(["/", "/submit"], async (req, res) => {
-  const validation = validateSurveyResponse(req.body || {}, {
-    userAgent: String(req.headers["user-agent"] || ""),
-  });
-  if (!validation.ok) return res.status(400).json({ error: validation.error });
-  if (validation.bot) return res.json({ success: true });
-
   try {
-    const result = await saveSurveyResponse({
+    const result = await processSurveySubmission({
       db: supabase,
-      response: validation.response,
+      body: req.body || {},
+      userAgent: String(req.headers["user-agent"] || ""),
     });
-    return res.status(201).json({
-      success: true,
-      responseId: result.response.id,
-      message: "Thank you. We read these.",
-      coupon: result.coupon,
-    });
+    return res.status(result.status).json(result.json);
   } catch (error: any) {
     console.error("[Survey] Error:", error?.message || error);
     return res.status(500).json({ error: "We could not save your answers. Please try again." });

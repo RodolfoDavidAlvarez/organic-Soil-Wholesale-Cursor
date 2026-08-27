@@ -23,6 +23,20 @@ import {
   surveyCouponQrPath,
   validateSurveyResponse,
 } from "../shared/surveyResponses.js";
+import {
+  STAFF_CLASS_SURVEY_SUBJECT,
+  STAFF_CLASS_SURVEY_THREAD_ID,
+  STAFF_YARD_SURVEY_SUBJECT,
+  STAFF_YARD_SURVEY_THREAD_ID,
+  getSurveyAlertRecipients,
+  processSurveySubmission,
+} from "../shared/surveyStaffAlerts.js";
+import {
+  STAFF_GARDEN_CLASS_SUBJECT,
+  STAFF_GARDEN_CLASS_THREAD_ID,
+  STAFF_NEWSLETTER_THREAD_ID,
+  STAFF_SIGNUP_SUBJECT,
+} from "../shared/newsletterNotifications.js";
 
 function createSurveyDb({ customerId = 42 } = {}) {
   const rows = [];
@@ -84,6 +98,16 @@ function createSurveyDb({ customerId = 42 } = {}) {
           insert(row) {
             state.insertRow = row;
             return api;
+          },
+          update(row) {
+            state.updateRow = row;
+            return {
+              eq: async (col, val) => {
+                const match = rows.find((existing) => existing[col] === val);
+                if (match) Object.assign(match, row);
+                return { data: match || null, error: null };
+              },
+            };
           },
           then(resolve, reject) {
             return Promise.resolve(snapshot()).then(resolve, reject);
@@ -475,6 +499,7 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   const survey = await readFile(new URL("../shared/surveyResponses.js", import.meta.url), "utf8");
   const qr = await readFile(new URL("../shared/surveyCouponQr.js", import.meta.url), "utf8");
   const route = await readFile(new URL("../server/routes/survey.ts", import.meta.url), "utf8");
+  const staff = await readFile(new URL("../shared/surveyStaffAlerts.js", import.meta.url), "utf8");
   const newsletter = await readFile(new URL("../server/routes/newsletter.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../client/src/pages/ClientSurvey.tsx", import.meta.url), "utf8");
   const slider = await readFile(new URL("../client/src/components/survey/ScoreSlider.tsx", import.meta.url), "utf8");
@@ -483,7 +508,7 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   const notifications = await readFile(new URL("../shared/newsletterNotifications.js", import.meta.url), "utf8");
   assert.doesNotMatch(survey, /newsletter/i);
   assert.doesNotMatch(qr, /newsletter/i);
-  assert.doesNotMatch(route, /newsletter/i);
+  assert.doesNotMatch(route, /newsletter\/subscribe/);
   assert.doesNotMatch(page, /newsletter\/subscribe/);
   assert.doesNotMatch(newsletter, /sp_survey_responses/);
   assert.doesNotMatch(survey, /nowell/i);
@@ -492,7 +517,7 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.doesNotMatch(page, /Founder/);
   assert.doesNotMatch(page, /\u2014|\u2013/);
   assert.doesNotMatch(notifications, /nowell/i);
-  assert.match(api, /coupon: result\.coupon/);
+  assert.match(api, /coupon: result\.coupon|processSurveySubmission/);
   assert.match(api, /survey-coupon/);
   assert.match(page, /Finish this and we'll give you 30% off one item at the yard/);
   assert.match(page, /Show this at the yard/);
@@ -518,8 +543,16 @@ test("survey write path never touches newsletter subscribe or emails Dan Nowell"
   assert.match(page, /coupon\.label/);
   assert.match(page, /coupon\.qrUrl/);
   assert.doesNotMatch(page, /SSW30-[A-Z0-9]{8}/);
-  assert.doesNotMatch(route, /resend/i);
   assert.doesNotMatch(survey, /resend/i);
+  assert.match(route, /processSurveySubmission/);
+  assert.match(staff, /resend/i);
+  assert.match(staff, /STAFF_YARD_SURVEY_SUBJECT/);
+  assert.match(staff, /ADMIN_TEAM/);
+  assert.doesNotMatch(staff, /getNewsletterAdminRecipients/);
+  assert.doesNotMatch(staff, /INTERNAL_TEST_RECIPIENTS/);
+  assert.doesNotMatch(staff, /newsletter\/subscribe/);
+  assert.match(staff, /dn@soilseedandwater\.com/);
+  assert.match(api, /Never email the customer here/);
 });
 
 const classAnswers = {
@@ -810,4 +843,169 @@ test("garden class validator no longer requires chip enums or the 8am heatCall e
   assert.doesNotMatch(survey, /loved-it/);
   assert.doesNotMatch(survey, /new Set\(\['great', 'okay', 'rough'\]\)/);
   assert.doesNotMatch(survey, /new Set\(\['yes', 'not-sure', 'no'\]\)/);
+});
+
+function createFakeResend() {
+  const sent = [];
+  return {
+    sent,
+    emails: {
+      send: async (payload) => {
+        sent.push(payload);
+        return { data: { id: `re_${sent.length}` }, error: null };
+      },
+    },
+  };
+}
+
+const staffRecipients = [
+  { name: "Rodolfo Alvarez", email: "ralvarez@soilseedandwater.com" },
+  { name: "Kerry Cooper", email: "kcooper@soilseedandwater.com" },
+];
+
+test("yard survey submit pings staff, never the customer, never Nowell", async () => {
+  const db = createSurveyDb();
+  const resend = createFakeResend();
+  const result = await processSurveySubmission({
+    db,
+    body: validAnswers,
+    userAgent: "SurveyTest/1.0",
+    resend,
+    getRecipients: () => [
+      ...staffRecipients,
+      { name: "Jordan Customer", email: "jordan@example.com" },
+      { name: "Dan Nowell", email: "dn@soilseedandwater.com" },
+    ],
+  });
+
+  assert.equal(result.status, 201);
+  assert.equal(result.json.success, true);
+  assert.equal(db.rows.length, 1);
+  assert.equal(resend.sent.length, 2);
+  assert.deepEqual(resend.sent.map((payload) => payload.to), [
+    "ralvarez@soilseedandwater.com",
+    "kcooper@soilseedandwater.com",
+  ]);
+  for (const payload of resend.sent) {
+    assert.equal(payload.subject, STAFF_YARD_SURVEY_SUBJECT);
+    assert.doesNotMatch(payload.subject, /Jordan/);
+    assert.equal(payload.headers["In-Reply-To"], STAFF_YARD_SURVEY_THREAD_ID);
+    assert.notEqual(payload.headers["In-Reply-To"], STAFF_NEWSLETTER_THREAD_ID);
+    assert.notEqual(payload.headers["In-Reply-To"], STAFF_GARDEN_CLASS_THREAD_ID);
+    assert.notEqual(payload.subject, STAFF_SIGNUP_SUBJECT);
+    assert.notEqual(payload.subject, STAFF_GARDEN_CLASS_SUBJECT);
+    assert.equal(payload.from, "Soil Seed & Water <info@soilseedandwater.com>");
+    assert.equal(payload.replyTo, "ralvarez@soilseedandwater.com");
+    assert.match(payload.html, /Jordan/);
+    assert.match(payload.html, /jordan@example.com/);
+    assert.match(payload.html, /\/admin\/surveys/);
+    assert.match(payload.html, /SSW30-/);
+    assert.notEqual(payload.to, "jordan@example.com");
+    assert.notEqual(payload.to, "dn@soilseedandwater.com");
+  }
+  assert.ok(db.rows[0].follow_up_alerted_at);
+});
+
+test("class survey submit pings staff with New class survey", async () => {
+  const db = createSurveyDb();
+  const resend = createFakeResend();
+  const result = await processSurveySubmission({
+    db,
+    body: classAnswers,
+    resend,
+    getRecipients: () => staffRecipients,
+  });
+  assert.equal(result.status, 201);
+  assert.equal(result.json.coupon, null);
+  assert.equal(resend.sent.length, 2);
+  assert.equal(resend.sent[0].subject, STAFF_CLASS_SURVEY_SUBJECT);
+  assert.equal(resend.sent[0].headers["In-Reply-To"], STAFF_CLASS_SURVEY_THREAD_ID);
+  assert.notEqual(resend.sent[0].subject, STAFF_YARD_SURVEY_SUBJECT);
+  assert.match(resend.sent[0].html, /garden-class/);
+  assert.notEqual(resend.sent[0].to, "rodo@example.com");
+});
+
+test("honeypot survey submit sends no staff mail and writes nothing", async () => {
+  const db = createSurveyDb();
+  const resend = createFakeResend();
+  const result = await processSurveySubmission({
+    db,
+    body: { ...validAnswers, website: "https://spam.example" },
+    resend,
+    getRecipients: () => staffRecipients,
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.json.success, true);
+  assert.equal(db.rows.length, 0);
+  assert.equal(resend.sent.length, 0);
+});
+
+test("insert failure sends no staff mail", async () => {
+  const resend = createFakeResend();
+  const db = {
+    from(table) {
+      if (table === "sp_customers") {
+        return {
+          select() { return this; },
+          ilike() { return this; },
+          limit: async () => ({ data: [], error: { message: "no match" } }),
+        };
+      }
+      return {
+        select() { return this; },
+        eq() { return this; },
+        not() { return this; },
+        maybeSingle: async () => ({ data: null, error: null }),
+        insert() { return this; },
+        single: async () => ({ data: null, error: { message: "insert failed" } }),
+      };
+    },
+  };
+  await assert.rejects(
+    () => processSurveySubmission({
+      db,
+      body: validAnswers,
+      resend,
+      getRecipients: () => staffRecipients,
+    }),
+    (err) => String(err?.message || err).includes("insert failed"),
+  );
+  assert.equal(resend.sent.length, 0);
+});
+
+test("staff mail failure still returns 201 and leaves follow_up_alerted_at null", async () => {
+  const db = createSurveyDb();
+  const result = await processSurveySubmission({
+    db,
+    body: validAnswers,
+    resend: {
+      emails: {
+        send: async () => ({ data: null, error: { message: "resend down" } }),
+      },
+    },
+    getRecipients: () => staffRecipients,
+  });
+  assert.equal(result.status, 201);
+  assert.equal(db.rows[0].follow_up_alerted_at, undefined);
+});
+
+test("survey alert recipients reuse ADMIN_TEAM and drop Nowell and Nancy", () => {
+  const overridden = getSurveyAlertRecipients({
+    envRecipients: "ralvarez@soilseedandwater.com, dn@soilseedandwater.com, nancy@example.com, kcooper@soilseedandwater.com, johnathan@example.com, luis@example.com, simon@example.com, jesus@example.com",
+  });
+  assert.deepEqual(overridden.map((person) => person.email), [
+    "ralvarez@soilseedandwater.com",
+    "kcooper@soilseedandwater.com",
+  ]);
+  const fromTeam = getSurveyAlertRecipients({ envRecipients: "" });
+  assert.deepEqual(fromTeam.map((person) => person.email), [
+    "ralvarez@soilseedandwater.com",
+    "kcooper@soilseedandwater.com",
+    "sabrina@soilseedandwater.com",
+    "kash@soilseedandwater.com",
+    "gperez@soilseedandwater.com",
+    "alejandrapatriciaalvarez@gmail.com",
+  ]);
+  assert.equal(fromTeam.length, 6);
+  assert.equal(fromTeam.some((person) => /nowell|nancy|johnathan|luis|\bsimon\b|jesus|dn@/i.test(`${person.name} ${person.email}`)), false);
 });
