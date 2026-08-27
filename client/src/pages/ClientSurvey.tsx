@@ -165,7 +165,7 @@ export default function ClientSurvey() {
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b38a58]">Soil Seed &amp; Water</p>
           <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">How did the yard feel?</h1>
           <p className="mt-4 text-base leading-7 text-white/90">
-            Honest feedback. About one minute. Three quick taps.
+            Honest feedback. Three quick taps.
           </p>
         </div>
       </section>
