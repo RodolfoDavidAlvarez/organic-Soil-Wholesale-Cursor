@@ -14,6 +14,7 @@ import {
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
+import { promoBundleHref } from "@shared/promoBundles.js";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Trash2, Minus, Plus, ArrowRight, Package,
@@ -31,6 +32,9 @@ const CART_IMAGE_FALLBACKS: Record<number, string> = {
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   111: "/images/optimized/plantpal-with-veggies.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+  4100: "/images/offers/garden-refresh.png",
+  4101: "/images/offers/garden-refresh-plus.png",
+  4102: "/images/offers/big-garden-setup.png",
 };
 
 const WALKING_FLOOR_IMAGE = "/images/size-formats/walking-floor-delivery.webp";
@@ -88,7 +92,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
           <div className="flex items-start justify-between gap-1.5">
             <div className="min-w-0">
               <Link
-                href={`/products/${item.productSlug}`}
+                href={promoBundleHref(item.productId) || `/products/${item.productSlug}`}
                 onClick={closeDrawer}
                 className="text-sm font-semibold leading-tight text-stone-900 hover:text-[#264027]"
               >

@@ -29,6 +29,7 @@ import {
   normalizeV5CheckoutItems,
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
+import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -6787,7 +6788,10 @@ ${pages}
         const productSubtotalDollars = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
         const rawSubtotal = productSubtotalDollars + truckingDollars;
-        const totalDollars = Math.max(0, rawSubtotal * (1 - discountPercent / 100));
+        const discountBase = discountPercent === 100
+          ? rawSubtotal
+          : nonBundleProductSubtotal(items);
+        const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100));
         const totalCents = Math.round(totalDollars * 100);
         const isFreeOrder = totalCents === 0 && discountPercent > 0;
 

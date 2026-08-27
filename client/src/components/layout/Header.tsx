@@ -84,11 +84,13 @@ const Header = () => {
   }, [location]);
 
   const isActive = (path: string) => {
+    if (path === "/offers") return location === "/offers" || location.startsWith("/offers/");
     return location === path;
   };
 
   const navLinks = [
     { name: "Products", path: "/products" },
+    { name: "Bundles", path: "/offers" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
@@ -194,6 +196,17 @@ const Header = () => {
                       <span className="text-xs text-muted-foreground">{product.type}</span>
                     </DropdownMenuItem>
                   ))}
+                  <div className="h-px w-full bg-border my-1"></div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setLocation("/offers");
+                    }}
+                    className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium cursor-pointer hover:bg-primary/5 hover:text-primary transition-colors duration-200"
+                  >
+                    <span>Garden bundles</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </DropdownMenuItem>
                   <div className="h-px w-full bg-border my-1"></div>
                   <DropdownMenuItem
                     onClick={() => {

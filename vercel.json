@@ -75,10 +75,25 @@
       "permanent": false
     },
     {
-      "source": "/unsubscribe/1/:token*",
-      "destination": "/unsubscribe",
+      "source": "/promos",
+      "destination": "/offers",
       "permanent": false
-    }
+    },
+    {
+      "source": "/promos/:path*",
+      "destination": "/offers/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/promo",
+      "destination": "/offers",
+      "permanent": false
+    },
+    {
+      "source": "/promo/:path*",
+      "destination": "/offers/:path*",
+      "permanent": false
+    },
   ],
   "rewrites": [
     {

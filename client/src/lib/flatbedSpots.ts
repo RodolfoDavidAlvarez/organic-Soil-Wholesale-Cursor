@@ -1,9 +1,12 @@
+import { resolvePromoBundle } from "@shared/promoBundles.js";
+
 /** Flatbed / Moffett capacity: one pallet or tote (super sack) = 1 spot. */
 export const FLATBED_CAPACITY = 22;
 /** Extra product discount when the cart fills exactly one flatbed (22 spots). */
 export const FULL_LOAD_PRODUCT_DISCOUNT = 0.1;
 
 export type SpotLine = {
+  productId?: number;
   format: string;
   quantity: number;
   unitPrice?: number;
@@ -94,6 +97,7 @@ export function hasFullFlatbedDiscount(spots: number): boolean {
 
 export function flatbedEligibleSubtotal(items: SpotLine[]): number {
   return items.reduce((sum, item) => {
+    if (resolvePromoBundle(item as Record<string, unknown>)) return sum;
     if (spotsForFormat(item.format, item.quantity) <= 0) return sum;
     const price = Number(item.unitPrice) || 0;
     return sum + price * Math.max(0, Number(item.quantity) || 0);

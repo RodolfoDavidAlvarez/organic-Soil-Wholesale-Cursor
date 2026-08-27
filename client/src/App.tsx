@@ -162,6 +162,14 @@ const CallTrackingRouteSync = () => {
   return null;
 };
 
+const RedirectTo = ({ href }: { href: string }) => {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(href);
+  }, [href, setLocation]);
+  return null;
+};
+
 function Router() {
   return (
     <Suspense fallback={<div className="flex min-h-[calc(100vh-var(--app-header-height,5rem))] items-center justify-center text-muted-foreground">Loading...</div>}>
@@ -215,6 +223,10 @@ function Router() {
         <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
+        <Route path="/promos/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
+        <Route path="/promos">{() => <RedirectTo href="/offers" />}</Route>
+        <Route path="/promo/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
+        <Route path="/promo">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
         <Route path="/newsletter" component={NewsletterSignup} />
 

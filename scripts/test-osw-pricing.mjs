@@ -7,6 +7,12 @@ import {
   resolveV5CartPricing,
 } from "../shared/oswPricing.js";
 import { applyFullFlatbedProductDiscount } from "../shared/flatbedSpots.js";
+import {
+  applyPromoBundlePricing,
+  getPromoBundleBySlug,
+  nonBundleProductSubtotal,
+  PROMO_BUNDLES,
+} from "../shared/promoBundles.js";
 
 const line = (productId, productName, sizeOption, quantity = 1, price = 0.01) => ({
   productId,
@@ -96,6 +102,39 @@ assert.throws(
   /Unsupported V5 format/,
 );
 
+assert.equal(PROMO_BUNDLES.length, 3);
+assert.equal(getPromoBundleBySlug("raised-bed-refresh")?.salePrice, 69);
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.salePrice, 149);
+assert.equal(getPromoBundleBySlug("garden-bed-builder")?.salePrice, 459);
+
+const tamperedBundle = normalizeV5CheckoutItems([
+  line(4100, "Garden Refresh", "whatever", 1, 1),
+  line(4101, "Garden Refresh Plus", "16 bags", 2, 9),
+  line(4102, "Big Garden Setup", "40 bags", 1, 399),
+]);
+assert.equal(tamperedBundle[0].price, 69);
+assert.equal(tamperedBundle[0].format, "7-bag Phoenix pickup bundle");
+assert.equal(tamperedBundle[1].price, 149);
+assert.equal(tamperedBundle[1].quantity, 2);
+assert.equal(tamperedBundle[2].price, 459);
+assert.match(tamperedBundle[2].format, /tote/i);
+assert.doesNotMatch(JSON.stringify(tamperedBundle), /coupon/i);
+
+const mixedDiscountBase = nonBundleProductSubtotal([
+  ...tamperedBundle,
+  { productId: 111, price: 10.99, quantity: 1 },
+]);
+assert.equal(mixedDiscountBase, 10.99);
+
+const bundleWithTote = applyPromoBundlePricing(line(4102, "Big Garden Setup", "Tote", 1, 1));
+const flatbedOnBundle = applyFullFlatbedProductDiscount(Array.from({ length: 22 }, () => ({ ...bundleWithTote })));
+assert.equal(flatbedOnBundle.items[0].price, 459, "already-priced bundles keep the freeze sale price on a full flatbed");
+
+const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
+assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
+assert.match(bundleOffersSource, /Add to order/);
+assert.doesNotMatch(bundleOffersSource, /coupon/i);
+
 const wholesaleSource = readFileSync(new URL("../client/src/pages/Wholesale.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(wholesaleSource, /PlantPal[^\n]*(?:1CF|50\/pallet)/, "PlantPal wholesale request option uses the V5 physical pack");
 assert.match(wholesaleSource, /PlantPal Potting Mix \(1\.5CF, 30\/pallet\)/);
@@ -103,4 +142,4 @@ const workOrderSource = readFileSync(new URL("../client/src/pages/admin/CreateWo
 assert.match(workOrderSource, /code: '1\.5cf'.*unitsPerPallet: 30/);
 assert.match(workOrderSource, /code: '2cf'.*unitsPerPallet: 25/);
 
-console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, and tamper normalization ok");
+console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, tamper normalization, and promo bundle freeze prices ok");

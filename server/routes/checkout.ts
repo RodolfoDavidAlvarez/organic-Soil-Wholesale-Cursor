@@ -14,6 +14,7 @@ import {
 } from '../../shared/pickupSchedule.js';
 import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
+import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
 
 const router = Router();
 
@@ -165,6 +166,14 @@ router.post('/create-session', async (req, res) => {
     if (discountPercent < 100) {
       const inventoryChecks = await Promise.all(
         items.map(async (item: any) => {
+          if (resolvePromoBundle(item)) {
+            return {
+              productId: item.productId,
+              requested: item.quantity,
+              available: item.quantity,
+              canFulfill: true,
+            };
+          }
           const { data } = await supabase
             .from('inventory')
             .select('quantity_available')
@@ -197,7 +206,10 @@ router.post('/create-session', async (req, res) => {
     const productSubtotalDollars = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
     const truckingDollars = isDelivery && truckingQuote ? truckingQuote.costDollars : 0;
     const rawSubtotal = productSubtotalDollars + truckingDollars;
-    const totalDollars = Math.max(0, rawSubtotal * (1 - discountPercent / 100));
+    const discountBase = discountPercent === 100
+      ? rawSubtotal
+      : nonBundleProductSubtotal(items);
+    const totalDollars = Math.max(0, rawSubtotal - discountBase * (discountPercent / 100));
     const totalCents = Math.round(totalDollars * 100);
     const isFreeOrder = totalCents === 0 && discountPercent > 0;
 
