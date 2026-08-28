@@ -321,9 +321,9 @@ export async function findSurveyCouponByEmail(db, email) {
     .select(COUPON_SELECT)
     .eq('email_normalized', email)
     .not('coupon_code', 'is', null)
-    .maybeSingle();
+    .limit(1);
   if (error) throw error;
-  return data || null;
+  return data?.[0] || null;
 }
 
 export async function findSurveyCouponByCode(db, code) {

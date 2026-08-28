@@ -79,9 +79,9 @@ export default function ClientSurvey() {
   const [identityPrefill] = useState(() => readYardPrefill());
   const [firstName, setFirstName] = useState(() => identityPrefill.firstName);
   const [email, setEmail] = useState(() => identityPrefill.email);
-  const [experience, setExperience] = useState<number | null>(null);
-  const [findingUs, setFindingUs] = useState<number | null>(null);
-  const [comeBack, setComeBack] = useState<number | null>(null);
+  const [experience, setExperience] = useState(5);
+  const [findingUs, setFindingUs] = useState(5);
+  const [comeBack, setComeBack] = useState(5);
   const [workedWell, setWorkedWell] = useState<string[]>([]);
   const [improveMost, setImproveMost] = useState("");
   const [notes, setNotes] = useState("");
