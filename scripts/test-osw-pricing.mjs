@@ -108,21 +108,22 @@ assert.throws(
 );
 
 assert.equal(PROMO_BUNDLES.length, 3);
-assert.equal(getPromoBundleBySlug("raised-bed-refresh")?.salePrice, 69);
+assert.equal(getPromoBundleBySlug("raised-bed-refresh")?.salePrice, 99);
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.salePrice, 149);
-assert.equal(getPromoBundleBySlug("garden-bed-builder")?.salePrice, 459);
+assert.equal(getPromoBundleBySlug("garden-bed-builder")?.salePrice, 399);
 
 const tamperedBundle = normalizeV5CheckoutItems([
   line(4100, "Garden Refresh", "whatever", 1, 1),
   line(4101, "Garden Refresh Plus", "16 bags", 2, 9),
-  line(4102, "Big Garden Setup", "40 bags", 1, 399),
+  line(4102, "Big Garden Setup", "tote leftover", 1, 459),
 ]);
-assert.equal(tamperedBundle[0].price, 69);
-assert.equal(tamperedBundle[0].format, "7-bag Phoenix pickup bundle");
+assert.equal(tamperedBundle[0].price, 99);
+assert.equal(tamperedBundle[0].format, "10-bag Phoenix pickup bundle");
 assert.equal(tamperedBundle[1].price, 149);
 assert.equal(tamperedBundle[1].quantity, 2);
-assert.equal(tamperedBundle[2].price, 459);
-assert.match(tamperedBundle[2].format, /tote/i);
+assert.equal(tamperedBundle[2].price, 399);
+assert.equal(tamperedBundle[2].format, "40-bag Phoenix pickup bundle");
+assert.doesNotMatch(JSON.stringify(tamperedBundle), /tote/i);
 assert.doesNotMatch(JSON.stringify(tamperedBundle), /coupon/i);
 
 const mixedDiscountBase = nonBundleProductSubtotal([
@@ -131,18 +132,19 @@ const mixedDiscountBase = nonBundleProductSubtotal([
 ]);
 assert.equal(mixedDiscountBase, 10.99);
 
-const bundleWithTote = applyPromoBundlePricing(line(4102, "Big Garden Setup", "Tote", 1, 1));
-const flatbedOnBundle = applyFullFlatbedProductDiscount(Array.from({ length: 22 }, () => ({ ...bundleWithTote })));
-assert.equal(flatbedOnBundle.items[0].price, 459, "already-priced bundles keep the freeze sale price on a full flatbed");
+const bundleWithLegacyToteFormat = applyPromoBundlePricing(line(4102, "Big Garden Setup", "Tote", 1, 1));
+const flatbedOnBundle = applyFullFlatbedProductDiscount(Array.from({ length: 22 }, () => ({ ...bundleWithLegacyToteFormat })));
+assert.equal(flatbedOnBundle.items[0].price, 399, "already-priced bundles keep the letter-flyer sale price on a full flatbed");
+assert.doesNotMatch(bundleWithLegacyToteFormat.format, /tote/i);
 
 assert.equal(CART_LOAD_GROUP_LABELS.offers, "Offers");
 assert.equal(CART_LOAD_GROUP_HINTS.offers, "Pickup or delivery at checkout");
 assert.equal(CART_LOAD_GROUP_LABELS.bags, "Bags & small items");
 
 const groupedCart = partitionPayCartItems([
-  { productId: 4100, format: "7-bag Phoenix pickup bundle", quantity: 1 },
+  { productId: 4100, format: "10-bag Phoenix pickup bundle", quantity: 1 },
   { productId: 4101, format: "16-bag Phoenix pickup bundle", quantity: 1 },
-  { productId: 4102, format: "1 tote + 10 bags · Phoenix pickup", quantity: 1 },
+  { productId: 4102, format: "40-bag Phoenix pickup bundle", quantity: 1 },
   { productId: 1000, format: "1CF Bag", quantity: 2 },
   { productId: 111, format: "Pallet (30 x 1.5CF)", quantity: 1 },
   { productId: 1000, format: "Truckload 24 ton walking floor", quantity: 1 },
@@ -150,7 +152,7 @@ const groupedCart = partitionPayCartItems([
 assert.deepEqual(
   groupedCart.offerItems.map((item) => item.productId),
   [4100, 4101, 4102],
-  "freeze promo bundles group under Offers, including the tote bundle",
+  "letter-flyer promo bundles group under Offers",
 );
 assert.deepEqual(groupedCart.yardItems.map((item) => item.productId), [1000]);
 assert.deepEqual(groupedCart.flatbedItems.map((item) => item.productId), [111]);
@@ -170,6 +172,9 @@ const checkoutSource = readFileSync(new URL("../client/src/pages/Checkout.tsx", 
 assert.match(checkoutSource, /CART_LOAD_GROUP_LABELS\.offers/);
 assert.match(checkoutSource, /partitionPayCartItems/);
 assert.match(checkoutSource, /CART_LOAD_GROUP_HINTS\.offers/);
+assert.match(drawerSource, /includedLabel/);
+assert.match(checkoutSource, /includedLabel/);
+assert.match(checkoutSource, /getPromoBundleByProductId/);
 
 const bundleOffersSource = readFileSync(new URL("../client/src/pages/BundleOffers.tsx", import.meta.url), "utf8");
 assert.doesNotMatch(bundleOffersSource, /\/api\/contact\/submit/);
@@ -181,7 +186,10 @@ assert.match(bundleOffersSource, /Add to order/);
 assert.match(bundleOffersSource, /Tue–Sat 8–1 and 2–4/);
 assert.doesNotMatch(bundleOffersSource, /Three setups\. Tap one\./);
 assert.doesNotMatch(bundleOffersSource, /Need a truckload, not a bundle/);
-assert.doesNotMatch(bundleOffersSource, /Garden Bundles \|/);
+assert.match(bundleOffersSource, /Garden Refresh \$99/);
+assert.match(bundleOffersSource, /Big Garden Setup \$399/);
+assert.doesNotMatch(bundleOffersSource, /\$69/);
+assert.doesNotMatch(bundleOffersSource, /\$459/);
 
 const headerSource = readFileSync(new URL("../client/src/components/layout/Header.tsx", import.meta.url), "utf8");
 assert.match(headerSource, />Deals</);
@@ -198,12 +206,25 @@ assert.match(dealListSource, /fmtDealPrice\(deal\.salePrice\)/);
 
 assert.equal(getPromoBundleBySlug("garden-refresh")?.listCaption, "Perfect for an existing garden. Quick soil feed and replenishment.");
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.listCaption, "A little soil with worm castings and mulch. Fill and feed one bed.");
-assert.equal(getPromoBundleBySlug("big-garden-setup")?.listCaption, "A tote of soil with feed and mulch. Two to three beds.");
-assert.equal(PROMO_BUNDLES.map((bundle) => bundle.salePrice).join(","), "69,149,459");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.listCaption, "Bags of soil with feed and mulch. Two to three beds.");
+assert.doesNotMatch(getPromoBundleBySlug("big-garden-setup")?.listCaption || "", /tote/i);
+assert.equal(PROMO_BUNDLES.map((bundle) => bundle.salePrice).join(","), "99,149,399");
+assert.equal(PROMO_BUNDLES.map((bundle) => bundle.bagLabel).join(","), "10 bags,16 bags,40 bags");
 assert.equal(getPromoBundleBySlug("garden-refresh")?.lpHeadline, "One 4×8 bed.");
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.lpHeadline, "One 4×8 bed.");
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.lpHeadline, "2 to 3 beds.");
-assert.match(getPromoBundleBySlug("big-garden-setup")?.lpLine || "", /1 PlantPal tote \+ 10 bags/);
+assert.match(getPromoBundleBySlug("big-garden-setup")?.lpLine || "", /40 bags/);
+assert.doesNotMatch(JSON.stringify(PROMO_BUNDLES), /tote/i);
+assert.doesNotMatch(JSON.stringify(PROMO_BUNDLES), /\$69/);
+assert.doesNotMatch(JSON.stringify(PROMO_BUNDLES), /\$459/);
+assert.equal(getPromoBundleBySlug("garden-refresh")?.items.length, 3);
+assert.match(getPromoBundleBySlug("garden-refresh")?.items[0].amount || "", /5 bags/);
+assert.match(getPromoBundleBySlug("garden-refresh")?.items[1].amount || "", /3 bags/);
+assert.match(getPromoBundleBySlug("garden-refresh")?.items[2].amount || "", /2 bags/);
+assert.match(getPromoBundleBySlug("big-garden-setup")?.items.find((item) => item.name.includes("PlantPal"))?.amount || "", /30 bags/);
+assert.equal(getPromoBundleBySlug("garden-refresh")?.includedLabel, "5 Nature's Blanket, 3 Simon's Gold free, 2 Mikey's Worm Poop");
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
 
 for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {
   const flyer = statSync(new URL(`../client/public/images/offers/flyers/${slug}.webp`, import.meta.url));
@@ -236,4 +257,10 @@ const workOrderSource = readFileSync(new URL("../client/src/pages/admin/CreateWo
 assert.match(workOrderSource, /code: '1\.5cf'.*unitsPerPallet: 30/);
 assert.match(workOrderSource, /code: '2cf'.*unitsPerPallet: 25/);
 
-console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, tamper normalization, and promo bundle freeze prices ok");
+const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+assert.match(homeSource, /PROMO_BUNDLES\.map/);
+assert.doesNotMatch(homeSource, /\$69/);
+assert.doesNotMatch(homeSource, /\$459/);
+assert.doesNotMatch(homeSource, /1 tote \+ 10 bags/);
+
+console.log("OSW V5 pricing: exact prices, pallet boundaries, mixed totals, rounding, delivery/tax separation, aliases, tamper normalization, and letter-flyer promo bundle prices ok");

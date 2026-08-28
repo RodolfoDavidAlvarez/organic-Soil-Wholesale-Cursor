@@ -2,11 +2,12 @@
  * Phoenix yard pickup promo bundles.
  *
  * These are already-discounted pay-and-pickup SKUs. Checkout must charge the
- * freeze sale price as a single cart line. Survey 30% and other percent
+ * letter-flyer sale price as a single cart line. Survey 30% and other percent
  * discounts stay off these lines (TEST / 100% QA still applies to the whole order).
  *
  * Product rows 4100–4102 already exist in Supabase (catalog disabled) so
  * order_items.product_id FK inserts succeed. Do not invent coupon codes.
+ * Do not mint new SKUs — keep 4100–4102 so old cart links still work.
  */
 
 export const PROMO_BUNDLE_PRODUCT_IDS = Object.freeze([4100, 4101, 4102]);
@@ -15,10 +16,6 @@ const productImages = {
   plantpal: {
     image: "/images/optimized/plantpal-bag-context.webp",
     alt: "PlantPal all-stage potting mix bag with fresh vegetables",
-  },
-  plantpalTote: {
-    image: "/images/optimized/2-2-cy-tote-supersack.jpg",
-    alt: "PlantPal 2.2 cubic yard living-soil tote",
   },
   simons: {
     image: "/images/optimized/simons-gold-bag-context.webp",
@@ -44,31 +41,32 @@ export const PROMO_BUNDLES = Object.freeze([
     shortTitle: "Garden Refresh",
     listCaption: "Perfect for an existing garden. Quick soil feed and replenishment.",
     lpHeadline: "One 4×8 bed.",
-    lpLine: "7 bags. Compost, worm castings, mulch.",
+    lpLine: "10 bags. Compost, worm castings, mulch.",
     lpUse: "Feed the soil. Cover with mulch. Pickup at the yard.",
     description:
-      "Ten cubic feet across seven bags: compost, worm castings, and mulch—exactly what one 4×8 raised bed needs for fall.",
+      "Fifteen cubic feet across ten bags: mulch, dairy compost, and worm castings for one 4×8 raised bed.",
     heroImage: "/images/offers/flyers/garden-refresh.webp",
     bannerImage: "/images/offers/banners/garden-refresh.webp",
-    heroAlt: "Garden Refresh offer: seven bags for one 4 by 8 raised bed, $69 pickup price",
-    listPrice: 91,
-    salePrice: 69,
-    savings: 22,
-    badge: "Save $22",
-    format: "7-bag Phoenix pickup bundle",
+    heroAlt: "Garden Refresh offer: ten bags for one 4 by 8 raised bed, $99 pickup price",
+    listPrice: 199,
+    salePrice: 99,
+    savings: 100,
+    badge: "Save $100",
+    format: "10-bag Phoenix pickup bundle",
+    includedLabel: "5 Nature's Blanket, 3 Simon's Gold free, 2 Mikey's Worm Poop",
     unit: "per bundle",
-    volumeLabel: "10 cu ft",
-    bagLabel: "7 bags",
+    volumeLabel: "15 cu ft",
+    bagLabel: "10 bags",
     bedLabel: "One 4×8 bed",
     idealFor: "Refreshing one existing 4×8 raised bed for fall",
-    result: "Four cubic feet feed the soil at 1½″ and six cubic feet of mulch cover the same bed at 2¼″.",
+    result: "Three cubic feet of compost plus two cubic feet of worm castings feed the soil, and ten cubic feet of mulch cover the same bed.",
     pickupNote: "Phoenix yard pickup. Add other bags from Products and check out together.",
     wormBagUpsell:
       "Walked in with a free worm bag? This is the fall bed reset that goes with it—compost, castings, and mulch in one pickup.",
     items: [
-      { name: "Nature's Blanket Premium mulch", amount: "3 bags · 6 cu ft", ...productImages.mulch },
-      { name: "Mikey's Worm Poop worm castings", amount: "3 bags · 3 cu ft", ...productImages.mikeys },
-      { name: "Simon's Gold dairy compost", amount: "1 bag · 1 cu ft", ...productImages.simons },
+      { name: "Nature's Blanket Premium mulch", amount: "5 bags · 10 cu ft", ...productImages.mulch },
+      { name: "Simon's Gold dairy compost", amount: "3 bags · 3 cu ft included", ...productImages.simons },
+      { name: "Mikey's Worm Poop worm castings", amount: "2 bags · 2 cu ft", ...productImages.mikeys },
     ],
   },
   {
@@ -92,6 +90,7 @@ export const PROMO_BUNDLES = Object.freeze([
     savings: 98,
     badge: "Save $98",
     format: "16-bag Phoenix pickup bundle",
+    includedLabel: "10 PlantPal, 3 Nature's Blanket free, 3 Mikey's Worm Poop",
     unit: "per bundle",
     volumeLabel: "24 cu ft",
     bagLabel: "16 bags",
@@ -112,29 +111,30 @@ export const PROMO_BUNDLES = Object.freeze([
     eyebrow: "Fill the beds. Feed the soil. Finish the surface.",
     title: "Big Garden Setup",
     shortTitle: "Big Garden Setup",
-    listCaption: "A tote of soil with feed and mulch. Two to three beds.",
+    listCaption: "Bags of soil with feed and mulch. Two to three beds.",
     lpHeadline: "2 to 3 beds.",
-    lpLine: "1 PlantPal tote + 10 bags.",
-    lpUse: "Fill, feed, cover. Use the tote within about a week.",
+    lpLine: "40 bags. Soil, compost, worm castings, mulch.",
+    lpUse: "Fill, feed, cover. Pickup at the yard.",
     description:
-      "One 2.2-cubic-yard PlantPal tote plus ten bags of compost, worm castings, and mulch for two to three 4×8 beds.",
+      "Fifty-four cubic feet (2.64 cubic yards) across forty bags of PlantPal, compost, worm castings, and mulch for two to three 4×8 beds.",
     heroImage: "/images/offers/flyers/big-garden-setup.webp",
     bannerImage: "/images/offers/banners/big-garden-setup.webp",
-    heroAlt: "Big Garden Setup offer: one PlantPal tote and ten bags for $459",
-    listPrice: 642,
-    salePrice: 459,
-    savings: 183,
-    badge: "Save $183",
-    format: "1 tote + 10 bags · Phoenix pickup",
+    heroAlt: "Big Garden Setup offer: forty bags for two to three beds, $399 pickup price",
+    listPrice: 566,
+    salePrice: 399,
+    savings: 167,
+    badge: "Save $167",
+    format: "40-bag Phoenix pickup bundle",
+    includedLabel: "30 PlantPal, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket",
     unit: "per bundle",
-    volumeLabel: "72.4 cu ft / 2.64 cu yd",
-    bagLabel: "1 tote + 10 bags",
+    volumeLabel: "54 cu ft / 2.64 cu yd",
+    bagLabel: "40 bags",
     bedLabel: "2–3 4×8 beds",
     idealFor: "Building or deeply resetting two to three 4×8 garden beds",
-    result: "Fills two beds at 12″ deep—or nearly three at 8″. Use the tote within about one week.",
-    pickupNote: "Phoenix yard pickup. The tote needs a scheduled slot so we can stage the load.",
+    result: "Forty bags fill two to three 4×8 beds depending on depth—45 cu ft of PlantPal plus feed and mulch.",
+    pickupNote: "Phoenix yard pickup. Add other bags from Products and check out together.",
     items: [
-      { name: "PlantPal living soil tote", amount: "1 tote · 2.2 cu yd (59.4 cu ft)", ...productImages.plantpalTote },
+      { name: "PlantPal all-stage potting mix", amount: "30 bags · 45 cu ft", ...productImages.plantpal },
       { name: "Simon's Gold dairy compost", amount: "4 bags · 4 cu ft", ...productImages.simons },
       { name: "Mikey's Worm Poop worm castings", amount: "3 bags · 3 cu ft", ...productImages.mikeys },
       { name: "Nature's Blanket Premium mulch", amount: "3 bags · 6 cu ft", ...productImages.mulch },

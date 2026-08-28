@@ -14,7 +14,7 @@ import {
   spotsForFormat,
 } from "@/lib/flatbedSpots";
 import { trackEvent } from "@/lib/analytics";
-import { promoBundleHref } from "@shared/promoBundles.js";
+import { promoBundleHref, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import {
   CART_LOAD_GROUP_HINTS,
   CART_LOAD_GROUP_LABELS,
@@ -57,6 +57,7 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
 }) {
   const imageUrl = item.imageUrl || CART_IMAGE_FALLBACKS[item.productId];
   const lineSpots = spotsForFormat(item.format, item.quantity);
+  const offer = getPromoBundleByProductId(item.productId);
   const sizeThumb =
     item.sizeImage ||
     (isWalkingFloorFormat(item.format) ? WALKING_FLOOR_IMAGE : undefined);
@@ -111,6 +112,11 @@ function LineItem({ item, removeItem, updateQuantity, closeDrawer }: {
                   </span>
                 ) : null}
               </p>
+              {offer?.includedLabel ? (
+                <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                  {offer.includedLabel}
+                </p>
+              ) : null}
             </div>
             <button
               type="button"
