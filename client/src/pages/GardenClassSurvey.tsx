@@ -33,9 +33,9 @@ export default function GardenClassSurvey() {
   usePhoneNumberLock({ selector: "[data-phone-number]" });
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
-  const [saturday, setSaturday] = useState<number | null>(null);
-  const [heat, setHeat] = useState<number | null>(null);
-  const [teaching, setTeaching] = useState<number | null>(null);
+  const [saturday, setSaturday] = useState(5);
+  const [heat, setHeat] = useState(5);
+  const [teaching, setTeaching] = useState(5);
   const [comeAgain, setComeAgain] = useState("");
   const [notes, setNotes] = useState("");
   const [website, setWebsite] = useState("");

@@ -113,8 +113,17 @@ function createSurveyDb({ customerId = 42 } = {}) {
             return Promise.resolve(snapshot()).then(resolve, reject);
           },
           maybeSingle: async () => {
-            const match = rows.find(matches);
-            return { data: match || null, error: null };
+            const match = rows.filter(matches);
+            if (match.length > 1) {
+              return {
+                data: null,
+                error: {
+                  code: "PGRST116",
+                  message: "JSON object requested, multiple (or no) rows returned",
+                },
+              };
+            }
+            return { data: match[0] || null, error: null };
           },
           single: async () => {
             if (!state.insertRow) {
@@ -214,6 +223,32 @@ test("requires first name, email, and the three yard scores", () => {
   assert.equal(ok.response.findingUs, "6");
   assert.equal(ok.response.comeBack, 9);
   assert.equal(ok.response.notes, "");
+});
+
+test("untouched slider defaults of 5 and high scores of 8-10 are valid", () => {
+  const untouched = validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    experienceScore: 5,
+    findingUs: 5,
+    comeBack: 5,
+  });
+  assert.equal(untouched.ok, true);
+  assert.equal(untouched.response.experienceScore, 5);
+  assert.equal(untouched.response.findingUs, "5");
+  assert.equal(untouched.response.comeBack, 5);
+
+  const high = validateSurveyResponse({
+    firstName: "Alex",
+    email: "alex@example.com",
+    experienceScore: 10,
+    findingUs: 8,
+    comeBack: 9,
+  });
+  assert.equal(high.ok, true);
+  assert.equal(high.response.experienceScore, 10);
+  assert.equal(high.response.findingUs, "8");
+  assert.equal(high.response.comeBack, 9);
 });
 
 test("phone is optional but validated when present", () => {
@@ -353,6 +388,41 @@ test("yard survey prefill reads first_name and email", () => {
   );
   assert.equal(readSurveyPrefill("?firstName=Haylee&email=haylee@example.com").firstName, "Haylee");
   assert.equal(readSurveyPrefill("?name=Haylee%20Smith&email=haylee@example.com").firstName, "Haylee");
+});
+
+test("two coupon rows for one email reuse the first code instead of 500ing", async () => {
+  const db = createSurveyDb();
+  db.rows.push(
+    {
+      id: "dup-1",
+      first_name: "Jordan",
+      email: "jordan@example.com",
+      email_normalized: "jordan@example.com",
+      coupon_code: "SSW30-FIRSTAAA",
+      coupon_issued_at: "2026-08-01T00:00:00.000Z",
+      coupon_expires_at: "2026-08-31T00:00:00.000Z",
+      coupon_redeemed_at: null,
+    },
+    {
+      id: "dup-2",
+      first_name: "Jordan",
+      email: "jordan@example.com",
+      email_normalized: "jordan@example.com",
+      coupon_code: "SSW30-SECONDBB",
+      coupon_issued_at: "2026-08-02T00:00:00.000Z",
+      coupon_expires_at: "2026-09-01T00:00:00.000Z",
+      coupon_redeemed_at: null,
+    },
+  );
+  const saved = await saveSurveyResponse({
+    db,
+    response: validateSurveyResponse(validAnswers).response,
+    createCouponCode: () => "SSW30-THIRDCXX",
+  });
+  assert.equal(saved.coupon.reused, true);
+  assert.equal(saved.coupon.code, "SSW30-FIRSTAAA");
+  assert.equal(db.rows.length, 3);
+  assert.equal(db.rows[2].coupon_code, null);
 });
 
 test("a second email still earns its own coupon", async () => {
@@ -686,6 +756,9 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.match(page, /Anything else you want us to hear\?/);
   assert.match(slider, /type="range"/);
   assert.match(page, /ScoreSlider/);
+  assert.match(page, /const \[saturday, setSaturday\] = useState\(5\)/);
+  assert.match(page, /const \[heat, setHeat\] = useState\(5\)/);
+  assert.match(page, /const \[teaching, setTeaching\] = useState\(5\)/);
   assert.match(page, /window\.location\.search/);
   assert.match(page, /readGardenClassSurveyPrefill/);
   assert.match(sources, /first_name/);
@@ -744,6 +817,9 @@ test("garden class survey page is not the yard apology coupon form", async () =>
   assert.doesNotMatch(yard, /What should we add next/);
   assert.doesNotMatch(yard, /survey-q1/);
   assert.doesNotMatch(yard, /const \[firstName, setFirstName\] = useState\(""\)/);
+  assert.match(yard, /const \[experience, setExperience\] = useState\(5\)/);
+  assert.match(yard, /const \[findingUs, setFindingUs\] = useState\(5\)/);
+  assert.match(yard, /const \[comeBack, setComeBack\] = useState\(5\)/);
 });
 
 test("garden class named scores write saturday, heat, teaching, comeAgain and no coupon", async () => {
@@ -830,6 +906,25 @@ test("one landing table: class and purchase share sp_survey_responses", async ()
   assert.match(migration, /event_key/);
   assert.match(migration, /sp_survey_garden_class/);
   assert.match(api, /\/api\/admin\/surveys/);
+});
+
+test("yard coupon lookup uses limit(1) and experience_score CHECK is 1-10 in repo", async () => {
+  const survey = await readFile(new URL("../shared/surveyResponses.js", import.meta.url), "utf8");
+  const lookup = survey.slice(
+    survey.indexOf("export async function findSurveyCouponByEmail"),
+    survey.indexOf("export async function findSurveyCouponByCode"),
+  );
+  assert.match(lookup, /\.limit\(1\)/);
+  assert.doesNotMatch(lookup, /maybeSingle/);
+  const migration = await readFile(
+    new URL("../supabase/migrations/20260828_survey_experience_score_1_to_10.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /drop constraint if exists sp_survey_responses_experience_score_check/);
+  assert.match(
+    migration,
+    /experience_score is null or \(experience_score >= 1 and experience_score <= 10\)/,
+  );
 });
 
 test("garden class validator no longer requires chip enums or the 8am heatCall error", async () => {
@@ -955,6 +1050,7 @@ test("insert failure sends no staff mail", async () => {
         select() { return this; },
         eq() { return this; },
         not() { return this; },
+        limit: async () => ({ data: [], error: null }),
         maybeSingle: async () => ({ data: null, error: null }),
         insert() { return this; },
         single: async () => ({ data: null, error: { message: "insert failed" } }),
