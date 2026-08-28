@@ -43,7 +43,7 @@ function OffersIndex() {
         <title>Deals | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Phoenix pickup deals from Organic Soil Wholesale. Garden Refresh $69, Garden Refresh Plus $149, and Big Garden Setup $459."
+          content="Phoenix pickup deals from Organic Soil Wholesale. Garden Refresh $99, Garden Refresh Plus $149, and Big Garden Setup $399."
         />
         <link rel="canonical" href="https://organicsoilwholesale.com/offers" />
       </Helmet>

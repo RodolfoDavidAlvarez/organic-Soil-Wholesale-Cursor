@@ -27,6 +27,7 @@ export type PromoBundle = {
   savings: number;
   badge: string;
   format: string;
+  includedLabel: string;
   unit: string;
   volumeLabel: string;
   bagLabel: string;

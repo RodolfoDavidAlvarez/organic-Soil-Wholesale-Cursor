@@ -25,6 +25,8 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { fmtDealPrice } from "@/components/DealList";
+import { PROMO_BUNDLES } from "@shared/promoBundles.js";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
 
@@ -421,35 +423,17 @@ const Home = () => {
             </Button>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                href: "/offers/garden-refresh",
-                title: "Garden Refresh",
-                price: "$69",
-                was: "$91",
-                detail: "7 bags · 10 cu ft · one 4×8 bed",
-                image: "/images/offers/flyers/garden-refresh.webp",
-                event: "garden-refresh",
-              },
-              {
-                href: "/offers/garden-refresh-plus",
-                title: "Garden Refresh Plus",
-                price: "$149",
-                was: "$247",
-                detail: "16 bags · 24 cu ft · mix, not just compost",
-                image: "/images/offers/flyers/garden-refresh-plus.webp",
-                event: "garden-refresh-plus",
-              },
-              {
-                href: "/offers/big-garden-setup",
-                title: "Big Garden Setup",
-                price: "$459",
-                was: "$642",
-                detail: "1 tote + 10 bags · 2–3 beds",
-                image: "/images/offers/flyers/big-garden-setup.webp",
-                event: "big-garden-setup",
-              },
-            ].map((bundle) => (
+            {PROMO_BUNDLES.map((offer) => {
+              const bundle = {
+                href: `/offers/${offer.slug}`,
+                title: offer.shortTitle,
+                price: fmtDealPrice(offer.salePrice),
+                was: fmtDealPrice(offer.listPrice),
+                detail: `${offer.bagLabel} · ${offer.volumeLabel} · ${offer.bedLabel}`,
+                image: offer.heroImage,
+                event: offer.slug,
+              };
+              return (
               <button
                 key={bundle.href}
                 type="button"
@@ -472,7 +456,8 @@ const Home = () => {
                   </span>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
