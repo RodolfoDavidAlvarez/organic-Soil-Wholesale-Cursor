@@ -1,8 +1,37 @@
 # Video shoot — Big Garden Giveaway
 
-Goal: use a 30-minute recording session to produce one 45–60 second main video plus short clips.
+Goal: one 30-second promo for the September Big Garden Giveaway, plus a longer 45–60 second cut from the same shoot.
 
-## Main script
+## 30-second promo (primary)
+
+Spoken at a calm walk. About 75 words. Vertical and horizontal.
+
+**0–4s — to camera at the beds**
+“Phoenix. August was a bag of worm castings. September is the whole garden.”
+
+**4–18s — walk the prize, camera follows**
+“One local gardener gets two raised beds delivered. Four pallets of PlantPal. Compost. Worm castings. A full pallet of mulch.”
+
+**18–24s — still walking, then look up**
+“We want one family, school, or community garden ready to grow this fall.”
+
+**24–30s — to camera**
+“Free to enter. Tap the link. Tell us what you’re growing. One winner. No purchase needed. Soil Seed and Water. Let’s grow something.”
+
+### 30-second picture
+
+- 0–4: Rodo at two real bed kits
+- 4–10: walk past four PlantPal pallets
+- 10–14: Simon’s Gold and Mikey’s
+- 14–18: Nature’s Blanket pallet
+- 18–24: wide of beds plus all pallets
+- 24–30: Rodo to camera, then URL card
+
+Do not say a dollar value on camera until Mike confirms bed-kit and delivery values.
+Do not say raffle. Say giveaway. No purchase necessary.
+
+## 45–60 second main script (same shoot)
+
 
 **Hook — at the garden beds**
 
