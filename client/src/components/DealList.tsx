@@ -5,6 +5,9 @@ import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { trackEvent } from "@/lib/analytics";
+import { Carousel, type CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Pause, Play } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export const fmtDealPrice = (value: number) => `$${value.toFixed(0)}`;
 
@@ -95,34 +98,104 @@ export default function DealList({ showCaption = false, onNavigate, className }:
   );
 }
 
-export function DealHubCards({ source = "deals-hub" }: { source?: string }) {
+export function DealHubCards({ source = "deals-hub", layout = "stack" }: { source?: string; layout?: "stack" | "carousel" }) {
+  const cards = PROMO_BUNDLES.map((deal, index) => (
+    <Link key={deal.slug} href={`/offers/${deal.slug}`}>
+      <a
+        onClick={() =>
+          trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", {
+            bundle: deal.slug,
+            source,
+          })
+        }
+        className="relative block overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)]"
+      >
+        <img
+          src={deal.bannerImage}
+          alt={deal.heroAlt}
+          width={1600}
+          height={646}
+          className="pointer-events-none block h-auto w-full"
+          {...{ fetchpriority: index === 0 ? "high" : undefined }}
+        />
+        <span className="absolute right-[5.2%] top-[57.4%] z-10 inline-flex h-[11.4%] min-h-11 min-w-[8rem] items-center justify-center rounded-full bg-[#f3ad2c] px-4 text-[clamp(0.65rem,1.55vw,1.05rem)] font-extrabold uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.22)] transition hover:bg-[#ffb83a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#153b22] sm:min-w-[9.75rem] sm:px-5">
+          Shop offer <span aria-hidden="true" className="ml-1.5 text-[1.05em] leading-none">›</span>
+        </span>
+      </a>
+    </Link>
+  ));
+
+  if (layout === "carousel") {
+    return <DealHubCarousel cards={cards} />;
+  }
+
+  return <div className="space-y-3 sm:space-y-4">{cards}</div>;
+}
+
+function DealHubCarousel({ cards }: { cards: ReactNode[] }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [manualPause, setManualPause] = useState(false);
+  const [temporaryPause, setTemporaryPause] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!api || reducedMotion || manualPause || temporaryPause) return;
+    const timer = window.setInterval(() => api.scrollNext(), 6500);
+    return () => window.clearInterval(timer);
+  }, [api, manualPause, reducedMotion, temporaryPause]);
+
+  const isPaused = reducedMotion || manualPause;
+
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {PROMO_BUNDLES.map((deal, index) => (
-        <Link key={deal.slug} href={`/offers/${deal.slug}`}>
-          <a
-            onClick={() =>
-              trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", {
-                bundle: deal.slug,
-                source,
-              })
-            }
-            className="relative block overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)]"
-          >
-            <img
-              src={deal.bannerImage}
-              alt={deal.heroAlt}
-              width={1600}
-              height={646}
-              className="pointer-events-none block h-auto w-full"
-              fetchPriority={index === 0 ? "high" : undefined}
-            />
-            <span className="absolute right-[5.2%] top-[57.4%] z-10 inline-flex h-[11.4%] min-h-11 min-w-[9.75rem] items-center justify-center rounded-full bg-[#f3ad2c] px-5 text-[clamp(0.7rem,1.55vw,1.05rem)] font-extrabold uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.22)] transition hover:bg-[#ffb83a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#153b22]">
-              Shop offer <span aria-hidden="true" className="ml-1.5 text-[1.05em] leading-none">›</span>
-            </span>
-          </a>
-        </Link>
-      ))}
+    <div
+      onMouseEnter={() => setTemporaryPause(true)}
+      onMouseLeave={() => setTemporaryPause(false)}
+      onFocusCapture={() => setTemporaryPause(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTemporaryPause(false);
+      }}
+      onPointerDown={() => setManualPause(true)}
+    >
+      <Carousel setApi={setApi} opts={{ align: "start", loop: true, duration: 35 }} className="w-full" aria-label="Fall garden bundle offers">
+        <CarouselContent className="-ml-3 sm:-ml-4">
+          {cards.map((card, index) => (
+            <CarouselItem key={PROMO_BUNDLES[index].slug} className="basis-[91%] pl-3 sm:basis-[78%] sm:pl-4 lg:basis-[62%]">
+              {card}
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold leading-5 text-[#667168]">
+            {reducedMotion ? "Automatic movement is off for reduced motion." : manualPause ? "Automatic movement paused." : "Moves gently. Hover or interact to pause."}
+          </p>
+          <div className="flex shrink-0 gap-2">
+            {!reducedMotion && (
+              <button
+                type="button"
+                aria-label={manualPause ? "Resume automatic carousel movement" : "Pause automatic carousel movement"}
+                aria-pressed={manualPause}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => setManualPause((current) => !current)}
+                className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-[#183a23]/20 bg-white px-3 text-[#183a23] shadow-sm transition hover:bg-[#f3f5f1]"
+              >
+                {manualPause ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              </button>
+            )}
+            <CarouselPrevious className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
+            <CarouselNext className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
+          </div>
+        </div>
+      </Carousel>
     </div>
   );
 }

@@ -326,9 +326,28 @@ const Home = () => {
         <MobileResultsProof />
       </div>
 
-      <section aria-labelledby="garden-classes-heading" className="relative z-10 bg-[#f4f0e5] px-4 pb-5 pt-4 lg:-mt-12 lg:pt-0">
+      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 pb-10 pt-8 sm:pb-12 sm:pt-10 lg:pt-12">
         <div className="container mx-auto max-w-5xl">
-          <div className="overflow-hidden rounded-2xl bg-[#264027] text-white shadow-[0_18px_40px_rgba(24,58,35,0.28)] ring-1 ring-black/10">
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
+            <h2 id="garden-bundles-heading" className="mt-2 font-heading text-2xl font-extrabold leading-tight text-[#183a23] sm:text-3xl">
+              Fall garden bundles.
+            </h2>
+          </div>
+          <DealHubCards source="homepage-bundles" layout="carousel" />
+        </div>
+      </section>
+
+      {/* Unified reviews: photo carousel + quote carousel + field strip */}
+      <DeferredMount minHeight={680} rootMargin="1200px 0px">
+        <Suspense fallback={<div className="min-h-[680px] bg-[#eef3eb]" aria-hidden />}>
+          <AmazonReviewCarousel />
+        </Suspense>
+      </DeferredMount>
+
+      <section aria-labelledby="garden-classes-heading" className="relative z-10 bg-[#f4f0e5] px-4 py-9 sm:py-11">
+        <div className="container mx-auto max-w-5xl">
+          <div className="overflow-hidden rounded-2xl bg-[#264027] text-white shadow-[0_18px_40px_rgba(24,58,35,0.24)] ring-1 ring-black/10">
             <div className="flex flex-col sm:flex-row sm:items-stretch">
               <img
                 src="/email-assets/garden-reset-saturday.jpg"
@@ -340,7 +359,7 @@ const Home = () => {
               <div className="flex flex-1 flex-col justify-center gap-4 px-5 py-5 sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-5">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d7b77d]">
-                    Free Garden Classes · Phoenix
+                    Free Phoenix Garden Registration
                   </p>
                   <h2 id="garden-classes-heading" className="mt-1 font-heading text-2xl font-extrabold leading-tight sm:text-[1.75rem]">
                     Get the next Garden Class date first.
@@ -364,25 +383,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 pb-8 pt-4 sm:pb-10 sm:pt-6">
-        <div className="container mx-auto max-w-5xl">
-          <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
-            <h2 id="garden-bundles-heading" className="mt-2 font-heading text-2xl font-extrabold leading-tight text-[#183a23] sm:text-3xl">
-              Fall garden bundles.
-            </h2>
-          </div>
-          <DealHubCards source="homepage-bundles" />
-        </div>
-      </section>
-
-      {/* Unified reviews: photo carousel + quote carousel + field strip */}
-      <DeferredMount minHeight={680} rootMargin="1200px 0px">
-        <Suspense fallback={<div className="min-h-[680px] bg-[#eef3eb]" aria-hidden />}>
-          <AmazonReviewCarousel />
-        </Suspense>
-      </DeferredMount>
 
       <section className="bg-stone-50 py-10 md:py-14">
         <div className="container mx-auto px-4">

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Big Garden Giveaway — concept</title>
+  <style>
+    :root { --forest:#143b26; --leaf:#2f6a3d; --gold:#efb43c; --cream:#f8f3e8; --paper:#fffdf8; --ink:#173120; --muted:#647067; }
+    * { box-sizing:border-box; }
+    @page { size:Letter; margin:0; }
+    body { margin:0; background:#d7d5cf; color:var(--ink); font-family:Arial,Helvetica,sans-serif; }
+    .sheet { width:8.5in; height:11in; margin:18px auto; overflow:hidden; background:var(--cream); box-shadow:0 8px 30px #0003; position:relative; }
+    .hero { height:3.55in; position:relative; overflow:hidden; color:white; background:var(--forest); }
+    .hero-photo { width:100%; height:100%; object-fit:cover; object-position:center 58%; filter:brightness(.47) saturate(.9); }
+    .hero-shade { position:absolute; inset:0; background:linear-gradient(90deg,#0f3022f2 0%,#123b28d4 52%,#123b2855 100%); }
+    .hero-copy { position:absolute; inset:.31in .45in; width:5.75in; }
+    .brand { width:1.58in; padding:.06in .1in; background:white; border-radius:4px; }
+    .kicker { margin:.17in 0 .06in; color:#ffd879; font-size:12px; font-weight:900; letter-spacing:1.8px; text-transform:uppercase; }
+    h1 { margin:0; font:700 42px/.97 Georgia,serif; letter-spacing:-1px; }
+    .lead { margin:.12in 0 0; max-width:5.2in; font-size:16px; font-weight:700; line-height:1.3; }
+    .snapshot { display:flex; gap:.08in; margin-top:.16in; }
+    .snapshot span { padding:.075in .13in; border-radius:99px; background:#ffffffee; color:var(--forest); font-size:13px; font-weight:900; }
+    .snapshot span:last-child { background:var(--gold); }
+    .content { padding:.23in .42in .25in; }
+    .section-title { margin:0; text-align:center; font:700 22px/1.05 Georgia,serif; color:var(--forest); }
+    .section-sub { margin:.05in 0 .14in; text-align:center; color:var(--muted); font-size:12px; }
+    .journey { display:grid; grid-template-columns:1fr 34px 1fr 34px 1fr; align-items:stretch; }
+    .step { min-height:2.66in; overflow:hidden; border-radius:12px; background:var(--paper); box-shadow:0 1px 0 #d9d1bf; }
+    .step-image { width:100%; height:1.34in; object-fit:cover; display:block; }
+    .step-body { padding:.11in .13in .13in; }
+    .step-number { color:#a86e00; font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; }
+    .step h2 { margin:4px 0 5px; color:var(--forest); font:700 20px/1 Georgia,serif; }
+    .big { margin:0; color:#aa6e00; font-size:25px; font-weight:900; line-height:1; }
+    .detail { margin:6px 0 0; color:var(--muted); font-size:11px; line-height:1.35; }
+    .arrow { display:flex; align-items:center; justify-content:center; color:var(--leaf); font-size:28px; font-weight:900; }
+    .feed-images { display:grid; grid-template-columns:1fr 1fr; height:1.34in; background:white; }
+    .feed-images img { width:100%; height:1.34in; object-fit:cover; }
+    .delivery { margin-top:.15in; padding:.12in .16in; display:grid; grid-template-columns:auto 1fr auto; gap:.13in; align-items:center; border-radius:11px; background:#e4eddc; }
+    .truck { width:.42in; height:.42in; border-radius:50%; display:grid; place-items:center; background:var(--forest); color:white; font-size:22px; }
+    .delivery strong { display:block; font-size:15px; color:var(--forest); }
+    .delivery small { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+    .delivery .included { color:var(--leaf); font-size:16px; font-weight:900; }
+    .cta { margin-top:.14in; min-height:.68in; padding:.13in .18in; display:grid; grid-template-columns:1fr auto; align-items:center; gap:.16in; border-radius:12px; background:var(--forest); color:white; }
+    .cta strong { display:block; font:700 20px/1.05 Georgia,serif; }
+    .cta small { display:block; margin-top:4px; color:#dbe7dc; font-size:10.5px; }
+    .button { padding:.13in .21in; border-radius:99px; background:var(--gold); color:var(--forest); font-size:14px; font-weight:900; white-space:nowrap; }
+    .legal { margin:.09in .06in 0; text-align:center; color:#6d756e; font-size:8.5px; line-height:1.25; }
+    .draft { position:absolute; z-index:5; right:-.71in; top:.27in; transform:rotate(35deg); padding:5px 58px; background:#ffffffdd; color:#90261e; font-size:11px; font-weight:900; letter-spacing:1.8px; }
+    @media print { body{background:white}.sheet{margin:0;box-shadow:none}.draft{display:none} }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <div class="draft">CONCEPT • DETAILS TBD</div>
+    <section class="hero">
+      <img class="hero-photo" src="assets/garden-bed-concept.jpg" alt="Raised garden bed concept">
+      <div class="hero-shade"></div>
+      <div class="hero-copy">
+        <img class="brand" src="assets/ssw-logo.png" alt="Soil Seed and Water">
+        <p class="kicker">September 2026 • Phoenix area</p>
+        <h1>Win your entire fall garden.</h1>
+        <p class="lead">We bring the beds and everything that goes inside them—right to your door.</p>
+        <div class="snapshot" aria-label="Prize summary"><span>2 BEDS</span><span>6 PALLETS</span><span>DELIVERY INCLUDED</span><span>FREE ENTRY</span></div>
+      </div>
+    </section>
+    <section class="content">
+      <h2 class="section-title">Build it. Fill it. Help it thrive.</h2>
+      <p class="section-sub">One complete prize • one Phoenix-area winner</p>
+      <div class="journey">
+        <article class="step">
+          <img class="step-image" src="assets/garden-bed-concept.jpg" alt="Raised garden bed">
+          <div class="step-body"><span class="step-number">1 • Build</span><h2>Raised garden beds</h2><p class="big">2 bed kits</p><p class="detail">Steel corner posts plus delivered wood. Final dimensions to be confirmed.</p></div>
+        </article>
+        <div class="arrow" aria-hidden="true">›</div>
+        <article class="step">
+          <img class="step-image" src="assets/plantpal.jpg" alt="PlantPal growing mix">
+          <div class="step-body"><span class="step-number">2 • Fill</span><h2>PlantPal growing mix</h2><p class="big">4 pallets</p><p class="detail">120 bags • 180 cubic feet of growing mix for the new beds.</p></div>
+        </article>
+        <div class="arrow" aria-hidden="true">›</div>
+        <article class="step">
+          <div class="feed-images"><img src="assets/simons-gold.jpg" alt="Simon's Gold dairy compost"><img src="assets/mikeys-worm-poop.jpg" alt="Mikey's Worm Poop worm castings"></div>
+          <div class="step-body"><span class="step-number">3 • Feed + protect</span><h2>Amendments + mulch</h2><p class="big">2 pallets</p><p class="detail">40 compost + 10 worm-casting bags, plus 25 Nature’s Blanket mulch bags.</p></div>
+        </article>
+      </div>
+      <div class="delivery">
+        <div class="truck" aria-hidden="true">↦</div>
+        <div><strong>Delivered to the winner’s door</strong><small>Eligible delivery area and site-access rules will be in the Official Rules.</small></div>
+        <span class="included">INCLUDED</span>
+      </div>
+      <div class="cta">
+        <div><strong>What would you grow?</strong><small>Enter online • one winner • no purchase necessary</small></div>
+        <div class="button">ENTER THE GIVEAWAY</div>
+      </div>
+      <p class="legal">Purchase does not improve odds. Eligibility, dates, delivery area, exact prize value, winner selection, and complete terms will appear in the Official Rules before launch. Concept image; final bed kit may differ.</p>
+    </section>
+  </main>
+</body>
+</html>

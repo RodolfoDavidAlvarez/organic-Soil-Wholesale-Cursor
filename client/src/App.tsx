@@ -65,6 +65,7 @@ const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
 const InstagramLinks = lazy(() => import("@/pages/InstagramLinks"));
+const BigGardenGiveaway = lazy(() => import("@/pages/BigGardenGiveaway"));
 
 // Admin Pages
 const Register = lazy(() => import("@/pages/Register"));
@@ -231,6 +232,8 @@ function Router() {
         <Route path="/promo">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/redeem/worm-castings/:token" component={WormCastingsCoupon} />
         <Route path="/newsletter" component={NewsletterSignup} />
+        <Route path="/win" component={BigGardenGiveaway} />
+        <Route path="/big-garden-giveaway" component={BigGardenGiveaway} />
 
         {/* Customer Auth Routes */}
         <Route path="/signin" component={SignIn} />
@@ -306,7 +309,8 @@ function App() {
   const isWormCastingsCampaign = location === "/free-worm-castings";
   const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
   const isSocialLinks = location === "/ig" || location === "/links/instagram";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey && !isSocialLinks;
+  const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

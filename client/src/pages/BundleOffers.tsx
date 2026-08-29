@@ -1,14 +1,15 @@
 import { Helmet } from "react-helmet-async";
 import { Link, useRoute } from "wouter";
-import { ShoppingBag } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   CUSTOMER_SUPPORT_PHONE_DISPLAY,
   CUSTOMER_SUPPORT_PHONE_TEL,
   PHOENIX_YARD_ADDRESS,
 } from "@/config/contact";
-import { DealHubCards, fmtDealPrice, useAddDeal } from "@/components/DealList";
-import { getPromoBundleBySlug, type PromoBundle } from "@shared/promoBundles.js";
+import { fmtDealPrice, useAddDeal } from "@/components/DealList";
+import { getPromoBundleBySlug, PROMO_BUNDLES, type PromoBundle } from "@shared/promoBundles.js";
+import { trackEvent } from "@/lib/analytics";
 
 const legacyOfferAliases: Record<string, string> = {
   "raised-bed-refresh": "garden-refresh",
@@ -38,7 +39,7 @@ function PickupStrip() {
 
 function OffersIndex() {
   return (
-    <main className="bg-[#f4f1ea] pb-12 pt-5 sm:pt-7">
+    <main className="bg-[#f4f1ea] px-4 pb-14 pt-8 text-[#183a23] sm:px-6 sm:pt-10">
       <Helmet>
         <title>Deals | Organic Soil Wholesale</title>
         <meta
@@ -47,18 +48,44 @@ function OffersIndex() {
         />
         <link rel="canonical" href="https://organicsoilwholesale.com/offers" />
       </Helmet>
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <h1 className="font-heading text-sm font-semibold uppercase tracking-[0.22em] text-[#8f7000]">Deals</h1>
-        <div className="mt-4">
-          <DealHubCards />
+      <section aria-labelledby="deals-heading" className="mx-auto max-w-6xl">
+        <div className="mb-6 max-w-2xl sm:mb-8">
+          <h1 id="deals-heading" className="font-heading text-4xl font-black leading-tight sm:text-5xl">Garden bundles</h1>
+          <p className="mt-3 text-base leading-7 text-[#5f6c62]">
+            Three ready-priced Phoenix pickup offers for refreshing, filling, or building garden beds.
+          </p>
         </div>
-        <p className="mt-6 text-center text-sm text-[#657066]">
-          Need a truckload? Call {CUSTOMER_SUPPORT_PHONE_DISPLAY} — quote only.
-        </p>
-        <div className="mt-4">
-          <PickupStrip />
-        </div>
-      </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {PROMO_BUNDLES.map((deal) => (
+              <article key={deal.slug} className="flex flex-col overflow-hidden rounded-3xl border border-[#d9d2c3] bg-[#fffdf8] shadow-[0_10px_24px_rgba(24,58,35,0.07)]">
+                    <img
+                      src={deal.bannerImage}
+                      alt={deal.heroAlt}
+                      width={1600}
+                      height={646}
+                      className="aspect-[1600/646] w-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h2 className="font-heading text-xl font-black leading-tight">{deal.title}</h2>
+                        <p className="shrink-0 text-2xl font-black text-[#27703f]">{fmtDealPrice(deal.salePrice)}</p>
+                      </div>
+                      <p className="mt-3 flex-1 text-sm font-semibold leading-6 text-[#4f5f54]">{deal.listCaption}</p>
+                    <Link href={`/offers/${deal.slug}`}>
+                      <a
+                        onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })}
+                          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#173d25] px-5 text-sm font-black text-white transition hover:bg-[#0d2917]"
+                      >
+                        View offer <ArrowRight className="h-4 w-4" />
+                      </a>
+                    </Link>
+                    </div>
+              </article>
+            ))}
+          </div>
+      </section>
     </main>
   );
 }

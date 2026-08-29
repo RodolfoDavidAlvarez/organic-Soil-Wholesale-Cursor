@@ -1,0 +1,405 @@
+﻿📝 Notes
+Aug 18, 2026
+Strategic Planning Meeting
+Invited Kerry Cooper Rodolfo Alvarez Johnathan Carrasco Kash Starks Sabrina S Gabriela Perez
+Attachments Strategic Planning Meeting
+Meeting records Transcript Recording 
+
+
+
+
+Summary
+The meeting focused on establishing new marketing strategies, operational communication flows, and store maintenance protocols.
+
+Marketing and Sales Strategies
+Leaders finalized a loyalty program requiring 15,000 dollars in annual purchases to trigger a 5 percent discount. Teams also reviewed new promotional frameworks and data collection methods.
+
+Logistics and Operational Procedures
+Management established a central contact for field staff and implemented a digital delivery request workflow. New inventory tracking protocols were also introduced to maintain production efficiency.
+
+Workplace Standards and Maintenance
+The team introduced mandatory opening and closing checklists to ensure storefront cleanliness. Operational communication expectations were clarified to improve documentation and professionalism.
+
+
+
+
+Decisions
+Aligned
+* New logistics order confirmation process The team established a new logistics framework where orders are submitted for a preferred time, requiring the logistics lead to explicitly accept, reject, or reschedule via their mobile device.
+* Opening and closing procedure checklist A new mandatory checklist for opening and closing procedures will be implemented to ensure the facility remains clean and maintains a professional presentation.
+* Google and Meta ads funding Funding for both Google and Meta ads will be moved to the IMX card to ensure ad campaigns are not interrupted.
+* Truckload and logistics reconciliation meeting A specific meeting will be scheduled to reconcile all past truckload deliveries and address necessary operational adjustments.
+
+
+We've updated the Decisions section using your feedback.
+Let us know what you think: Helpful or Not Helpful
+
+
+
+
+Next steps
+* [The group] Create Sales Framework: Draft and review the new sales framework involving upsell and downsell processes with the team for implementation.
+* [Rodolfo Alvarez] Provide Pricing Sheet: Create and provide a one-page document detailing the pricing for current products.
+* [Johnathan Carrasco] Coordinate Communications: Bridge communication gaps between the field team and leadership by coordinating on orders and fulfillment details.
+* [Rodolfo Alvarez] Verify Order Date: Verify the delivery date for the Melissa order with the client.
+* [Johnathan Carrasco] Monitor Inventory: Monitor inventory levels for production ingredients to ensure awareness of stock availability.
+* [The group] Create Facility Checklist: Develop an opening and closing checklist to ensure the store environment remains clean and tidy.
+* [The group] Reconcile Finances: Reconcile account numbers and funds related to the Comdata account.
+* [The group] Update Payment Methods: Transition Google and Meta advertising payments from the Comdata account to the IMX card.
+* [The group] Schedule Reconciliation Meeting: Schedule a follow-up meeting to reconcile recent load deliveries and logistics operations.
+* [Rodolfo Alvarez] Adjust Time Sheet: Adjust the time sheet for August 8th to reflect the correct hours worked.
+
+
+
+
+Details
+* Promotional Frameworks: Rodolfo presented various marketing models to be activated, including a "Big Garden Giveaway" for a complete garden package, a "Buy X Get Y" offer for selected bonus items, and a "Win Your Money Back" incentive based on class attendance, testimonials, and referrals. They also discussed a decoy pricing strategy, such as offering a $459 garden setup against a $649 option, and potential "garden refresh" packages for $49 or $99 (00:00:44).
+* Preferred Customer Loyalty Program: Rodolfo outlined the criteria for the loyalty program, which targets business customers buying in high quantities. To qualify, customers must reach a purchase threshold of $15,000 within a year, after which they receive a 5% discount; participants who fall below this annual total are removed from the preferred list (00:03:12).
+* Upsell and Downsell Frameworks: Rodolfo proposed a standardized customer service framework to guide sales associates when taking orders. By asking specific qualifying questions—such as whether the garden is new or existing—associates can build value by offering planting guidelines or refresh packages, followed by structured upsell opportunities like adding bags of compost or planting calendars (00:04:31).
+* Payment Plans and Card on File: The team discussed implementing "card on file" functionality via an onboarding portal to expedite future transactions and increase customer comfort. Additionally, Rodolfo noted that for large orders, such as those valued at $10,000, the company will offer structured payment plans rather than expecting full payment upfront (00:06:37).
+* Customer Data Collection: Rodolfo emphasized adding intake questions during sign-ups for the 9-pound bag or garden setup raffle. By gathering information on what customers are growing—such as herbs, roses, fruit trees, or grapes—the team can better customize their sales approach and provide relevant amendments and products (00:08:04).
+* Accountability and Sales Systems: Kash questioned how the team will maintain accountability for standard operating procedures and upsell processes. Rodolfo suggested using the system for sales, which involves recorded calls and AI-generated transcriptions to evaluate performance, identify missed upsell opportunities, and provide coaching, though they noted a desire to avoid micromanagement (00:09:29).
+* Community Marketing and Postcards: Rodolfo decided to leverage local knowledge of the area to drive marketing, specifically planning for postcard distribution. They requested input on the quantity of postcards needed and the appropriate call to action (CTA) to include (00:11:25).
+* 9-Pound Bag Promotion and Customer Feedback: The team reviewed the 9-pound bag promotion, which ends on August 31st, and planned to release promotional videos and newsletters to boost final participation. Furthermore, Rodolfo proposed implementing an authentic customer survey to gather feedback on the storefront experience, allowing them to identify and correct mistakes from their initial launch (00:12:17).
+* Storefront Pricing Transparency: To address customer confusion regarding pricing, Rodolfo introduced a one-letter-size page containing pricing codes for products currently available at the storefront. They noted that previously, the lack of visible pricing led to customer discomfort during checkout (00:14:23).
+* Operational Communication and Job Management: Rodolfo identified communication barriers between field staff and management and designated Jonathan as the primary bridge for these interactions. To improve organization, Rodolfo planned to add a "Jobs" tab to their system to track active deliveries until completion, noting that orders should not be submitted for delivery without their approval (00:15:21).
+* Logistics and Delivery Workflow: Rodolfo detailed a new logistics framework where staff submit delivery requests with a preferred time and date. This request triggers a confirmation or reschedule notification for the logistics team, ensuring that drivers like Kerry are not burdened with uncoordinated delivery schedules (00:17:42).
+* Logistics Confirmation Procedures: The process for handling delivery requests will involve a digital prompt asking the logistics representative to accept, reject, or reschedule the load. If a delivery is accepted, a confirmation is sent to the client; if rejected or rescheduled, the system facilitates communication with the client, including the ability for clients to provide a window of availability for rescheduling (00:23:28).
+* Inventory Tracking: Jonathan and Rodolfo discussed the need for better inventory management, particularly for raw materials used to create products. They agreed to track ingredients and completed inventory upon the arrival of new truckloads to ensure production can continue without interruption (00:26:23).
+* Opening and Closing Procedures: Kerry highlighted issues with the storefront's cleanliness, noting that the second shift often cleans up after the first. To resolve this, the team agreed to implement mandatory opening and closing checklists to ensure the property remains tidy, presenting a professional image to potential customers (00:27:21).
+* Workplace Communication Standards: Rodolfo advised that team messages should be kept concise, with long-format issues handled via email to ensure proper documentation. They urged the team to remain patient and understanding as they navigate the challenges of their first month operating the storefront (00:30:34).
+* Upcoming Promotions and Budgeting: The team planned to focus on shooting a video for the upcoming garden class and preparing for the Big Garden Giveaway in September. Rodolfo also addressed a budget discrepancy within the Comdata account, directing that Google and Meta ad expenditures be moved to the AMX card to prevent further interruptions (00:32:42).
+* Moon House Project and Site Access: Kerry updated the team on the "Moon House" order, which has approximately 48 deliveries remaining. They discussed constraints on dump truck loads due to site obstacles and limited space, with Rodolfo noting that they need to reconcile the number of loads already delivered and potentially adjust future pricing based on site accessibility (00:34:28).
+* Time Tracking and Meeting Adjournment: Rodolfo addressed issues with the digital clock-in system and promised to process adjustments for September 8th. The meeting concluded with a commitment to send out the notes and a brief check on individual clock-in statuses for team members (00:37:30).
+
+
+
+
+You should review Gemini's notes to make sure they're accurate. Get tips and learn how Gemini takes notes
+How is the quality of these specific notes? Take a short survey to let us know your feedback, including how helpful the notes were for your needs.
+📖 Transcript
+Aug 18, 2026
+Strategic Planning Meeting - Transcript
+00:00:44
+
+
+Rodolfo Alvarez: Hello. Can you hear me?
+Johnathan Carrasco: I can hear you.
+Rodolfo Alvarez: Okay,
+Johnathan Carrasco: Okay.
+Rodolfo Alvarez: perfect. Okay, so these are a little bit of what we worked uh um on the on the on the way there to San Diego and coming back. So really uh what it is is uh different frameworks that are really really going to help us specifically on this time. So the first framework is the attraction model and everything attraction offers. So all of these what you see here these are promos. So the different promos that we're going to activate and they're not going to necessarily be only of September. Some of them are going to be a 90-day period and you can start them whenever you want. But for example, the big garden giveaway, capture simple capture entries for a complete garden package, choose one winner and then sell the runner up offer to everybody else. Okay, so this one is buy X to get Y free. Sell a core package, add a selected free nine pound bag or low cost bonus.
+
+
+
+
+00:02:00
+
+
+Rodolfo Alvarez: So we're we'll figure out how to integrate that one. So this is win your money back and this is exactly what you were saying Kash is you know sell um a garden package class uh sorry reward customers who complete the class and prove results. So one of the things so basically the win your money back model um Sabrina is okay you bought this much we'll give you your money back if you do this this and this. So, if you attend a garden class, if you kind of show us your testimonials with the product that you use from us and talking to the camera and third, if you um refer to your clients or something like that. I think I think that's something really really good. And then decoy offer show a garden setup, right, that it is uh 459 besides a um 649 back equivalent option. The comparison makes that garden setup aid that what this one is, and I really don't want to go in detail into each of them, but basically, um, let's suppose we have a garden refresh offer, and that's like a $49 U or the $99, uh, package.
+
+
+
+
+00:03:12
+
+
+Rodolfo Alvarez: So, as soon as they hit that lands that um landing page, we're gonna say, "Hey, we're gonna even give you a better deal where you're going to get value, more value, but this is a ticket price of I don't know $200, right?" So, that's kind of kind of uh the preferred customer and loyalty. this kind of we already started it and what it is is that um so for preferred uh customers or loyalty programs what it is is that it's a select few of people that you know kind of like the Kumar guy right he um we put it manually into the preferred um customer list and they get 5% off no matter what this is everywhere right and So within the year, you have to hit $15,000 that you bought. And if you don't hit it, that's okay. But you're not in the preferred list for next year. But as you know, people that we see candidates that are businesses that are buying in large quantities, we can provide them this uh loyalty program. And if they buy, you know, kind of more than 15% obviously more than $15,000, they stay on the list.
+
+
+
+
+00:04:31
+
+
+Rodolfo Alvarez: Okay. So the other things that we um that this book talks about is a lot of um upsell frameworks and downell frameworks. So what this is is number one is kind of putting it together with the our other conversation about customer service experience. Whenever a customer calls us today, we kind of just take their order, write it down, and submit it for payment, right? But we don't necessarily um have a a framework where number one we we kind of do, don't get me wrong, but it's not super super put together. So one of the things is that we ask, okay, are you um number one, what's your name? What are you working on? Right? And then they're going to kind of tells you what they're working on. And then you're going to say, okay, is this a new or an existing garden? Why do you want to ask those questions? but new is you know that they maybe don't know enough about gardening, maybe they need a planting guideline, you kind of build their value, right?
+
+
+
+
+00:05:37
+
+
+Rodolfo Alvarez: And maybe um if they already have an existing garden, well, you have a refresh package so they don't need to go and buy all of that soil, but rather they can refresh it and really really kind of um you know, amend their soil and have a great soil without even needing to buy the potting soil. So that's kind of that And then after um the framework will include after you have already kind of put their package together, you're going to say we should have like this upsell or kind of lines which is okay with your order for $5 more you can add an extra back of dairy compost. Is that something good? Would you like that? No. Okay, perfect. And would you prefer this and this? No, thank you. And would you like the planting calendar? Boom. That's it. Right. So kind of you kind of build that Yeah. Sabrina. Yeah. And um but the idea here is that you have kind of a a a framework where you are upselling and down selling.
+
+
+
+
+00:06:37
+
+
+Rodolfo Alvarez: Now this got to be on paper just like we have the uh on boarding of the um sales associate and we'll review it and we hopefully can come up with kind of the frameworks together. Um so that way we can implement them. And now um we should be able to also kind of um kind of use this when whenever we are we are going to also add a payment plan. Um, so we're not necessarily going to do this, but some orders they are $10,000. Like that guy that he he wanted to buy that order and we we said, you know, we can work with you, but you know, um maybe a payment plan for you would work best. And so that is that. Um another thing that we're going to incorporate is going to be card on file. So um we're going to basically send them an onboarding um a you know kind of portal and in there they can submit their card and file so that way cash you know hey just put it on the cash okay good and we sell it we charge them we don't even have to worry about it they feel comfortable they feel like they know us they can place an order next next day pretty pretty quick right so that's are the things that we're adding other custom frameworks here is uh Number one is when they're signing up for to get the
+
+
+
+
+00:08:04
+
+
+Rodolfo Alvarez: nine pound back or they get the garden the big garden setup raffle. One of the things that we're going to ask is kind of questions that are going to give us really really good insight. So, in addition to their cost, their contact information, we're also going to ask, "Hey, um, tell me if you have any of these in your garden." Herb, roses, fruit trees, um, you know, avocados, avocados, native, citrus, native, citrus, avocado, a lot of people grow grapes. I am shocked at how many people grapes in Arizona. Let me talk to them. Yeah, but they grow grapes and we have that grape amendment that feeds I think we need to work on it. Yeah, we definitely need to work on it. But so the idea here is that now as we're getting 50 customers like we have gotten already we would know at this point most of our customers by the way they have graphs or none of them have graphs you know so imagine what that allows us to kind of customize ourselves towards too a lot of palms too a lot of palms that's a good question especially for and everything so the second is the intro questions obviously this is kind of what we already talked about okay what's what project are you working on new or existing garden.
+
+
+
+
+00:09:29
+
+
+Rodolfo Alvarez: What are the what are you growing? What is your time? And then this is for for you to give your prescription as well as your upsell, right? Because like sometimes they want to get um nature blanket. Well, maybe you sell them plant, you know? Yeah. And so or maybe and you always say, "Hey, you want to throw 9 pound worm castings back in there or you want to throw a one cubic feet?" I think it will work great for your setup. you have a question, Kash? Um, what the upsell and downell that would be kind of changing based off like what we're promoting and then like also just like what's the system in regards to like I guess holding us accountable for the SOPs and the processes that are being created. You know, it's one thing to create them. However, you know, like building that customer engagement with the implement, you know, like yeah, like, oh, we already talked to this customer about, you know, the note, like the SOPs, putting those into place.
+
+
+
+
+00:10:29
+
+
+Rodolfo Alvarez: What like what kind of system can we create to hold ourselves accountable for the great ideas that we're coming up with to grow the company? You know, it's one thing to talk, but the action is what's going to get us there. Well, number one, if we're talking about systems, we have uh the cool system for sales and that is uh recorded calls. Every recorded call, it also provides a transcription and we can go off of that using AI and saying, okay, how many times did we did not upsell in an opportunity and kind of go in there, not necessarily to kind of micromanage, but to figure out how we can make it better. Is there a way to connect the phone transcripts to the actual sale transcripts? It's like, oh, this is Sally, you know, like, oh, her birthday just came. Happy birthday. You know, like, what are you doing for this? You know, like building the community is like there's the neighborhood and there's the community. And community is built off of relationships.
+
+
+
+
+00:11:25
+
+
+Rodolfo Alvarez: Correct. You know, and that trust. Being at the nurseries today, it's like 80 this dude has been shopping at the same nursery for eight since 1980. And that's a large part of their customer. Every person in my community, not so much down in Congress, but right up the hill, which is 10 minutes. Um, I know everybody. I delivered all their mail. That's like Yeah. That's you know, and stuff. So, I know what houses have what. I know everything. And so, I'm ready to market big time. Yeah. So, we're definitely going to put you on sales. Um, so you can start marketing that area. We want to do the uh postcard. So, I need to know how many postcards do we need. Okay. And then what is the uh actual CTA customer um call to action inside of that. Yeah. But we kind of already have that. Um so, we can definitely use it.
+
+
+
+
+00:12:17
+
+
+Rodolfo Alvarez: Okay. So, this was a kind of um a tentative um you know, get you interested. The nine pound bag free. Oh, I have a question about that. Do we know how much product we have given away for free? And with the remaining coupons that we have, can we afford to honor those coupons that we already invested in if someone comes back to Arizona in September because it cools down and they have this on their door, you know, can they still bring that in regardless? Well, the the nonbound back specifically that ends on the 31st. So, we we definitely want to um shoot a video and say, "Hey, it's it's only 10 more days. you got to come and pick it up and we got to uh send a newsletter. I think uh some of the CTAs or the the things that we got to do is we're going to talk at the end and please help me because I'm also just came from work from from San Diego and I don't really I'm kind of um um you're doing good.
+
+
+
+
+00:13:13
+
+
+Rodolfo Alvarez: Yeah, kind of kind of mixed up here but okay. So on August um we did the nine pound back. It was not optimized but you know what we started a campaign and we did good job. We got a bunch of new people that now know about us and now we're just gonna make it better. One of the other things that I think we should definitely implement is a survey. And the survey has to be an authentic letter that goes to every single person that came here and say, "Hey, you know what? We are a small group of gardeners, landscapers, and you know, people that really care about the community. We started this storefront project. We are not um you know I don't know how to say it just yet but we're not we could have made a lot of mistakes and you know this was the first month we're just getting started and so we want to hear your feedback and how did we do yeah just based on what we've done so far and I want to hear all of the problems you know what I we came to the the place and there was no napal bags there there was no pricing on the bags which to me that's uncom comfortable because if I go to a place and there's oh you want
+
+
+
+
+00:14:23
+
+
+Rodolfo Alvarez: a a bag here I want to be able to see the prices without because like like this guy came and he was okay let me get five bags and then once I put the pricing in there he saw the the total and he was kind of oh well you know so I don't want that to be taken by surprise we need the pricing so what I'm going to come up with and I already did is kind of a um you know a oneletter size page that pays the pricing code for the productated that we have here right now. Uhhuh. Exactly. So that's that. Um you had a question. No, I was just going to say with Jonathan here, um he has gone they've gone above and beyond and made all kinds of product that we have brought. Um we still have a bunch left at the yard. So if we can maybe do some inventory out here and kind of So Koi really organized that whole area over there so that he could fit a lot of this product here.
+
+
+
+
+00:15:21
+
+
+Rodolfo Alvarez: Yeah. But thank you Jonathan for doing such a good job with making everything.
+Johnathan Carrasco: Thank you. Of course.
+Rodolfo Alvarez: And now I'm I started with marketing. We're kind of jumping into the operations and fulfillment. And I think there was a little bit of a barrier uh talking to Simon and talking to uh people on the field obviously because um there could be a communication barrier and obviously Sabrina couldn't communicate directly with Simon. Now Jonathan is gonna bridge that gap. Okay. So Jonathan just so everybody knows he's been working with us for like like how many years Jonathan?
+Johnathan Carrasco: I think it's going on
+Rodolfo Alvarez: Four years.
+Johnathan Carrasco: Four.
+Rodolfo Alvarez: Wow. And so for the most part, Jonathan has been working on the packaging department. He it was uh essential when we were moving a lot of product to Amazon. Um but now obviously the main priority is have the fulfillment you know be top shape and I knew that we needed uh a straight communication because we run through a lot of problems including when talking to about a product they you know Simon would understand another product and it's you know the it's it's time Jonathan helps a lot with and whatever I I I need to be communicated too like on orders and stuff because sometimes Um, I don't know what's,
+
+
+
+
+00:16:43
+
+
+Rodolfo Alvarez: you know, Yeah. going on. So, I need to know what's being made as well and where it's got to go and who it's for. Yeah. Right. My job. So, a few things. Everybody's going to be communicating on every single order. As an example, right now, we have an order that it is for um Melissa, right? Yeah, that's what I was gonna ask. Then, what's the best way? because that was the the payment received was the 50 to the 50% deposit and then the other 50% is going to be paid on delivery day, right? Which is the 25th. That's what she said, but I want to verify with her. So that's not a Monday or anything. That's three that's in the midweek. Well, um, in the So, so just real quick here, I do want to add another tab that is going to be called jobs. And in there we're going to see active jobs. And so it would only be considered closed when everything is done with it, right?
+
+
+
+
+00:17:42
+
+
+Rodolfo Alvarez: But for example, when you submit uh the delivery, it tells you preferred time and date. But what but delivery can't be like submitted unless through me. We can't just like schedule drivers without me knowing about it. No. So, what I do is just to get the um secure the payment and because they're already ready to pay, I always follow up with them to verify. But Melissa, she said the 25th, but it's not sure. But so the the framework because committed to taking loads every day to the moon. One second. Okay. So, this is considering that, right? But this is considering it. So one thing that we need is to uh u figure out what's going to be the logistics. The idea here is that they submit a preferred time. It goes to you Carrie Carrie. You then at this point you say this is the preferred time. I approve, right? Or you reschedu and I have to coordinate with Jonathan because he has to be ready for it and that's all and all that.
+
+
+
+
+00:19:00
+
+
+Rodolfo Alvarez: That's really cool. I don't want to just throw it on him like, "Hey, I've got a delivery of this." Okay, let's put in the bag. I think it's just right now a lot of departments to talk to before. I know it's none of my business, but there's other classes that like offer gardening like seedling startings here. I don't know, maybe you can group with them and you can offer a deal for your soil. We definitely want to do that. That would be an idea. So, I found a lot of people who do classes and they like teach people how to grow. No, you can have it in your car there for advertising. Yeah. I mean that's a good idea driver and stuff. This is all the thing get another driver. Huh? I think the dump truck works because I I just went like whatever. Is sometimes that I have to upsell to sign. think it's a good idea. You know those people walking.
+
+
+
+
+00:20:23
+
+
+Rodolfo Alvarez: You know how many That's it. So if you ask that you know they wait how much everything holds. So when Okay, let's move on. Yeah. So, so this is the uh this is the idea Kerry. Okay, you tell me if this works. But the idea now is to make it everything so that it gets confirmation from logistics. Right. So suppose uh Kash gets a call and she her call is hey we're like delivery the 25th right which it was at this point it was like two weeks in advance which is pretty good right and so the idea is now you she submits it now we have a calendar and it's going to be submitted in there and for example um we will have here that number one it's scheduled but maybe not confirmed but in your phone It should prompt you, hey, there's a new order here. Can we confirm, reschedu, or or reject? So, need to be more specific when you say one truckload. All right.
+
+
+
+
+00:22:26
+
+
+Rodolfo Alvarez: Because that truck Okay. Are we could be a walking? So, are we are we do I I'm going to take this sheet away if we we're not concentrated here. So, this it's important for this to understand. Okay. Number one, the the calendar is for things that have been already set in that and and that's going to be shown in the future. But here's the framework, Carrie. So, first she submits the order for preferred time and day. And then it's going to prompt you in your phone, hey, or in your computer. Do you accept or reject? Okay. Or reschedu. Suppose you say accept. Okay? Then there's going to be a confirmation that goes to the client and to the administrator saying, "Hey, you know, your your transportation has been confirmed." Okay. You got to connect my phone to that. Yeah. I don't have But there's also a reschedu button and if you need to reschedu just connect my phone to it and I'll I got you'll figure it out.
+
+
+
+
+00:23:28
+
+
+Rodolfo Alvarez: Done deal. Deal. I'm not getting the nothing to my phone right at at this point. It's important to kind of know the framework as at the moment. Okay. So, let's continue. So, if you say accept, yes, we'll put it on your phone. If you say accept, then it's going to go on a confirmation to the uh tr to the client and to the u representative for that date because that representative is in charge that this order goes through from you know the beginning to the end. Okay. Second, let's suppose For some reason, the truck load, somebody died, we cannot do it, right? We say reject load and then we send a an email to obviously cash and then we got to figure out what's going to happen next or when can when can we deliver. Now, from the perspective of the client, um you know, they're going to be informed. But now, let's suppose you say, hey, this preferred time is not good because I already have three loads in there.
+
+
+
+
+00:24:25
+
+
+Rodolfo Alvarez: I my truckload is okay busy, right? So, you're gonna reschedu Okay. And the rescheduling is gonna send be sent to the client and the client also will have a reschedule button. Okay? So, that way we can reschedu and when they reschedu they not only provide a time a specific time and date, but they also provide a window of availability. So, that way you can schedule nicely, right? And it's easy. Yeah. So or maybe you know what we do is like yeah we can deliver um let me send you this portal for you to schedule you know when you are available and and that way we have an availability that goes to you and kind of the preferred time of day. That would be really cool. Then I get to set up my whole logistics like operation. Yeah. And then now once everything is said and done it's going to be here. Okay. So you're going to see Okay. Today we are in the 18th of um of uh of August.
+
+
+
+
+00:25:27
+
+
+Rodolfo Alvarez: So the 25th um we have this order. Then you will say, well, what is this order all about? I need all of the details. Well, you can always click here or go to the sales and look for that record and figure out everything that they bought. Okay, so that should be more than intuitive. Does Jonathan already have the order or do I give Jonathan the order? No. So the order goes to you for confirmation logistics and goes to uh to Jonathan. Okay, got it. And so Jonathan should know uh what everything that is coming up. Um so that's pretty much it. That's the truckload. Is this semi truckload? Well, the truckload is only the truckload in the system, the sales app, which is not a dump truck. It's the 24 tons. Set that up. I'm going to check my logistics schedule. Okay. So confirm with her today. So, Tuesday the 25th, I got to make sure they have a truckload of plant health.
+
+
+
+
+00:26:23
+
+
+Rodolfo Alvarez: See, that's the thing. Yeah. So,
+Johnathan Carrasco: I I sorry not to interrupt you Rodolfo.
+Rodolfo Alvarez: um they go
+Johnathan Carrasco: I also have to make sure we have the ingredients or whatever to make the product.
+Rodolfo Alvarez: ahead. Which I thought coming today,
+Johnathan Carrasco: Um Okay.
+Rodolfo Alvarez: too. I ordered a palette. Yep.
+Johnathan Carrasco: So,
+Rodolfo Alvarez: So,
+Johnathan Carrasco: I'll also try to be on top of that so that way um everybody has like an idea of what's in inventory.
+Rodolfo Alvarez: Okay. Uh so that's that. Um the other thing that we're going to incorporate is going to be inventory. So, So now we have received a pallet here of stuff, right? Um I mean a truckload and we're going to submit. Okay, how many totes or planta mulch all that, right? Yeah, that and I can show you how that looks like. Um I don't want to go too much into detail. I got to get Jonathan on board because we're going to do the same thing out there and ensure that we have everything finished and ingredient products.
+
+
+
+
+00:27:21
+
+
+Rodolfo Alvarez: So that should just be taken on this end when we deliver a flatbed for Yeah. um written down like everything the inventory like what you got. Yeah. And we we should definitely be able to see it here. Okay. Um so now let's talk about uh a little bit of the operational problems that we have had. Uh one of the most recent is the um the framework that we are going to install here in order to make sure that when we're opening and when we're closing everything is kind of together. So, um I think for the um you can kind of want to give um your perspective on the opening and closing kind of setting up um ensuring that everything is clean, tidy, nice and put together. Yeah, I just think that um just coming in second shift, um it's just been a continuous pattern I've noticed um where I do feel like I'm kind of cleaning up behind the first shift if I'm being honest. And so we're all I think this culture is set up that we're all individuals, you know, so I understand like the way the systems have been before, but depending on each other to remind each other about our individual roles.
+
+
+
+
+00:28:37
+
+
+Rodolfo Alvarez: I don't think that's realistic to like for a sustainable future. So I think there should be something antimented when we're opening. We go to that checklist. We're go we go to that gate and so like let's clean up the trash there. If we walk past some trash, let's clean it up. You know, we um people come in here, being at a couple nurseries today, like it's a it's a presentation type of thing, you know, and if we're wanting to empower people and and get them excited about this that a lot a lot of people really aren't excited about, it starts with being an example, right? It starts with um Wow. It it starts with being the example checklist. I do I do agree. the driver. I do agree that we have to have a framework and that is a checklist. So, we're going to have a checklist for opening and we're going to put it all together. Obviously, this is going to be one of the things that you just show it for the day.
+
+
+
+
+00:29:31
+
+
+Rodolfo Alvarez: Yeah. And then the system behind holding us accountable for we can create a checklist, but how are we holding ourselves responsible or accountable for hey, you know, well, we're gonna we're going to start with the checklist. I think is the the most simple format and that is going to be when opening one of the things that I want to implement is that whenever we open there's uh trash that accumulates on the on the corner where where the products R. Okay. And I also think that a lot of the the trash that we see around is not necessarily us. It's these people right here. They are nasty. They smoke and they throw it wherever they want. They grab they see a place to put something and they're just going to throw the trash in there. Well, that's why I say like that water bottle that was in the thing the in the wooden box out there. I have no idea where that we all understand. We don't know sometimes. However, like there has to be someone to take the lead and but I didn't even notice I didn't even know in there.
+
+
+
+
+00:30:34
+
+
+Rodolfo Alvarez: Yeah. So, we're not here. This is not the moment or time to kind of jump onto it. What we're going to install is a framework. And if that framework is not followed, then it's going to be another situation, right? But right now uh one thing that I do feel we have to work to is in a way of communication because you know you know it's it's good if you say it one time and then you nobody listens to you. You say it twice nobody maybe by the third fourth time you can you have the you know the uh the now you can go and say and raise it up. But if number one one thing that I don't like is messages that are too long. it's really hard to read. Messages should be for concise kind of immediate things. If it's going to be a problem that it's got to be documented and it's got to be kind of more long format, let's do email and that way it's also documented. Uh but also the this is a place where this is our home, right?
+
+
+
+
+00:31:35
+
+
+Rodolfo Alvarez: And for that reason, we got to make sure it's clean and tidy, nice and well put together, but also uh people should feel comfortable um and not feel kind of attacked and that can happen. So, let's just watch out for that. I know that your intentions are great, Kash. I appreciate it because sometimes I also come here and I feel like it's kind of dirty, you know? It's like, do you want me to come on this place? You're in crutches. You're in crutches, Kerry. Um so um no but I do feel sometimes in it can be put together better. Now we're not going to go into the details because this is not what this is about. It's more about installing. Now think about this where we are today. We are in August 18. you know, this is the first time that we're doing the storefront and it's something that it's a thousand factors that I don't even know the next factors that are coming into play and so we really have to work on this being patient and understanding that we're new and understanding that we haven't had everything figured out.
+
+
+
+
+00:32:42
+
+
+Rodolfo Alvarez: So really really um that is you guys get misters. It would really help the appearance. Everything would get lush more lush and have you have potted plants and it just be a nice environment. Yeah. Overall, don't you think? Well, the 22 And that's a part of like just beautifying the place cuz I drive down there so much. And when I first started here, that back part, it looked crazy to drive by, you know? It wasn't something like I work there. I couldn't get to turn on yesterday. I was like, "Okay, let's not get distracted because we're going to finish uh uh pretty quick." Mess around. Okay. So, so what are the things that then we're going to focus this week? Uh well, number one, we're going to continue with the marketing. We're going to shoot a video for the garden class. We also um are going to start preparing for the upcoming September launch which is that's going to be the big big big giveaway.
+
+
+
+
+00:33:34
+
+
+Rodolfo Alvarez: I think we can frame it into a nice narrative. Um third thing we got to send the garden class uh because it's coming up soon is we got to send for everybody to sign up and put a video to promotion. Something that happened is that now the com data for some reason now we don't have funds. We had more than enough funds. So I don't know really what happened. We need to take a look at the numbers. Victoria sent me the statement. So, we need to reconcile on what what is going to her yesterday and I told her um yeah so so a few things are going to happen. The um the Google ads can never be stopped more again. So, we're going to move that from the com data to the IMX card as well as meta ads and we're going to put a little bit of promotion to that video for the garden class. And then the um other thing that we want to work is we have to work on is number one is obviously the active cell.
+
+
+
+
+00:34:28
+
+
+Rodolfo Alvarez: So one of the active sales that we have is the moon house. What is going on with that? Um Kerry, it's going great. Okay. So what does that mean? So it is going on schedule. We've done Yeah. How many deliveries so far? We have like 48 more. That's the This is the scale people. I sent I sent you all the pictures, right? Yeah. You got to show Rodolfo them. How far is that? It's like almost two It's a hour and 45 minutes. Okay. Um so, so that order we kind of talked about this. Um Oh, yeah. They can only get the dump truck because the flat bed we've done roughly we have like Simon said we have probably maybe five more loads left right now made so we're kind of like but how many loads can be delivered we've done we've done 16 Jonathan can you confirm that because um we should have have made enough product for 12 24 ton truckloads and so far we've done about 13 14 um dump trucks that are only like five tons.
+
+
+
+
+00:35:45
+
+
+Rodolfo Alvarez: So, we should have more than than a few more trucks. Well, Simon and Kerry both determined it was about five more dump truck
+Johnathan Carrasco: Yeah.
+Rodolfo Alvarez: loads.
+Johnathan Carrasco: And remember we've been we've been also making a plant mixes and uh
+Rodolfo Alvarez: So, they
+Johnathan Carrasco: orders as well. So, we have been taking it from the row.
+Rodolfo Alvarez: And we're bringing the roto mixer back today. Okay. Which we need
+Johnathan Carrasco: Uh but but like I said, sorry, sorry, Kerry. Um like I said,
+Rodolfo Alvarez: just
+Johnathan Carrasco: uh Kerry ordered me more zinc and calcium to even make more plant pow.
+Rodolfo Alvarez: Okay.
+Johnathan Carrasco: So,
+Rodolfo Alvarez: So, we we definitely need to check that out. I know that we're going to hit a pause on that deal because there's not more space to dump, right? They need to take maybe some time to move. Like there's clearly in the pictures you can see all the obstacles, right? There's all these like real big AC unit thingies that I mean, what are we supposed to dump on top of it?
+
+
+
+
+00:36:39
+
+
+Rodolfo Alvarez: You know, it's Yeah. No, that's why I that's why I asked how many loads Yeah. are do you think can safely fit up there? Because I told her, well, right now we can get about three more up there. Three more safely up there. And I've been telling her she needs to get it spread out before we can bring more. And you need um and we can always And there's the load at the bottom. See, the thing is is Oh, yeah. That should never had happened, Kerry. And that could never cannot ever happen again. Okay. Well, I'll let you talk to Coy about that. I did talk to Co and I did tell him that can never happen again as far as as far as dumping wherever. Um, you know, it was it was just the bottom of their the gate. You know, it's probably a spot they're going to want the product anyway. So, I don't think so. She was actually up there.
+
+
+
+
+00:37:30
+
+
+Rodolfo Alvarez: I've been there. No, we I All the way up, you guys. All the way. All the way up in your vehicles. I've been there without a drone. I've been there, Kerry. I've been I've seen everything. Well, that's the reason I wanted you and to go first is so that we could uh price appropriately for that load. Well, Cy wasn't gonna come back at that low. But I guess if you know if Can you talk to But next time if we have anything big like this, I'm definitely going to have Coy go check out the road to make sure I don't have to charge extra for So we need to do an adjustments and we have to have a meeting specifically on this um to reconcile everything that has happened and how many loads we have had. Um but yeah, the other thing and last thing is that everybody is now in when I work, everybody's clocking in and clocking out uh what it looks like except you Carrie. So I know that you've been uh with this problem.
+
+
+
+
+00:38:27
+
+
+Rodolfo Alvarez: We'll talk about it. But now so far we have uh Jesus, we have Fernando, we have Jonathan, we have Luis, we have Ramon, and we have Alfredo. And we also have obviously everybody here. And I've been doing the clock out thing and I don't know if it's been clocking me out. Do you clock out here or when you're at home? No, here. Yeah. Um, how do we Is there a way to request like Saturday the 8th? I had emailed you. I don't I had emailed you last week because I noticed that the time sheets September 8th um they switch because uh Friday is the last cut off day. Yeah. In the app. So Friday. Yeah. And then Saturday starts the new week. Okay, that's weird. I with Saturdays, but I need an adjustment on the 8th. I had emailed you last week. We uh we will adjust September 8th. Huh? The 8th. The September rate. No, August 8th. Last Saturday when I was at the farmer. Yeah. And we got to reset our parameters for our clock in too because I can't even clock in when I'm already on the property. Yeah. It's like five minutes the way up in there and stuff like that. I'm sorry. No worries. So, you need me here tomorrow in the afternoon. Yeah. Same thing Wednesday. Okay. So, that's going to be it for this meeting, Jonathan. Um,
+Johnathan Carrasco: All
+Rodolfo Alvarez: thank you. We we'll send the notes and then uh we should be u put together for everything that we do.
+Johnathan Carrasco: right,
+Rodolfo Alvarez: Okay.
+Johnathan Carrasco: sounds good, boss.
+Rodolfo Alvarez: Thank you. Bye.
+Johnathan Carrasco: All right, but
+
+
+
+
+Transcription ended after 00:40:15
+
+
+This editable transcript was computer generated and might contain errors. People can also change the text after it was created.
