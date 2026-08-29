@@ -1,8 +1,8 @@
 /**
  * Pay-cart load grouping for QuoteCart + checkout.
  *
- * Promo freeze bundles (4100–4102) always sit under Offers, even when the
- * format string mentions a tote. Regular bags/totes keep their existing groups.
+ * Promo letter-flyer bundles (4100–4102) always sit under Offers.
+ * Regular bags/totes keep their existing groups.
  */
 import { isPromoBundleProductId } from "./promoBundles.js";
 import { isWalkingFloorDeliveryFormat, spotsForFormat } from "./flatbedSpots.js";

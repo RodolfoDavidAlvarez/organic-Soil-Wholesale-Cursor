@@ -10,11 +10,8 @@ import {
   Container,
   ArrowUpRight,
   Building2,
-  CalendarDays,
-  Clock3,
   Compass,
   Phone,
-  Sprout,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY, CUSTOMER_SUPPORT_PHONE_TEL, PHOENIX_YARD_DIRECTIONS_URL, PHOENIX_YARD_ENTRANCE_COORDINATES } from "@/config/contact";
@@ -25,6 +22,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import DeferredMount from "@/components/DeferredMount";
 import LazyYouTube from "@/components/LazyYouTube";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { DealHubCards } from "@/components/DealList";
 
 const AmazonReviewCarousel = lazy(() => import("@/components/AmazonReviewCarousel"));
 
@@ -328,152 +326,40 @@ const Home = () => {
         <MobileResultsProof />
       </div>
 
-      <section aria-labelledby="garden-classes-heading" className="border-y border-[#d9dfd4] bg-[#f4f0e5] px-4 py-9 sm:py-12">
-        <div className="container mx-auto overflow-hidden rounded-[1.75rem] bg-[#264027] text-white shadow-xl ring-1 ring-[#264027]/10">
-          <div className="grid lg:grid-cols-[1.18fr_0.82fr]">
-            <div className="p-6 sm:p-9 lg:p-11">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#d7b77d] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.16em] text-[#263527]">
-                <CalendarDays className="h-4 w-4" /> Free Garden Classes · Phoenix
-              </div>
-              <h2 id="garden-classes-heading" className="mt-5 max-w-2xl font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
-                Be first to hear about the next Garden Class.
-              </h2>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
-                Our first Garden Reset brought Phoenix gardeners together for practical soil and growing lessons. Join the alert list for future dates—and tell us which topics you want next.
+      <section aria-labelledby="garden-classes-heading" className="bg-[#f4f0e5] px-4 py-5 sm:py-6">
+        <div className="container mx-auto">
+          <div className="flex flex-col gap-4 rounded-2xl bg-[#264027] px-5 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-7 sm:py-5">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d7b77d]">
+                Free Garden Classes · Phoenix
               </p>
-
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <CalendarDays className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">New dates</p>
-                  <p className="mt-1 text-xs text-white/65">Get alerted first</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                  <Clock3 className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">Your topics</p>
-                  <p className="mt-1 text-xs text-white/65">Help shape the schedule</p>
-                </div>
-                <div className="col-span-2 rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 sm:col-span-1">
-                  <Sprout className="h-5 w-5 text-[#d7b77d]" />
-                  <p className="mt-3 font-bold">Hands-on</p>
-                  <p className="mt-1 text-xs text-white/65">Arizona-specific lessons</p>
-                </div>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={() => {
-                  trackEvent("Homepage Garden Class CTA Clicked", { source: "homepage-class-card" });
-                  navigate("/classes?source=homepage-class-card");
-                }}
-                className="mt-7 h-14 w-full bg-[#d7b77d] px-7 text-base font-extrabold text-[#263527] shadow-lg hover:bg-[#e2c794] sm:w-auto"
-              >
-                Alert Me About New Classes <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <p className="mt-3 text-sm text-white/65">Free alerts · Choose your interests · Unsubscribe anytime</p>
+              <h2 id="garden-classes-heading" className="mt-1.5 font-heading text-xl font-extrabold leading-tight sm:text-2xl">
+                Get the next Garden Class date first.
+              </h2>
             </div>
-
-            <div className="border-t border-white/10 bg-[#1d3422] p-6 sm:p-9 lg:border-l lg:border-t-0 lg:p-11">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d7b77d]">Topics you can request</p>
-              <ol className="mt-6 space-y-5">
-                {[
-                  ["01", "Soil and compost", "Reset beds, use amendments, and build living soil."],
-                  ["02", "Arizona planting", "Choose seasonal crops, seeds, and transplants."],
-                  ["03", "Water and pests", "Read moisture, protect roots, and manage pests naturally."],
-                  ["04", "Containers and trees", "Grow in small spaces or care for perennial gardens."],
-                ].map(([number, title, detail]) => (
-                  <li key={number} className="flex gap-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#d7b77d] text-xs font-black text-[#263527]">{number}</span>
-                    <div>
-                      <p className="font-bold text-white">{title}</p>
-                      <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <Button
+              size="lg"
+              onClick={() => {
+                trackEvent("Homepage Garden Class CTA Clicked", { source: "homepage-class-card" });
+                navigate("/classes?source=homepage-class-card");
+              }}
+              className="h-12 min-h-12 w-full shrink-0 bg-[#d7b77d] px-6 text-sm font-extrabold text-[#263527] hover:bg-[#e2c794] sm:w-auto"
+            >
+              Alert me <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
 
-      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 py-10 sm:py-14">
-        <div className="container mx-auto">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
-              <h2 id="garden-bundles-heading" className="mt-3 max-w-2xl font-heading text-3xl font-extrabold leading-tight text-[#183a23] sm:text-4xl">
-                Fall garden bundles. Pay now, pick up at the yard.
-              </h2>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-[#5f6c62]">
-                Three DIY soil packages for 4×8 beds. Add the bundle to your order, keep shopping Products, and check out together.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => {
-                trackEvent("Homepage Bundle Hub Clicked", { source: "homepage-bundles" });
-                navigate("/offers");
-              }}
-              className="h-12 min-h-12 border-[#183a23]/20 bg-white px-5 font-extrabold text-[#183a23] hover:bg-[#eaf0e6]"
-            >
-              All deals <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 py-8 sm:py-10">
+        <div className="container mx-auto max-w-5xl">
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
+            <h2 id="garden-bundles-heading" className="mt-2 font-heading text-2xl font-extrabold leading-tight text-[#183a23] sm:text-3xl">
+              Fall garden bundles.
+            </h2>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                href: "/offers/garden-refresh",
-                title: "Garden Refresh",
-                price: "$69",
-                was: "$91",
-                detail: "7 bags · 10 cu ft · one 4×8 bed",
-                image: "/images/offers/flyers/garden-refresh.webp",
-                event: "garden-refresh",
-              },
-              {
-                href: "/offers/garden-refresh-plus",
-                title: "Garden Refresh Plus",
-                price: "$149",
-                was: "$247",
-                detail: "16 bags · 24 cu ft · mix, not just compost",
-                image: "/images/offers/flyers/garden-refresh-plus.webp",
-                event: "garden-refresh-plus",
-              },
-              {
-                href: "/offers/big-garden-setup",
-                title: "Big Garden Setup",
-                price: "$459",
-                was: "$642",
-                detail: "1 tote + 10 bags · 2–3 beds",
-                image: "/images/offers/flyers/big-garden-setup.webp",
-                event: "big-garden-setup",
-              },
-            ].map((bundle) => (
-              <button
-                key={bundle.href}
-                type="button"
-                onClick={() => {
-                  trackEvent("Homepage Bundle CTA Clicked", { bundle: bundle.event, source: "homepage-bundles" });
-                  navigate(bundle.href);
-                }}
-                className="group overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-[#dfe5dc] transition hover:-translate-y-1 hover:shadow-xl"
-              >
-                <img src={bundle.image} alt="" className="aspect-[3/4] w-full bg-[#f4f2eb] object-contain" loading="lazy" />
-                <div className="p-5">
-                  <p className="font-heading text-xl font-bold text-[#183a23]">{bundle.title}</p>
-                  <p className="mt-1 text-sm text-[#657066]">{bundle.detail}</p>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-2xl font-extrabold text-[#183a23]">{bundle.price}</span>
-                    <span className="pb-0.5 text-sm text-[#758077] line-through">{bundle.was}</span>
-                  </div>
-                  <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#215330]">
-                    Open offer <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <DealHubCards source="homepage-bundles" />
         </div>
       </section>
 

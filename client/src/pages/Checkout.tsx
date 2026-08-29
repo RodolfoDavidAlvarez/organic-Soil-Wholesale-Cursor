@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { cartItemToEcommerceItem, trackEcommerceEvent, trackEvent } from "@/lib/analytics";
 import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkoutMonitor";
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
-import { nonBundleProductSubtotal } from "@shared/promoBundles.js";
+import { nonBundleProductSubtotal, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import {
   CART_LOAD_GROUP_HINTS,
   CART_LOAD_GROUP_LABELS,
@@ -1047,6 +1047,11 @@ const Checkout: React.FC = () => {
                       <div className="min-w-0">
                         <p className="text-base font-bold leading-tight text-stone-950">{item.productName}</p>
                         <p className="mt-0.5 text-sm leading-tight text-stone-500">{item.format}</p>
+                        {getPromoBundleByProductId(item.productId)?.includedLabel ? (
+                          <p className="mt-0.5 text-xs leading-snug text-stone-500">
+                            {getPromoBundleByProductId(item.productId)?.includedLabel}
+                          </p>
+                        ) : null}
                         <p className="mt-1 text-xs text-stone-500">{fmt(item.unitPrice)} each</p>
                         {item.discountPercent ? <p className="mt-1 text-xs font-bold text-green-700">{item.discountPercent}% pallet savings · save {fmt((item.savingsPerUnit || 0) * item.quantity)}</p> : null}
                       </div>
@@ -1616,6 +1621,11 @@ const Checkout: React.FC = () => {
                                       </span>
                                     ) : null}
                                   </p>
+                                  {getPromoBundleByProductId(item.productId)?.includedLabel ? (
+                                    <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                                      {getPromoBundleByProductId(item.productId)?.includedLabel}
+                                    </p>
+                                  ) : null}
                                 </div>
                                 {canEditQty ? (
                                   <button

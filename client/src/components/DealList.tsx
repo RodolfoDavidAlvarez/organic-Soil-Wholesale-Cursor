@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import { ShoppingBag } from "lucide-react";
 import { PROMO_BUNDLES, promoBundleCartItem, type PromoBundle } from "@shared/promoBundles.js";
 import { cn } from "@/lib/utils";
 import { useQuoteCart, type CartItem } from "@/contexts/QuoteCartContext";
@@ -96,52 +95,30 @@ export default function DealList({ showCaption = false, onNavigate, className }:
   );
 }
 
-export function DealHubCards() {
-  const addDeal = useAddDeal();
-
+export function DealHubCards({ source = "deals-hub" }: { source?: string }) {
   return (
     <div className="space-y-3 sm:space-y-4">
       {PROMO_BUNDLES.map((deal, index) => (
-        <article
-          key={deal.slug}
-          className="relative overflow-hidden rounded-[1.5rem] bg-[#153b22] text-white shadow-[0_16px_36px_rgba(21,59,34,0.18)]"
-        >
-          <Link href={`/offers/${deal.slug}`} className="block">
+        <Link key={deal.slug} href={`/offers/${deal.slug}`}>
+          <a
+            onClick={() =>
+              trackEvent(source === "homepage-bundles" ? "Homepage Bundle CTA Clicked" : "Deal Banner Clicked", {
+                bundle: deal.slug,
+                source,
+              })
+            }
+            className="block cursor-pointer overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)]"
+          >
             <img
               src={deal.bannerImage}
-              alt=""
-              className="h-[11.25rem] w-full object-cover object-left sm:h-[13.5rem] lg:h-[15.25rem]"
+              alt={deal.heroAlt}
+              width={1600}
+              height={646}
+              className="block h-auto w-full"
               fetchPriority={index === 0 ? "high" : undefined}
             />
-            <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#102818] via-[#102818]/35 to-transparent" />
-            <span className="pointer-events-none absolute inset-y-0 right-0 w-[42%] bg-gradient-to-l from-[#102818] to-transparent" />
-          </Link>
-          <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <Link href={`/offers/${deal.slug}`} className="min-w-0 sm:max-w-md">
-                <h2 className="font-heading text-xl font-bold leading-tight sm:text-2xl">{deal.shortTitle}</h2>
-                <p className="mt-1 text-sm leading-5 text-white/80">{deal.listCaption}</p>
-              </Link>
-              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <p className="font-heading text-3xl font-bold tabular-nums text-[#e9c66c] sm:text-4xl">
-                  {fmtDealPrice(deal.salePrice)}
-                </p>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    addDeal(deal);
-                  }}
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#e9c66c] px-5 text-sm font-extrabold text-[#183a23] transition hover:bg-[#f1d6a6]"
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Buy Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </article>
+          </a>
+        </Link>
       ))}
     </div>
   );
