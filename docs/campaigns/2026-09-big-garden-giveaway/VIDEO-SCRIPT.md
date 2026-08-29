@@ -2,21 +2,37 @@
 
 Goal: one 30-second promo for the September Big Garden Giveaway, plus a longer 45–60 second cut from the same shoot.
 
+## Must mention (Hormozi stack, from Mike / Money Models notes)
+
+On camera, one offer only: the giveaway. Paid bundles are the follow-up, not this video.
+
+1. Hook: August was free worm castings. September is the whole garden.
+2. Dream: one complete fall garden, delivered in Phoenix.
+3. Stack, named: two raised beds (steel corners and wood), four PlantPal pallets (120 bags / 180 cu ft), mixed pallet (40 Simon’s Gold + 10 Mikey’s), Nature’s Blanket pallet (25 bags), local delivery.
+4. Value: full package about $5,000. Rodo confirmed this as the on-camera number.
+5. Who: one family, school, or community garden.
+6. Scarcity: one winner.
+7. Risk: free to enter, no purchase needed.
+8. CTA: tap the link, tell us what you grow.
+9. Brand: Soil Seed and Water, Phoenix.
+
+Do not say raffle. Do not make buying, sharing, class attendance, or a testimonial a condition of entry. Do not list Garden Refresh $99 / $149 / $399 in this 30 seconds.
+
 ## 30-second promo (primary)
 
-Spoken at a calm walk. About 75 words. Vertical and horizontal.
+Spoken at a calm walk. About 80 words. Vertical and horizontal.
 
 **0–4s — to camera at the beds**
-“Phoenix. August was a bag of worm castings. September is the whole garden.”
+“Phoenix. August was a bag of worm castings. September is a five thousand dollar garden.”
 
-**4–18s — walk the prize, camera follows**
-“One local gardener gets two raised beds delivered. Four pallets of PlantPal. Compost. Worm castings. A full pallet of mulch.”
+**4–20s — walk the prize, camera follows**
+“One winner gets two raised beds delivered. Four pallets of PlantPal. Compost. Worm castings. A full pallet of mulch. The whole package, about five grand, at your door.”
 
-**18–24s — still walking, then look up**
-“We want one family, school, or community garden ready to grow this fall.”
+**20–26s — wide of the full stack**
+“One family, school, or community garden. One winner.”
 
-**24–30s — to camera**
-“Free to enter. Tap the link. Tell us what you’re growing. One winner. No purchase needed. Soil Seed and Water. Let’s grow something.”
+**26–30s — to camera**
+“Free to enter. Tap the link. Tell us what you’re growing. No purchase needed. Soil Seed and Water. Let’s grow something.”
 
 ### 30-second picture
 
@@ -24,11 +40,11 @@ Spoken at a calm walk. About 75 words. Vertical and horizontal.
 - 4–10: walk past four PlantPal pallets
 - 10–14: Simon’s Gold and Mikey’s
 - 14–18: Nature’s Blanket pallet
-- 18–24: wide of beds plus all pallets
-- 24–30: Rodo to camera, then URL card
+- 18–26: wide of beds plus all pallets
+- 26–30: Rodo to camera, then URL card
 
-Do not say a dollar value on camera until Mike confirms bed-kit and delivery values.
-Do not say raffle. Say giveaway. No purchase necessary.
+Say giveaway, not raffle. No purchase necessary.
+Rodo authorized “about $5,000” for the full package on camera.
 
 ## 45–60 second main script (same shoot)
 
@@ -80,5 +96,5 @@ Do not say raffle. Say giveaway. No purchase necessary.
 - Rodo speaking directly to camera
 - Clean vertical and horizontal takes
 
-Do not say “$5,000 value” on camera until Mike confirms the bed-kit and delivery values.
+On-camera value: about $5,000 for the full package (Rodo, Aug 29). Product retail on file is $2,938.55 before bed kits and delivery.
 
