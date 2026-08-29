@@ -84,6 +84,7 @@ const Header = () => {
 
   const isActive = (path: string) => {
     if (path === "/products") return location === "/products" || location.startsWith("/products/");
+    if (path === "/offers") return location === "/offers" || location.startsWith("/offers/") || location.startsWith("/deals");
     return location === path;
   };
 
@@ -94,6 +95,7 @@ const Header = () => {
 
   const navLinks = [
     { name: "Products", path: "/products" },
+    { name: "Deals", path: "/offers" },
     { name: "About Us", path: "/about" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },

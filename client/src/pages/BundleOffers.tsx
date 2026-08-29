@@ -108,7 +108,11 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
         <div className="mt-7 flex gap-3 overflow-x-auto pb-1">
           {offer.items.map((item) => (
             <figure key={`${item.name}-${item.amount}`} className="w-32 shrink-0 sm:w-36">
-              <img src={item.image} alt={item.alt} className="aspect-square w-full rounded-2xl object-cover" />
+              <Link href={item.href}>
+                <a className="block overflow-hidden rounded-2xl ring-1 ring-[#183a23]/10 transition hover:ring-2 hover:ring-[#215330]">
+                  <img src={item.image} alt={item.alt} className="aspect-square w-full object-cover" />
+                </a>
+              </Link>
               <figcaption className="mt-2 text-xs leading-snug text-[#657066]">{item.amount}</figcaption>
             </figure>
           ))}

@@ -16,18 +16,22 @@ const productImages = {
   plantpal: {
     image: "/images/optimized/plantpal-bag-context.webp",
     alt: "PlantPal all-stage potting mix bag with fresh vegetables",
+    href: "/products/plantpal",
   },
   simons: {
     image: "/images/optimized/simons-gold-bag-context.webp",
     alt: "Simon's Gold dairy compost bag with fresh vegetables",
+    href: "/products/simons-gold",
   },
   mikeys: {
     image: "/images/optimized/mikeys-worm-poop-bag-context.webp",
     alt: "Mikey's Worm Poop worm castings bag with vegetables and soil",
+    href: "/products/mikeys-worm-poop",
   },
   mulch: {
     image: "/images/optimized/natures-blanket-bag-context.webp",
     alt: "Nature's Blanket Premium mulch bag with rich brown mulch",
+    href: "/products/natures-blanket-premium",
   },
 };
 

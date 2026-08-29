@@ -228,7 +228,7 @@ const Home = () => {
             {...{ fetchpriority: "high" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-stone-950/70 to-stone-950/40" />
-          <div className="absolute inset-x-0 bottom-0 hidden h-32 bg-gradient-to-t from-stone-50 to-transparent lg:block" />
+          <div className="absolute inset-x-0 bottom-0 hidden h-24 bg-gradient-to-t from-[#f4f0e5] to-transparent lg:block" />
         </div>
         <div className="container mx-auto px-4 py-12 sm:py-16 md:py-28 lg:py-36">
           <div className="grid items-center gap-12 lg:grid-cols-12">
@@ -326,32 +326,46 @@ const Home = () => {
         <MobileResultsProof />
       </div>
 
-      <section aria-labelledby="garden-classes-heading" className="bg-[#f4f0e5] px-4 py-5 sm:py-6">
-        <div className="container mx-auto">
-          <div className="flex flex-col gap-4 rounded-2xl bg-[#264027] px-5 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-7 sm:py-5">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d7b77d]">
-                Free Garden Classes · Phoenix
-              </p>
-              <h2 id="garden-classes-heading" className="mt-1.5 font-heading text-xl font-extrabold leading-tight sm:text-2xl">
-                Get the next Garden Class date first.
-              </h2>
+      <section aria-labelledby="garden-classes-heading" className="relative z-10 bg-[#f4f0e5] px-4 pb-5 pt-4 lg:-mt-12 lg:pt-0">
+        <div className="container mx-auto max-w-5xl">
+          <div className="overflow-hidden rounded-2xl bg-[#264027] text-white shadow-[0_18px_40px_rgba(24,58,35,0.28)] ring-1 ring-black/10">
+            <div className="flex flex-col sm:flex-row sm:items-stretch">
+              <img
+                src="/email-assets/garden-reset-saturday.jpg"
+                alt="Garden Reset class at the Phoenix yard"
+                width="900"
+                height="420"
+                className="h-32 w-full object-cover object-center sm:h-auto sm:w-48 md:w-56"
+              />
+              <div className="flex flex-1 flex-col justify-center gap-4 px-5 py-5 sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-5">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d7b77d]">
+                    Free Garden Classes · Phoenix
+                  </p>
+                  <h2 id="garden-classes-heading" className="mt-1 font-heading text-2xl font-extrabold leading-tight sm:text-[1.75rem]">
+                    Get the next Garden Class date first.
+                  </h2>
+                  <p className="mt-1.5 max-w-xl text-sm leading-snug text-white/70">
+                    Free alerts for the next Phoenix class. Pick the topics you want.
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    trackEvent("Homepage Garden Class CTA Clicked", { source: "homepage-class-card" });
+                    navigate("/classes?source=homepage-class-card");
+                  }}
+                  className="h-12 min-h-12 w-full shrink-0 bg-[#d7b77d] px-6 text-sm font-extrabold text-[#263527] hover:bg-[#e2c794] sm:w-auto"
+                >
+                  Alert me <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button
-              size="lg"
-              onClick={() => {
-                trackEvent("Homepage Garden Class CTA Clicked", { source: "homepage-class-card" });
-                navigate("/classes?source=homepage-class-card");
-              }}
-              className="h-12 min-h-12 w-full shrink-0 bg-[#d7b77d] px-6 text-sm font-extrabold text-[#263527] hover:bg-[#e2c794] sm:w-auto"
-            >
-              Alert me <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
         </div>
       </section>
 
-      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 py-8 sm:py-10">
+      <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 pb-8 pt-4 sm:pb-10 sm:pt-6">
         <div className="container mx-auto max-w-5xl">
           <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>

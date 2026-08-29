@@ -107,16 +107,19 @@ export function DealHubCards({ source = "deals-hub" }: { source?: string }) {
                 source,
               })
             }
-            className="block cursor-pointer overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)]"
+            className="relative block overflow-hidden rounded-[1.25rem] bg-[#153b22] shadow-[0_12px_28px_rgba(21,59,34,0.14)] ring-1 ring-[#183a23]/10 transition hover:shadow-[0_18px_40px_rgba(21,59,34,0.22)]"
           >
             <img
               src={deal.bannerImage}
               alt={deal.heroAlt}
               width={1600}
               height={646}
-              className="block h-auto w-full"
+              className="pointer-events-none block h-auto w-full"
               fetchPriority={index === 0 ? "high" : undefined}
             />
+            <span className="absolute right-[5.2%] top-[57.4%] z-10 inline-flex h-[11.4%] min-h-11 min-w-[9.75rem] items-center justify-center rounded-full bg-[#f3ad2c] px-5 text-[clamp(0.7rem,1.55vw,1.05rem)] font-extrabold uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.22)] transition hover:bg-[#ffb83a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#153b22]">
+              Shop offer <span aria-hidden="true" className="ml-1.5 text-[1.05em] leading-none">›</span>
+            </span>
           </a>
         </Link>
       ))}

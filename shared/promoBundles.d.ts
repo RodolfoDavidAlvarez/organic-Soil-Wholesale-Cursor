@@ -5,6 +5,7 @@ export type PromoBundleItem = {
   amount: string;
   image: string;
   alt: string;
+  href: string;
 };
 
 export type PromoBundle = {
