@@ -15,12 +15,6 @@ export const SURVEY_SUBMIT_POST_PATHS = Object.freeze([
   "/api/surveys",
 ]);
 
-export const SURVEY_SUBMIT_MOUNT_PREFIXES = Object.freeze([
-  "/api/survey",
-  "/api/public/survey",
-  "/api/surveys",
-]);
-
 export function isSurveySubmitPostPath(path) {
   return SURVEY_SUBMIT_POST_PATHS.includes(path);
 }

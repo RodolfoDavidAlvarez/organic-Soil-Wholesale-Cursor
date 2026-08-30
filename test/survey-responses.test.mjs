@@ -32,7 +32,6 @@ import {
   processSurveySubmission,
 } from "../shared/surveyStaffAlerts.js";
 import {
-  SURVEY_SUBMIT_MOUNT_PREFIXES,
   SURVEY_SUBMIT_POST_PATHS,
   isSurveySubmitPostPath,
 } from "../shared/surveySubmitPaths.js";
@@ -925,12 +924,7 @@ test("live survey forms post to /api/survey/submit and prod aliases the 2026-08-
   assert.equal(isSurveySubmitPostPath("/api/graphql"), false);
 
   assert.match(api, /isSurveySubmitPostPath\(path\) && req\.method === 'POST'/);
-  assert.match(express, /SURVEY_SUBMIT_MOUNT_PREFIXES/);
-  assert.deepEqual([...SURVEY_SUBMIT_MOUNT_PREFIXES], [
-    "/api/survey",
-    "/api/public/survey",
-    "/api/surveys",
-  ]);
+  assert.match(express, /app\.post\(SURVEY_SUBMIT_POST_PATHS, handleSurveySubmit\)/);
 });
 
 test("one landing table: class and purchase share sp_survey_responses", async () => {
