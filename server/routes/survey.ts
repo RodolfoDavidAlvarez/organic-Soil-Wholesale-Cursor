@@ -5,7 +5,7 @@ import { processSurveySubmission } from "../../shared/surveyStaffAlerts.js";
 
 const router = Router();
 
-router.post(["/", "/submit"], async (req, res) => {
+export async function handleSurveySubmit(req: any, res: any) {
   try {
     const result = await processSurveySubmission({
       db: supabase,
@@ -17,7 +17,9 @@ router.post(["/", "/submit"], async (req, res) => {
     console.error("[Survey] Error:", error?.message || error);
     return res.status(500).json({ error: "We could not save your answers. Please try again." });
   }
-});
+}
+
+router.post(["/", "/submit"], handleSurveySubmit);
 
 export async function handleSurveyCouponQr(req: any, res: any) {
   try {

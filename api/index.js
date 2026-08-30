@@ -18,6 +18,7 @@ import { buildPurchaseThankYouEmail, PURCHASE_THANK_YOU_FROM } from '../shared/p
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
 import { processPortalSurveyLetters } from '../shared/portalSurveyLetter.js';
 import { processSurveySubmission } from '../shared/surveyStaffAlerts.js';
+import { isSurveySubmitPostPath } from '../shared/surveySubmitPaths.js';
 import {
   CHECKOUT_ABANDONMENT_STATUSES,
   CHECKOUT_ALERT_TO,
@@ -4670,9 +4671,10 @@ ${pages}
     }
 
     // POST /api/survey and /api/survey/submit - CSAT / yard / class feedback.
+    // Also accept /api/public/survey and /api/surveys (those 404'd in prod).
     // One table: sp_survey_responses. Never writes newsletter_subscribed.
     // After a successful save, ping staff internally. Never email the customer here.
-    if ((path === '/api/survey' || path === '/api/survey/submit') && req.method === 'POST') {
+    if (isSurveySubmitPostPath(path) && req.method === 'POST') {
       try {
         const result = await processSurveySubmission({
           db: await getSupabase(),

@@ -41,7 +41,8 @@ import grokRoutes from "./grok.js";
 import unsubscribeRoutes from "./unsubscribe.js";
 import newsletterRoutes from "./newsletter.js";
 import workshopRoutes from "./workshops.js";
-import surveyRoutes, { handleSurveyCouponQr } from "./survey.js";
+import { handleSurveyCouponQr, handleSurveySubmit } from "./survey.js";
+import { SURVEY_SUBMIT_POST_PATHS } from "../../shared/surveySubmitPaths.js";
 import schedulingRoutes from "./scheduling.js";
 import webhookRoutes from "./webhooks.js";
 // import pricingRoutes from "./pricing.js";
@@ -98,7 +99,7 @@ export function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/unsubscribe", unsubscribeRoutes);
   app.use("/api/newsletter", newsletterRoutes);
   app.use("/api/workshops", workshopRoutes);
-  app.use("/api/survey", surveyRoutes);
+  app.post(SURVEY_SUBMIT_POST_PATHS, handleSurveySubmit);
   app.get("/api/public/survey-coupon/qr/:code.:format", handleSurveyCouponQr);
   app.use("/api/portal/scheduling", schedulingRoutes);
   app.use("/api/webhooks", webhookRoutes);
