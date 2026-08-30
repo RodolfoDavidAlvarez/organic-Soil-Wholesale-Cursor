@@ -32,6 +32,11 @@ import {
   processSurveySubmission,
 } from "../shared/surveyStaffAlerts.js";
 import {
+  SURVEY_SUBMIT_MOUNT_PREFIXES,
+  SURVEY_SUBMIT_POST_PATHS,
+  isSurveySubmitPostPath,
+} from "../shared/surveySubmitPaths.js";
+import {
   STAFF_GARDEN_CLASS_SUBJECT,
   STAFF_GARDEN_CLASS_THREAD_ID,
   STAFF_NEWSLETTER_THREAD_ID,
@@ -893,6 +898,39 @@ test("inbox lists all rows and can filter class-only", async () => {
   assert.equal(classes.rows.length, 1);
   assert.equal(classes.rows[0].survey_kind, SURVEY_KIND_GARDEN_CLASS);
   assert.equal(classes.rows[0].notes, "The fan helped.");
+});
+
+test("live survey forms post to /api/survey/submit and prod aliases the 2026-08-28 404 paths", async () => {
+  const yard = await readFile(new URL("../client/src/pages/ClientSurvey.tsx", import.meta.url), "utf8");
+  const gardenClass = await readFile(new URL("../client/src/pages/GardenClassSurvey.tsx", import.meta.url), "utf8");
+  const api = await readFile(new URL("../api/index.js", import.meta.url), "utf8");
+  const express = await readFile(new URL("../server/routes/index.ts", import.meta.url), "utf8");
+
+  assert.match(yard, /fetch\("\/api\/survey\/submit"/);
+  assert.match(gardenClass, /fetch\("\/api\/survey\/submit"/);
+  assert.doesNotMatch(yard, /\/api\/public\/survey"/);
+  assert.doesNotMatch(yard, /\/api\/surveys"/);
+  assert.doesNotMatch(gardenClass, /\/api\/public\/survey"/);
+  assert.doesNotMatch(gardenClass, /\/api\/surveys"/);
+
+  assert.deepEqual([...SURVEY_SUBMIT_POST_PATHS], [
+    "/api/survey",
+    "/api/survey/submit",
+    "/api/public/survey",
+    "/api/surveys",
+  ]);
+  assert.equal(isSurveySubmitPostPath("/api/public/survey"), true);
+  assert.equal(isSurveySubmitPostPath("/api/surveys"), true);
+  assert.equal(isSurveySubmitPostPath("/api/survey/submit"), true);
+  assert.equal(isSurveySubmitPostPath("/api/graphql"), false);
+
+  assert.match(api, /isSurveySubmitPostPath\(path\) && req\.method === 'POST'/);
+  assert.match(express, /SURVEY_SUBMIT_MOUNT_PREFIXES/);
+  assert.deepEqual([...SURVEY_SUBMIT_MOUNT_PREFIXES], [
+    "/api/survey",
+    "/api/public/survey",
+    "/api/surveys",
+  ]);
 });
 
 test("one landing table: class and purchase share sp_survey_responses", async () => {
