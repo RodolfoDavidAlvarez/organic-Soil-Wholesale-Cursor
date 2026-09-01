@@ -4694,6 +4694,24 @@ ${pages}
       }
     }
 
+    // POST /api/giveaway/enter — Phoenix Fall Garden Giveaway (/win).
+    // Closed by default. Never writes a live row or emails the customer while
+    // GIVEAWAY_ENTRIES_OPEN is unset/false.
+    if (path === '/api/giveaway/enter' && req.method === 'POST') {
+      try {
+        const { processGiveawayEntry } = await import('../shared/giveawayEntries.js');
+        const result = await processGiveawayEntry({
+          db: await getSupabase(),
+          body: req.body || {},
+          userAgent: String(req.headers['user-agent'] || ''),
+        });
+        return res.status(result.status).json(result.json);
+      } catch (error) {
+        console.error('[Giveaway] Error:', error?.message || error);
+        return res.status(500).json({ error: 'We could not save your entry. Please try again.' });
+      }
+    }
+
     // POST /api/workshops/fall-garden/register — persist the class roster first,
     // then send the class staff alert. Marketing subscribe never sends a second staff email.
     if (path === '/api/workshops/fall-garden/register' && req.method === 'POST') {

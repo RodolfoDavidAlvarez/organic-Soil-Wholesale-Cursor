@@ -1,12 +1,22 @@
+import {
+  GIVEAWAY_CUSTOMER_TYPES,
+  GIVEAWAY_FOLLOW_COPY,
+  GIVEAWAY_GARDEN_STATUSES,
+  GIVEAWAY_GROWING_OPTIONS,
+  GIVEAWAY_SOCIAL_CHANNELS,
+  GIVEAWAY_SOURCE,
+} from "@shared/giveawayEntries.js";
+
 /**
  * Registration-to-win landing page draft.
  *
  * Keep `acceptingEntries` false until the complete prize, eligibility,
  * official rules, privacy language, delivery limits, and campaign dates
- * have been approved.
+ * have been approved. Server also requires GIVEAWAY_ENTRIES_OPEN=true.
  */
 export const GIVEAWAY_DRAFT = {
   acceptingEntries: false,
+  source: GIVEAWAY_SOURCE,
   statusLabel: "Draft preview — entries are not being accepted",
   campaignName: "September Big Garden Giveaway",
   eyebrow: "Phoenix fall garden giveaway",
@@ -49,12 +59,16 @@ export const GIVEAWAY_DRAFT = {
   ],
   form: {
     title: "One simple entry.",
-    intro: "The live form will ask only for the essentials. This preview is disabled and saves nothing.",
-    fields: [
-      { label: "First name", name: "firstName", type: "text", placeholder: "First name" },
-      { label: "Email", name: "email", type: "email", placeholder: "you@example.com" },
-      { label: "ZIP code", name: "zip", type: "text", placeholder: "85000" },
-    ],
+    intro: "Fill this out to see how entry will work. Nothing is saved until entries officially open.",
+    followCopy: GIVEAWAY_FOLLOW_COPY,
+    customerTypes: GIVEAWAY_CUSTOMER_TYPES,
+    gardenStatuses: GIVEAWAY_GARDEN_STATUSES,
+    growingOptions: GIVEAWAY_GROWING_OPTIONS,
+    socialChannels: GIVEAWAY_SOCIAL_CHANNELS,
+    emailConsent:
+      "Email me if I win and send garden updates about this giveaway. I can unsubscribe any time.",
+    rulesConsent:
+      "I am 18 or older, this is my only entry for this email, no purchase is necessary, and I can receive a Phoenix-area prize as stated.",
   },
   launchRequirements: [
     "Final prize contents, value, and fulfillment scope",
