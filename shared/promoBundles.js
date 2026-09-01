@@ -65,8 +65,6 @@ export const PROMO_BUNDLES = Object.freeze([
     idealFor: "Refreshing one existing 4×8 raised bed for fall",
     result: "Three cubic feet of compost plus two cubic feet of worm castings feed the soil, and ten cubic feet of mulch cover the same bed.",
     pickupNote: "Phoenix yard pickup. Add other bags from Products and check out together.",
-    wormBagUpsell:
-      "Walked in with a free worm bag? This is the fall bed reset that goes with it—compost, castings, and mulch in one pickup.",
     items: [
       { name: "Nature's Blanket Premium mulch", amount: "5 bags · 10 cu ft", ...productImages.mulch },
       { name: "Simon's Gold dairy compost", amount: "3 bags · 3 cu ft included", ...productImages.simons },

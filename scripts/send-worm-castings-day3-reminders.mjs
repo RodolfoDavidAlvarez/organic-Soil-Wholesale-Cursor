@@ -10,7 +10,13 @@
 import dotenv from 'dotenv';
 import pg from 'pg';
 import { Resend } from 'resend';
+import { WORM_CASTINGS_PUBLIC_SIGNUP_OPEN } from '../shared/wormCastingsCampaign.js';
 import { processDay3Reminders } from '../shared/wormCastingsDay3Reminders.js';
+
+if (!WORM_CASTINGS_PUBLIC_SIGNUP_OPEN) {
+  console.log(JSON.stringify({ skipped: true, reason: 'august_campaign_ended', sent: 0 }));
+  process.exit(0);
+}
 
 dotenv.config({ path: '.env', quiet: true });
 

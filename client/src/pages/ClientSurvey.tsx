@@ -197,13 +197,13 @@ export default function ClientSurvey() {
             {coupon ? <SurveyCouponCard coupon={coupon} /> : null}
 
             <p className="text-sm leading-6 text-neutral-600">
-              If you have not claimed a free 9 lb bag of worm castings yet, that offer is still live through August 31.
+              Current Phoenix pickup deals are on the Deals page.
             </p>
             <a
-              href="https://www.organicsoilwholesale.com/free-worm-castings"
+              href="/offers"
               className="inline-flex min-h-11 items-center text-base font-bold text-[#264027] underline"
             >
-              Free worm castings
+              See current deals
             </a>
             <p className="text-sm leading-6 text-neutral-700">
               Rodo Alvarez

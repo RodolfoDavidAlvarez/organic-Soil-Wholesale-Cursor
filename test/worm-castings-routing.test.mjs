@@ -160,24 +160,35 @@ test('staff signup alerts keep generic subject and still omit Dan Nowell', async
   assert.doesNotMatch(notifications, /nowell/i);
 });
 
-test('/free-worm-castings asks routing questions and does not change /survey', async () => {
-  const page = await readFile(new URL('../client/src/pages/WormCastingsCampaign.tsx', import.meta.url), 'utf8');
+test('/free-worm-castings is expired: no public signup route, API returns 410', async () => {
+  const app = await readFile(new URL('../client/src/App.tsx', import.meta.url), 'utf8');
+  const main = await readFile(new URL('../client/src/main.tsx', import.meta.url), 'utf8');
+  const campaignEntry = await readFile(new URL('../client/src/CampaignEntry.tsx', import.meta.url), 'utf8');
   const survey = await readFile(new URL('../client/src/pages/ClientSurvey.tsx', import.meta.url), 'utf8');
+  const instagram = await readFile(new URL('../client/src/pages/InstagramLinks.tsx', import.meta.url), 'utf8');
+  const newsletter = await readFile(new URL('../client/src/pages/NewsletterSignup.tsx', import.meta.url), 'utf8');
+  const workshop = await readFile(new URL('../client/src/pages/FallGardenWorkshop.tsx', import.meta.url), 'utf8');
+  const offers = await readFile(new URL('../shared/promoBundles.js', import.meta.url), 'utf8');
+  const campaign = await readFile(new URL('../shared/wormCastingsCampaign.js', import.meta.url), 'utf8');
   const api = await readFile(new URL('../api/index.js', import.meta.url), 'utf8');
+  const serverNewsletter = await readFile(new URL('../server/routes/newsletter.ts', import.meta.url), 'utf8');
 
-  assert.match(page, /Who are you\?/);
-  assert.match(page, /New or existing garden\?/);
-  assert.match(page, /What are you growing\?/);
-  assert.match(page, /ZIP code/);
-  assert.match(page, /parseCampaignPrefill/);
-  assert.match(page, /This is your number. Call us with it and we will pull you up./);
-  assert.match(page, /campaign-notes/);
-  assert.match(page, /border-\[#264027\] bg-\[#264027\] text-white/);
-  assert.match(page, /campaign: "free-worm-castings-2026-08"/);
-  assert.doesNotMatch(page, /Founder/);
-  assert.doesNotMatch(page, /nowell/i);
-  assert.doesNotMatch(page, /home-gardener/);
-  assert.doesNotMatch(page, /\u2014/);
+  assert.match(app, /path="\/free-worm-castings" component=\{NotFound\}/);
+  assert.doesNotMatch(app, /FreeWormCastingsRoute/);
+  assert.doesNotMatch(main, /CampaignEntry/);
+  assert.match(campaignEntry, /NotFound/);
+  assert.match(campaign, /WORM_CASTINGS_PUBLIC_SIGNUP_OPEN = false/);
+  assert.match(api, /status\(410\)/);
+  assert.match(api, /WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE/);
+  assert.match(serverNewsletter, /status\(410\)/);
+
+  assert.doesNotMatch(survey, /free-worm-castings/);
+  assert.doesNotMatch(instagram, /free-worm-castings/);
+  assert.doesNotMatch(instagram, /Claim your free 9-lb bag/);
+  assert.doesNotMatch(newsletter, /WormCastingsCampaign/);
+  assert.doesNotMatch(newsletter, /Subscribe for My Free Bag/);
+  assert.doesNotMatch(workshop, /free-worm-castings/);
+  assert.doesNotMatch(offers, /Walked in with a free worm bag/);
 
   assert.match(survey, /\/api\/survey\/submit/);
   assert.doesNotMatch(survey, /newsletter\/subscribe/);

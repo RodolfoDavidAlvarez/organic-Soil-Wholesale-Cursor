@@ -4,7 +4,11 @@ import { supabase } from "../supabaseClient";
 import { subscribeNewsletterContact } from "../../shared/newsletterEngagement.js";
 import { getNewsletterAdminRecipients, isGardenClassRegistrationSource, sendNewsletterAdminNotifications } from "../../shared/newsletterNotifications.js";
 import { submitGardenClassRegistration } from "../../shared/workshopRegistrations.js";
-import { isWormCastingsCampaignSource } from "../../shared/wormCastingsCampaign.js";
+import {
+  isWormCastingsCampaignSource,
+  WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE,
+  WORM_CASTINGS_PUBLIC_SIGNUP_OPEN,
+} from "../../shared/wormCastingsCampaign.js";
 import { validateWormCastingsRouting } from "../../shared/wormCastingsRouting.js";
 
 const router = Router();
@@ -15,6 +19,12 @@ router.post("/subscribe", async (req, res) => {
   const normalizedPhone = String(phone || "").trim();
   const normalizedSource = String(source || "website_newsletter_signup").slice(0, 100);
   const campaignRequested = campaign === "free-worm-castings-2026-08" || isWormCastingsCampaignSource(source);
+  if (campaignRequested && !WORM_CASTINGS_PUBLIC_SIGNUP_OPEN) {
+    return res.status(410).json({
+      error: WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE,
+      campaignEnded: true,
+    });
+  }
   const allowedCustomerCategories = new Set(["home-gardener", "farmer", "landscaper", "nursery", "contractor", "municipal-commercial", "other"]);
   let routing = null;
   let normalizedCustomerCategory = String(customerCategory || "").trim();

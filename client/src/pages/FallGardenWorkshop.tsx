@@ -101,7 +101,7 @@ export default function FallGardenWorkshop({ source }: Props) {
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <div className="flex items-start gap-3">
                 <Gift className="mt-1 h-6 w-6 shrink-0 text-primary" />
-                <div><h3 className="font-bold text-primary">Claim your included 9 lb bag of worm castings</h3><p className="mt-1 text-sm leading-6 text-neutral-700">Already signed up and have not received your bag? Bring your redemption email and attend the class to claim it. If you have not signed up, <a href="/free-worm-castings?source=garden-reset-workshop" className="font-bold text-primary underline">claim your free 9 lb bag here</a>.</p></div>
+                <div><h3 className="font-bold text-primary">Included 9 lb bag of worm castings</h3><p className="mt-1 text-sm leading-6 text-neutral-700">Already signed up and have not received your bag? Bring your redemption email and attend the class. Public signup for that August gift has ended.</p></div>
               </div>
               <div className="flex items-start gap-3">
                 <BadgePercent className="mt-1 h-6 w-6 shrink-0 text-primary" />

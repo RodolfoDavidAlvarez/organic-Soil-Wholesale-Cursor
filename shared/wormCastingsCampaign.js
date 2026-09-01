@@ -1,4 +1,8 @@
 export const WORM_CASTINGS_CAMPAIGN_KEY = 'free-worm-castings-2026-08';
+/** Public August gift signup/claim is closed. Historical redemptions stay in the DB. */
+export const WORM_CASTINGS_PUBLIC_SIGNUP_OPEN = false;
+export const WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE =
+  'The August free worm castings gift has ended. Browse current Phoenix pickup offers.';
 export const WORM_CASTINGS_CAMPAIGN_SOURCES = new Set([
   'july-community-gift',
   'community-print',

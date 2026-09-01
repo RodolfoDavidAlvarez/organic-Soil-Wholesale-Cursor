@@ -3,6 +3,8 @@ import QRCode from 'qrcode';
 import crypto from 'node:crypto';
 import {
   WORM_CASTINGS_CAMPAIGN_KEY,
+  WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE,
+  WORM_CASTINGS_PUBLIC_SIGNUP_OPEN,
   buildWormCastingsCouponEmail,
   isWormCastingsCampaignSource,
   normalizeCampaignSource,
@@ -1214,6 +1216,9 @@ export default async function handler(req, res) {
       const authHeader = req.headers.authorization || '';
       if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return res.status(401).json({ error: 'Unauthorized' });
+      }
+      if (!WORM_CASTINGS_PUBLIC_SIGNUP_OPEN) {
+        return res.json({ skipped: true, reason: 'august_campaign_ended', sent: 0 });
       }
 
       const { default: pg } = await import('pg');
@@ -4759,6 +4764,12 @@ ${pages}
 
       const allowedCustomerCategories = new Set(['home-gardener', 'farmer', 'landscaper', 'nursery', 'contractor', 'municipal-commercial', 'other']);
       const campaignRequested = campaign === 'free-worm-castings-2026-08' || isWormCastingsCampaignSource(source);
+      if (campaignRequested && !WORM_CASTINGS_PUBLIC_SIGNUP_OPEN) {
+        return res.status(410).json({
+          error: WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE,
+          campaignEnded: true,
+        });
+      }
       let routing = null;
       let normalizedCustomerCategory = String(customerCategory || '').trim();
 

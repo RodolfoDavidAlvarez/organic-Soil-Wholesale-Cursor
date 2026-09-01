@@ -60,7 +60,6 @@ const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
-const WormCastingsCampaign = lazy(() => import("@/pages/WormCastingsCampaign"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
 const SurveyEntry = lazy(() => import("@/pages/SurveyEntry"));
 const BundleOffers = lazy(() => import("@/pages/BundleOffers"));
@@ -117,12 +116,6 @@ const ScrollToTop = () => {
 
   return null;
 };
-
-const FreeWormCastingsRoute = () => (
-  <WormCastingsCampaign
-    source={new URLSearchParams(window.location.search).get("source") || "community-print"}
-  />
-);
 
 const CallTrackingRouteSync = () => {
   const [location] = useLocation();
@@ -218,7 +211,7 @@ function Router() {
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
-        <Route path="/free-worm-castings" component={FreeWormCastingsRoute} />
+        <Route path="/free-worm-castings" component={NotFound} />
         <Route path="/fall-garden-workshop" component={Classes} />
         <Route path="/survey/garden-class" component={SurveyEntry} />
         <Route path="/survey" component={SurveyEntry} />
@@ -306,11 +299,10 @@ function App() {
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
-  const isWormCastingsCampaign = location === "/free-worm-castings";
   const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
   const isSocialLinks = location === "/ig" || location === "/links/instagram";
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isWormCastingsCampaign && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
+  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

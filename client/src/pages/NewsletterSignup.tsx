@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/analytics";
-import WormCastingsCampaign from "@/pages/WormCastingsCampaign";
 
 const NewsletterSignup = () => {
-  const source = new URLSearchParams(window.location.search).get("source") || "website_newsletter_signup";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,19 +48,15 @@ const NewsletterSignup = () => {
     }
   };
 
-  if (source.toLowerCase() === "july-community-gift") {
-    return <WormCastingsCampaign source={source} />;
-  }
-
   return (
     <section className="min-h-[75vh] bg-white px-4 py-10 sm:py-16">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:items-start">
         <div className="space-y-7">
           <div className="text-center lg:text-left">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[#8a6a42]">August</p>
-            <h1 className="font-heading text-3xl font-bold leading-tight text-primary sm:text-4xl xl:text-5xl">Our Gift to the Community</h1>
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[#8a6a42]">Soil Seed &amp; Water</p>
+            <h1 className="font-heading text-3xl font-bold leading-tight text-primary sm:text-4xl xl:text-5xl">Stay in the loop</h1>
             <p className="mt-5 text-base leading-7 text-neutral-700">
-              Join the Soil Seed &amp; Water email list. We’ll send your pickup code in August, along with practical soil guidance and occasional community updates.
+              Join the Soil Seed &amp; Water email list for practical soil guidance and occasional yard updates.
             </p>
           </div>
           <img
@@ -78,14 +72,14 @@ const NewsletterSignup = () => {
               <div className="py-8 text-center">
                 <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-primary" />
                 <h2 className="font-heading text-2xl font-bold text-primary">You’re on the list.</h2>
-                <p className="mt-3 leading-7 text-neutral-600">Watch your inbox in August for your pickup code.</p>
+                <p className="mt-3 leading-7 text-neutral-600">Watch your inbox for soil guidance and yard updates.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <Mail className="mb-4 h-9 w-9 text-primary" />
-                  <h2 className="font-heading text-2xl font-bold text-primary">Subscribe for your free bag</h2>
-                  <p className="mt-2 text-sm leading-6 text-neutral-600">No purchase required. One gift per subscriber. Phoenix pickup by August 31.</p>
+                  <h2 className="font-heading text-2xl font-bold text-primary">Subscribe</h2>
+                  <p className="mt-2 text-sm leading-6 text-neutral-600">No spam. Unsubscribe any time.</p>
                 </div>
 
                 <div>
@@ -131,7 +125,7 @@ const NewsletterSignup = () => {
                 {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
                 <Button type="submit" disabled={submitting} className="w-full py-6 text-base font-bold">
-                  {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : "Subscribe for My Free Bag"}
+                  {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : "Subscribe"}
                 </Button>
                 <p className="text-center text-xs leading-5 text-neutral-500">We respect your inbox. No spam and no sold email addresses.</p>
               </form>

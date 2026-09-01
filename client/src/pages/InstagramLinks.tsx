@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/analytics";
 const instagramUtm = "utm_source=instagram&utm_medium=social&utm_campaign=link-in-bio";
 
 const links = {
-  wormCastings: `/free-worm-castings?source=instagram-bio&${instagramUtm}&utm_content=free-worm-castings`,
+  offers: `/offers?source=instagram-bio&${instagramUtm}&utm_content=fall-garden-bundles`,
   gardenClass: `/classes?source=instagram-bio&${instagramUtm}&utm_content=garden-class-waitlist#class-alert-signup`,
   organicSoil: `/?${instagramUtm}&utm_content=organic-soil-wholesale`,
   soilSeedWater: `https://soilseedandwater.com/?${instagramUtm}&utm_content=soil-seed-water`,
@@ -34,7 +34,7 @@ export default function InstagramLinks() {
         <title>Choose Your Next Step | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Claim free worm castings, join garden class alerts, or explore Organic Soil Wholesale and Soil Seed & Water."
+          content="Shop fall garden bundles, join garden class alerts, or explore Organic Soil Wholesale and Soil Seed & Water."
         />
       </Helmet>
 
@@ -43,19 +43,19 @@ export default function InstagramLinks() {
           <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, Instagram friends</p>
           <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Free pickup and garden class alerts are available now.</p>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Fall garden bundles and garden class alerts are available now.</p>
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
           <a
-            href={links.wormCastings}
-            onClick={() => recordClick("free-worm-castings")}
+            href={links.offers}
+            onClick={() => recordClick("fall-garden-bundles")}
             className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#133d2a] text-white shadow-[0_12px_32px_rgba(19,61,42,0.18)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
           >
             <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]"><Gift className="h-4 w-4" /> Free community gift</span>
-              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Claim your free 9-lb bag</span>
-              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f8edcf]">Get my bag <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]"><Gift className="h-4 w-4" /> Phoenix pickup deals</span>
+              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Fall garden bundles $99 / $149 / $399</span>
+              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f8edcf]">See deals <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
             </span>
             <img src="/images/performance/campaign-worm-thumb-384.webp" alt="Mikey's Worm Poop worm castings" className="h-full w-full object-cover" />
           </a>

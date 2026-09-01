@@ -36,7 +36,6 @@ export type PromoBundle = {
   idealFor: string;
   result: string;
   pickupNote: string;
-  wormBagUpsell?: string;
   items: PromoBundleItem[];
 };
 
