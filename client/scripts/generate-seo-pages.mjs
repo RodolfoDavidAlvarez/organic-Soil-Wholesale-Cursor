@@ -269,8 +269,8 @@ const routes = [
   },
   {
     path: "/free-worm-castings",
-    title: "That page moved or doesn't exist. | Organic Soil Wholesale",
-    description: "The August free worm castings gift has ended. Browse current Phoenix pickup deals or products.",
+    title: "This offer is no longer available | Organic Soil Wholesale",
+    description: "The August free worm castings community gift has ended. Browse current Phoenix pickup deals or products.",
     canonical: absoluteUrl("/free-worm-castings"),
     robots: "noindex, nofollow",
     schemas: [],

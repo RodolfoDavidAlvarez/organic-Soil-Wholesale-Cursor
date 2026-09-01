@@ -165,6 +165,7 @@ test('/free-worm-castings is expired: no public signup route, API returns 410', 
   const main = await readFile(new URL('../client/src/main.tsx', import.meta.url), 'utf8');
   const campaignEntry = await readFile(new URL('../client/src/CampaignEntry.tsx', import.meta.url), 'utf8');
   const survey = await readFile(new URL('../client/src/pages/ClientSurvey.tsx', import.meta.url), 'utf8');
+  const expired = await readFile(new URL('../client/src/pages/ExpiredAugustGift.tsx', import.meta.url), 'utf8');
   const instagram = await readFile(new URL('../client/src/pages/InstagramLinks.tsx', import.meta.url), 'utf8');
   const newsletter = await readFile(new URL('../client/src/pages/NewsletterSignup.tsx', import.meta.url), 'utf8');
   const workshop = await readFile(new URL('../client/src/pages/FallGardenWorkshop.tsx', import.meta.url), 'utf8');
@@ -173,10 +174,15 @@ test('/free-worm-castings is expired: no public signup route, API returns 410', 
   const api = await readFile(new URL('../api/index.js', import.meta.url), 'utf8');
   const serverNewsletter = await readFile(new URL('../server/routes/newsletter.ts', import.meta.url), 'utf8');
 
-  assert.match(app, /path="\/free-worm-castings" component=\{NotFound\}/);
+  assert.match(app, /path="\/free-worm-castings" component=\{ExpiredAugustGift\}/);
   assert.doesNotMatch(app, /FreeWormCastingsRoute/);
   assert.doesNotMatch(main, /CampaignEntry/);
-  assert.match(campaignEntry, /NotFound/);
+  assert.match(campaignEntry, /ExpiredAugustGift/);
+  assert.match(expired, /This offer is no longer available/);
+  assert.doesNotMatch(expired, /Claim My Free Bag/);
+  assert.doesNotMatch(expired, /newsletter\/subscribe/);
+  assert.match(instagram, /\/offers\?source=instagram-bio/);
+  assert.doesNotMatch(instagram, /Free community gift/);
   assert.match(campaign, /WORM_CASTINGS_PUBLIC_SIGNUP_OPEN = false/);
   assert.match(api, /status\(410\)/);
   assert.match(api, /WORM_CASTINGS_CAMPAIGN_ENDED_MESSAGE/);

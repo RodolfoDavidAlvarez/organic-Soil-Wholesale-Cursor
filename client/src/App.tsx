@@ -58,6 +58,7 @@ const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const GrokAssistant = lazy(() => import("@/pages/GrokAssistant"));
 const VideoDemo = lazy(() => import("@/pages/VideoDemo"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const ExpiredAugustGift = lazy(() => import("@/pages/ExpiredAugustGift"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NewsletterSignup = lazy(() => import("@/pages/NewsletterSignup"));
 const WormCastingsCoupon = lazy(() => import("@/pages/WormCastingsCoupon"));
@@ -211,7 +212,7 @@ function Router() {
         <Route path="/crm/ssw" component={CRMCapture} />
         <Route path="/crm/ufe" component={CRMCapture} />
         <Route path="/unsubscribe" component={Unsubscribe} />
-        <Route path="/free-worm-castings" component={NotFound} />
+        <Route path="/free-worm-castings" component={ExpiredAugustGift} />
         <Route path="/fall-garden-workshop" component={Classes} />
         <Route path="/survey/garden-class" component={SurveyEntry} />
         <Route path="/survey" component={SurveyEntry} />

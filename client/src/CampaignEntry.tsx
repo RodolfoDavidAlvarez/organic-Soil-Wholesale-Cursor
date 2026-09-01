@@ -1,11 +1,11 @@
 import { Analytics } from "@vercel/analytics/react";
-import NotFound from "@/pages/not-found";
+import ExpiredAugustGift from "@/pages/ExpiredAugustGift";
 
-/** August /free-worm-castings gift is closed. Keep this entry as a soft 404. */
+/** August /free-worm-castings gift is closed. Same URL, expired message. */
 export default function CampaignEntry() {
   return (
     <>
-      <NotFound />
+      <ExpiredAugustGift />
       <Analytics />
     </>
   );

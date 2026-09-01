@@ -111,6 +111,7 @@ try {
       assert.doesNotMatch(pageState.text, /\(602\) 637-0032/, `${viewport.name} ${route}: retired number rendered`);
       if (route === "/free-worm-castings") {
         assert.doesNotMatch(pageState.text, /Claim My Free Bag/, `${viewport.name} ${route}: expired campaign must not show claim CTA`);
+        assert.match(pageState.text, /This offer is no longer available/, `${viewport.name} ${route}: expired campaign must name the ended offer`);
       }
       for (const link of pageState.official) {
         assert.deepEqual(link, {
