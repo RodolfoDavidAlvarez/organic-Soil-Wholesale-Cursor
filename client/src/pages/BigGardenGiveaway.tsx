@@ -121,7 +121,13 @@ export default function BigGardenGiveaway() {
           source: GIVEAWAY_DRAFT.source,
         }),
       });
-      const body = await response.json();
+      const raw = await response.text();
+      let body: any = {};
+      try {
+        body = raw ? JSON.parse(raw) : {};
+      } catch {
+        body = {};
+      }
       if (!response.ok) {
         throw new Error(body.error || "We could not save your entry. Please try again.");
       }
