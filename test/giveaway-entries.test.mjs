@@ -202,7 +202,15 @@ test('/win is live-ready: no draft framing, working Enter to win, form and follo
   assert.match(page, /playsInline/);
   assert.match(page, /hash === "#video"/);
   assert.match(page, /params\.get\("play"\) === "1"/);
-  assert.doesNotMatch(page, /autoPlay|autoplay/);
+  assert.match(page, /if \(!wantsVideo\) return/);
+  assert.match(page, /hashchange/);
+  assert.match(page, /figure\?\.querySelector\("video"\)/);
+  assert.match(page, /video\.muted = false/);
+  assert.match(page, /await video\.play\(\)/);
+  assert.match(page, /video\.muted = true/);
+  assert.match(page, /Tap to unmute/);
+  assert.doesNotMatch(page, /autoPlay=/);
+  assert.doesNotMatch(page, /\sautoplay=/i);
   assert.match(page, /giveaway-name/);
   assert.match(page, /form\.followCopy/);
   assert.match(page, /Enter to win/);
