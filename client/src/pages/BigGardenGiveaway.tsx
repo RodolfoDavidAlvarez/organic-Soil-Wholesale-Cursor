@@ -57,6 +57,24 @@ export default function BigGardenGiveaway() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wantsVideo =
+      window.location.hash === "#video" ||
+      params.get("play") === "1";
+    if (!wantsVideo) return;
+
+    const focusVideo = () => {
+      document.getElementById("video")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    };
+
+    const timer = window.setTimeout(focusVideo, 50);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const goToEnter = () => {
     document.getElementById("enter")?.scrollIntoView({
       behavior: "smooth",
@@ -186,7 +204,7 @@ export default function BigGardenGiveaway() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-10 pt-5 sm:px-6 sm:pb-16 sm:pt-10">
-        <section className="max-w-3xl">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center lg:gap-10">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#a34f2b]">
               {GIVEAWAY_DRAFT.eyebrow}
@@ -197,8 +215,26 @@ export default function BigGardenGiveaway() {
             <p className="mt-5 max-w-xl text-lg leading-7 text-[#56635a] sm:text-xl">
               {GIVEAWAY_DRAFT.subheadline}
             </p>
+          </div>
 
-            <ul className="mt-6 space-y-3">
+          <figure
+            id="video"
+            className="scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-black shadow-[0_12px_40px_rgba(20,34,25,0.18)] lg:row-span-2"
+          >
+            <video
+              className="aspect-video w-full bg-black"
+              controls
+              playsInline
+              preload="metadata"
+              poster={GIVEAWAY_DRAFT.video.poster}
+              aria-label={GIVEAWAY_DRAFT.video.title}
+            >
+              <source src={GIVEAWAY_DRAFT.video.src} type="video/mp4" />
+            </video>
+          </figure>
+
+          <div>
+            <ul className="space-y-3">
               {GIVEAWAY_DRAFT.prizeHighlights.map((item) => (
                 <li key={item} className="flex items-start gap-3 font-bold text-[#2e4938]">
                   <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#dbe8d7] text-[#24703e]">
@@ -221,7 +257,6 @@ export default function BigGardenGiveaway() {
               No purchase necessary. One entry per email. Phoenix-area prize.
             </p>
           </div>
-
         </section>
 
         <section aria-label="Winner announcement" className="mt-10 rounded-[1.5rem] border border-[#e6b43c] bg-[#fff8df] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
