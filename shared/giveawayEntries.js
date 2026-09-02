@@ -1,9 +1,9 @@
 /**
  * Phoenix Fall Garden Giveaway (/win) entry validation and persistence.
  *
- * Entries stay closed until GIVEAWAY_ENTRIES_OPEN=true is set on the server
- * AND GIVEAWAY_DRAFT.acceptingEntries is flipped. The public API never writes
- * a live row while the flag is off. No customer email is sent from this path.
+ * Entries are OPEN by default. No Vercel env is required in production.
+ * Set GIVEAWAY_ENTRIES_OPEN=false to pause new entries. This path never
+ * sends a customer or marketing email.
  */
 
 export const GIVEAWAY_SOURCE = 'win-giveaway';
@@ -72,13 +72,15 @@ function envObject(env) {
   return {};
 }
 
-function isTruthyFlag(value) {
-  const raw = String(value || '').trim().toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+function isClosedFlag(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return raw === '0' || raw === 'false' || raw === 'no' || raw === 'off';
 }
 
 export function areGiveawayEntriesOpen(env) {
-  return isTruthyFlag(envObject(env).GIVEAWAY_ENTRIES_OPEN);
+  const value = envObject(env).GIVEAWAY_ENTRIES_OPEN;
+  if (value == null || String(value).trim() === '') return true;
+  return !isClosedFlag(value);
 }
 
 function trimText(value, max) {

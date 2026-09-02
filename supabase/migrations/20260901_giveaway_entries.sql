@@ -1,7 +1,7 @@
 -- Phoenix Fall Garden Giveaway entries for /win.
 -- Service-role writes from the website API only. Public insert is blocked by RLS.
--- Live rows are unique per source + email. Preview rows are not written while
--- GIVEAWAY_ENTRIES_OPEN is unset/false.
+-- Live rows are unique per source + email. Entries are OPEN unless
+-- GIVEAWAY_ENTRIES_OPEN=false. Production does not need that env set.
 
 create extension if not exists pgcrypto;
 

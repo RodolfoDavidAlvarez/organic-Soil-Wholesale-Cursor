@@ -98,11 +98,11 @@ test('social follow URLs and copy match the approved channels', () => {
   ]);
 });
 
-test('GIVEAWAY_ENTRIES_OPEN defaults closed and only truthy env opens it', () => {
-  assert.equal(areGiveawayEntriesOpen({}), false);
-  assert.equal(areGiveawayEntriesOpen({ GIVEAWAY_ENTRIES_OPEN: '' }), false);
-  assert.equal(areGiveawayEntriesOpen({ GIVEAWAY_ENTRIES_OPEN: 'false' }), false);
+test('GIVEAWAY_ENTRIES_OPEN defaults open; only an explicit false closes it', () => {
+  assert.equal(areGiveawayEntriesOpen({}), true);
+  assert.equal(areGiveawayEntriesOpen({ GIVEAWAY_ENTRIES_OPEN: '' }), true);
   assert.equal(areGiveawayEntriesOpen({ GIVEAWAY_ENTRIES_OPEN: 'true' }), true);
+  assert.equal(areGiveawayEntriesOpen({ GIVEAWAY_ENTRIES_OPEN: 'false' }), false);
 });
 
 test('closed flag rejects before any database write', async () => {
@@ -123,19 +123,17 @@ test('honeypot succeeds without saving even when entries are open', async () => 
   const result = await processGiveawayEntry({
     db,
     body: { ...validBody, website: 'https://bot.test' },
-    env: { GIVEAWAY_ENTRIES_OPEN: 'true' },
   });
   assert.equal(result.status, 200);
   assert.equal(result.json.success, true);
   assert.equal(db.inserts.length, 0);
 });
 
-test('open flag saves a live win-giveaway row with follow flags', async () => {
+test('unset env saves a live win-giveaway row with follow flags', async () => {
   const db = createGiveawayDb();
   const result = await processGiveawayEntry({
     db,
     body: validBody,
-    env: { GIVEAWAY_ENTRIES_OPEN: 'true' },
     now: new Date('2026-09-01T12:00:00.000Z'),
   });
   assert.equal(result.status, 201);
@@ -166,33 +164,43 @@ test('live row helper never marks preview true', () => {
   assert.equal(row.source, 'win-giveaway');
 });
 
-test('/win preview page keeps the banner, prize concept, form, and disabled submit', async () => {
+test('/win is live-ready: no draft framing, working Enter to win, form and follows kept', async () => {
   const page = await readFile(new URL('../client/src/pages/BigGardenGiveaway.tsx', import.meta.url), 'utf8');
   const config = await readFile(new URL('../client/src/config/giveawayDraft.ts', import.meta.url), 'utf8');
   const shared = await readFile(new URL('../shared/giveawayEntries.js', import.meta.url), 'utf8');
   const app = await readFile(new URL('../client/src/App.tsx', import.meta.url), 'utf8');
   const api = await readFile(new URL('../api/index.js', import.meta.url), 'utf8');
   const serverRoutes = await readFile(new URL('../server/routes/index.ts', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../supabase/migrations/20260901_giveaway_entries.sql', import.meta.url), 'utf8');
+  const envExample = await readFile(new URL('../.env.example', import.meta.url), 'utf8');
   const offers = await readFile(new URL('../shared/promoBundles.js', import.meta.url), 'utf8');
   const worm = await readFile(new URL('../shared/wormCastingsCampaign.js', import.meta.url), 'utf8');
 
   assert.match(app, /path="\/win" component=\{BigGardenGiveaway\}/);
-  assert.match(config, /acceptingEntries: false/);
-  assert.match(page, /statusLabel/);
-  assert.match(page, /Package concept/);
+  assert.match(config, /acceptingEntries: true/);
+  assert.match(config, /cta: "Enter to win"/);
+  assert.match(page, /Prize package/);
   assert.match(page, /giveaway-name/);
   assert.match(page, /form\.followCopy/);
+  assert.match(page, /Enter to win/);
+  assert.match(page, /disabled=\{submitting\}/);
+  assert.doesNotMatch(page, /Draft preview/);
+  assert.doesNotMatch(page, /Entries open after approval/);
+  assert.doesNotMatch(page, /nothing is saved until/i);
+  assert.doesNotMatch(page, /entries are not being accepted/i);
+  assert.doesNotMatch(config, /Draft preview/);
   assert.match(shared, /Follow us \(free\)/);
   assert.match(shared, /instagram\.com\/soilseedandwater/);
   assert.match(shared, /facebook\.com\/soilseedandwater/);
   assert.match(shared, /youtube\.com\/@soilseedwater/);
   assert.match(shared, /tiktok\.com\/@soilseedandwater/);
-  assert.match(page, /disabled=\{!entriesOpen \|\| submitting\}/);
   assert.match(page, /\/api\/giveaway\/enter/);
   assert.match(page, /noopener/);
   assert.doesNotMatch(page, /auto-follow|autofollow|we followed you/i);
   assert.match(api, /\/api\/giveaway\/enter/);
   assert.match(serverRoutes, /\/api\/giveaway/);
+  assert.match(migration, /sp_giveaway_entries/);
+  assert.match(envExample, /GIVEAWAY_ENTRIES_OPEN/);
   assert.match(offers, /99/);
   assert.match(worm, /WORM_CASTINGS_PUBLIC_SIGNUP_OPEN = false/);
 });

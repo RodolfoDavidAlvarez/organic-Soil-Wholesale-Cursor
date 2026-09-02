@@ -4695,8 +4695,8 @@ ${pages}
     }
 
     // POST /api/giveaway/enter — Phoenix Fall Garden Giveaway (/win).
-    // Closed by default. Never writes a live row or emails the customer while
-    // GIVEAWAY_ENTRIES_OPEN is unset/false.
+    // Open by default. Set GIVEAWAY_ENTRIES_OPEN=false to pause. Never emails
+    // the customer from this path.
     if (path === '/api/giveaway/enter' && req.method === 'POST') {
       try {
         const { processGiveawayEntry } = await import('../shared/giveawayEntries.js');
