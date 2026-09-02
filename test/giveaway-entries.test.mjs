@@ -191,7 +191,18 @@ test('/win is live-ready: no draft framing, working Enter to win, form and follo
   assert.match(app, /path="\/win" component=\{BigGardenGiveaway\}/);
   assert.match(config, /acceptingEntries: true/);
   assert.match(config, /cta: "Sign up in 30 seconds"/);
+  assert.match(config, /September is bigger than August/);
+  assert.match(config, /Raised-Bed Starter Garden/);
+  assert.match(config, /Full Pallet of Planting Soil/);
+  assert.match(config, /phoenix-september-garden-prize-web\.mp4/);
+  assert.match(config, /phoenix-september-garden-prize-email-thumb\.jpg/);
   assert.match(page, /Here’s what you can win/);
+  assert.match(page, /id="video"/);
+  assert.match(page, /controls/);
+  assert.match(page, /playsInline/);
+  assert.match(page, /hash === "#video"/);
+  assert.match(page, /params\.get\("play"\) === "1"/);
+  assert.doesNotMatch(page, /autoPlay|autoplay/);
   assert.match(page, /giveaway-name/);
   assert.match(page, /form\.followCopy/);
   assert.match(page, /Enter to win/);

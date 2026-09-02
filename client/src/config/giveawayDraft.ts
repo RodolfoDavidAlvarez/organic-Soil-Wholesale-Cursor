@@ -15,10 +15,10 @@ export const GIVEAWAY_DRAFT = {
   acceptingEntries: true,
   source: GIVEAWAY_SOURCE,
   campaignName: "September Big Garden Giveaway",
-  eyebrow: "Phoenix fall garden giveaway",
+  eyebrow: "Phoenix. September is bigger than August.",
   headline: "Three winners. One huge garden giveaway.",
   subheadline:
-    "Enter free for a chance to win one of three Phoenix-area garden prizes — including a $5,000 complete garden grand prize.",
+    "Enter free in about 30 seconds for a chance to win a $5,000 garden — everything needed to set up two beds in the Phoenix Valley.",
   announcement: {
     date: "Saturday, October 3, 2026",
     time: "10:00 AM Phoenix time",
@@ -28,9 +28,14 @@ export const GIVEAWAY_DRAFT = {
   heroImage: "/images/giveaway/complete-fall-garden-hero-v9.png",
   heroImageAlt:
     "Near-ground view of two tall eight-by-four raised beds full of harvest-ready vegetables, with open trellises, four product pallets, and separate raw-mulch and pea-gravel totes",
+  video: {
+    src: "/videos/giveaway/phoenix-september-garden-prize-web.mp4",
+    poster: "/images/giveaway/phoenix-september-garden-prize-email-thumb.jpg",
+    title: "September Big Garden Giveaway prize video",
+  },
   prizeHighlights: [
     "3 Phoenix-area winners",
-    "$5,000 complete garden grand prize",
+    "$5,000 garden: two beds, soil, compost, castings, mulch, and more",
     "Free entry in about 30 seconds",
   ],
   prizes: [
@@ -39,13 +44,11 @@ export const GIVEAWAY_DRAFT = {
       title: "$5,000 Complete Garden",
       featured: true,
       items: [
+        "Everything needed to set up 2 garden beds",
         "Two heavy-duty 4×8 raised garden bed kits",
-        "2 pallets of planting soil",
-        "1 mixed pallet of dairy compost and worm castings",
-        "1 pallet of Nature’s Blanket premium mulch",
-        "Raw agave wood chips for the surrounding pathways",
-        "Pea gravel and landscape cloth for ground preparation",
-        "Assembly hardware, setup instructions, and a Phoenix planting guide",
+        "Planting soil, dairy compost, and worm castings",
+        "Mulch, gravel, soil cloth, and wood chips",
+        "Beds, pathways, and garden instruction",
       ],
     },
     {
