@@ -8,29 +8,25 @@ import {
 } from "@shared/giveawayEntries.js";
 
 /**
- * Registration-to-win landing page draft.
- *
- * Keep `acceptingEntries` false until the complete prize, eligibility,
- * official rules, privacy language, delivery limits, and campaign dates
- * have been approved. Server also requires GIVEAWAY_ENTRIES_OPEN=true.
+ * Phoenix Fall Garden Giveaway landing page (/win).
+ * Entries are open. Server also defaults open unless GIVEAWAY_ENTRIES_OPEN=false.
  */
 export const GIVEAWAY_DRAFT = {
-  acceptingEntries: false,
+  acceptingEntries: true,
   source: GIVEAWAY_SOURCE,
-  statusLabel: "Draft preview — entries are not being accepted",
-  campaignName: "September Big Garden Giveaway",
+  campaignName: "Phoenix Fall Garden Giveaway",
   eyebrow: "Phoenix fall garden giveaway",
   headline: "Win a complete fall garden.",
   subheadline:
     "A ready-to-grow garden package built around real Soil Seed & Water soil, compost, castings, and mulch.",
-  cta: "Preview registration",
+  cta: "Enter to win",
   heroImage: "/images/giveaway/complete-fall-garden-hero-v9.png",
   heroImageAlt:
     "Near-ground view of two tall eight-by-four raised beds full of harvest-ready vegetables, with open trellises, four product pallets, and separate raw-mulch and pea-gravel totes",
   prizeHighlights: [
     "Two long 8×4 raised garden beds",
     "Four product pallets plus raw-mulch and pea-gravel totes",
-    "Proposed Phoenix-area delivery",
+    "Phoenix-area delivery",
   ],
   supportVisuals: [
     {
@@ -58,8 +54,8 @@ export const GIVEAWAY_DRAFT = {
     },
   ],
   form: {
-    title: "One simple entry.",
-    intro: "Fill this out to see how entry will work. Nothing is saved until entries officially open.",
+    title: "Enter free in about a minute.",
+    intro: "Tell us about your garden, follow us, then tap Enter to win. One entry per email. No purchase necessary.",
     followCopy: GIVEAWAY_FOLLOW_COPY,
     customerTypes: GIVEAWAY_CUSTOMER_TYPES,
     gardenStatuses: GIVEAWAY_GARDEN_STATUSES,
@@ -70,13 +66,4 @@ export const GIVEAWAY_DRAFT = {
     rulesConsent:
       "I am 18 or older, this is my only entry for this email, no purchase is necessary, and I can receive a Phoenix-area prize as stated.",
   },
-  launchRequirements: [
-    "Final prize contents, value, and fulfillment scope",
-    "Eligible ages, locations, and any exclusions",
-    "Entry opening and closing dates with time zone",
-    "Winner selection, notification, and response process",
-    "Approved Official Rules and required disclosures",
-    "Privacy notice, data retention, and consent language",
-    "Delivery area, access limits, and substitution terms",
-  ],
 } as const;
