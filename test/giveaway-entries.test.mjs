@@ -203,6 +203,7 @@ test('/win is live-ready: no draft framing, working Enter to win, form and follo
   assert.match(page, /hash === "#video"/);
   assert.match(page, /params\.get\("play"\) === "1"/);
   assert.match(page, /if \(!wantsVideo\) return/);
+  assert.match(page, /hashchange/);
   assert.match(page, /figure\?\.querySelector\("video"\)/);
   assert.match(page, /video\.muted = false/);
   assert.match(page, /await video\.play\(\)/);

@@ -60,13 +60,8 @@ export default function BigGardenGiveaway() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const wantsVideo =
-      window.location.hash === "#video" ||
-      params.get("play") === "1";
-    if (!wantsVideo) return;
-
     let cancelled = false;
+    let timer = 0;
 
     const startDeepLinkPlayback = async (video: HTMLVideoElement) => {
       video.muted = false;
@@ -94,10 +89,22 @@ export default function BigGardenGiveaway() {
       if (video) void startDeepLinkPlayback(video);
     };
 
-    const timer = window.setTimeout(focusVideo, 50);
+    const runIfDeepLinked = () => {
+      const params = new URLSearchParams(window.location.search);
+      const wantsVideo =
+        window.location.hash === "#video" ||
+        params.get("play") === "1";
+      if (!wantsVideo) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(focusVideo, 50);
+    };
+
+    runIfDeepLinked();
+    window.addEventListener("hashchange", runIfDeepLinked);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      window.removeEventListener("hashchange", runIfDeepLinked);
     };
   }, []);
 
