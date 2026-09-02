@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowLeft, CalendarDays, Check, CheckCircle2, ExternalLink, Instagram, Loader2, Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
@@ -20,6 +20,16 @@ const FIELD_CLASS =
 
 export default function BigGardenGiveaway() {
   const entriesOpen = GIVEAWAY_DRAFT.acceptingEntries === true;
+  const attribution = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      attributionSource: params.get("source") || "direct",
+      utmSource: params.get("utm_source") || "",
+      utmMedium: params.get("utm_medium") || "",
+      utmCampaign: params.get("utm_campaign") || "",
+      utmContent: params.get("utm_content") || "",
+    };
+  }, []);
   const followTimers = useRef<Partial<Record<SocialKey, number>>>({});
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -122,6 +132,7 @@ export default function BigGardenGiveaway() {
           followed,
           website,
           source: GIVEAWAY_DRAFT.source,
+          ...attribution,
         }),
       });
       const raw = await response.text();

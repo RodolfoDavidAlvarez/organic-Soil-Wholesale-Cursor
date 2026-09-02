@@ -3,28 +3,57 @@ import { ArrowRight, BellRing, ExternalLink, Gift, Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
-const instagramUtm = "utm_source=instagram&utm_medium=social&utm_campaign=link-in-bio";
+type SocialChannel = "instagram" | "facebook" | "tiktok" | "youtube";
 
-const links = {
-  giveaway: `/win?source=instagram-bio&${instagramUtm}&utm_content=big-garden-giveaway`,
-  offers: `/offers?source=instagram-bio&${instagramUtm}&utm_content=fall-garden-bundles`,
-  gardenClass: `/classes?source=instagram-bio&${instagramUtm}&utm_content=garden-class-waitlist#class-alert-signup`,
-  organicSoil: `/?${instagramUtm}&utm_content=organic-soil-wholesale`,
-  soilSeedWater: `https://soilseedandwater.com/?${instagramUtm}&utm_content=soil-seed-water`,
+const channelDetails: Record<SocialChannel, { name: string; utmSource: string }> = {
+  instagram: { name: "Instagram", utmSource: "instagram" },
+  facebook: { name: "Facebook", utmSource: "facebook" },
+  tiktok: { name: "TikTok", utmSource: "tiktok" },
+  youtube: { name: "YouTube", utmSource: "youtube" },
 };
 
+function channelFromPath(pathname: string): SocialChannel {
+  const segment = pathname.toLowerCase().split("/").filter(Boolean).pop() || "ig";
+  if (segment === "fb" || segment === "facebook") return "facebook";
+  if (segment === "tt" || segment === "tiktok") return "tiktok";
+  if (segment === "yt" || segment === "youtube") return "youtube";
+  return "instagram";
+}
+
+function trackedLink(channel: SocialChannel, target: string, campaign: string, content: string) {
+  const url = new URL(target, "https://www.organicsoilwholesale.com");
+  url.searchParams.set("source", `${channel}-bio`);
+  url.searchParams.set("utm_source", channelDetails[channel].utmSource);
+  url.searchParams.set("utm_medium", "organic_social");
+  url.searchParams.set("utm_campaign", campaign);
+  url.searchParams.set("utm_content", content);
+  return url.origin === "https://www.organicsoilwholesale.com"
+    ? `${url.pathname}${url.search}${url.hash}`
+    : url.toString();
+}
+
 export default function InstagramLinks() {
+  const channel = channelFromPath(window.location.pathname);
+  const channelName = channelDetails[channel].name;
+  const links = {
+    giveaway: trackedLink(channel, "/win", "september_garden_giveaway_2026", "big_garden_giveaway"),
+    offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
+    gardenClass: trackedLink(channel, "/classes#class-alert-signup", "fall_garden_classes_2026", "garden_class_alerts"),
+    organicSoil: trackedLink(channel, "/", "social_bio_2026", "organic_soil_wholesale"),
+    soilSeedWater: trackedLink(channel, "https://soilseedandwater.com/", "social_bio_2026", "soil_seed_water"),
+  };
+
   useEffect(() => {
     trackEvent("Social Bio Page Viewed", {
-      source: "instagram",
-      campaign: "link-in-bio",
+      source: channel,
+      campaign: "social-bio-2026",
     });
-  }, []);
+  }, [channel]);
 
   const recordClick = (destination: string) => {
     trackEvent("Social Bio Link Clicked", {
-      source: "instagram",
-      campaign: "link-in-bio",
+      source: channel,
+      campaign: "social-bio-2026",
       destination,
     });
   };
@@ -42,7 +71,7 @@ export default function InstagramLinks() {
       <div className="mx-auto w-full max-w-xl px-4 pb-10 pt-7 sm:px-6 sm:pt-10">
         <header className="text-center">
           <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, Instagram friends</p>
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, {channelName} friends</p>
           <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Giveaway registration, fall garden bundles, and garden class alerts are available now.</p>
         </header>

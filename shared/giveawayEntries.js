@@ -138,6 +138,11 @@ export function normalizeGiveawayEntry(input = {}, extras = {}) {
     rulesConsent: input.rulesConsent === true || input.officialRules === true,
     followed: readFollowed(input),
     source,
+    attributionSource: trimText(input.attributionSource || input.attribution_source, 80) || 'direct',
+    utmSource: trimText(input.utmSource || input.utm_source, 100) || null,
+    utmMedium: trimText(input.utmMedium || input.utm_medium, 100) || null,
+    utmCampaign: trimText(input.utmCampaign || input.utm_campaign, 140) || null,
+    utmContent: trimText(input.utmContent || input.utm_content, 140) || null,
     website: String(input.website || '').trim(),
     userAgent: trimText(extras.userAgent || input.userAgent || input.user_agent, 400),
   };
@@ -188,6 +193,11 @@ export function giveawayEntryRow(entry, { now = new Date(), isPreview = false } 
   return {
     source: entry.source || GIVEAWAY_SOURCE,
     campaign_key: GIVEAWAY_CAMPAIGN_KEY,
+    attribution_source: entry.attributionSource || 'direct',
+    utm_source: entry.utmSource,
+    utm_medium: entry.utmMedium,
+    utm_campaign: entry.utmCampaign,
+    utm_content: entry.utmContent,
     is_preview: isPreview === true,
     full_name: entry.fullName,
     email: entry.email,

@@ -171,6 +171,15 @@ function Router() {
       <Switch>
         <Route path="/ig" component={InstagramLinks} />
         <Route path="/links/instagram" component={InstagramLinks} />
+        <Route path="/fb" component={InstagramLinks} />
+        <Route path="/facebook" component={InstagramLinks} />
+        <Route path="/links/facebook" component={InstagramLinks} />
+        <Route path="/tiktok" component={InstagramLinks} />
+        <Route path="/tt" component={InstagramLinks} />
+        <Route path="/links/tiktok" component={InstagramLinks} />
+        <Route path="/youtube" component={InstagramLinks} />
+        <Route path="/yt" component={InstagramLinks} />
+        <Route path="/links/youtube" component={InstagramLinks} />
         <Route path="/" component={Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
@@ -301,7 +310,12 @@ function App() {
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
   const isClientSurvey = location === "/survey" || location.startsWith("/survey/");
-  const isSocialLinks = location === "/ig" || location === "/links/instagram";
+  const isSocialLinks = [
+    "/ig", "/links/instagram",
+    "/fb", "/facebook", "/links/facebook",
+    "/tiktok", "/tt", "/links/tiktok",
+    "/youtube", "/yt", "/links/youtube",
+  ].includes(location);
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
   const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 

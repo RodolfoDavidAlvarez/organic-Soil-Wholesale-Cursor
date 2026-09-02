@@ -31,6 +31,11 @@ const validBody = {
   followed: { ig: true, fb: false, yt: false },
   source: 'win-giveaway',
   website: '',
+  attributionSource: 'instagram-bio',
+  utmSource: 'instagram',
+  utmMedium: 'organic_social',
+  utmCampaign: 'september_garden_giveaway_2026',
+  utmContent: 'big_garden_giveaway',
 };
 
 function createGiveawayDb({ existing = null, failInsert = false } = {}) {
@@ -148,6 +153,11 @@ test('unset env saves a live win-giveaway row with follow flags', async () => {
   assert.equal(db.inserts[0].customer_type, 'homeowner');
   assert.match(db.inserts[0].notes, /Customer types: homeowner, specialty-farmer/);
   assert.equal(db.inserts[0].email_normalized, 'jordan@example.com');
+  assert.equal(db.inserts[0].attribution_source, 'instagram-bio');
+  assert.equal(db.inserts[0].utm_source, 'instagram');
+  assert.equal(db.inserts[0].utm_medium, 'organic_social');
+  assert.equal(db.inserts[0].utm_campaign, 'september_garden_giveaway_2026');
+  assert.equal(db.inserts[0].utm_content, 'big_garden_giveaway');
 });
 
 test('one live entry per email does not insert a second row', async () => {

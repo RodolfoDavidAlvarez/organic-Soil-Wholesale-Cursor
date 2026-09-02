@@ -73,6 +73,8 @@ export function buildGiveawayAdminNotification({ entry, testing = true }) {
           ${detailRow('Growing', growing)}
           ${detailRow('Other', entry?.growingOther)}
           ${detailRow('Followed', followed)}
+          ${detailRow('Source', entry?.utmSource || entry?.attributionSource || 'direct')}
+          ${detailRow('Campaign', entry?.utmCampaign)}
           ${detailRow('Notes', entry?.notes)}
           ${detailRow('Entered', `${when} AZ`)}
         </table>
