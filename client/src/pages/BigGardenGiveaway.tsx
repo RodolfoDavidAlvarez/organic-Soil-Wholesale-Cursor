@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowLeft, CalendarDays, Check, CheckCircle2, ExternalLink, Instagram, Loader2, Trophy } from "lucide-react";
+import { ArrowDown, ArrowLeft, CalendarDays, Check, CheckCircle2, ExternalLink, Instagram, Loader2, Trophy, Volume2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { GIVEAWAY_DRAFT } from "@/config/giveawayDraft";
@@ -31,6 +31,8 @@ export default function BigGardenGiveaway() {
     };
   }, []);
   const followTimers = useRef<Partial<Record<SocialKey, number>>>({});
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -64,16 +66,48 @@ export default function BigGardenGiveaway() {
       params.get("play") === "1";
     if (!wantsVideo) return;
 
+    let cancelled = false;
+
+    const startDeepLinkPlayback = async (video: HTMLVideoElement) => {
+      video.muted = false;
+      try {
+        await video.play();
+      } catch {
+        if (cancelled) return;
+        video.muted = true;
+        try {
+          await video.play();
+          if (!cancelled) setShowUnmuteHint(true);
+        } catch {
+          // Native controls stay visible so the visitor can still tap to play.
+        }
+      }
+    };
+
     const focusVideo = () => {
-      document.getElementById("video")?.scrollIntoView({
+      const figure = document.getElementById("video");
+      figure?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
+      const video = figure?.querySelector("video");
+      if (video) void startDeepLinkPlayback(video);
     };
 
     const timer = window.setTimeout(focusVideo, 50);
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, []);
+
+  function unmuteVideo() {
+    const video = videoRef.current ?? document.getElementById("video")?.querySelector("video");
+    if (!video) return;
+    video.muted = false;
+    void video.play();
+    setShowUnmuteHint(false);
+  }
 
   const goToEnter = () => {
     document.getElementById("enter")?.scrollIntoView({
@@ -219,18 +253,34 @@ export default function BigGardenGiveaway() {
 
           <figure
             id="video"
-            className="mx-auto w-full max-w-[16.5rem] scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-black shadow-[0_12px_40px_rgba(20,34,25,0.18)] sm:max-w-[18rem] lg:mx-0 lg:max-w-[22rem] lg:justify-self-end lg:row-span-2"
+            className="relative mx-auto w-full max-w-[16.5rem] scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-black shadow-[0_12px_40px_rgba(20,34,25,0.18)] sm:max-w-[18rem] lg:mx-0 lg:max-w-[22rem] lg:justify-self-end lg:row-span-2"
           >
             <video
+              ref={videoRef}
               className="aspect-[9/16] w-full bg-black object-cover"
               controls
               playsInline
               preload="metadata"
               poster={GIVEAWAY_DRAFT.video.poster}
               aria-label={GIVEAWAY_DRAFT.video.title}
+              onVolumeChange={() => {
+                if (videoRef.current && !videoRef.current.muted) {
+                  setShowUnmuteHint(false);
+                }
+              }}
             >
               <source src={GIVEAWAY_DRAFT.video.src} type="video/mp4" />
             </video>
+            {showUnmuteHint ? (
+              <button
+                type="button"
+                onClick={unmuteVideo}
+                className="absolute left-1/2 top-3 z-10 inline-flex min-h-11 min-w-[11rem] -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-black/80 px-4 text-sm font-black text-white shadow-lg"
+              >
+                <Volume2 className="h-4 w-4" aria-hidden="true" />
+                Tap to unmute
+              </button>
+            ) : null}
           </figure>
 
           <div>
