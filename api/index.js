@@ -4699,12 +4699,37 @@ ${pages}
     // the customer from this path.
     if (path === '/api/giveaway/enter' && req.method === 'POST') {
       try {
-        const { processGiveawayEntry } = await import('../shared/giveawayEntries.js');
+        const { normalizeGiveawayEntry, processGiveawayEntry } = await import('../shared/giveawayEntries.js');
         const result = await processGiveawayEntry({
           db: await getSupabase(),
           body: req.body || {},
           userAgent: String(req.headers['user-agent'] || ''),
         });
+        const { shouldSendGiveawayAdminNotification } = await import('../shared/giveawayNotifications.js');
+        if (shouldSendGiveawayAdminNotification(result)) {
+          try {
+            const { getNewsletterAdminRecipients } = await import('../shared/newsletterNotifications.js');
+            const { sendGiveawayAdminNotifications } = await import('../shared/giveawayNotifications.js');
+            const recipients = getNewsletterAdminRecipients();
+            const notificationResults = await sendGiveawayAdminNotifications({
+              resend: await getResend(),
+              recipients,
+              entry: {
+                ...normalizeGiveawayEntry(req.body || {}, {
+                  userAgent: String(req.headers['user-agent'] || ''),
+                }),
+                submittedAt: new Date().toISOString(),
+              },
+            });
+            notificationResults.forEach((notificationResult, index) => {
+              if (notificationResult.status === 'rejected') {
+                console.error(`[Giveaway] Staff notification to ${recipients[index]?.email} failed:`, notificationResult.reason?.message || notificationResult.reason);
+              }
+            });
+          } catch (notificationError) {
+            console.error('[Giveaway] Staff notification error:', notificationError?.message || notificationError);
+          }
+        }
         return res.status(result.status).json(result.json);
       } catch (error) {
         console.error('[Giveaway] Error:', error?.message || error);
