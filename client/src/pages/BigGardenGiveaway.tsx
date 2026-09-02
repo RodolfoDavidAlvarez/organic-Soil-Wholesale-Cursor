@@ -219,10 +219,10 @@ export default function BigGardenGiveaway() {
 
           <figure
             id="video"
-            className="scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-black shadow-[0_12px_40px_rgba(20,34,25,0.18)] lg:row-span-2"
+            className="mx-auto w-full max-w-[16.5rem] scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-black shadow-[0_12px_40px_rgba(20,34,25,0.18)] sm:max-w-[18rem] lg:mx-0 lg:max-w-[22rem] lg:justify-self-end lg:row-span-2"
           >
             <video
-              className="aspect-video w-full bg-black"
+              className="aspect-[9/16] w-full bg-black object-cover"
               controls
               playsInline
               preload="metadata"
