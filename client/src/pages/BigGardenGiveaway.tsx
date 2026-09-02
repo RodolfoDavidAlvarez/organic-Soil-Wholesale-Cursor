@@ -1,19 +1,18 @@
 import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, Check, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, CalendarDays, Check, CheckCircle2, ExternalLink, Instagram, Loader2, Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { GIVEAWAY_DRAFT } from "@/config/giveawayDraft";
 import { trackEvent } from "@/lib/analytics";
 import { GIVEAWAY_ENTRIES_CLOSED_MESSAGE } from "@shared/giveawayEntries.js";
 
-type SocialKey = "ig" | "fb" | "yt" | "tt";
+type SocialKey = "ig" | "fb" | "yt";
 type FollowedState = Record<SocialKey, boolean>;
 
 const emptyFollowed = (): FollowedState => ({
   ig: false,
   fb: false,
   yt: false,
-  tt: false,
 });
 
 const FIELD_CLASS =
@@ -26,7 +25,7 @@ export default function BigGardenGiveaway() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [zipCode, setZipCode] = useState("");
-  const [customerType, setCustomerType] = useState("");
+  const [customerTypes, setCustomerTypes] = useState<string[]>([]);
   const [gardenStatus, setGardenStatus] = useState("");
   const [growing, setGrowing] = useState<string[]>([]);
   const [growingOther, setGrowingOther] = useState("");
@@ -61,6 +60,12 @@ export default function BigGardenGiveaway() {
     ));
   }
 
+  function toggleCustomerType(value: string) {
+    setCustomerTypes((current) => (
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    ));
+  }
+
   function markFollowed(key: SocialKey) {
     setFollowed((current) => ({ ...current, [key]: true }));
   }
@@ -76,13 +81,11 @@ export default function BigGardenGiveaway() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
     if (phone.replace(/\D/g, "").length < 10) return "Please enter a valid phone number.";
     if (!/^\d{5}(?:-?\d{4})?$/.test(zipCode.replace(/\s/g, ""))) return "Please enter a valid US ZIP code.";
-    if (!customerType) return "Please tell us who you are.";
+    if (!customerTypes.length) return "Please tell us who you are.";
     if (!gardenStatus) return "Please tell us if this is a brand new or existing garden.";
     if (!growing.length) return "Please tell us what you are growing.";
-    if (!followed.ig || !followed.fb || !followed.yt || !followed.tt) {
-      return "Please follow each channel, then check the box.";
-    }
-    if (!emailConsent) return "Please confirm we may email you about this giveaway.";
+    if (!Object.values(followed).some(Boolean)) return "Please follow at least one account, then check the box.";
+    if (!emailConsent) return "Please confirm we may email you if you win and about this giveaway.";
     if (!rulesConsent) return "Please confirm you are eligible and agree to the official rules.";
     return "";
   }
@@ -109,7 +112,7 @@ export default function BigGardenGiveaway() {
           email,
           phone,
           zipCode,
-          customerType,
+          customerTypes,
           gardenStatus,
           growing,
           growingOther,
@@ -153,12 +156,13 @@ export default function BigGardenGiveaway() {
 
       <header className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/">
-          <a aria-label="Organic Soil Wholesale home" className="inline-flex min-h-11 items-center">
+          <a aria-label="Back to the Organic Soil Wholesale website" className="inline-flex min-h-11 items-center gap-3">
             <img
               src="/images/soil-seed-and-water-logo.png"
               alt="Soil Seed and Water"
               className="h-10 w-auto object-contain sm:h-12"
             />
+            <span className="hidden items-center gap-1 text-xs font-black text-[#526056] sm:inline-flex"><ArrowLeft className="h-3.5 w-3.5" />Back to website</span>
           </a>
         </Link>
         <button
@@ -171,7 +175,7 @@ export default function BigGardenGiveaway() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-10 pt-5 sm:px-6 sm:pb-16 sm:pt-10">
-        <section className="grid gap-8 lg:grid-cols-2 lg:items-center">
+        <section className="max-w-3xl">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#a34f2b]">
               {GIVEAWAY_DRAFT.eyebrow}
@@ -207,58 +211,16 @@ export default function BigGardenGiveaway() {
             </p>
           </div>
 
-          <figure className="overflow-hidden rounded-[1.75rem] border border-[#d2c8b5] bg-white shadow-[0_20px_55px_rgba(28,57,38,0.16)]">
-            <img
-              src={GIVEAWAY_DRAFT.heroImage}
-              alt={GIVEAWAY_DRAFT.heroImageAlt}
-              className="aspect-[3/2] w-full object-cover"
-              {...{ fetchpriority: "high" }}
-            />
-            <figcaption className="border-t border-[#e2dacb] px-4 py-3 text-xs font-semibold leading-5 text-[#657067]">
-              Prize visual based on actual Soil Seed &amp; Water products.
-            </figcaption>
-          </figure>
         </section>
 
-        <section aria-labelledby="package-visuals-title" className="pt-10 sm:pt-14">
-          <div className="mb-5 max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a34f2b]">Prize package</p>
-            <h2 id="package-visuals-title" className="mt-2 font-heading text-3xl font-black leading-tight text-[#173d25] sm:text-4xl">
-              See the complete setup.
-            </h2>
-          </div>
+        <section aria-label="Winner announcement" className="mt-10 rounded-[1.5rem] border border-[#e6b43c] bg-[#fff8df] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
+          <div className="flex items-start gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5b934] text-[#173d25]"><CalendarDays className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-[#a34f2b]">Winners announced live</p><h2 className="mt-1 font-heading text-2xl font-black text-[#173d25]">{GIVEAWAY_DRAFT.announcement.date} at {GIVEAWAY_DRAFT.announcement.time}</h2><p className="mt-1 text-sm leading-6 text-[#56635a]">Watch the drawing on Instagram Live during our Saturday {GIVEAWAY_DRAFT.announcement.event}.</p></div></div>
+          <a href="https://www.instagram.com/soilseedandwater/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#173d25] px-5 text-sm font-black text-white sm:mt-0 sm:w-auto"><Instagram className="h-4 w-4" />Follow for the live drawing</a>
+        </section>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {GIVEAWAY_DRAFT.supportVisuals.map((visual) => (
-              <figure
-                key={visual.image}
-                className="overflow-hidden rounded-[1.5rem] border border-[#d2c8b5] bg-[#fffdf8] shadow-[0_14px_35px_rgba(28,57,38,0.1)]"
-              >
-                <img
-                  src={visual.image}
-                  alt={visual.alt}
-                  loading="lazy"
-                  className="h-64 w-full bg-[#e9e2d1] object-contain"
-                />
-                <figcaption className="border-t border-[#e2dacb] px-5 py-4">
-                  <h3 className="font-heading text-xl font-black text-[#173d25]">{visual.title}</h3>
-                  <p className="mt-1.5 text-sm leading-6 text-[#657067]">{visual.caption}</p>
-                  {visual.items.length > 0 && (
-                    <ul className="mt-3 flex flex-wrap gap-2" aria-label={`${visual.title} Included component types`}>
-                      {visual.items.map((item) => (
-                        <li
-                          key={item}
-                          className="rounded-full border border-[#d7cebd] bg-[#f4efe2] px-3 py-1.5 text-xs font-bold text-[#3d5546]"
-                        >
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+        <section aria-labelledby="prizes-title" className="pt-12 sm:pt-16">
+          <div className="mx-auto max-w-3xl text-center"><p className="text-xs font-black uppercase tracking-[0.18em] text-[#a34f2b]">Three winners</p><h2 id="prizes-title" className="mt-2 font-heading text-3xl font-black leading-tight text-[#173d25] sm:text-5xl">Here’s what you can win.</h2></div>
+          <div className="mt-7 grid gap-4 lg:grid-cols-3">{GIVEAWAY_DRAFT.prizes.map((prize) => <article key={prize.rank} className={`rounded-[1.5rem] border p-5 sm:p-6 ${prize.featured ? "border-[#f5b934] bg-[#173d25] text-white" : "border-[#d2c8b5] bg-[#fffdf8] text-[#173d25]"}`}><div className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-full ${prize.featured ? "bg-[#f5b934] text-[#173d25]" : "bg-[#dbe8d7] text-[#24703e]"}`}><Trophy className="h-5 w-5" /></span><div><p className={`text-xs font-black uppercase tracking-[0.14em] ${prize.featured ? "text-[#f5bb45]" : "text-[#a34f2b]"}`}>{prize.rank}</p><h3 className="font-heading text-xl font-black">{prize.title}</h3></div></div><ul className="mt-5 space-y-2.5">{prize.items.map((item) => <li key={item} className="flex gap-2 text-sm font-semibold leading-5"><Check className={`mt-0.5 h-4 w-4 shrink-0 ${prize.featured ? "text-[#f5bb45]" : "text-[#24703e]"}`} />{item}</li>)}</ul></article>)}</div>
         </section>
 
         <section id="enter" className="scroll-mt-6 pt-10 sm:pt-14">
@@ -348,13 +310,13 @@ export default function BigGardenGiveaway() {
                   </div>
 
                   <fieldset>
-                    <legend className="mb-2 text-sm font-black">Who are you?</legend>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <legend className="mb-2 text-sm font-black">Who are you? <span className="font-normal text-[#6d756f]">Select all that apply.</span></legend>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {GIVEAWAY_DRAFT.form.customerTypes.map(([value, label]) => (
                         <ChoiceButton
                           key={value}
-                          selected={customerType === value}
-                          onClick={() => setCustomerType(value)}
+                          selected={customerTypes.includes(value)}
+                          onClick={() => toggleCustomerType(value)}
                         >
                           {label}
                         </ChoiceButton>
@@ -363,8 +325,8 @@ export default function BigGardenGiveaway() {
                   </fieldset>
 
                   <fieldset>
-                    <legend className="mb-2 text-sm font-black">New or existing garden?</legend>
-                    <div className="grid grid-cols-2 gap-2">
+                    <legend className="mb-2 text-sm font-black">Which best describes your garden?</legend>
+                    <div className="grid gap-2 sm:grid-cols-3">
                       {GIVEAWAY_DRAFT.form.gardenStatuses.map(([value, label]) => (
                         <ChoiceButton
                           key={value}

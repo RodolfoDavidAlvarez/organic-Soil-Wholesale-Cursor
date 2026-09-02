@@ -9,17 +9,19 @@
 export const GIVEAWAY_SOURCE = 'win-giveaway';
 export const GIVEAWAY_CAMPAIGN_KEY = 'phoenix-fall-garden-2026';
 export const GIVEAWAY_ENTRIES_CLOSED_MESSAGE = 'Entries are not open yet.';
-export const GIVEAWAY_FOLLOW_COPY = 'Follow us (free) — tap each Follow, then check the box.';
+export const GIVEAWAY_FOLLOW_COPY = 'Follow at least one account — tap Follow, then check the box.';
 
 export const GIVEAWAY_CUSTOMER_TYPES = Object.freeze([
   ['homeowner', 'Homeowner'],
   ['landscaper', 'Landscaper'],
-  ['specialty-farmer', 'Specialty farmer'],
+  ['specialty-farmer', 'Farmer / agriculture'],
+  ['garden-professional', 'Garden professional'],
 ]);
 
 export const GIVEAWAY_GARDEN_STATUSES = Object.freeze([
-  ['brand-new', 'Brand new'],
-  ['existing', 'Existing'],
+  ['new-to-gardening', 'I’m new to gardening'],
+  ['brand-new', 'Starting a new garden'],
+  ['existing', 'Improving an existing garden'],
 ]);
 
 export const GIVEAWAY_GROWING_OPTIONS = Object.freeze([
@@ -52,12 +54,6 @@ export const GIVEAWAY_SOCIAL_CHANNELS = Object.freeze([
     column: 'followed_yt',
     label: 'YouTube @soilseedwater',
     url: 'https://www.youtube.com/@soilseedwater',
-  },
-  {
-    key: 'tt',
-    column: 'followed_tt',
-    label: 'TikTok @soilseedandwater',
-    url: 'https://www.tiktok.com/@soilseedandwater',
   },
 ]);
 
@@ -122,12 +118,18 @@ function readFollowed(input = {}) {
 export function normalizeGiveawayEntry(input = {}, extras = {}) {
   const email = String(input.email || '').trim().toLowerCase().slice(0, 254);
   const source = trimText(input.source, 80) || GIVEAWAY_SOURCE;
+  const rawCustomerTypes = Array.isArray(input.customerTypes)
+    ? input.customerTypes
+    : [input.customerType || input.customerCategory].filter(Boolean);
+  const customerTypes = [...new Set(rawCustomerTypes.map((value) => String(value || '').trim()))]
+    .filter((value) => CUSTOMER_TYPE_VALUES.has(value))
+    .slice(0, 4);
   return {
     fullName: trimText(input.fullName || input.name, 120),
     email,
     phone: trimText(input.phone, 30),
     zipCode: normalizeGiveawayZip(input.zipCode || input.zip),
-    customerType: String(input.customerType || input.customerCategory || '').trim(),
+    customerTypes,
     gardenStatus: String(input.gardenStatus || '').trim(),
     growing: normalizeGiveawayGrowing(input.growing),
     growingOther: trimText(input.growingOther || input.growing_other, 80) || null,
@@ -156,7 +158,7 @@ export function validateGiveawayEntry(input = {}, extras = {}) {
     return { ok: false, error: 'Please enter a valid phone number.' };
   }
   if (!entry.zipCode) return { ok: false, error: 'Please enter a valid US ZIP code.' };
-  if (!CUSTOMER_TYPE_VALUES.has(entry.customerType)) {
+  if (!entry.customerTypes.length) {
     return { ok: false, error: 'Please tell us who you are.' };
   }
   if (!GARDEN_STATUS_VALUES.has(entry.gardenStatus)) {
@@ -164,19 +166,25 @@ export function validateGiveawayEntry(input = {}, extras = {}) {
   }
   if (!entry.growing.length) return { ok: false, error: 'Please tell us what you are growing.' };
   if (!entry.emailConsent) {
-    return { ok: false, error: 'Please confirm we may email you about this giveaway.' };
+    return { ok: false, error: 'Please confirm we may email you if you win and about this giveaway.' };
   }
   if (!entry.rulesConsent) {
     return { ok: false, error: 'Please confirm you are eligible and agree to the official rules.' };
   }
-  if (missingFollows(entry.followed).length) {
-    return { ok: false, error: 'Please follow each channel, then check the box.' };
+  if (missingFollows(entry.followed).length === SOCIAL_KEYS.length) {
+    return { ok: false, error: 'Please follow at least one account, then check the box.' };
   }
   return { ok: true, bot: false, entry };
 }
 
 export function giveawayEntryRow(entry, { now = new Date(), isPreview = false } = {}) {
   const timestamp = now instanceof Date ? now.toISOString() : now;
+  const legacyCustomerType = entry.customerTypes.includes('homeowner')
+    ? 'homeowner'
+    : entry.customerTypes.includes('landscaper')
+      ? 'landscaper'
+      : 'specialty-farmer';
+  const customerTypeNote = `Customer types: ${entry.customerTypes.join(', ')}`;
   return {
     source: entry.source || GIVEAWAY_SOURCE,
     campaign_key: GIVEAWAY_CAMPAIGN_KEY,
@@ -186,11 +194,11 @@ export function giveawayEntryRow(entry, { now = new Date(), isPreview = false } 
     email_normalized: entry.email,
     phone: entry.phone,
     zip_code: entry.zipCode,
-    customer_type: entry.customerType,
-    garden_status: entry.gardenStatus,
+    customer_type: legacyCustomerType,
+    garden_status: entry.gardenStatus === 'new-to-gardening' ? 'brand-new' : entry.gardenStatus,
     growing: entry.growing,
     growing_other: entry.growingOther,
-    notes: entry.notes,
+    notes: entry.notes ? `${customerTypeNote}\n${entry.notes}` : customerTypeNote,
     email_consent: entry.emailConsent === true,
     rules_consent: entry.rulesConsent === true,
     followed_ig: entry.followed?.ig === true,

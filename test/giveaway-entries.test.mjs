@@ -21,14 +21,14 @@ const validBody = {
   email: 'jordan@example.com',
   phone: '(623) 555-0199',
   zipCode: '85009',
-  customerType: 'homeowner',
+  customerTypes: ['homeowner', 'specialty-farmer'],
   gardenStatus: 'brand-new',
   growing: ['food-garden', 'citrus-avocado'],
   growingOther: 'figs',
   notes: 'South-facing beds',
   emailConsent: true,
   rulesConsent: true,
-  followed: { ig: true, fb: true, yt: true, tt: true },
+  followed: { ig: true, fb: false, yt: false },
   source: 'win-giveaway',
   website: '',
 };
@@ -64,7 +64,8 @@ test('giveaway questions match the /win spec and reject incomplete entries', () 
   assert.deepEqual(GIVEAWAY_CUSTOMER_TYPES.map(([, label]) => label), [
     'Homeowner',
     'Landscaper',
-    'Specialty farmer',
+    'Farmer / agriculture',
+    'Garden professional',
   ]);
   assert.deepEqual(GIVEAWAY_GROWING_OPTIONS.map(([, label]) => label), [
     'Food garden',
@@ -80,21 +81,20 @@ test('giveaway questions match the /win spec and reject incomplete entries', () 
   assert.equal(validateGiveawayEntry(validBody).ok, true);
   assert.equal(validateGiveawayEntry({ ...validBody, fullName: 'J' }).ok, false);
   assert.equal(validateGiveawayEntry({ ...validBody, zipCode: '8500' }).ok, false);
-  assert.equal(validateGiveawayEntry({ ...validBody, customerType: 'home-gardener' }).ok, false);
+  assert.equal(validateGiveawayEntry({ ...validBody, customerTypes: ['home-gardener'] }).ok, false);
   assert.equal(validateGiveawayEntry({ ...validBody, growing: [] }).ok, false);
   assert.equal(validateGiveawayEntry({ ...validBody, emailConsent: false }).ok, false);
   assert.equal(validateGiveawayEntry({ ...validBody, rulesConsent: false }).ok, false);
-  assert.equal(validateGiveawayEntry({ ...validBody, followed: { ig: true, fb: true, yt: true, tt: false } }).ok, false);
+  assert.equal(validateGiveawayEntry({ ...validBody, followed: { ig: false, fb: false, yt: false } }).ok, false);
   assert.equal(validateGiveawayEntry({ ...validBody, website: 'https://spam.test' }).bot, true);
 });
 
 test('social follow URLs and copy match the approved channels', () => {
-  assert.equal(GIVEAWAY_FOLLOW_COPY, 'Follow us (free) — tap each Follow, then check the box.');
+  assert.equal(GIVEAWAY_FOLLOW_COPY, 'Follow at least one account — tap Follow, then check the box.');
   assert.deepEqual(GIVEAWAY_SOCIAL_CHANNELS.map((channel) => [channel.key, channel.url]), [
     ['ig', 'https://www.instagram.com/soilseedandwater/'],
     ['fb', 'https://www.facebook.com/soilseedandwater'],
     ['yt', 'https://www.youtube.com/@soilseedwater'],
-    ['tt', 'https://www.tiktok.com/@soilseedandwater'],
   ]);
 });
 
@@ -144,7 +144,9 @@ test('unset env saves a live win-giveaway row with follow flags', async () => {
   assert.equal(db.inserts[0].campaign_key, GIVEAWAY_CAMPAIGN_KEY);
   assert.equal(db.inserts[0].is_preview, false);
   assert.equal(db.inserts[0].followed_ig, true);
-  assert.equal(db.inserts[0].followed_tt, true);
+  assert.equal(db.inserts[0].followed_tt, false);
+  assert.equal(db.inserts[0].customer_type, 'homeowner');
+  assert.match(db.inserts[0].notes, /Customer types: homeowner, specialty-farmer/);
   assert.equal(db.inserts[0].email_normalized, 'jordan@example.com');
 });
 
@@ -178,8 +180,8 @@ test('/win is live-ready: no draft framing, working Enter to win, form and follo
 
   assert.match(app, /path="\/win" component=\{BigGardenGiveaway\}/);
   assert.match(config, /acceptingEntries: true/);
-  assert.match(config, /cta: "Enter to win"/);
-  assert.match(page, /Prize package/);
+  assert.match(config, /cta: "Sign up in 30 seconds"/);
+  assert.match(page, /Here’s what you can win/);
   assert.match(page, /giveaway-name/);
   assert.match(page, /form\.followCopy/);
   assert.match(page, /Enter to win/);
@@ -189,11 +191,11 @@ test('/win is live-ready: no draft framing, working Enter to win, form and follo
   assert.doesNotMatch(page, /nothing is saved until/i);
   assert.doesNotMatch(page, /entries are not being accepted/i);
   assert.doesNotMatch(config, /Draft preview/);
-  assert.match(shared, /Follow us \(free\)/);
+  assert.match(shared, /Follow at least one account/);
   assert.match(shared, /instagram\.com\/soilseedandwater/);
   assert.match(shared, /facebook\.com\/soilseedandwater/);
   assert.match(shared, /youtube\.com\/@soilseedwater/);
-  assert.match(shared, /tiktok\.com\/@soilseedandwater/);
+  assert.doesNotMatch(shared, /tiktok\.com\/@soilseedandwater/);
   assert.match(page, /\/api\/giveaway\/enter/);
   assert.match(page, /noopener/);
   assert.doesNotMatch(page, /auto-follow|autofollow|we followed you/i);

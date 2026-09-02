@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { ArrowRight, BellRing, ExternalLink, Gift } from "lucide-react";
+import { ArrowRight, BellRing, ExternalLink, Gift, Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
 const instagramUtm = "utm_source=instagram&utm_medium=social&utm_campaign=link-in-bio";
 
 const links = {
+  giveaway: `/win?source=instagram-bio&${instagramUtm}&utm_content=big-garden-giveaway`,
   offers: `/offers?source=instagram-bio&${instagramUtm}&utm_content=fall-garden-bundles`,
   gardenClass: `/classes?source=instagram-bio&${instagramUtm}&utm_content=garden-class-waitlist#class-alert-signup`,
   organicSoil: `/?${instagramUtm}&utm_content=organic-soil-wholesale`,
@@ -34,7 +35,7 @@ export default function InstagramLinks() {
         <title>Choose Your Next Step | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Shop fall garden bundles, join garden class alerts, or explore Organic Soil Wholesale and Soil Seed & Water."
+          content="Enter the Big Garden Giveaway, shop fall garden bundles, join garden class alerts, or explore Organic Soil Wholesale."
         />
       </Helmet>
 
@@ -43,10 +44,24 @@ export default function InstagramLinks() {
           <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, Instagram friends</p>
           <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Fall garden bundles and garden class alerts are available now.</p>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Giveaway registration, fall garden bundles, and garden class alerts are available now.</p>
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
+          <a
+            href={links.giveaway}
+            onClick={() => recordClick("big-garden-giveaway")}
+            className="group grid min-h-40 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#173d25] text-white shadow-[0_14px_34px_rgba(19,61,42,0.22)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
+          >
+            <span className="flex flex-col justify-center p-5 sm:p-6">
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f5bb45]"><Trophy className="h-4 w-4" /> Three winners · Free entry</span>
+              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Enter the Big Garden Giveaway</span>
+              <span className="mt-2 text-sm font-semibold text-[#dce7de]">Grand prize: a $5,000 complete garden</span>
+              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">Enter now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </span>
+            <img src="/images/giveaway/complete-fall-garden-hero-v9.png" alt="Complete raised-bed garden giveaway" className="h-full w-full object-cover" />
+          </a>
+
           <a
             href={links.offers}
             onClick={() => recordClick("fall-garden-bundles")}
