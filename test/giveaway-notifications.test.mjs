@@ -110,7 +110,9 @@ test('email is a Lead Report with the map, all categories, and 30 contacts', asy
   assert.match(report.html, /Total leads since August: 60/);
   assert.match(report.html, /Big Garden Giveaway leads since September: 60/);
   assert.match(report.html, /supported-color-schemes/);
-  assert.match(report.html, /color-scheme:light only/);
+  assert.match(report.html, /color-scheme:light dark/);
+  assert.match(report.html, /prefers-color-scheme:dark/);
+  assert.match(report.html, /\[data-ogsc\]/);
   assert.match(report.html, /background-image:linear-gradient\(#ffffff,#ffffff\)/);
   assert.doesNotMatch(report.html, /background:#17251b/);
   assert.match(report.html, /ssw-logo-white\.png/);
