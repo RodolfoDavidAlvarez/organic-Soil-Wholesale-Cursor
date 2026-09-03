@@ -35,6 +35,13 @@ import {
   normalizeV5ProductRecord,
 } from '../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../shared/promoBundles.js';
+import {
+  JOB_APPLICATION_BUCKET,
+  JobApplicationError,
+  cleanupUnsavedJobApplication,
+  processJobApplication,
+  validateJobApplicationUpload,
+} from '../shared/jobApplications.js';
 
 // Lazy initialize clients
 let supabase = null;
@@ -1319,6 +1326,64 @@ export default async function handler(req, res) {
     }
 
     const db = await getSupabase();
+
+    if (path === '/api/job-applications/upload-url' && req.method === 'POST') {
+      try {
+        const document = validateJobApplicationUpload(req.body || {});
+        const { data, error } = await db.storage.from(JOB_APPLICATION_BUCKET)
+          .createSignedUploadUrl(document.path, { upsert: false });
+        if (error || !data?.token) throw error || new Error('No upload token returned');
+        return res.json({ path: document.path, token: data.token });
+      } catch (error) {
+        const known = error instanceof JobApplicationError;
+        console.error(JSON.stringify({ event: 'job_application_upload_url_failed', requestId, code: error?.code, message: error?.message || String(error) }));
+        return res.status(known ? error.status : 500).json({
+          error: known ? error.message : 'We could not prepare the document upload. Please try again.',
+          code: known ? error.code : 'upload_url_failed',
+        });
+      }
+    }
+
+    if (path === '/api/job-applications/cleanup' && req.method === 'POST') {
+      try {
+        const result = await cleanupUnsavedJobApplication({ db, applicationId: req.body?.applicationId });
+        return res.json(result);
+      } catch (error) {
+        const known = error instanceof JobApplicationError;
+        console.error(JSON.stringify({ event: 'job_application_cleanup_failed', requestId, code: error?.code, message: error?.message || String(error) }));
+        return res.status(known ? error.status : 500).json({
+          error: known ? error.message : 'Document cleanup failed.',
+          code: known ? error.code : 'cleanup_failed',
+        });
+      }
+    }
+
+    if (path === '/api/job-applications' && req.method === 'POST') {
+      try {
+        const result = await processJobApplication({ db, resend: await getResend(), body: req.body || {} });
+        console.log(JSON.stringify({ event: 'job_application_submitted', requestId, applicationId: result.applicationId }));
+        return res.status(201).json(result);
+      } catch (error) {
+        const known = error instanceof JobApplicationError;
+        console.error(JSON.stringify({ event: 'job_application_failed', requestId, code: error?.code, message: error?.message || String(error) }));
+        let applicationWasSaved = false;
+        try {
+          await cleanupUnsavedJobApplication({ db, applicationId: req.body?.applicationId });
+        } catch (cleanupError) {
+          if (cleanupError?.code === 'application_saved') {
+            applicationWasSaved = true;
+          } else {
+            console.error(JSON.stringify({ event: 'job_application_failure_cleanup_failed', requestId, message: cleanupError?.message || String(cleanupError) }));
+          }
+        }
+        return res.status(applicationWasSaved ? 502 : known ? error.status : 500).json({
+          error: applicationWasSaved
+            ? 'Your application was saved, but a confirmation could not be delivered. Please try once more.'
+            : known ? error.message : 'We could not submit your application. Please try again.',
+          code: applicationWasSaved ? 'notification_failed' : known ? error.code : 'application_failed',
+        });
+      }
+    }
 
     // Defense in depth: these public paths must be routed to api/stripe-webhook.js,
     // where the untouched request bytes are verified. Never process parsed bodies.

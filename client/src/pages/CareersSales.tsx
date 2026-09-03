@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
 
 const POSITION_SLUG = "sales-representative";
-const POSITION_TITLE = "Sales Representative";
 const APPLICATION_SOURCE = "www.organicsoilwholesale.com/careers/sales";
 const APPLICATION_URL = `https://${APPLICATION_SOURCE}`;
 const RESUME_BUCKET = "job-applications";
@@ -54,6 +53,22 @@ const computerSkillOptions = [
 ];
 
 type SubmitStatus = "idle" | "uploading" | "saving" | "sent" | "error";
+
+type UploadedDocument = {
+  name: string;
+  size: number;
+  contentType: string;
+  path: string;
+};
+
+class ApplicationApiError extends Error {
+  code: string;
+
+  constructor(message: string, code = "application_failed") {
+    super(message);
+    this.code = code;
+  }
+}
 
 type ApplicationForm = {
   firstName: string;
@@ -125,11 +140,6 @@ const inputClass =
   "min-h-12 w-full rounded-xl border border-[#d9e1db] bg-white px-4 py-3 text-base text-[#183a23] outline-none transition placeholder:text-slate-400 focus:border-[#397854] focus:ring-2 focus:ring-[#397854]/20 md:text-sm";
 const labelClass = "mb-2 block text-sm font-semibold text-[#183a23]";
 const cardClass = "rounded-3xl border border-[#dfe7e1] bg-white p-5 shadow-sm sm:p-8";
-const safeFileName = (fileName: string) =>
-  fileName
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 const fileContentType = (file: File) => {
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
   return FILE_CONTENT_TYPES[extension] || file.type;
@@ -137,6 +147,8 @@ const fileContentType = (file: File) => {
 
 const CareersSales = () => {
   const formRef = useRef<HTMLFormElement>(null);
+  const applicationIdRef = useRef(crypto.randomUUID());
+  const uploadedDocumentsRef = useRef(new Map<string, UploadedDocument>());
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [resume, setResume] = useState<File | null>(null);
   const [supportingDocuments, setSupportingDocuments] = useState<File[]>([]);
@@ -144,6 +156,35 @@ const CareersSales = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [website, setWebsite] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+
+  const postJson = async <T,>(url: string, body: unknown): Promise<T> => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new ApplicationApiError(
+        typeof result?.error === "string" ? result.error : "We could not submit your application. Please try again.",
+        typeof result?.code === "string" ? result.code : "application_failed",
+      );
+    }
+    return result as T;
+  };
+
+  const resetUploadSession = (requestCleanup = false) => {
+    const applicationId = applicationIdRef.current;
+    if (requestCleanup && uploadedDocumentsRef.current.size) {
+      void fetch("/api/job-applications/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId }),
+      }).catch(() => undefined);
+    }
+    applicationIdRef.current = crypto.randomUUID();
+    uploadedDocumentsRef.current.clear();
+  };
 
   const update = (field: keyof ApplicationForm, value: string | boolean | string[]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -218,6 +259,7 @@ const CareersSales = () => {
 
   const handleResume = (file: File | null) => {
     setErrorMessage("");
+    resetUploadSession(true);
     if (!file) {
       setResume(null);
       return;
@@ -239,6 +281,7 @@ const CareersSales = () => {
 
   const handleSupportingDocuments = (files: FileList | null) => {
     setErrorMessage("");
+    resetUploadSession(true);
     if (!files) {
       setSupportingDocuments([]);
       return;
@@ -289,72 +332,54 @@ const CareersSales = () => {
       return;
     }
 
-    const applicationId = crypto.randomUUID();
-    const resumePath = `${POSITION_SLUG}/${applicationId}/resume-${safeFileName(resume.name)}`;
-    const supportingDocumentPaths = supportingDocuments.map(
-      (file, index) => `${POSITION_SLUG}/${applicationId}/supporting-${index + 1}-${safeFileName(file.name)}`,
-    );
-
     try {
       setStatus("uploading");
-      const { error: uploadError } = await supabase.storage
-        .from(RESUME_BUCKET)
-        .upload(resumePath, resume, { cacheControl: "3600", contentType: fileContentType(resume), upsert: false });
+      const applicationId = applicationIdRef.current;
+      const uploadDocument = async (file: File, kind: "resume" | "supporting", index?: number) => {
+        const signature = [kind, index || 0, file.name, file.size, file.lastModified].join(":");
+        const existing = uploadedDocumentsRef.current.get(signature);
+        if (existing) return existing;
 
-      if (uploadError) throw uploadError;
+        const contentType = fileContentType(file);
+        const signed = await postJson<{ path: string; token: string }>("/api/job-applications/upload-url", {
+          applicationId,
+          kind,
+          index,
+          name: file.name,
+          size: file.size,
+          contentType,
+        });
+        const { error } = await supabase.storage.from(RESUME_BUCKET).uploadToSignedUrl(
+          signed.path,
+          signed.token,
+          file,
+          { cacheControl: "3600", contentType, upsert: false },
+        );
+        if (error) throw new ApplicationApiError(error.message, "document_upload_failed");
+        const uploaded = { name: file.name, size: file.size, contentType, path: signed.path };
+        uploadedDocumentsRef.current.set(signature, uploaded);
+        return uploaded;
+      };
 
-      for (const [index, file] of supportingDocuments.entries()) {
-        const { error: supportingUploadError } = await supabase.storage
-          .from(RESUME_BUCKET)
-          .upload(supportingDocumentPaths[index], file, { cacheControl: "3600", contentType: fileContentType(file), upsert: false });
-
-        if (supportingUploadError) throw supportingUploadError;
-      }
+      const uploadJobs = [
+        uploadDocument(resume, "resume"),
+        ...supportingDocuments.map((file, index) => uploadDocument(file, "supporting", index + 1)),
+      ];
+      const uploadResults = await Promise.allSettled(uploadJobs);
+      const failedUpload = uploadResults.find((result) => result.status === "rejected");
+      if (failedUpload?.status === "rejected") throw failedUpload.reason;
+      const uploaded = uploadResults.map((result) => (result as PromiseFulfilledResult<UploadedDocument>).value);
+      const uploadedResume = uploaded[0];
+      const uploadedSupportingDocuments = uploaded.slice(1);
 
       setStatus("saving");
-      const { error: insertError } = await supabase.from("job_applications").insert({
-        id: applicationId,
-        position_slug: POSITION_SLUG,
-        position_title: POSITION_TITLE,
-        first_name: form.firstName.trim(),
-        last_name: form.lastName.trim(),
-        preferred_name: form.preferredName.trim() || null,
-        email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
-        city: form.city.trim(),
-        state: form.state.trim().toUpperCase(),
-        linkedin_url: form.linkedInUrl.trim() || null,
-        employment_interest: form.employmentInterest,
-        phoenix_availability: form.phoenixAvailability,
-        reliable_transportation: form.reliableTransportation,
-        work_authorization: form.workAuthorization,
-        earliest_start_date: form.earliestStartDate || null,
-        compensation_expectation: form.compensationExpectation.trim() || null,
-        sales_experience_years: form.salesExperienceYears,
-        sales_background: form.salesBackground.trim(),
-        experience_tags: form.gardeningFocus,
-        gardening_experience_years: form.gardeningExperienceYears,
-        gardening_focus: form.gardeningFocus,
-        plants_grown: form.plantsGrown.trim(),
-        organic_practices: form.organicPractices.trim(),
-        product_experience: form.productExperience.trim(),
-        why_ssw: form.whySsw.trim(),
-        soil_knowledge: form.soilKnowledge.trim(),
-        computer_proficiency: form.computerProficiency,
-        computer_skills: form.computerSkills,
-        software_tools: form.softwareTools.trim(),
-        computer_task_example: form.computerTaskExample.trim(),
-        sales_example: form.salesExample.trim(),
-        referral_source: form.referralSource.trim() || null,
-        resume_bucket: RESUME_BUCKET,
-        resume_path: resumePath,
-        additional_document_paths: supportingDocumentPaths,
-        source: APPLICATION_SOURCE,
-        consent_to_contact: true,
-        application_version: 2,
+      await postJson("/api/job-applications", {
+        applicationId,
+        form,
+        resume: uploadedResume,
+        supportingDocuments: uploadedSupportingDocuments,
+        website,
       });
-
-      if (insertError) throw insertError;
 
       trackEvent("Recruitment Application Submitted", {
         position: POSITION_SLUG,
@@ -365,12 +390,13 @@ const CareersSales = () => {
       setResume(null);
       setSupportingDocuments([]);
       setCurrentStep(1);
+      resetUploadSession(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
+    } catch (error) {
+      const apiError = error instanceof ApplicationApiError ? error : new ApplicationApiError("We could not submit your application. Please try again.");
+      if (apiError.code !== "notification_failed") resetUploadSession(true);
       setStatus("error");
-      setErrorMessage(
-        "We could not submit your application. Please try again or email your resume to info@soilseedandwater.com.",
-      );
+      setErrorMessage(`${apiError.message} You can also email your resume to info@soilseedandwater.com.`);
     }
   };
 

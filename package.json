@@ -22,7 +22,8 @@
     "test:worm-day3": "node --test test/worm-castings-day3-reminders.test.mjs",
     "test:worm-routing": "node --test test/worm-castings-routing.test.mjs",
     "test:survey": "node --test test/survey-responses.test.mjs test/portal-survey-letter.test.mjs",
-    "test:signup-alerts": "node --test test/newsletter-notifications.test.mjs test/workshop-registrations.test.mjs && node scripts/check-signup-alerts.mjs"
+    "test:signup-alerts": "node --test test/newsletter-notifications.test.mjs test/workshop-registrations.test.mjs && node scripts/check-signup-alerts.mjs",
+    "test:recruitment": "node --test test/job-applications.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
