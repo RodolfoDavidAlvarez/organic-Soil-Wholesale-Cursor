@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ArrowRight, BellRing, ExternalLink, Gift, Trophy } from "lucide-react";
+import { ArrowRight, BellRing, Briefcase, ExternalLink, Gift, Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { trackEvent } from "@/lib/analytics";
 
@@ -37,6 +37,7 @@ export default function InstagramLinks() {
   const channelName = channelDetails[channel].name;
   const links = {
     giveaway: trackedLink(channel, "/win", "september_garden_giveaway_2026", "big_garden_giveaway"),
+    careers: trackedLink(channel, "/careers/sales", "sales_recruitment_2026", "sales_representative_careers"),
     offers: trackedLink(channel, "/offers", "fall_garden_bundles_2026", "fall_garden_bundles"),
     gardenClass: trackedLink(channel, "/classes#class-alert-signup", "fall_garden_classes_2026", "garden_class_alerts"),
     organicSoil: trackedLink(channel, "/", "social_bio_2026", "organic_soil_wholesale"),
@@ -64,7 +65,7 @@ export default function InstagramLinks() {
         <title>Choose Your Next Step | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Enter the Big Garden Giveaway, shop fall garden bundles, join garden class alerts, or explore Organic Soil Wholesale."
+          content="Apply to join Soil Seed & Water, enter the Big Garden Giveaway, shop fall garden bundles, or join garden class alerts."
         />
       </Helmet>
 
@@ -73,7 +74,7 @@ export default function InstagramLinks() {
           <p className="font-heading text-xl font-bold text-[#20251f] sm:text-2xl">Welcome to Soil Seed and Water</p>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#8b6940]">Welcome, {channelName} friends</p>
           <h1 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">What would you like to do?</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. Giveaway registration, fall garden bundles, and garden class alerts are available now.</p>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#4f6255] sm:text-base">Choose an option below. We are hiring, and our giveaway, garden bundles, and class alerts are available now.</p>
         </header>
 
         <section className="mt-7 space-y-3" aria-label="Featured links">
@@ -89,6 +90,26 @@ export default function InstagramLinks() {
               <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f5d77d]">Enter now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
             </span>
             <img src="/images/giveaway/complete-fall-garden-hero-v9.png" alt="Complete raised-bed garden giveaway" className="h-full w-full object-cover" />
+          </a>
+
+          <a
+            href={links.careers}
+            onClick={() => recordClick("sales-representative-careers")}
+            aria-label="Apply for the Soil Seed & Water Sales Representative position in Phoenix"
+            className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl border-2 border-[#d6b470] bg-gradient-to-br from-[#fff8e8] via-[#f3e0b5] to-[#dce8d6] text-[#133d2a] shadow-[0_12px_32px_rgba(87,62,29,0.16)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
+          >
+            <span className="flex flex-col justify-center p-5 sm:p-6">
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#7a552c]"><Briefcase className="h-4 w-4" /> We’re hiring · Phoenix</span>
+              <span className="mt-2 font-heading text-2xl font-bold leading-tight">Grow With Us</span>
+              <span className="mt-1 text-sm font-semibold text-[#526457]">Sales position open</span>
+              <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#133d2a]">Apply to join SSW <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </span>
+            <img
+              src="/images/recruitment/sales-representative-hiring-square-2026.webp"
+              alt="Soil Seed & Water sales representative opening in Phoenix"
+              className="h-full w-full object-cover object-center"
+              loading="lazy"
+            />
           </a>
 
           <a
