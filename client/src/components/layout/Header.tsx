@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, ShoppingCart, ChevronDown, Phone, User, LogOut, ArrowRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,6 +85,7 @@ const Header = () => {
   const isActive = (path: string) => {
     if (path === "/products") return location === "/products" || location.startsWith("/products/");
     if (path === "/offers") return location === "/offers" || location.startsWith("/offers/") || location.startsWith("/deals");
+    if (path === "/careers") return location === "/careers" || location.startsWith("/careers/");
     return location === path;
   };
 
@@ -97,6 +98,7 @@ const Header = () => {
     { name: "Products", path: "/products" },
     { name: "Deals", path: "/offers" },
     { name: "About Us", path: "/about" },
+    { name: "Careers", path: "/careers" },
     { name: "Contact", path: "/contact" },
     { name: "FAQ", path: "/faq" },
     ...(GROK_ASSISTANT_ENABLED ? [{ name: "AI Assistant", path: "/grok" }] : []),
@@ -338,6 +340,8 @@ const Header = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="flex h-[100svh] max-h-[100svh] w-[min(90vw,360px)] flex-col overflow-hidden p-0 sm:w-[400px]">
+                <SheetTitle className="sr-only">Site navigation</SheetTitle>
+                <SheetDescription className="sr-only">Browse products, careers, company information, and contact options.</SheetDescription>
                 <div className="flex min-h-0 flex-1 flex-col">
                   <div className="flex flex-col gap-2 border-b border-[#183a23]/10 px-5 pb-4 pr-16 pt-5">
                     <Link href="/">

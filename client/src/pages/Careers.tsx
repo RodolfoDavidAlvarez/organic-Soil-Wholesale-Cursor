@@ -1,4 +1,4 @@
-import { ArrowRight, Briefcase, Clock3, MapPin, Sprout } from "lucide-react";
+import { ArrowRight, Briefcase, Clock3, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import SEO from "@/components/layout/SEO";
 import { trackEvent } from "@/lib/analytics";
@@ -12,6 +12,19 @@ const openings = [
       "Help gardeners and growers choose products that build healthier soil. Sales, customer service, gardening, and growing experience are valued.",
     href: "/careers/sales",
     image: "/images/recruitment/sales-representative-hiring-square-2026.webp",
+    imageAlt: "Soil Seed & Water sales representative opening",
+    status: "Open position",
+  },
+  {
+    title: "General Application",
+    location: "Phoenix, Arizona",
+    schedule: "Current and future opportunities",
+    description:
+      "Tell us where you can contribute. We review experience in gardening, agriculture, sales, driving, equipment, operations, technology, and other useful skills.",
+    href: "/careers/general",
+    image: "/images/field-content/congress-yard-tour.jpg",
+    imageAlt: "A gardener inspecting a sunflower at Soil Seed & Water",
+    status: "Open application",
   },
 ];
 
@@ -39,7 +52,7 @@ const Careers = () => {
                   <div className="bg-[#eef3ed] p-5 md:p-6">
                     <img
                       src={opening.image}
-                      alt="Soil Seed & Water sales representative opening"
+                      alt={opening.imageAlt}
                       width="1254"
                       height="1254"
                       loading="lazy"
@@ -50,7 +63,7 @@ const Careers = () => {
                   <div className="flex flex-col justify-center p-6 sm:p-8">
                     <div className="flex items-center gap-2 text-sm font-semibold text-[#397854]">
                       <Briefcase className="h-5 w-5" aria-hidden="true" />
-                      Open position
+                      {opening.status}
                     </div>
                     <h3 className="mt-3 font-heading text-2xl font-bold text-[#183a23] sm:text-3xl">{opening.title}</h3>
                     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
@@ -85,17 +98,6 @@ const Careers = () => {
         </div>
       </section>
 
-      <section className="bg-[#f5f2ea] py-14 lg:py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-[#dfe7e1] bg-white p-6 shadow-sm sm:p-10">
-            <Sprout className="h-8 w-8 text-[#397854]" aria-hidden="true" />
-            <h2 className="mt-4 font-heading text-2xl font-bold text-[#183a23]">Don&apos;t see the right position yet?</h2>
-            <p className="mt-3 max-w-2xl leading-relaxed text-slate-600">
-              Check this page again. We will publish each new opening here with its own position details and application.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

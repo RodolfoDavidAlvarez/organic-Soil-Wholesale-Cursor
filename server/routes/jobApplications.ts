@@ -30,7 +30,11 @@ router.post("/upload-url", async (req, res) => {
 
 router.post("/cleanup", async (req, res) => {
   try {
-    return res.json(await cleanupUnsavedJobApplication({ db: supabase, applicationId: req.body?.applicationId }));
+    return res.json(await cleanupUnsavedJobApplication({
+      db: supabase,
+      applicationId: req.body?.applicationId,
+      positionSlug: req.body?.positionSlug,
+    }));
   } catch (error: any) {
     const known = error instanceof JobApplicationError;
     return res.status(known ? error.status : 500).json({
@@ -49,7 +53,11 @@ router.post("/", async (req, res) => {
     const known = error instanceof JobApplicationError;
     let applicationWasSaved = false;
     try {
-      await cleanupUnsavedJobApplication({ db: supabase, applicationId: req.body?.applicationId });
+      await cleanupUnsavedJobApplication({
+        db: supabase,
+        applicationId: req.body?.applicationId,
+        positionSlug: req.body?.positionSlug,
+      });
     } catch (cleanupError: any) {
       if (cleanupError?.code === "application_saved") applicationWasSaved = true;
       else console.error("[Job Applications] Cleanup error:", cleanupError?.message || cleanupError);

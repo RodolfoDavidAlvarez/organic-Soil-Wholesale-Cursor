@@ -42,6 +42,7 @@ const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Careers = lazy(() => import("@/pages/Careers"));
 const CareersSales = lazy(() => import("@/pages/CareersSales"));
+const CareersGeneral = lazy(() => import("@/pages/CareersSales").then((module) => ({ default: module.CareersGeneral })));
 const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
 const YardMap = lazy(() => import("@/pages/YardMap"));
 const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
@@ -202,6 +203,7 @@ function Router() {
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/careers/sales" component={CareersSales} />
+        <Route path="/careers/general" component={CareersGeneral} />
         <Route path="/careers" component={Careers} />
         <Route path="/jobs">{() => <RedirectTo href="/careers" />}</Route>
         <Route path="/store-locator" component={StoreLocatorEnhanced} />

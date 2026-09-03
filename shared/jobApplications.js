@@ -2,6 +2,20 @@ export const JOB_APPLICATION_BUCKET = 'job-applications';
 export const JOB_APPLICATION_POSITION_SLUG = 'sales-representative';
 export const JOB_APPLICATION_POSITION_TITLE = 'Sales Representative';
 export const JOB_APPLICATION_SOURCE = 'www.organicsoilwholesale.com/careers/sales';
+export const JOB_APPLICATION_POSITIONS = Object.freeze({
+  'sales-representative': Object.freeze({
+    slug: 'sales-representative',
+    title: 'Sales Representative',
+    source: 'www.organicsoilwholesale.com/careers/sales',
+    applicationVersion: 2,
+  }),
+  'general-application': Object.freeze({
+    slug: 'general-application',
+    title: 'General Application',
+    source: 'www.organicsoilwholesale.com/careers/general',
+    applicationVersion: 3,
+  }),
+});
 export const JOB_APPLICATION_MAX_FILE_BYTES = 8 * 1024 * 1024;
 export const JOB_APPLICATION_MAX_SUPPORTING_FILES = 5;
 
@@ -30,7 +44,7 @@ const ALLOWED = Object.freeze({
   phoenixAvailability: new Set(['Yes', 'No', 'Relocating to Phoenix']),
   reliableTransportation: new Set(['Yes', 'No', 'Would like to discuss']),
   workAuthorization: new Set(['Yes', 'No']),
-  salesExperienceYears: new Set(['Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
+  salesExperienceYears: new Set(['No experience yet', 'Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
   gardeningExperienceYears: new Set(['New, but actively learning', 'Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
   computerProficiency: new Set([
     'Beginner — I need regular guidance',
@@ -59,6 +73,51 @@ const ALLOWED = Object.freeze({
     'Video meetings',
     'Social media and direct messages',
     'AI productivity tools',
+  ]),
+  preferredWorkAreas: new Set([
+    'Sales and customer service',
+    'Yard, warehouse, or production',
+    'Delivery and driving',
+    'Gardening, growing, or plant care',
+    'Agronomy, soil science, or crop support',
+    'Office and administration',
+    'Marketing, content, or e-commerce',
+    'Open to any suitable role',
+  ]),
+  educationLevel: new Set([
+    'High school or GED',
+    'Trade or technical program',
+    'Some college',
+    'Associate degree',
+    'Bachelor’s degree',
+    'Graduate degree',
+    'Other or prefer not to say',
+  ]),
+  licensesCertifications: new Set([
+    'Valid driver’s license',
+    'CDL Class A',
+    'CDL Class B',
+    'Forklift certification',
+    'Pesticide applicator license',
+    'Agriculture, horticulture, or landscape certification',
+    'Other professional certification',
+  ]),
+  equipmentSkills: new Set([
+    'Forklift',
+    'Skid steer',
+    'Front-end loader',
+    'Tractor',
+    'Dump trailer or towing',
+    'Box truck or delivery vehicle',
+    'Pallet jack',
+    'Bagging, batching, or production equipment',
+    'Hand and power tools',
+    'No equipment experience yet',
+  ]),
+  physicalWorkReadiness: new Set([
+    'Yes',
+    'No',
+    'Open to discussing the role requirements',
   ]),
 });
 
@@ -95,12 +154,20 @@ function assertApplicationId(applicationId) {
   return normalized.toLowerCase();
 }
 
+function jobApplicationPosition(positionSlug) {
+  const slug = String(positionSlug || JOB_APPLICATION_POSITION_SLUG).trim();
+  const position = JOB_APPLICATION_POSITIONS[slug];
+  if (!position) throw new JobApplicationError('Please select a valid position.', 400, 'invalid_position');
+  return position;
+}
+
 function extensionFor(fileName) {
   return String(fileName || '').split('.').pop()?.toLowerCase() || '';
 }
 
 export function validateJobApplicationUpload(input) {
   const applicationId = assertApplicationId(input?.applicationId);
+  const position = jobApplicationPosition(input?.positionSlug);
   const kind = input?.kind === 'resume' ? 'resume' : input?.kind === 'supporting' ? 'supporting' : null;
   if (!kind) throw new JobApplicationError('Invalid document type.', 400, 'invalid_document_type');
 
@@ -136,8 +203,8 @@ export function validateJobApplicationUpload(input) {
   }
 
   const prefix = kind === 'resume' ? 'resume' : `supporting-${index}`;
-  const path = `${JOB_APPLICATION_POSITION_SLUG}/${applicationId}/${prefix}-${safeJobApplicationFileName(originalName)}`;
-  return { applicationId, kind, index, name: originalName, size, contentType, path };
+  const path = `${position.slug}/${applicationId}/${prefix}-${safeJobApplicationFileName(originalName)}`;
+  return { applicationId, positionSlug: position.slug, kind, index, name: originalName, size, contentType, path };
 }
 
 function requiredText(value, label, min, max) {
@@ -171,8 +238,20 @@ function allowedList(value, key, label) {
   return normalized;
 }
 
-function normalizedDocument(raw, applicationId, kind, index = null) {
-  const document = validateJobApplicationUpload({ ...raw, applicationId, kind, index });
+function allowedOptionalList(value, key, label) {
+  if (value == null || (Array.isArray(value) && value.length === 0)) return [];
+  if (!Array.isArray(value) || value.length > ALLOWED[key].size) {
+    throw new JobApplicationError(`Please select valid ${label}.`);
+  }
+  const normalized = [...new Set(value.map((item) => String(item)))];
+  if (normalized.some((item) => !ALLOWED[key].has(item))) {
+    throw new JobApplicationError(`Please select valid ${label}.`);
+  }
+  return normalized;
+}
+
+function normalizedDocument(raw, applicationId, positionSlug, kind, index = null) {
+  const document = validateJobApplicationUpload({ ...raw, applicationId, positionSlug, kind, index });
   if (raw?.path !== document.path) {
     throw new JobApplicationError('A document path is invalid. Please attach the file again.', 400, 'invalid_document_path');
   }
@@ -184,6 +263,7 @@ export function normalizeJobApplication(body) {
     throw new JobApplicationError('Unable to submit this application.', 400, 'bot_submission');
   }
   const applicationId = assertApplicationId(body?.applicationId);
+  const position = jobApplicationPosition(body?.positionSlug);
   const form = body?.form && typeof body.form === 'object' ? body.form : {};
   const email = requiredText(form.email, 'Email', 3, 254).toLowerCase();
   if (!EMAIL.test(email)) throw new JobApplicationError('Please enter a valid email address.');
@@ -209,20 +289,21 @@ export function normalizeJobApplication(body) {
 
   if (form.certification !== true) throw new JobApplicationError('Please certify your application before submitting.');
 
-  const resume = normalizedDocument(body?.resume, applicationId, 'resume');
+  const resume = normalizedDocument(body?.resume, applicationId, position.slug, 'resume');
   const rawSupporting = Array.isArray(body?.supportingDocuments) ? body.supportingDocuments : [];
   if (rawSupporting.length > JOB_APPLICATION_MAX_SUPPORTING_FILES) {
     throw new JobApplicationError(`Please choose no more than ${JOB_APPLICATION_MAX_SUPPORTING_FILES} supporting documents.`);
   }
-  const supportingDocuments = rawSupporting.map((document, index) => normalizedDocument(document, applicationId, 'supporting', index + 1));
+  const supportingDocuments = rawSupporting.map((document, index) => normalizedDocument(document, applicationId, position.slug, 'supporting', index + 1));
   if (new Set([resume.path, ...supportingDocuments.map((document) => document.path)]).size !== supportingDocuments.length + 1) {
     throw new JobApplicationError('Duplicate document paths are not allowed.');
   }
 
+  const isGeneralApplication = position.slug === 'general-application';
   const record = {
     id: applicationId,
-    position_slug: JOB_APPLICATION_POSITION_SLUG,
-    position_title: JOB_APPLICATION_POSITION_TITLE,
+    position_slug: position.slug,
+    position_title: position.title,
     first_name: requiredText(form.firstName, 'First name', 1, 80),
     last_name: requiredText(form.lastName, 'Last name', 1, 80),
     preferred_name: optionalText(form.preferredName, 'Preferred name', 80),
@@ -253,12 +334,28 @@ export function normalizeJobApplication(body) {
     sales_example: requiredText(form.salesExample, 'Sales example', 40, 1500),
     referral_source: optionalText(form.referralSource, 'Referral source', 250),
     experience_tags: allowedList(form.gardeningFocus, 'gardeningFocus', 'experience tag'),
+    preferred_work_areas: isGeneralApplication
+      ? allowedList(form.preferredWorkAreas, 'preferredWorkAreas', 'preferred work area')
+      : [],
+    education_level: isGeneralApplication
+      ? allowedValue(form.educationLevel, 'educationLevel', 'education level')
+      : null,
+    education_field: isGeneralApplication ? optionalText(form.educationField, 'Degree or field of study', 500) : null,
+    licenses_certifications: isGeneralApplication
+      ? allowedOptionalList(form.licensesCertifications, 'licensesCertifications', 'licenses and certifications')
+      : [],
+    equipment_skills: isGeneralApplication
+      ? allowedList(form.equipmentSkills, 'equipmentSkills', 'equipment skill')
+      : [],
+    physical_work_readiness: isGeneralApplication
+      ? allowedValue(form.physicalWorkReadiness, 'physicalWorkReadiness', 'outdoor and physical work answer')
+      : null,
     resume_bucket: JOB_APPLICATION_BUCKET,
     resume_path: resume.path,
     additional_document_paths: supportingDocuments.map((document) => document.path),
-    source: JOB_APPLICATION_SOURCE,
+    source: position.source,
     consent_to_contact: true,
-    application_version: 2,
+    application_version: position.applicationVersion,
   };
 
   return { applicationId, record, resume, supportingDocuments };
@@ -287,18 +384,26 @@ function detailsTable(rows) {
 
 export function buildApplicantConfirmationEmail(record) {
   const name = record.preferred_name || record.first_name;
+  const positionTitle = record.position_title || JOB_APPLICATION_POSITION_TITLE;
+  const applicantSubject = positionTitle === 'General Application'
+    ? 'We received your General Application'
+    : `We received your ${positionTitle} application`;
+  const submissionDescription = positionTitle === 'General Application'
+    ? 'general application'
+    : `application for the ${positionTitle} position`;
   return {
     from: 'Soil Seed & Water <info@soilseedandwater.com>',
     replyTo: 'ralvarez@soilseedandwater.com',
     to: record.email,
-    subject: 'We received your Sales Representative application',
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#24352a;max-width:640px;margin:auto"><h1 style="color:#183a23">Application received</h1><p>Hi ${escapeJobApplicationHtml(name)},</p><p>Thank you for applying for the Sales Representative position with Soil Seed &amp; Water. Your application and documents were received successfully.</p><p>Our team will review your experience and contact you if there is a fit for the next step.</p><p>Questions? Reply to this email or call <a href="tel:+16232633386">(623) 263-3386</a>.</p><p>Soil Seed &amp; Water<br><a href="https://www.organicsoilwholesale.com">www.organicsoilwholesale.com</a></p></div>`,
-    text: `Hi ${name},\n\nThank you for applying for the Sales Representative position with Soil Seed & Water. Your application and documents were received successfully. Our team will review your experience and contact you if there is a fit for the next step.\n\nQuestions? Reply to this email or call (623) 263-3386.`,
+    subject: applicantSubject,
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#24352a;max-width:640px;margin:auto"><h1 style="color:#183a23">Application received</h1><p>Hi ${escapeJobApplicationHtml(name)},</p><p>Thank you for submitting your ${escapeJobApplicationHtml(submissionDescription)} with Soil Seed &amp; Water. Your application and documents were received successfully.</p><p>Our team will review your experience and contact you if there is a fit for a current or future opportunity.</p><p>Questions? Reply to this email or call <a href="tel:+16232633386">(623) 263-3386</a>.</p><p>Soil Seed &amp; Water<br><a href="https://www.organicsoilwholesale.com">www.organicsoilwholesale.com</a></p></div>`,
+    text: `Hi ${name},\n\nThank you for submitting your ${submissionDescription} with Soil Seed & Water. Your application and documents were received successfully. Our team will review your experience and contact you if there is a fit for a current or future opportunity.\n\nQuestions? Reply to this email or call (623) 263-3386.`,
   };
 }
 
 export function buildAdminApplicationEmail(record, documentLinks) {
   const applicantName = `${record.first_name} ${record.last_name}`;
+  const positionTitle = record.position_title || JOB_APPLICATION_POSITION_TITLE;
   const links = documentLinks.map((document) => `<li style="margin:8px 0"><a href="${escapeJobApplicationHtml(document.url)}">${escapeJobApplicationHtml(document.label)}</a> <span style="color:#64748b">(private link expires in 7 days)</span></li>`).join('');
   const rows = [
     ['Applicant', applicantName], ['Email', record.email], ['Phone', record.phone], ['Location', `${record.city}, ${record.state}`],
@@ -309,14 +414,16 @@ export function buildAdminApplicationEmail(record, documentLinks) {
     ['Organic practices', record.organic_practices], ['Product experience', record.product_experience], ['Soil biology answer', record.soil_knowledge],
     ['Computer proficiency', record.computer_proficiency], ['Computer skills', record.computer_skills], ['Software and tools', record.software_tools],
     ['Follow-up workflow answer', record.computer_task_example], ['Customer trust example', record.sales_example], ['Referral source', record.referral_source],
+    ['Preferred work areas', record.preferred_work_areas], ['Education level', record.education_level], ['Degree or field of study', record.education_field],
+    ['Licenses and certifications', record.licenses_certifications], ['Equipment skills', record.equipment_skills], ['Outdoor / physical work interest', record.physical_work_readiness],
     ['LinkedIn / portfolio', record.linkedin_url], ['Application ID', record.id],
   ];
   return {
     from: 'Soil Seed & Water Careers <info@soilseedandwater.com>',
     replyTo: record.email,
-    subject: `New Sales Representative application — ${applicantName}`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#24352a;max-width:760px;margin:auto"><h1 style="color:#183a23">New Sales Representative application</h1><p><strong>${escapeJobApplicationHtml(applicantName)}</strong> submitted a complete application.</p><h2 style="color:#183a23">Private documents</h2><ul>${links}</ul>${detailsTable(rows)}<p style="color:#64748b">Submitted through ${escapeJobApplicationHtml(JOB_APPLICATION_SOURCE)}.</p></div>`,
-    text: `New Sales Representative application from ${applicantName}.\n\nEmail: ${record.email}\nPhone: ${record.phone}\nLocation: ${record.city}, ${record.state}\n\nPrivate document links:\n${documentLinks.map((document) => `${document.label}: ${document.url}`).join('\n')}\n\nApplication ID: ${record.id}`,
+    subject: `New ${positionTitle} — ${applicantName}`,
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#24352a;max-width:760px;margin:auto"><h1 style="color:#183a23">New ${escapeJobApplicationHtml(positionTitle)}</h1><p><strong>${escapeJobApplicationHtml(applicantName)}</strong> submitted a complete application.</p><h2 style="color:#183a23">Private documents</h2><ul>${links}</ul>${detailsTable(rows)}<p style="color:#64748b">Submitted through ${escapeJobApplicationHtml(record.source || JOB_APPLICATION_SOURCE)}.</p></div>`,
+    text: `New ${positionTitle} from ${applicantName}.\n\nEmail: ${record.email}\nPhone: ${record.phone}\nLocation: ${record.city}, ${record.state}\n\nPrivate document links:\n${documentLinks.map((document) => `${document.label}: ${document.url}`).join('\n')}\n\nApplication ID: ${record.id}`,
   };
 }
 
@@ -380,7 +487,8 @@ async function privateDocumentLinks(storage, documents) {
 }
 
 function sameExistingApplication(existing, normalized) {
-  return existing.email === normalized.record.email
+  return existing.position_slug === normalized.record.position_slug
+    && existing.email === normalized.record.email
     && existing.resume_path === normalized.record.resume_path
     && JSON.stringify(existing.additional_document_paths || []) === JSON.stringify(normalized.record.additional_document_paths);
 }
@@ -446,14 +554,15 @@ export async function processJobApplication({ db, resend, body }) {
   return { ok: true, applicationId: normalized.applicationId, applicantConfirmation: 'sent', adminNotifications: 'sent' };
 }
 
-export async function cleanupUnsavedJobApplication({ db, applicationId }) {
+export async function cleanupUnsavedJobApplication({ db, applicationId, positionSlug }) {
   const id = assertApplicationId(applicationId);
+  const position = jobApplicationPosition(positionSlug);
   const { data: existing, error: lookupError } = await db.from('job_applications').select('id').eq('id', id).maybeSingle();
   if (lookupError) throw lookupError;
   if (existing) throw new JobApplicationError('Saved application documents cannot be removed here.', 409, 'application_saved');
 
   const storage = db.storage.from(JOB_APPLICATION_BUCKET);
-  const folder = `${JOB_APPLICATION_POSITION_SLUG}/${id}`;
+  const folder = `${position.slug}/${id}`;
   const { data: files, error: listError } = await storage.list(folder, { limit: 10 });
   if (listError) throw listError;
   const paths = (files || []).filter((file) => file?.name && file.id).map((file) => `${folder}/${file.name}`);

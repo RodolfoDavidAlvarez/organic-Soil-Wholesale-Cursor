@@ -12,9 +12,10 @@ import {
 
 const applicationId = 'a7782093-e50d-4b7a-97ce-b7b546a0081f';
 
-function validBody() {
+function validBody(positionSlug = 'sales-representative') {
   const resume = validateJobApplicationUpload({
     applicationId,
+    positionSlug,
     kind: 'resume',
     name: 'RÉSUMÉ Test.pdf',
     size: 412,
@@ -22,6 +23,7 @@ function validBody() {
   });
   const supporting = validateJobApplicationUpload({
     applicationId,
+    positionSlug,
     kind: 'supporting',
     index: 1,
     name: 'Certificate.png',
@@ -30,6 +32,7 @@ function validBody() {
   });
   return {
     applicationId,
+    positionSlug,
     website: '',
     form: {
       firstName: 'Test', lastName: 'Applicant', preferredName: '', email: 'test@example.com', phone: '(623) 263-3386', city: 'Phoenix', state: 'az', linkedInUrl: '',
@@ -45,6 +48,10 @@ function validBody() {
       computerTaskExample: 'I would answer clearly, record the customer and question in the CRM, create a dated follow-up task, and check it next week.',
       salesExample: 'I listened to a customer’s goals, explained two suitable options without pressure, and followed up after purchase to confirm success.',
       referralSource: 'Instagram', certification: true,
+      preferredWorkAreas: ['Sales and customer service', 'Gardening, growing, or plant care'],
+      educationLevel: 'Bachelor’s degree', educationField: 'Crop science',
+      licensesCertifications: ['Valid driver’s license'], equipmentSkills: ['Forklift', 'Hand and power tools'],
+      physicalWorkReadiness: 'Yes',
     },
     resume,
     supportingDocuments: [supporting],
@@ -58,6 +65,31 @@ test('normalizes a complete three-part application and exact private paths', () 
   assert.equal(normalized.record.resume_path, `sales-representative/${applicationId}/resume-r-sum-test.pdf`);
   assert.deepEqual(normalized.record.gardening_focus, ['Home gardening', 'Organic growing']);
   assert.deepEqual(normalized.record.computer_skills, ['Email and digital calendars', 'CRM or lead-tracking software']);
+});
+
+test('normalizes an evergreen general application and its business-useful screening profile', () => {
+  const normalized = normalizeJobApplication(validBody('general-application'));
+  assert.equal(normalized.record.position_slug, 'general-application');
+  assert.equal(normalized.record.position_title, 'General Application');
+  assert.equal(normalized.record.source, 'www.organicsoilwholesale.com/careers/general');
+  assert.equal(normalized.record.application_version, 3);
+  assert.equal(normalized.record.resume_path, `general-application/${applicationId}/resume-r-sum-test.pdf`);
+  assert.deepEqual(normalized.record.preferred_work_areas, ['Sales and customer service', 'Gardening, growing, or plant care']);
+  assert.equal(normalized.record.education_field, 'Crop science');
+  assert.deepEqual(normalized.record.licenses_certifications, ['Valid driver’s license']);
+  assert.deepEqual(normalized.record.equipment_skills, ['Forklift', 'Hand and power tools']);
+  assert.equal(buildApplicantConfirmationEmail(normalized.record).subject, 'We received your General Application');
+  assert.match(buildAdminApplicationEmail(normalized.record, []).subject, /New General Application/);
+});
+
+test('rejects incomplete or forged general application profiles', () => {
+  const missingWorkArea = validBody('general-application');
+  missingWorkArea.form.preferredWorkAreas = [];
+  assert.throws(() => normalizeJobApplication(missingWorkArea), /preferred work area/);
+
+  const forgedPosition = validBody();
+  forgedPosition.positionSlug = 'executive';
+  assert.throws(() => normalizeJobApplication(forgedPosition), /valid position/);
 });
 
 test('rejects mismatched content types, oversized files, forged paths, and invalid dates', () => {

@@ -5,9 +5,20 @@ import SEO from "@/components/layout/SEO";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
 
-const POSITION_SLUG = "sales-representative";
-const APPLICATION_SOURCE = "www.organicsoilwholesale.com/careers/sales";
-const APPLICATION_URL = `https://${APPLICATION_SOURCE}`;
+type CareersApplicationVariant = "sales" | "general";
+
+const positionConfig = {
+  sales: {
+    slug: "sales-representative",
+    title: "Sales Representative",
+    source: "www.organicsoilwholesale.com/careers/sales",
+  },
+  general: {
+    slug: "general-application",
+    title: "General Application",
+    source: "www.organicsoilwholesale.com/careers/general",
+  },
+} as const;
 const RESUME_BUCKET = "job-applications";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_SUPPORTING_FILES = 5;
@@ -50,6 +61,40 @@ const computerSkillOptions = [
   "Video meetings",
   "Social media and direct messages",
   "AI productivity tools",
+];
+
+const preferredWorkAreaOptions = [
+  "Sales and customer service",
+  "Yard, warehouse, or production",
+  "Delivery and driving",
+  "Gardening, growing, or plant care",
+  "Agronomy, soil science, or crop support",
+  "Office and administration",
+  "Marketing, content, or e-commerce",
+  "Open to any suitable role",
+];
+
+const licenseCertificationOptions = [
+  "Valid driver’s license",
+  "CDL Class A",
+  "CDL Class B",
+  "Forklift certification",
+  "Pesticide applicator license",
+  "Agriculture, horticulture, or landscape certification",
+  "Other professional certification",
+];
+
+const equipmentSkillOptions = [
+  "Forklift",
+  "Skid steer",
+  "Front-end loader",
+  "Tractor",
+  "Dump trailer or towing",
+  "Box truck or delivery vehicle",
+  "Pallet jack",
+  "Bagging, batching, or production equipment",
+  "Hand and power tools",
+  "No equipment experience yet",
 ];
 
 type SubmitStatus = "idle" | "uploading" | "saving" | "sent" | "error";
@@ -100,6 +145,12 @@ type ApplicationForm = {
   computerTaskExample: string;
   salesExample: string;
   referralSource: string;
+  preferredWorkAreas: string[];
+  educationLevel: string;
+  educationField: string;
+  licensesCertifications: string[];
+  equipmentSkills: string[];
+  physicalWorkReadiness: string;
   certification: boolean;
 };
 
@@ -133,6 +184,12 @@ const initialForm: ApplicationForm = {
   computerTaskExample: "",
   salesExample: "",
   referralSource: "",
+  preferredWorkAreas: [],
+  educationLevel: "",
+  educationField: "",
+  licensesCertifications: [],
+  equipmentSkills: [],
+  physicalWorkReadiness: "",
   certification: false,
 };
 
@@ -145,7 +202,17 @@ const fileContentType = (file: File) => {
   return FILE_CONTENT_TYPES[extension] || file.type;
 };
 
-const CareersSales = () => {
+const CareersApplication = ({ variant }: { variant: CareersApplicationVariant }) => {
+  const position = positionConfig[variant];
+  const isGeneralApplication = variant === "general";
+  const APPLICATION_URL = `https://${position.source}`;
+  const applicationSteps = isGeneralApplication
+    ? [
+        { number: 1, title: "Basics", shortTitle: "Basics", icon: ClipboardCheck },
+        { number: 2, title: "Experience and fit", shortTitle: "Experience", icon: Sprout },
+        { number: 3, title: "Computer and work skills", shortTitle: "Skills", icon: Laptop },
+      ]
+    : APPLICATION_STEPS;
   const formRef = useRef<HTMLFormElement>(null);
   const applicationIdRef = useRef(crypto.randomUUID());
   const uploadedDocumentsRef = useRef(new Map<string, UploadedDocument>());
@@ -179,7 +246,7 @@ const CareersSales = () => {
       void fetch("/api/job-applications/cleanup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId }),
+        body: JSON.stringify({ applicationId, positionSlug: position.slug }),
       }).catch(() => undefined);
     }
     applicationIdRef.current = crypto.randomUUID();
@@ -190,7 +257,10 @@ const CareersSales = () => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const toggleListItem = (field: "gardeningFocus" | "computerSkills", option: string) => {
+  const toggleListItem = (
+    field: "gardeningFocus" | "computerSkills" | "preferredWorkAreas" | "licensesCertifications" | "equipmentSkills",
+    option: string,
+  ) => {
     const selected = form[field];
     update(
       field,
@@ -230,6 +300,14 @@ const CareersSales = () => {
     }
     if (currentStep === 2 && form.gardeningFocus.length === 0) {
       setErrorMessage("Please select at least one gardening focus area before continuing.");
+      return false;
+    }
+    if (currentStep === 2 && isGeneralApplication && form.preferredWorkAreas.length === 0) {
+      setErrorMessage("Please select at least one type of work that interests you.");
+      return false;
+    }
+    if (currentStep === 2 && isGeneralApplication && form.equipmentSkills.length === 0) {
+      setErrorMessage("Please select your equipment experience, including the no-experience option if needed.");
       return false;
     }
     if (currentStep === 3 && form.computerSkills.length === 0) {
@@ -272,10 +350,10 @@ const CareersSales = () => {
     }
 
     trackEvent("Recruitment Application Step Completed", {
-      position: POSITION_SLUG,
+      position: position.slug,
       step: currentStep,
     });
-    setCurrentStep((step) => Math.min(step + 1, APPLICATION_STEPS.length));
+    setCurrentStep((step) => Math.min(step + 1, applicationSteps.length));
     scrollToApplication();
   };
 
@@ -340,7 +418,7 @@ const CareersSales = () => {
     event.preventDefault();
     setErrorMessage("");
 
-    if (currentStep < APPLICATION_STEPS.length) {
+    if (currentStep < applicationSteps.length) {
       goToNextStep();
       return;
     }
@@ -353,6 +431,10 @@ const CareersSales = () => {
     }
     if (form.gardeningFocus.length === 0) {
       setErrorMessage("Please select at least one gardening focus area.");
+      return;
+    }
+    if (isGeneralApplication && (form.preferredWorkAreas.length === 0 || form.equipmentSkills.length === 0)) {
+      setErrorMessage("Please complete your preferred work areas and equipment experience.");
       return;
     }
     if (form.computerSkills.length === 0) {
@@ -371,6 +453,7 @@ const CareersSales = () => {
         const contentType = fileContentType(file);
         const signed = await postJson<{ path: string; token: string }>("/api/job-applications/upload-url", {
           applicationId,
+          positionSlug: position.slug,
           kind,
           index,
           name: file.name,
@@ -403,6 +486,7 @@ const CareersSales = () => {
       setStatus("saving");
       await postJson("/api/job-applications", {
         applicationId,
+        positionSlug: position.slug,
         form,
         resume: uploadedResume,
         supportingDocuments: uploadedSupportingDocuments,
@@ -410,8 +494,8 @@ const CareersSales = () => {
       });
 
       trackEvent("Recruitment Application Submitted", {
-        position: POSITION_SLUG,
-        source: APPLICATION_SOURCE,
+        position: position.slug,
+        source: position.source,
       });
       setStatus("sent");
       setForm(initialForm);
@@ -451,10 +535,14 @@ const CareersSales = () => {
   return (
     <div className="min-h-screen bg-[#f5f2ea]">
       <SEO
-        title="Sales Representative Career"
-        description="Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and product experience are preferred."
+        title={isGeneralApplication ? "General Application | Careers" : "Sales Representative Career"}
+        description={isGeneralApplication
+          ? "Submit a general application for current and future opportunities with Soil Seed & Water in Phoenix, Arizona."
+          : "Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and product experience are preferred."}
         canonical={APPLICATION_URL}
-        ogImage="https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png"
+        ogImage={isGeneralApplication
+          ? "https://www.organicsoilwholesale.com/images/field-content/congress-yard-tour.jpg"
+          : "https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png"}
       />
 
       <section className="bg-[#183a23] py-14 text-white lg:py-20">
@@ -465,10 +553,12 @@ const CareersSales = () => {
             </Link>
             <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Join our team · Phoenix, Arizona</p>
             <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Sales Representative
+              {position.title}
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/80">
-              Help gardeners and growers choose products that build healthier soil. We are looking for a strong communicator who knows sales and genuinely enjoys growing things.
+              {isGeneralApplication
+                ? "Interested in working with us? Share your background once, and we can consider you for current and future roles that match your experience."
+                : "Help gardeners and growers choose products that build healthier soil. We are looking for a strong communicator who knows sales and genuinely enjoys growing things."}
             </p>
             <a
               href="#apply"
@@ -478,8 +568,12 @@ const CareersSales = () => {
             </a>
           </div>
           <img
-            src="/images/recruitment/sales-representative-hiring-square-2026.webp"
-            alt="Soil Seed & Water is hiring a sales representative in Phoenix, Arizona"
+            src={isGeneralApplication
+              ? "/images/field-content/congress-yard-tour.jpg"
+              : "/images/recruitment/sales-representative-hiring-square-2026.webp"}
+            alt={isGeneralApplication
+              ? "A gardener inspecting a sunflower at Soil Seed & Water"
+              : "Soil Seed & Water is hiring a sales representative in Phoenix, Arizona"}
             width="1254"
             height="1254"
             className="mx-auto w-full max-w-xl rounded-3xl border border-white/15 object-cover shadow-2xl"
@@ -494,21 +588,27 @@ const CareersSales = () => {
               <Sprout className="h-7 w-7 text-[#397854]" />
               <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">Who we hope to meet</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                A home gardener, grower, landscaper, nursery professional, soil biology learner, or current product user who can connect real growing experience to customer needs.
+                {isGeneralApplication
+                  ? "People who care about plants, soil, customers, operations, or building a growing local business. Formal credentials are welcome but practical experience counts too."
+                  : "A home gardener, grower, landscaper, nursery professional, soil biology learner, or current product user who can connect real growing experience to customer needs."}
               </p>
             </article>
             <article className={cardClass}>
               <Users className="h-7 w-7 text-[#397854]" />
-              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">What you will do</h2>
+              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isGeneralApplication ? "Experience we can use" : "What you will do"}</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                Guide customers, follow up with leads, explain products clearly, build long-term relationships, and help the team turn interest into the right solution.
+                {isGeneralApplication
+                  ? "Gardening, agriculture or crop-science education, sales, customer service, CDL driving, equipment operation, yard work, technology, and administration can all be valuable."
+                  : "Guide customers, follow up with leads, explain products clearly, build long-term relationships, and help the team turn interest into the right solution."}
               </p>
             </article>
             <article className={cardClass}>
               <MapPin className="h-7 w-7 text-[#397854]" />
-              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">Position details</h2>
+              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isGeneralApplication ? "How this works" : "Position details"}</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                This is a Phoenix-area role. Schedule, employment structure, and compensation will be discussed with qualified applicants during the hiring process.
+                {isGeneralApplication
+                  ? "This is an evergreen applicant pool, not a promise of immediate employment. We will contact you when your experience matches an available Phoenix-area opportunity."
+                  : "This is a Phoenix-area role. Schedule, employment structure, and compensation will be discussed with qualified applicants during the hiring process."}
               </p>
             </article>
           </div>
@@ -522,21 +622,21 @@ const CareersSales = () => {
             <h2 className="mt-3 font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Complete your application</h2>
             <p className="mt-3 text-slate-600">One section at a time · approximately 15–20 minutes. Required fields are marked with an asterisk.</p>
 
-            <div className="mt-7" aria-label={`Application progress: step ${currentStep} of ${APPLICATION_STEPS.length}`}>
+            <div className="mt-7" aria-label={`Application progress: step ${currentStep} of ${applicationSteps.length}`}>
               <div className="mb-3 flex items-center justify-between text-sm font-semibold text-[#183a23]">
-                <span>Step {currentStep} of {APPLICATION_STEPS.length}</span>
-                <span>{Math.round((currentStep / APPLICATION_STEPS.length) * 100)}% complete</span>
+                <span>Step {currentStep} of {applicationSteps.length}</span>
+                <span>{Math.round((currentStep / applicationSteps.length) * 100)}% complete</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[#dfe7e1]">
                 <div
                   className="h-full rounded-full bg-[#397854] transition-all duration-300"
-                  style={{ width: `${(currentStep / APPLICATION_STEPS.length) * 100}%` }}
+                  style={{ width: `${(currentStep / applicationSteps.length) * 100}%` }}
                 />
               </div>
             </div>
 
             <ol className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
-              {APPLICATION_STEPS.map((step) => {
+              {applicationSteps.map((step) => {
                 const StepIcon = step.icon;
                 const isActive = currentStep === step.number;
                 const isComplete = currentStep > step.number;
@@ -588,7 +688,11 @@ const CareersSales = () => {
             {currentStep === 1 ? (
             <fieldset id="basics" data-application-step="1" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 1 · Basics and employment readiness</legend>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">Contact details, availability, sales background, and application documents.</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                {isGeneralApplication
+                  ? "Contact details, availability, customer experience, and application documents."
+                  : "Contact details, availability, sales background, and application documents."}
+              </p>
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 <div>
                   <label className={labelClass} htmlFor="firstName">First name *</label>
@@ -649,7 +753,7 @@ const CareersSales = () => {
                 <div>
                   <label className={labelClass} htmlFor="salesExperienceYears">Sales or customer-service experience *</label>
                   <select id="salesExperienceYears" required className={inputClass} value={form.salesExperienceYears} onChange={(event) => update("salesExperienceYears", event.target.value)}>
-                    <option value="">Select one</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>More than 10 years</option>
+                    <option value="">Select one</option><option>No experience yet</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>More than 10 years</option>
                   </select>
                 </div>
                 <div className="sm:col-span-2">
@@ -658,7 +762,7 @@ const CareersSales = () => {
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="salesBackground">Briefly describe your sales or customer-service background. *</label>
-                  <textarea id="salesBackground" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.salesBackground} onChange={(event) => update("salesBackground", event.target.value)} />
+                  <textarea id="salesBackground" required minLength={40} maxLength={1500} rows={5} className={inputClass} placeholder={isGeneralApplication ? "If you are new to sales, describe other work, volunteer, or customer-facing experience." : undefined} value={form.salesBackground} onChange={(event) => update("salesBackground", event.target.value)} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="whySsw">Why do you want to work with Soil Seed & Water? *</label>
@@ -702,8 +806,14 @@ const CareersSales = () => {
 
             {currentStep === 2 ? (
             <fieldset id="gardening-focus" data-application-step="2" className={[cardClass, "scroll-mt-28"].join(" ")}>
-              <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 2 · Gardening focus</legend>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">Professional credentials are welcome but not required. Personal gardening experience counts.</p>
+              <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">
+                Part 2 · {isGeneralApplication ? "Experience and fit" : "Gardening focus"}
+              </legend>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                {isGeneralApplication
+                  ? "Tell us what you know, what you can operate, and where you could help most. Professional credentials are welcome but not required."
+                  : "Professional credentials are welcome but not required. Personal gardening experience counts."}
+              </p>
               <div className="mt-6 space-y-6">
                 <div>
                   <label className={labelClass} htmlFor="gardeningExperienceYears">How long have you gardened, grown plants, farmed, or worked with landscapes? *</label>
@@ -722,6 +832,61 @@ const CareersSales = () => {
                     ))}
                   </div>
                 </div>
+                {isGeneralApplication ? (
+                  <>
+                    <div>
+                      <span className={labelClass}>Which types of work interest you? *</span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {preferredWorkAreaOptions.map((option) => (
+                          <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
+                            <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.preferredWorkAreas.includes(option)} onChange={() => toggleListItem("preferredWorkAreas", option)} />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className={labelClass} htmlFor="educationLevel">Highest education level *</label>
+                        <select id="educationLevel" required className={inputClass} value={form.educationLevel} onChange={(event) => update("educationLevel", event.target.value)}>
+                          <option value="">Select one</option><option>High school or GED</option><option>Trade or technical program</option><option>Some college</option><option>Associate degree</option><option>Bachelor’s degree</option><option>Graduate degree</option><option>Other or prefer not to say</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="educationField">Degree, training, or field of study <span className="font-normal text-slate-500">(optional)</span></label>
+                        <input id="educationField" maxLength={500} placeholder="Agriculture, crop science, horticulture, business..." className={inputClass} value={form.educationField} onChange={(event) => update("educationField", event.target.value)} />
+                      </div>
+                    </div>
+                    <div>
+                      <span className={labelClass}>Licenses and certifications <span className="font-normal text-slate-500">(select all that apply)</span></span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {licenseCertificationOptions.map((option) => (
+                          <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
+                            <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.licensesCertifications.includes(option)} onChange={() => toggleListItem("licensesCertifications", option)} />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className={labelClass}>Which equipment can you safely operate? *</span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {equipmentSkillOptions.map((option) => (
+                          <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
+                            <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.equipmentSkills.includes(option)} onChange={() => toggleListItem("equipmentSkills", option)} />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass} htmlFor="physicalWorkReadiness">Some roles involve outdoor conditions, standing, and moving materials. Should we consider you for those roles? *</label>
+                      <select id="physicalWorkReadiness" required className={inputClass} value={form.physicalWorkReadiness} onChange={(event) => update("physicalWorkReadiness", event.target.value)}>
+                        <option value="">Select one</option><option>Yes</option><option>No</option><option>Open to discussing the role requirements</option>
+                      </select>
+                    </div>
+                  </>
+                ) : null}
                 <div>
                   <label className={labelClass} htmlFor="plantsGrown">What plants, crops, or growing environments do you know best? *</label>
                   <textarea id="plantsGrown" required minLength={20} maxLength={1200} rows={4} className={inputClass} placeholder="For example: vegetables, fruit trees, turf, ornamentals, houseplants, greenhouse crops..." value={form.plantsGrown} onChange={(event) => update("plantsGrown", event.target.value)} />
@@ -803,13 +968,13 @@ const CareersSales = () => {
                 </button>
               ) : <span aria-hidden="true" />}
 
-              {currentStep < APPLICATION_STEPS.length ? (
+              {currentStep < applicationSteps.length ? (
                 <button
                   type="button"
                   onClick={goToNextStep}
                   className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#183a23] px-8 text-base font-bold text-white transition hover:bg-[#215330] sm:w-auto"
                 >
-                  Continue to {APPLICATION_STEPS[currentStep].shortTitle}
+                  Continue to {applicationSteps[currentStep].shortTitle}
                   <ArrowRight className="h-5 w-5" aria-hidden="true" />
                 </button>
               ) : (
@@ -820,7 +985,7 @@ const CareersSales = () => {
               )}
             </div>
             {status === "error" ? (
-              <p className="text-sm text-slate-600">You can also email <a className="font-semibold underline" href="mailto:info@soilseedandwater.com?subject=Sales%20Representative%20Application">info@soilseedandwater.com</a>.</p>
+              <p className="text-sm text-slate-600">You can also email <a className="font-semibold underline" href={`mailto:info@soilseedandwater.com?subject=${encodeURIComponent(position.title)}`}>info@soilseedandwater.com</a>.</p>
             ) : null}
           </form>
         </div>
@@ -828,5 +993,9 @@ const CareersSales = () => {
     </div>
   );
 };
+
+export const CareersGeneral = () => <CareersApplication variant="general" />;
+
+const CareersSales = () => <CareersApplication variant="sales" />;
 
 export default CareersSales;
