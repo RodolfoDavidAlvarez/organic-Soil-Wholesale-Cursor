@@ -103,6 +103,7 @@ async function runSchedule({ db, resend }, args) {
     ...window,
     recipients,
     scheduledAt: date.toISOString(),
+    idempotencySuffix: String(args.idempotencySuffix || ''),
   });
   console.log(JSON.stringify({
     action: 'schedule',
