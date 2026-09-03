@@ -328,6 +328,41 @@ const routes = [
     ],
   },
   {
+    path: "/careers/truck-driver",
+    title: "CDL Truck Driver in Congress, Arizona | Soil Seed & Water",
+    description: "Apply for the CDL Truck Driver position with Soil Seed & Water in Congress, Arizona. Commercial driving, walking-floor, equipment, and bulk-material experience are valued.",
+    keywords: "CDL truck driver Congress Arizona, commercial driver job Arizona, walking floor driver, bulk material driver",
+    canonical: "https://www.organicsoilwholesale.com/careers/truck-driver",
+    image: "https://www.organicsoilwholesale.com/images/pickup-formats/bulk-walking-floor-delivery.jpg",
+    imageType: "image/jpeg",
+    imageWidth: "1400",
+    imageHeight: "1400",
+    schemas: [
+      {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        title: "CDL Truck Driver",
+        description: "Drive and deliver bulk soil materials safely from the Soil Seed & Water Congress operation. A current CDL is required; tractor-trailer, walking-floor, equipment, and bulk-material experience are valued.",
+        datePosted: "2026-09-03",
+        directApply: true,
+        hiringOrganization: {
+          "@type": "Organization",
+          name: "Soil Seed & Water",
+          sameAs: "https://www.organicsoilwholesale.com",
+        },
+        jobLocation: {
+          "@type": "Place",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Congress",
+            addressRegion: "AZ",
+            addressCountry: "US",
+          },
+        },
+      },
+    ],
+  },
+  {
     path: "/free-worm-castings",
     title: "This offer is no longer available | Organic Soil Wholesale",
     description: "The August free worm castings community gift has ended. Browse current Phoenix pickup deals or products.",

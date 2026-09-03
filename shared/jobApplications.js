@@ -15,6 +15,12 @@ export const JOB_APPLICATION_POSITIONS = Object.freeze({
     source: 'www.organicsoilwholesale.com/careers/general',
     applicationVersion: 3,
   }),
+  'cdl-truck-driver': Object.freeze({
+    slug: 'cdl-truck-driver',
+    title: 'CDL Truck Driver',
+    source: 'www.organicsoilwholesale.com/careers/truck-driver',
+    applicationVersion: 4,
+  }),
 });
 export const JOB_APPLICATION_MAX_FILE_BYTES = 8 * 1024 * 1024;
 export const JOB_APPLICATION_MAX_SUPPORTING_FILES = 5;
@@ -42,9 +48,11 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ALLOWED = Object.freeze({
   employmentInterest: new Set(['Full-time', 'Part-time', 'Open to either']),
   phoenixAvailability: new Set(['Yes', 'No', 'Relocating to Phoenix']),
+  congressAvailability: new Set(['Yes', 'No', 'Relocating or planning a commute']),
   reliableTransportation: new Set(['Yes', 'No', 'Would like to discuss']),
   workAuthorization: new Set(['Yes', 'No']),
   salesExperienceYears: new Set(['No experience yet', 'Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
+  commercialDrivingYears: new Set(['Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
   gardeningExperienceYears: new Set(['New, but actively learning', 'Less than 1 year', '1–2 years', '3–5 years', '6–10 years', 'More than 10 years']),
   computerProficiency: new Set([
     'Beginner — I need regular guidance',
@@ -103,6 +111,10 @@ const ALLOWED = Object.freeze({
     'Other professional certification',
   ]),
   equipmentSkills: new Set([
+    'Tractor-trailer',
+    'Walking-floor trailer',
+    'End-dump or dump trailer',
+    'Flatbed trailer',
     'Forklift',
     'Skid steer',
     'Front-end loader',
@@ -112,12 +124,34 @@ const ALLOWED = Object.freeze({
     'Pallet jack',
     'Bagging, batching, or production equipment',
     'Hand and power tools',
+    'Loading and securing bulk materials',
+    'Pre-trip and post-trip inspections',
+    'Basic vehicle maintenance',
     'No equipment experience yet',
   ]),
   physicalWorkReadiness: new Set([
     'Yes',
     'No',
     'Open to discussing the role requirements',
+  ]),
+  cdlClass: new Set(['Class A', 'Class B']),
+  cdlEndorsements: new Set([
+    'T — Double/triple trailers',
+    'N — Tank vehicle',
+    'H — Hazardous materials',
+    'X — Tank and hazardous materials',
+    'No endorsements',
+  ]),
+  dotMedicalCard: new Set(['Current', 'Can obtain before starting', 'Not current']),
+  insurerEligibility: new Set(['Yes', 'Unsure', 'No']),
+  manualTransmission: new Set(['Yes', 'Some experience', 'No']),
+  driverTechnologySkills: new Set([
+    'Smartphone navigation and maps',
+    'Electronic logging device (ELD)',
+    'Dispatch or route apps',
+    'Digital inspection forms',
+    'Proof-of-delivery photos or signatures',
+    'Email and text communication',
   ]),
 });
 
@@ -300,6 +334,7 @@ export function normalizeJobApplication(body) {
   }
 
   const isGeneralApplication = position.slug === 'general-application';
+  const isDriverApplication = position.slug === 'cdl-truck-driver';
   const record = {
     id: applicationId,
     position_slug: position.slug,
@@ -313,27 +348,32 @@ export function normalizeJobApplication(body) {
     state: requiredText(form.state, 'State', 2, 2).toUpperCase(),
     linkedin_url: linkedInUrl,
     employment_interest: allowedValue(form.employmentInterest, 'employmentInterest', 'preferred schedule'),
-    phoenix_availability: allowedValue(form.phoenixAvailability, 'phoenixAvailability', 'Phoenix availability'),
+    phoenix_availability: isDriverApplication ? null : allowedValue(form.phoenixAvailability, 'phoenixAvailability', 'Phoenix availability'),
+    congress_availability: isDriverApplication
+      ? allowedValue(form.congressAvailability, 'congressAvailability', 'Congress availability')
+      : null,
     reliable_transportation: allowedValue(form.reliableTransportation, 'reliableTransportation', 'transportation answer'),
     work_authorization: allowedValue(form.workAuthorization, 'workAuthorization', 'work authorization answer'),
     earliest_start_date: earliestStartDate,
     compensation_expectation: optionalText(form.compensationExpectation, 'Compensation expectation', 160),
-    sales_experience_years: allowedValue(form.salesExperienceYears, 'salesExperienceYears', 'sales experience range'),
-    sales_background: requiredText(form.salesBackground, 'Sales background', 40, 1500),
-    gardening_experience_years: allowedValue(form.gardeningExperienceYears, 'gardeningExperienceYears', 'gardening experience range'),
-    gardening_focus: allowedList(form.gardeningFocus, 'gardeningFocus', 'gardening focus area'),
-    plants_grown: requiredText(form.plantsGrown, 'Plants and growing experience', 20, 1200),
-    organic_practices: requiredText(form.organicPractices, 'Organic practices', 20, 1500),
-    product_experience: requiredText(form.productExperience, 'Product experience', 40, 1500),
+    sales_experience_years: isDriverApplication ? null : allowedValue(form.salesExperienceYears, 'salesExperienceYears', 'sales experience range'),
+    sales_background: isDriverApplication ? null : requiredText(form.salesBackground, 'Sales background', 40, 1500),
+    gardening_experience_years: isDriverApplication ? null : allowedValue(form.gardeningExperienceYears, 'gardeningExperienceYears', 'gardening experience range'),
+    gardening_focus: isDriverApplication ? [] : allowedList(form.gardeningFocus, 'gardeningFocus', 'gardening focus area'),
+    plants_grown: isDriverApplication ? null : requiredText(form.plantsGrown, 'Plants and growing experience', 20, 1200),
+    organic_practices: isDriverApplication ? null : requiredText(form.organicPractices, 'Organic practices', 20, 1500),
+    product_experience: isDriverApplication ? null : requiredText(form.productExperience, 'Product experience', 40, 1500),
     why_ssw: requiredText(form.whySsw, 'Reason for applying', 40, 1500),
-    soil_knowledge: requiredText(form.soilKnowledge, 'Soil knowledge answer', 40, 1500),
+    soil_knowledge: isDriverApplication ? null : requiredText(form.soilKnowledge, 'Soil knowledge answer', 40, 1500),
     computer_proficiency: allowedValue(form.computerProficiency, 'computerProficiency', 'computer proficiency'),
-    computer_skills: allowedList(form.computerSkills, 'computerSkills', 'computer skill'),
+    computer_skills: isDriverApplication ? [] : allowedList(form.computerSkills, 'computerSkills', 'computer skill'),
     software_tools: requiredText(form.softwareTools, 'Software tools', 10, 1200),
     computer_task_example: requiredText(form.computerTaskExample, 'Computer task example', 40, 1500),
-    sales_example: requiredText(form.salesExample, 'Sales example', 40, 1500),
+    sales_example: isDriverApplication ? null : requiredText(form.salesExample, 'Sales example', 40, 1500),
     referral_source: optionalText(form.referralSource, 'Referral source', 250),
-    experience_tags: allowedList(form.gardeningFocus, 'gardeningFocus', 'experience tag'),
+    experience_tags: isDriverApplication
+      ? allowedList(form.equipmentSkills, 'equipmentSkills', 'driving or equipment skill')
+      : allowedList(form.gardeningFocus, 'gardeningFocus', 'experience tag'),
     preferred_work_areas: isGeneralApplication
       ? allowedList(form.preferredWorkAreas, 'preferredWorkAreas', 'preferred work area')
       : [],
@@ -344,11 +384,40 @@ export function normalizeJobApplication(body) {
     licenses_certifications: isGeneralApplication
       ? allowedOptionalList(form.licensesCertifications, 'licensesCertifications', 'licenses and certifications')
       : [],
-    equipment_skills: isGeneralApplication
+    equipment_skills: isGeneralApplication || isDriverApplication
       ? allowedList(form.equipmentSkills, 'equipmentSkills', 'equipment skill')
       : [],
-    physical_work_readiness: isGeneralApplication
+    physical_work_readiness: isGeneralApplication || isDriverApplication
       ? allowedValue(form.physicalWorkReadiness, 'physicalWorkReadiness', 'outdoor and physical work answer')
+      : null,
+    commercial_driving_years: isDriverApplication
+      ? allowedValue(form.commercialDrivingYears, 'commercialDrivingYears', 'commercial driving experience range')
+      : null,
+    cdl_class: isDriverApplication ? allowedValue(form.cdlClass, 'cdlClass', 'CDL class') : null,
+    cdl_endorsements: isDriverApplication
+      ? allowedOptionalList(form.cdlEndorsements, 'cdlEndorsements', 'CDL endorsements')
+      : [],
+    dot_medical_card: isDriverApplication
+      ? allowedValue(form.dotMedicalCard, 'dotMedicalCard', 'DOT medical card answer')
+      : null,
+    insurer_eligibility: isDriverApplication
+      ? allowedValue(form.insurerEligibility, 'insurerEligibility', 'driving-record answer')
+      : null,
+    manual_transmission_experience: isDriverApplication
+      ? allowedValue(form.manualTransmission, 'manualTransmission', 'manual transmission answer')
+      : null,
+    driver_technology_skills: isDriverApplication
+      ? allowedList(form.driverTechnologySkills, 'driverTechnologySkills', 'driver technology skill')
+      : [],
+    commercial_driving_background: isDriverApplication
+      ? requiredText(form.commercialDrivingBackground, 'Commercial driving background', 40, 1500)
+      : null,
+    bulk_material_experience: isDriverApplication
+      ? requiredText(form.bulkMaterialExperience, 'Bulk material experience', 40, 1500)
+      : null,
+    safety_example: isDriverApplication ? requiredText(form.safetyExample, 'Safety example', 40, 1500) : null,
+    customer_delivery_example: isDriverApplication
+      ? requiredText(form.customerDeliveryExample, 'Customer delivery example', 40, 1500)
       : null,
     resume_bucket: JOB_APPLICATION_BUCKET,
     resume_path: resume.path,
@@ -405,19 +474,32 @@ export function buildAdminApplicationEmail(record, documentLinks) {
   const applicantName = `${record.first_name} ${record.last_name}`;
   const positionTitle = record.position_title || JOB_APPLICATION_POSITION_TITLE;
   const links = documentLinks.map((document) => `<li style="margin:8px 0"><a href="${escapeJobApplicationHtml(document.url)}">${escapeJobApplicationHtml(document.label)}</a> <span style="color:#64748b">(private link expires in 7 days)</span></li>`).join('');
-  const rows = [
+  const commonRows = [
     ['Applicant', applicantName], ['Email', record.email], ['Phone', record.phone], ['Location', `${record.city}, ${record.state}`],
-    ['Preferred schedule', record.employment_interest], ['Phoenix availability', record.phoenix_availability], ['Reliable transportation', record.reliable_transportation],
+    ['Preferred schedule', record.employment_interest], ['Reliable transportation', record.reliable_transportation],
     ['Work authorization', record.work_authorization], ['Earliest start', record.earliest_start_date], ['Compensation expectation', record.compensation_expectation],
-    ['Sales experience', record.sales_experience_years], ['Sales background', record.sales_background], ['Why Soil Seed & Water', record.why_ssw],
+    ['Why Soil Seed & Water', record.why_ssw],
+  ];
+  const roleRows = record.position_slug === 'cdl-truck-driver' ? [
+    ['Congress work availability', record.congress_availability], ['Commercial driving experience', record.commercial_driving_years],
+    ['CDL class', record.cdl_class], ['CDL endorsements', record.cdl_endorsements], ['DOT medical card', record.dot_medical_card],
+    ['Can meet insurer driving requirements', record.insurer_eligibility], ['Manual transmission experience', record.manual_transmission_experience],
+    ['Driving and equipment skills', record.equipment_skills], ['Outdoor / physical work interest', record.physical_work_readiness],
+    ['Commercial driving background', record.commercial_driving_background], ['Bulk material experience', record.bulk_material_experience],
+    ['Safety example', record.safety_example], ['Customer delivery example', record.customer_delivery_example],
+    ['Driver technology skills', record.driver_technology_skills], ['Software and tools', record.software_tools],
+    ['Dispatch and documentation answer', record.computer_task_example],
+  ] : [
+    ['Phoenix availability', record.phoenix_availability],
+    ['Sales experience', record.sales_experience_years], ['Sales background', record.sales_background],
     ['Gardening experience', record.gardening_experience_years], ['Gardening focus', record.gardening_focus], ['Plants and environments', record.plants_grown],
     ['Organic practices', record.organic_practices], ['Product experience', record.product_experience], ['Soil biology answer', record.soil_knowledge],
     ['Computer proficiency', record.computer_proficiency], ['Computer skills', record.computer_skills], ['Software and tools', record.software_tools],
     ['Follow-up workflow answer', record.computer_task_example], ['Customer trust example', record.sales_example], ['Referral source', record.referral_source],
     ['Preferred work areas', record.preferred_work_areas], ['Education level', record.education_level], ['Degree or field of study', record.education_field],
     ['Licenses and certifications', record.licenses_certifications], ['Equipment skills', record.equipment_skills], ['Outdoor / physical work interest', record.physical_work_readiness],
-    ['LinkedIn / portfolio', record.linkedin_url], ['Application ID', record.id],
   ];
+  const rows = [...commonRows, ...roleRows, ['Referral source', record.referral_source], ['LinkedIn / portfolio', record.linkedin_url], ['Application ID', record.id]];
   return {
     from: 'Soil Seed & Water Careers <info@soilseedandwater.com>',
     replyTo: record.email,

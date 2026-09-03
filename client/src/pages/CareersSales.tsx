@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, FileText, Laptop, Leaf, MapPin, Sprout, Upload, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, FileText, Laptop, Leaf, MapPin, ShieldCheck, Sprout, Truck, Upload, Users } from "lucide-react";
 import SEO from "@/components/layout/SEO";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
 
-type CareersApplicationVariant = "sales" | "general";
+type CareersApplicationVariant = "sales" | "general" | "driver";
 
 const positionConfig = {
   sales: {
@@ -17,6 +17,11 @@ const positionConfig = {
     slug: "general-application",
     title: "General Application",
     source: "www.organicsoilwholesale.com/careers/general",
+  },
+  driver: {
+    slug: "cdl-truck-driver",
+    title: "CDL Truck Driver",
+    source: "www.organicsoilwholesale.com/careers/truck-driver",
   },
 } as const;
 const RESUME_BUCKET = "job-applications";
@@ -85,6 +90,10 @@ const licenseCertificationOptions = [
 ];
 
 const equipmentSkillOptions = [
+  "Tractor-trailer",
+  "Walking-floor trailer",
+  "End-dump or dump trailer",
+  "Flatbed trailer",
   "Forklift",
   "Skid steer",
   "Front-end loader",
@@ -94,7 +103,27 @@ const equipmentSkillOptions = [
   "Pallet jack",
   "Bagging, batching, or production equipment",
   "Hand and power tools",
+  "Loading and securing bulk materials",
+  "Pre-trip and post-trip inspections",
+  "Basic vehicle maintenance",
   "No equipment experience yet",
+];
+
+const cdlEndorsementOptions = [
+  "T — Double/triple trailers",
+  "N — Tank vehicle",
+  "H — Hazardous materials",
+  "X — Tank and hazardous materials",
+  "No endorsements",
+];
+
+const driverTechnologyOptions = [
+  "Smartphone navigation and maps",
+  "Electronic logging device (ELD)",
+  "Dispatch or route apps",
+  "Digital inspection forms",
+  "Proof-of-delivery photos or signatures",
+  "Email and text communication",
 ];
 
 type SubmitStatus = "idle" | "uploading" | "saving" | "sent" | "error";
@@ -151,6 +180,18 @@ type ApplicationForm = {
   licensesCertifications: string[];
   equipmentSkills: string[];
   physicalWorkReadiness: string;
+  congressAvailability: string;
+  commercialDrivingYears: string;
+  cdlClass: string;
+  cdlEndorsements: string[];
+  dotMedicalCard: string;
+  insurerEligibility: string;
+  manualTransmission: string;
+  driverTechnologySkills: string[];
+  commercialDrivingBackground: string;
+  bulkMaterialExperience: string;
+  safetyExample: string;
+  customerDeliveryExample: string;
   certification: boolean;
 };
 
@@ -190,6 +231,18 @@ const initialForm: ApplicationForm = {
   licensesCertifications: [],
   equipmentSkills: [],
   physicalWorkReadiness: "",
+  congressAvailability: "",
+  commercialDrivingYears: "",
+  cdlClass: "",
+  cdlEndorsements: [],
+  dotMedicalCard: "",
+  insurerEligibility: "",
+  manualTransmission: "",
+  driverTechnologySkills: [],
+  commercialDrivingBackground: "",
+  bulkMaterialExperience: "",
+  safetyExample: "",
+  customerDeliveryExample: "",
   certification: false,
 };
 
@@ -205,8 +258,26 @@ const fileContentType = (file: File) => {
 const CareersApplication = ({ variant }: { variant: CareersApplicationVariant }) => {
   const position = positionConfig[variant];
   const isGeneralApplication = variant === "general";
+  const isDriverApplication = variant === "driver";
   const APPLICATION_URL = `https://${position.source}`;
-  const applicationSteps = isGeneralApplication
+  const locationLabel = isDriverApplication ? "Congress, Arizona" : "Phoenix, Arizona";
+  const heroDescription = isDriverApplication
+    ? "Help move and deliver bulk soil materials safely from our Congress operation. We are looking for a dependable commercial driver with a current CDL and a strong safety mindset."
+    : isGeneralApplication
+      ? "Interested in working with us? Share your background once, and we can consider you for current and future roles that match your experience."
+      : "Help gardeners and growers choose products that build healthier soil. We are looking for a strong communicator who knows sales and genuinely enjoys growing things.";
+  const heroImage = isDriverApplication
+    ? "/images/pickup-formats/bulk-walking-floor-delivery.jpg"
+    : isGeneralApplication
+      ? "/images/field-content/congress-yard-tour.jpg"
+      : "/images/recruitment/sales-representative-hiring-square-2026.webp";
+  const applicationSteps = isDriverApplication
+    ? [
+        { number: 1, title: "Basics", shortTitle: "Basics", icon: ClipboardCheck },
+        { number: 2, title: "Driving and equipment", shortTitle: "Driving", icon: Truck },
+        { number: 3, title: "Safety and work tools", shortTitle: "Safety", icon: ShieldCheck },
+      ]
+    : isGeneralApplication
     ? [
         { number: 1, title: "Basics", shortTitle: "Basics", icon: ClipboardCheck },
         { number: 2, title: "Experience and fit", shortTitle: "Experience", icon: Sprout },
@@ -258,7 +329,7 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
   };
 
   const toggleListItem = (
-    field: "gardeningFocus" | "computerSkills" | "preferredWorkAreas" | "licensesCertifications" | "equipmentSkills",
+    field: "gardeningFocus" | "computerSkills" | "preferredWorkAreas" | "licensesCertifications" | "equipmentSkills" | "cdlEndorsements" | "driverTechnologySkills",
     option: string,
   ) => {
     const selected = form[field];
@@ -298,7 +369,7 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
       document.getElementById("resume")?.focus();
       return false;
     }
-    if (currentStep === 2 && form.gardeningFocus.length === 0) {
+    if (currentStep === 2 && !isDriverApplication && form.gardeningFocus.length === 0) {
       setErrorMessage("Please select at least one gardening focus area before continuing.");
       return false;
     }
@@ -310,7 +381,15 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
       setErrorMessage("Please select your equipment experience, including the no-experience option if needed.");
       return false;
     }
-    if (currentStep === 3 && form.computerSkills.length === 0) {
+    if (currentStep === 2 && isDriverApplication && form.equipmentSkills.length === 0) {
+      setErrorMessage("Please select at least one driving or equipment skill.");
+      return false;
+    }
+    if (currentStep === 3 && isDriverApplication && form.driverTechnologySkills.length === 0) {
+      setErrorMessage("Please select at least one driver communication or technology skill.");
+      return false;
+    }
+    if (currentStep === 3 && !isDriverApplication && form.computerSkills.length === 0) {
       setErrorMessage("Please select at least one computer skill.");
       return false;
     }
@@ -338,11 +417,13 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
         linkedInUrl: value("linkedInUrl"),
         employmentInterest: value("employmentInterest"),
         phoenixAvailability: value("phoenixAvailability"),
+        congressAvailability: value("congressAvailability"),
         reliableTransportation: value("reliableTransportation"),
         workAuthorization: value("workAuthorization"),
         earliestStartDate: value("earliestStartDate"),
         compensationExpectation: value("compensationExpectation"),
         salesExperienceYears: value("salesExperienceYears"),
+        commercialDrivingYears: value("commercialDrivingYears"),
         salesBackground: value("salesBackground"),
         whySsw: value("whySsw"),
         referralSource: value("referralSource"),
@@ -429,7 +510,7 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
       setErrorMessage("Please attach your resume.");
       return;
     }
-    if (form.gardeningFocus.length === 0) {
+    if (!isDriverApplication && form.gardeningFocus.length === 0) {
       setErrorMessage("Please select at least one gardening focus area.");
       return;
     }
@@ -437,7 +518,11 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
       setErrorMessage("Please complete your preferred work areas and equipment experience.");
       return;
     }
-    if (form.computerSkills.length === 0) {
+    if (isDriverApplication && (form.equipmentSkills.length === 0 || form.driverTechnologySkills.length === 0)) {
+      setErrorMessage("Please complete your driving, equipment, and work-tool experience.");
+      return;
+    }
+    if (!isDriverApplication && form.computerSkills.length === 0) {
       setErrorMessage("Please select at least one computer skill.");
       return;
     }
@@ -535,14 +620,14 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
   return (
     <div className="min-h-screen bg-[#f5f2ea]">
       <SEO
-        title={isGeneralApplication ? "General Application | Careers" : "Sales Representative Career"}
-        description={isGeneralApplication
-          ? "Submit a general application for current and future opportunities with Soil Seed & Water in Phoenix, Arizona."
-          : "Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and product experience are preferred."}
+        title={isDriverApplication ? "CDL Truck Driver in Congress, Arizona" : isGeneralApplication ? "General Application | Careers" : "Sales Representative Career"}
+        description={isDriverApplication
+          ? "Apply for the CDL Truck Driver position with Soil Seed & Water in Congress, Arizona. Commercial driving, walking-floor, equipment, and bulk-material experience are valued."
+          : isGeneralApplication
+            ? "Submit a general application for current and future opportunities with Soil Seed & Water in Phoenix, Arizona."
+            : "Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and product experience are preferred."}
         canonical={APPLICATION_URL}
-        ogImage={isGeneralApplication
-          ? "https://www.organicsoilwholesale.com/images/field-content/congress-yard-tour.jpg"
-          : "https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png"}
+        ogImage={`https://www.organicsoilwholesale.com${heroImage}`}
       />
 
       <section className="bg-[#183a23] py-14 text-white lg:py-20">
@@ -551,14 +636,12 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
             <Link href="/careers" className="inline-flex min-h-11 items-center text-sm font-semibold text-white/80 underline-offset-4 transition hover:text-white hover:underline">
               ← View all openings
             </Link>
-            <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Join our team · Phoenix, Arizona</p>
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Join our team · {locationLabel}</p>
             <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
               {position.title}
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/80">
-              {isGeneralApplication
-                ? "Interested in working with us? Share your background once, and we can consider you for current and future roles that match your experience."
-                : "Help gardeners and growers choose products that build healthier soil. We are looking for a strong communicator who knows sales and genuinely enjoys growing things."}
+              {heroDescription}
             </p>
             <a
               href="#apply"
@@ -568,12 +651,12 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
             </a>
           </div>
           <img
-            src={isGeneralApplication
-              ? "/images/field-content/congress-yard-tour.jpg"
-              : "/images/recruitment/sales-representative-hiring-square-2026.webp"}
-            alt={isGeneralApplication
-              ? "A gardener inspecting a sunflower at Soil Seed & Water"
-              : "Soil Seed & Water is hiring a sales representative in Phoenix, Arizona"}
+            src={heroImage}
+            alt={isDriverApplication
+              ? "Walking-floor truck delivering bulk soil material"
+              : isGeneralApplication
+                ? "A gardener inspecting a sunflower at Soil Seed & Water"
+                : "Soil Seed & Water is hiring a sales representative in Phoenix, Arizona"}
             width="1254"
             height="1254"
             className="mx-auto w-full max-w-xl rounded-3xl border border-white/15 object-cover shadow-2xl"
@@ -585,30 +668,36 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-3">
             <article className={cardClass}>
-              <Sprout className="h-7 w-7 text-[#397854]" />
-              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">Who we hope to meet</h2>
+              {isDriverApplication ? <Truck className="h-7 w-7 text-[#397854]" /> : <Sprout className="h-7 w-7 text-[#397854]" />}
+              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isDriverApplication ? "Required license" : "Who we hope to meet"}</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                {isGeneralApplication
-                  ? "People who care about plants, soil, customers, operations, or building a growing local business. Formal credentials are welcome but practical experience counts too."
-                  : "A home gardener, grower, landscaper, nursery professional, soil biology learner, or current product user who can connect real growing experience to customer needs."}
+                {isDriverApplication
+                  ? "A current commercial driver’s license is required. Class A, relevant endorsements, a current DOT medical card, and a driving record that meets insurer requirements are preferred."
+                  : isGeneralApplication
+                    ? "People who care about plants, soil, customers, operations, or building a growing local business. Formal credentials are welcome but practical experience counts too."
+                    : "A home gardener, grower, landscaper, nursery professional, soil biology learner, or current product user who can connect real growing experience to customer needs."}
               </p>
             </article>
             <article className={cardClass}>
               <Users className="h-7 w-7 text-[#397854]" />
-              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isGeneralApplication ? "Experience we can use" : "What you will do"}</h2>
+              <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isDriverApplication ? "What you will do" : isGeneralApplication ? "Experience we can use" : "What you will do"}</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                {isGeneralApplication
-                  ? "Gardening, agriculture or crop-science education, sales, customer service, CDL driving, equipment operation, yard work, technology, and administration can all be valuable."
-                  : "Guide customers, follow up with leads, explain products clearly, build long-term relationships, and help the team turn interest into the right solution."}
+                {isDriverApplication
+                  ? "Complete safe deliveries, perform pre-trip and post-trip inspections, communicate with dispatch and customers, document each delivery, and help with loading or equipment when needed."
+                  : isGeneralApplication
+                    ? "Gardening, agriculture or crop-science education, sales, customer service, CDL driving, equipment operation, yard work, technology, and administration can all be valuable."
+                    : "Guide customers, follow up with leads, explain products clearly, build long-term relationships, and help the team turn interest into the right solution."}
               </p>
             </article>
             <article className={cardClass}>
               <MapPin className="h-7 w-7 text-[#397854]" />
               <h2 className="mt-4 font-heading text-xl font-bold text-[#183a23]">{isGeneralApplication ? "How this works" : "Position details"}</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                {isGeneralApplication
-                  ? "This is an evergreen applicant pool, not a promise of immediate employment. We will contact you when your experience matches an available Phoenix-area opportunity."
-                  : "This is a Phoenix-area role. Schedule, employment structure, and compensation will be discussed with qualified applicants during the hiring process."}
+                {isDriverApplication
+                  ? "This position is based in Congress, Arizona. Schedule, employment structure, routes, equipment, and compensation will be discussed with qualified applicants during the hiring process."
+                  : isGeneralApplication
+                    ? "This is an evergreen applicant pool, not a promise of immediate employment. We will contact you when your experience matches an available Phoenix-area opportunity."
+                    : "This is a Phoenix-area role. Schedule, employment structure, and compensation will be discussed with qualified applicants during the hiring process."}
               </p>
             </article>
           </div>
@@ -689,7 +778,9 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
             <fieldset id="basics" data-application-step="1" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 1 · Basics and employment readiness</legend>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                {isGeneralApplication
+                {isDriverApplication
+                  ? "Contact details, Congress availability, commercial driving history, and application documents."
+                  : isGeneralApplication
                   ? "Contact details, availability, customer experience, and application documents."
                   : "Contact details, availability, sales background, and application documents."}
               </p>
@@ -728,14 +819,27 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
                     <option value="">Select one</option><option>Full-time</option><option>Part-time</option><option>Open to either</option>
                   </select>
                 </div>
+                {isDriverApplication ? (
+                  <div>
+                    <label className={labelClass} htmlFor="congressAvailability">Available to work from our Congress, Arizona operation? *</label>
+                    <select id="congressAvailability" required className={inputClass} value={form.congressAvailability} onChange={(event) => update("congressAvailability", event.target.value)}>
+                      <option value="">Select one</option><option>Yes</option><option>No</option><option>Relocating or planning a commute</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className={labelClass} htmlFor="phoenixAvailability">Available for Phoenix-area work? *</label>
+                    <select id="phoenixAvailability" required className={inputClass} value={form.phoenixAvailability} onChange={(event) => update("phoenixAvailability", event.target.value)}>
+                      <option value="">Select one</option><option>Yes</option><option>No</option><option>Relocating to Phoenix</option>
+                    </select>
+                  </div>
+                )}
                 <div>
-                  <label className={labelClass} htmlFor="phoenixAvailability">Available for Phoenix-area work? *</label>
-                  <select id="phoenixAvailability" required className={inputClass} value={form.phoenixAvailability} onChange={(event) => update("phoenixAvailability", event.target.value)}>
-                    <option value="">Select one</option><option>Yes</option><option>No</option><option>Relocating to Phoenix</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="reliableTransportation">Can you reliably travel to work and customer locations in the Phoenix area? *</label>
+                  <label className={labelClass} htmlFor="reliableTransportation">
+                    {isDriverApplication
+                      ? "Can you reliably report to our Congress operation and travel for assigned deliveries? *"
+                      : "Can you reliably travel to work and customer locations in the Phoenix area? *"}
+                  </label>
                   <select id="reliableTransportation" required className={inputClass} value={form.reliableTransportation} onChange={(event) => update("reliableTransportation", event.target.value)}>
                     <option value="">Select one</option><option>Yes</option><option>No</option><option>Would like to discuss</option>
                   </select>
@@ -750,20 +854,31 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
                   <label className={labelClass} htmlFor="earliestStartDate">Earliest start date *</label>
                   <input id="earliestStartDate" type="date" required className={inputClass} value={form.earliestStartDate} onInput={(event) => update("earliestStartDate", event.currentTarget.value)} onChange={(event) => update("earliestStartDate", event.target.value)} />
                 </div>
-                <div>
-                  <label className={labelClass} htmlFor="salesExperienceYears">Sales or customer-service experience *</label>
-                  <select id="salesExperienceYears" required className={inputClass} value={form.salesExperienceYears} onChange={(event) => update("salesExperienceYears", event.target.value)}>
-                    <option value="">Select one</option><option>No experience yet</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>More than 10 years</option>
-                  </select>
-                </div>
+                {isDriverApplication ? (
+                  <div>
+                    <label className={labelClass} htmlFor="commercialDrivingYears">Commercial driving experience *</label>
+                    <select id="commercialDrivingYears" required className={inputClass} value={form.commercialDrivingYears} onChange={(event) => update("commercialDrivingYears", event.target.value)}>
+                      <option value="">Select one</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>More than 10 years</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className={labelClass} htmlFor="salesExperienceYears">Sales or customer-service experience *</label>
+                    <select id="salesExperienceYears" required className={inputClass} value={form.salesExperienceYears} onChange={(event) => update("salesExperienceYears", event.target.value)}>
+                      <option value="">Select one</option><option>No experience yet</option><option>Less than 1 year</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>More than 10 years</option>
+                    </select>
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="compensationExpectation">Compensation expectation <span className="font-normal text-slate-500">(optional)</span></label>
                   <input id="compensationExpectation" maxLength={160} placeholder="Share a range or structure you are seeking" className={inputClass} value={form.compensationExpectation} onChange={(event) => update("compensationExpectation", event.target.value)} />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className={labelClass} htmlFor="salesBackground">Briefly describe your sales or customer-service background. *</label>
-                  <textarea id="salesBackground" required minLength={40} maxLength={1500} rows={5} className={inputClass} placeholder={isGeneralApplication ? "If you are new to sales, describe other work, volunteer, or customer-facing experience." : undefined} value={form.salesBackground} onChange={(event) => update("salesBackground", event.target.value)} />
-                </div>
+                {!isDriverApplication ? (
+                  <div className="sm:col-span-2">
+                    <label className={labelClass} htmlFor="salesBackground">Briefly describe your sales or customer-service background. *</label>
+                    <textarea id="salesBackground" required minLength={40} maxLength={1500} rows={5} className={inputClass} placeholder={isGeneralApplication ? "If you are new to sales, describe other work, volunteer, or customer-facing experience." : undefined} value={form.salesBackground} onChange={(event) => update("salesBackground", event.target.value)} />
+                  </div>
+                ) : null}
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="whySsw">Why do you want to work with Soil Seed & Water? *</label>
                   <textarea id="whySsw" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.whySsw} onChange={(event) => update("whySsw", event.target.value)} />
@@ -805,16 +920,91 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
             ) : null}
 
             {currentStep === 2 ? (
-            <fieldset id="gardening-focus" data-application-step="2" className={[cardClass, "scroll-mt-28"].join(" ")}>
+            <fieldset id={isDriverApplication ? "driving-experience" : "gardening-focus"} data-application-step="2" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">
-                Part 2 · {isGeneralApplication ? "Experience and fit" : "Gardening focus"}
+                Part 2 · {isDriverApplication ? "Driving and equipment" : isGeneralApplication ? "Experience and fit" : "Gardening focus"}
               </legend>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                {isGeneralApplication
+                {isDriverApplication
+                  ? "Tell us about your CDL, commercial driving record, equipment experience, and safe work habits."
+                  : isGeneralApplication
                   ? "Tell us what you know, what you can operate, and where you could help most. Professional credentials are welcome but not required."
                   : "Professional credentials are welcome but not required. Personal gardening experience counts."}
               </p>
               <div className="mt-6 space-y-6">
+                {isDriverApplication ? (
+                  <>
+                    <div>
+                      <label className={labelClass} htmlFor="commercialDrivingBackground">Describe your commercial driving background, including vehicle types, routes, and typical loads. *</label>
+                      <textarea id="commercialDrivingBackground" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.commercialDrivingBackground} onChange={(event) => update("commercialDrivingBackground", event.target.value)} />
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className={labelClass} htmlFor="cdlClass">Current CDL class *</label>
+                        <select id="cdlClass" required className={inputClass} value={form.cdlClass} onChange={(event) => update("cdlClass", event.target.value)}>
+                          <option value="">Select one</option><option>Class A</option><option>Class B</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="dotMedicalCard">DOT medical card *</label>
+                        <select id="dotMedicalCard" required className={inputClass} value={form.dotMedicalCard} onChange={(event) => update("dotMedicalCard", event.target.value)}>
+                          <option value="">Select one</option><option>Current</option><option>Can obtain before starting</option><option>Not current</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <span className={labelClass}>CDL endorsements <span className="font-normal text-slate-500">(select all that apply)</span></span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {cdlEndorsementOptions.map((option) => (
+                          <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
+                            <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.cdlEndorsements.includes(option)} onChange={() => toggleListItem("cdlEndorsements", option)} />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className={labelClass} htmlFor="insurerEligibility">Can you meet company and insurer driving-record requirements? *</label>
+                        <select id="insurerEligibility" required className={inputClass} value={form.insurerEligibility} onChange={(event) => update("insurerEligibility", event.target.value)}>
+                          <option value="">Select one</option><option>Yes</option><option>Unsure</option><option>No</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="manualTransmission">Manual transmission experience *</label>
+                        <select id="manualTransmission" required className={inputClass} value={form.manualTransmission} onChange={(event) => update("manualTransmission", event.target.value)}>
+                          <option value="">Select one</option><option>Yes</option><option>Some experience</option><option>No</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <span className={labelClass}>Which vehicles, trailers, or equipment can you safely operate? *</span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {equipmentSkillOptions.filter((option) => option !== "No equipment experience yet").map((option) => (
+                          <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
+                            <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.equipmentSkills.includes(option)} onChange={() => toggleListItem("equipmentSkills", option)} />
+                            {option}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass} htmlFor="physicalWorkReadiness">Are you prepared for outdoor work, inspections, securing loads, and reasonable material-handling duties? *</label>
+                      <select id="physicalWorkReadiness" required className={inputClass} value={form.physicalWorkReadiness} onChange={(event) => update("physicalWorkReadiness", event.target.value)}>
+                        <option value="">Select one</option><option>Yes</option><option>No</option><option>Open to discussing the role requirements</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass} htmlFor="bulkMaterialExperience">Describe your experience loading, securing, hauling, or unloading bulk materials. *</label>
+                      <textarea id="bulkMaterialExperience" required minLength={40} maxLength={1500} rows={5} className={inputClass} placeholder="Examples may include soil, compost, aggregate, agricultural materials, or similar loads." value={form.bulkMaterialExperience} onChange={(event) => update("bulkMaterialExperience", event.target.value)} />
+                    </div>
+                    <div>
+                      <label className={labelClass} htmlFor="safetyExample">Tell us about a time you identified or prevented a driving, equipment, or job-site safety issue. *</label>
+                      <textarea id="safetyExample" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.safetyExample} onChange={(event) => update("safetyExample", event.target.value)} />
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <div>
                   <label className={labelClass} htmlFor="gardeningExperienceYears">How long have you gardened, grown plants, farmed, or worked with landscapes? *</label>
                   <select id="gardeningExperienceYears" required className={inputClass} value={form.gardeningExperienceYears} onChange={(event) => update("gardeningExperienceYears", event.target.value)}>
@@ -903,14 +1093,22 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
                   <label className={labelClass} htmlFor="soilKnowledge">A customer asks, “Why should I care about soil biology?” How would you answer? *</label>
                   <textarea id="soilKnowledge" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.soilKnowledge} onChange={(event) => update("soilKnowledge", event.target.value)} />
                 </div>
+                  </>
+                )}
               </div>
             </fieldset>
             ) : null}
 
             {currentStep === 3 ? (
             <fieldset id="computer-skills" data-application-step="3" className={[cardClass, "scroll-mt-28"].join(" ")}>
-              <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 3 · Computer literacy and sales skills</legend>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">We use everyday digital tools to serve customers, document conversations, and follow up reliably.</p>
+              <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">
+                Part 3 · {isDriverApplication ? "Safety, communication, and work tools" : isGeneralApplication ? "Computer and work skills" : "Computer literacy and sales skills"}
+              </legend>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                {isDriverApplication
+                  ? "We use digital tools to coordinate routes, document inspections and deliveries, and communicate safely with customers and the team."
+                  : "We use everyday digital tools to serve customers, document conversations, and follow up reliably."}
+              </p>
               <div className="mt-6 space-y-6">
                 <div>
                   <label className={labelClass} htmlFor="computerProficiency">How comfortable are you learning and using computer-based work tools? *</label>
@@ -921,26 +1119,46 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
                 <div>
                   <span className={labelClass}>Which tools or tasks have you used? *</span>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {computerSkillOptions.map((option) => (
+                    {(isDriverApplication ? driverTechnologyOptions : computerSkillOptions).map((option) => (
                       <label key={option} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9e1db] px-4 py-3 text-sm text-slate-700 transition hover:border-[#397854]">
-                        <input type="checkbox" className="h-5 w-5 accent-[#397854]" checked={form.computerSkills.includes(option)} onChange={() => toggleListItem("computerSkills", option)} />
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 accent-[#397854]"
+                          checked={(isDriverApplication ? form.driverTechnologySkills : form.computerSkills).includes(option)}
+                          onChange={() => toggleListItem(isDriverApplication ? "driverTechnologySkills" : "computerSkills", option)}
+                        />
                         {option}
                       </label>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="softwareTools">List software, apps, CRM systems, or sales tools you have used. *</label>
-                  <textarea id="softwareTools" required minLength={10} maxLength={1200} rows={4} className={inputClass} placeholder="If you have limited experience, tell us what you currently use and how you learn new tools." value={form.softwareTools} onChange={(event) => update("softwareTools", event.target.value)} />
+                  <label className={labelClass} htmlFor="softwareTools">
+                    {isDriverApplication
+                      ? "List navigation, ELD, dispatch, inspection, or proof-of-delivery tools you have used. *"
+                      : "List software, apps, CRM systems, or sales tools you have used. *"}
+                  </label>
+                  <textarea id="softwareTools" required minLength={10} maxLength={1200} rows={4} className={inputClass} placeholder={isDriverApplication ? "If your experience is limited, tell us which phone or navigation tools you currently use." : "If you have limited experience, tell us what you currently use and how you learn new tools."} value={form.softwareTools} onChange={(event) => update("softwareTools", event.target.value)} />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="computerTaskExample">A customer emails a product question and asks for a follow-up next week. Explain how you would respond, record the details, and make sure you follow up. *</label>
+                  <label className={labelClass} htmlFor="computerTaskExample">
+                    {isDriverApplication
+                      ? "Dispatch changes your route while a customer is waiting. Explain how you would communicate the change, document it, and complete the delivery safely. *"
+                      : "A customer emails a product question and asks for a follow-up next week. Explain how you would respond, record the details, and make sure you follow up. *"}
+                  </label>
                   <textarea id="computerTaskExample" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.computerTaskExample} onChange={(event) => update("computerTaskExample", event.target.value)} />
                 </div>
-                <div>
-                  <label className={labelClass} htmlFor="salesExample">Tell us about a time you earned a customer&apos;s trust or solved their problem. *</label>
-                  <textarea id="salesExample" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.salesExample} onChange={(event) => update("salesExample", event.target.value)} />
-                </div>
+                {isDriverApplication ? (
+                  <div>
+                    <label className={labelClass} htmlFor="customerDeliveryExample">Tell us about a time you handled a difficult delivery, customer concern, or job-site condition professionally. *</label>
+                    <textarea id="customerDeliveryExample" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.customerDeliveryExample} onChange={(event) => update("customerDeliveryExample", event.target.value)} />
+                  </div>
+                ) : (
+                  <div>
+                    <label className={labelClass} htmlFor="salesExample">Tell us about a time you earned a customer&apos;s trust or solved their problem. *</label>
+                    <textarea id="salesExample" required minLength={40} maxLength={1500} rows={5} className={inputClass} value={form.salesExample} onChange={(event) => update("salesExample", event.target.value)} />
+                  </div>
+                )}
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-[#f4f8f5] p-4 text-sm leading-relaxed text-slate-700">
                   <input type="checkbox" required className="mt-0.5 h-5 w-5 shrink-0 accent-[#397854]" checked={form.certification} onChange={(event) => update("certification", event.target.checked)} />
                   <span>
@@ -995,6 +1213,8 @@ const CareersApplication = ({ variant }: { variant: CareersApplicationVariant })
 };
 
 export const CareersGeneral = () => <CareersApplication variant="general" />;
+
+export const CareersDriver = () => <CareersApplication variant="driver" />;
 
 const CareersSales = () => <CareersApplication variant="sales" />;
 

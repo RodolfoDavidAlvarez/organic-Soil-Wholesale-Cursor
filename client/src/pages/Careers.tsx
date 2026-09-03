@@ -16,6 +16,17 @@ const openings = [
     status: "Open position",
   },
   {
+    title: "CDL Truck Driver",
+    location: "Congress, Arizona",
+    schedule: "Schedule discussed during hiring",
+    description:
+      "Drive and deliver bulk soil materials safely from our Congress operation. A current CDL is required; tractor-trailer, walking-floor, equipment, and bulk-material experience are valued.",
+    href: "/careers/truck-driver",
+    image: "/images/pickup-formats/bulk-walking-floor-delivery.jpg",
+    imageAlt: "Walking-floor truck delivering bulk soil material",
+    status: "Open position",
+  },
+  {
     title: "General Application",
     location: "Phoenix, Arizona",
     schedule: "Current and future opportunities",
@@ -33,7 +44,7 @@ const Careers = () => {
     <div className="min-h-screen bg-[#f5f2ea]">
       <SEO
         title="Careers at Soil Seed & Water"
-        description="Explore current career opportunities with Soil Seed & Water in Phoenix, Arizona. View open positions and apply online."
+        description="Explore current Soil Seed & Water career opportunities in Phoenix and Congress, Arizona. View open positions and apply online."
         canonical="https://www.organicsoilwholesale.com/careers"
         ogImage="https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png"
       />

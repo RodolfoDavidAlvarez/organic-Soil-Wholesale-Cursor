@@ -52,6 +52,13 @@ function validBody(positionSlug = 'sales-representative') {
       educationLevel: 'Bachelor’s degree', educationField: 'Crop science',
       licensesCertifications: ['Valid driver’s license'], equipmentSkills: ['Forklift', 'Hand and power tools'],
       physicalWorkReadiness: 'Yes',
+      congressAvailability: 'Yes', commercialDrivingYears: '6–10 years', cdlClass: 'Class A',
+      cdlEndorsements: ['T — Double/triple trailers'], dotMedicalCard: 'Current', insurerEligibility: 'Yes', manualTransmission: 'Yes',
+      driverTechnologySkills: ['Electronic logging device (ELD)', 'Proof-of-delivery photos or signatures'],
+      commercialDrivingBackground: 'I have driven commercial tractor-trailers on local and regional routes for more than six years.',
+      bulkMaterialExperience: 'I have safely loaded, secured, hauled, and unloaded compost, soil, and aggregate in walking-floor and dump trailers.',
+      safetyExample: 'I stopped a departure after finding a damaged securement point during inspection and had it repaired before moving the load.',
+      customerDeliveryExample: 'I handled a restricted job site by confirming access with the customer, repositioning safely, and documenting delivery.',
     },
     resume,
     supportingDocuments: [supporting],
@@ -90,6 +97,43 @@ test('rejects incomplete or forged general application profiles', () => {
   const forgedPosition = validBody();
   forgedPosition.positionSlug = 'executive';
   assert.throws(() => normalizeJobApplication(forgedPosition), /valid position/);
+});
+
+test('normalizes the Congress CDL truck driver application and tailored screening profile', () => {
+  const body = validBody('cdl-truck-driver');
+  body.form.city = 'Congress';
+  body.form.equipmentSkills = ['Tractor-trailer', 'Walking-floor trailer', 'Pre-trip and post-trip inspections'];
+  const normalized = normalizeJobApplication(body);
+
+  assert.equal(normalized.record.position_slug, 'cdl-truck-driver');
+  assert.equal(normalized.record.position_title, 'CDL Truck Driver');
+  assert.equal(normalized.record.source, 'www.organicsoilwholesale.com/careers/truck-driver');
+  assert.equal(normalized.record.application_version, 4);
+  assert.equal(normalized.record.resume_path, `cdl-truck-driver/${applicationId}/resume-r-sum-test.pdf`);
+  assert.equal(normalized.record.congress_availability, 'Yes');
+  assert.equal(normalized.record.cdl_class, 'Class A');
+  assert.deepEqual(normalized.record.cdl_endorsements, ['T — Double/triple trailers']);
+  assert.deepEqual(normalized.record.driver_technology_skills, ['Electronic logging device (ELD)', 'Proof-of-delivery photos or signatures']);
+  assert.deepEqual(normalized.record.equipment_skills, ['Tractor-trailer', 'Walking-floor trailer', 'Pre-trip and post-trip inspections']);
+  assert.equal(normalized.record.phoenix_availability, null);
+  assert.equal(normalized.record.sales_background, null);
+  assert.deepEqual(normalized.record.gardening_focus, []);
+  assert.equal(buildApplicantConfirmationEmail(normalized.record).subject, 'We received your CDL Truck Driver application');
+  assert.match(buildAdminApplicationEmail(normalized.record, []).subject, /New CDL Truck Driver/);
+});
+
+test('rejects incomplete or forged CDL truck driver profiles', () => {
+  const missingEquipment = validBody('cdl-truck-driver');
+  missingEquipment.form.equipmentSkills = [];
+  assert.throws(() => normalizeJobApplication(missingEquipment), /equipment skill/);
+
+  const forgedCdlClass = validBody('cdl-truck-driver');
+  forgedCdlClass.form.cdlClass = 'Class C';
+  assert.throws(() => normalizeJobApplication(forgedCdlClass), /valid CDL class/);
+
+  const missingDriverTools = validBody('cdl-truck-driver');
+  missingDriverTools.form.driverTechnologySkills = [];
+  assert.throws(() => normalizeJobApplication(missingDriverTools), /driver technology skill/);
 });
 
 test('rejects mismatched content types, oversized files, forged paths, and invalid dates', () => {
