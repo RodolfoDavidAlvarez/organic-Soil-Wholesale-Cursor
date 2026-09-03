@@ -25,36 +25,11 @@ const Careers = () => {
         ogImage="https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png"
       />
 
-      <section className="bg-[#183a23] py-16 text-white lg:py-24">
+      <section id="open-positions" className="bg-[#faf9f5] py-8 sm:py-10 lg:py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Careers at Soil Seed &amp; Water</p>
-          <h1 className="mt-4 max-w-4xl font-heading text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Grow something meaningful with us.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/80">
-            Join a Phoenix team helping gardeners, growers, and landscape professionals build healthier soil and stronger communities.
-          </p>
-          <a
-            href="#open-positions"
-            className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#d4aa63] px-7 text-sm font-bold text-[#183a23] transition hover:bg-[#e2c184]"
-          >
-            View open positions
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </div>
-      </section>
+          <h1 className="font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Open positions</h1>
 
-      <section id="open-positions" className="scroll-mt-28 bg-[#faf9f5] py-16 lg:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a34]">Current opportunities</p>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Open positions</h2>
-            <p className="mt-3 leading-relaxed text-slate-600">
-              Select a position to review the details and start your application. New opportunities will be added here as they open.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-6">
+          <div className="mt-6 grid gap-6">
             {openings.map((opening) => (
               <article
                 key={opening.href}
