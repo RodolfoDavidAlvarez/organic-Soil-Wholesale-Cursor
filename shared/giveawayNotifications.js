@@ -25,6 +25,8 @@ const CATEGORY_LABELS = Object.fromEntries(GIVEAWAY_GROWING_OPTIONS);
 const CATEGORY_KEYS = GIVEAWAY_GROWING_OPTIONS.map(([key]) => key);
 const MAP_CONTENT_ID = 'giveaway-lead-map';
 const LOGO_URL = 'https://www.organicsoilwholesale.com/email-assets/ssw-logo.png';
+const AUGUST_LEAD_START = '2026-08-01T07:00:00.000Z';
+const SEPTEMBER_GIVEAWAY_START = '2026-09-01T07:00:00.000Z';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -41,6 +43,17 @@ function escapeXml(value) {
 
 function normalizeZip(value) {
   return String(value || '').replace(/\D/g, '').slice(0, 5) || 'Unknown';
+}
+
+function uniqueLeadCount(rows, since = AUGUST_LEAD_START) {
+  const emails = new Set();
+  for (const row of rows || []) {
+    const email = String(row?.email || '').trim().toLowerCase();
+    const createdAt = new Date(row?.created_at || 0);
+    if (!email || email.endsWith('@example.com') || Number.isNaN(createdAt.getTime()) || createdAt < new Date(since)) continue;
+    emails.add(email);
+  }
+  return emails.size;
 }
 
 export function isGiveawayLeadReportEligible(entry) {
@@ -128,6 +141,8 @@ export function buildGiveawayLeadReportModel({
   entryStart = (batchNumber - 1) * batchSize + 1,
   entryEnd = entryStart + batchSize - 1,
   giveawayTotalCount = giveawayEntries?.length || 0,
+  allLeadRows = giveawayEntries || [],
+  allGiveawayRows = giveawayEntries || [],
 }) {
   const eligibleEntries = (giveawayEntries || []).filter(isGiveawayLeadReportEligible);
   const start = entryStart - 1;
@@ -170,6 +185,8 @@ export function buildGiveawayLeadReportModel({
     startOrdinal: entryStart,
     endOrdinal: end,
     giveawayTotalCount: Math.max(Number(giveawayTotalCount || 0), end),
+    totalLeadsSinceAugust: uniqueLeadCount(allLeadRows),
+    giveawayLeadsSinceSeptember: uniqueLeadCount(allGiveawayRows, SEPTEMBER_GIVEAWAY_START),
     batch,
     baselineCount: baseline.length,
     beforeTotal,
@@ -301,24 +318,24 @@ export async function buildGiveawayLeadReportEmail({ model, testing = false, gen
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(subject)}</title>
 <style>:root{color-scheme:light only;supported-color-schemes:light}@media(max-width:560px){.email-pad{padding-left:16px!important;padding-right:16px!important}.kpi{display:block!important;width:100%!important;border-right:0!important;border-bottom:1px solid #dce4da!important}.stage-cell{display:block!important;width:100%!important;padding:7px 0!important}.people-head{display:none!important}.person-row,.person-cell{display:block!important;width:100%!important}.person-row{padding:10px 0;border-top:1px solid #dce4da}.person-cell{padding:3px 0!important;border:0!important;white-space:normal!important}}</style></head>
 <body bgcolor="#eef2ed" style="margin:0;background:#eef2ed;font-family:Arial,Helvetica,sans-serif;color:#1e3824;">
-<div style="display:none;max-height:0;overflow:hidden;">Latest ${model.batchSize} giveaway leads. Total leads since the August launch: ${model.giveawayTotalCount}. Map and contact details inside.</div>
+<div style="display:none;max-height:0;overflow:hidden;">Latest ${model.batchSize} giveaway leads. ${model.totalLeadsSinceAugust} total leads since August; ${model.giveawayLeadsSinceSeptember} Big Garden Giveaway leads since September.</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#eef2ed" style="background:#eef2ed;"><tr><td align="center" style="padding:24px 10px;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:680px;background:#ffffff;border:1px solid #d6e0d4;border-radius:16px;overflow:hidden;">
   <tr><td class="email-pad" bgcolor="#ffffff" style="padding:18px 24px;background:#ffffff;border-bottom:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><img src="${LOGO_URL}" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"></td><td align="right" style="color:#526759;font-size:12px;">SSW Lead Report</td></tr></table></td></tr>
   ${testing ? '<tr><td class="email-pad" style="padding:11px 24px;background:#fff8e7;color:#684e12;font-size:12px;"><strong>Internal production test:</strong> delivered only to Rodolfo. Live batching is not triggered by this test.</td></tr>' : ''}
-  <tr><td class="email-pad" bgcolor="#d9efdd" style="padding:27px 24px 23px;background:#d9efdd;color:#132f1a;"><div style="color:#6b4809;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Big Garden Giveaway</div><h1 style="margin:7px 0 7px;color:#132f1a;font-size:29px;line-height:1.2;">SSW Lead Report #${model.batchNumber}</h1><p style="margin:0;color:#294f34;font-size:15px;line-height:1.5;"><strong>This report covers the latest ${model.batchSize} lead submissions.</strong><br>Total leads since launch (August): ${model.giveawayTotalCount}.</p></td></tr>
+  <tr><td class="email-pad" bgcolor="#d9efdd" style="padding:27px 24px 23px;background:#d9efdd;color:#132f1a;"><div style="color:#6b4809;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Big Garden Giveaway</div><h1 style="margin:7px 0 7px;color:#132f1a;font-size:29px;line-height:1.2;">SSW Lead Report #${model.batchNumber}</h1><p style="margin:0;color:#294f34;font-size:15px;line-height:1.5;"><strong>This report covers the latest ${model.batchSize} giveaway lead submissions.</strong><br>Total leads since August: ${model.totalLeadsSinceAugust}.<br>Big Garden Giveaway leads since September: ${model.giveawayLeadsSinceSeptember}.</p></td></tr>
   <tr><td bgcolor="#f4f8f2" style="padding:0;background:#f4f8f2;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
     <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #dce4da;"><span style="display:block;color:#526759;font-size:11px;">Leads in this report</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.batchSize}</strong></td>
-    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #dce4da;"><span style="display:block;color:#526759;font-size:11px;">Total leads since August</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.giveawayTotalCount}</strong></td>
-    <td class="kpi" width="33.33%" style="padding:17px 20px;"><span style="display:block;color:#526759;font-size:11px;">ZIPs in latest 30</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.uniqueZips}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #dce4da;"><span style="display:block;color:#526759;font-size:11px;">Total leads since August</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.totalLeadsSinceAugust}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;"><span style="display:block;color:#526759;font-size:11px;">Giveaway since September</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.giveawayLeadsSinceSeptember}</strong></td>
   </tr></table></td></tr>
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">What people are growing</h2></td><td align="right" style="color:#526759;font-size:11px;">All 9 categories · before → now</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:13px;">${categoryRows(model)}</table></td></tr>
+  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">What profiled leads are growing</h2></td><td align="right" style="color:#526759;font-size:11px;">${model.afterTotal} categorized profiles · all 9 categories</td></tr></table><p style="margin:8px 0 0;color:#526759;font-size:11px;line-height:1.45;">Category insights use only leads who answered the growing questions; earlier leads are included in the headline total but not assumed here.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:13px;">${categoryRows(model)}</table></td></tr>
   <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Gardening journey</h2></td><td align="right" style="color:#526759;font-size:11px;">${model.baselineCount} prior profiles + ${model.endOrdinal} giveaway entrants</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>${stageBlock('Before', model.beforeStatus, model.beforeTotal).replace('<td ', '<td class="stage-cell" ')}${stageBlock('Now', model.afterStatus, model.afterTotal).replace('<td ', '<td class="stage-cell" ')}</tr></table><p style="margin:11px 0 0;color:#526759;font-size:11px;"><span style="color:#3f7b49;">●</span> New or starting &nbsp;&nbsp; <span style="color:#b47a0b;">●</span> Improving an existing garden</p></td></tr>
   <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Where the latest 30 leads are</h2></td><td align="right" style="color:#526759;font-size:11px;">${escapeHtml(mapCaption)}</td></tr></table><img src="cid:${MAP_CONTENT_ID}" width="560" alt="Phoenix metro map showing the ${map.mappedPeople} leads in this report." style="display:block;width:100%;max-width:560px;height:auto;margin:15px auto 0;border:0;border-radius:12px;"></td></tr>
   <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Latest ${model.batchSize} lead submissions</h2></td><td align="right" style="color:#526759;font-size:11px;">Contact details + quick context</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;table-layout:fixed;"><thead class="people-head"><tr><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:37%;">Person</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:20%;">Phone</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:10%;">ZIP</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:33%;">Quick view</th></tr></thead><tbody>${peopleRows(model.batch)}</tbody></table></td></tr>
   <tr><td class="email-pad" align="center" bgcolor="#f7f8f5" style="padding:17px 24px;background:#f7f8f5;border-top:1px solid #dce4da;color:#526759;font-size:11px;line-height:1.5;">Generated ${escapeHtml(phoenixTime(generatedAt))} AZ · ${model.baselineCount} profiled worm-castings signups included · Next report after lead ${nextTotal}</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = `${subject}\n\nThis report covers the latest ${model.batchSize} lead submissions. Total leads since launch (August): ${model.giveawayTotalCount}. ZIPs in this report: ${model.uniqueZips}.\n\n${model.batch.map((entry, index) => `${index + 1}. ${entry.full_name} — ${entry.email} — ${entry.phone || 'No phone'} — ZIP ${normalizeZip(entry.zip_code)} — ${quickView(entry)}`).join('\n')}\n\nNext report after lead ${nextTotal}.`;
+  const text = `${subject}\n\nThis report covers the latest ${model.batchSize} giveaway lead submissions. Total leads since August: ${model.totalLeadsSinceAugust}. Big Garden Giveaway leads since September: ${model.giveawayLeadsSinceSeptember}. Category insights use ${model.afterTotal} profiled responses. ZIPs in this report: ${model.uniqueZips}.\n\n${model.batch.map((entry, index) => `${index + 1}. ${entry.full_name} — ${entry.email} — ${entry.phone || 'No phone'} — ZIP ${normalizeZip(entry.zip_code)} — ${quickView(entry)}`).join('\n')}\n\nNext report after lead ${nextTotal}.`;
   return {
     subject,
     html,
@@ -339,7 +356,7 @@ export async function loadGiveawayLeadReportData({
   entryStart = (batchNumber - 1) * batchSize + 1,
   entryEnd = entryStart + batchSize - 1,
 }) {
-  const [giveawayResult, wormResult, countResult] = await Promise.all([
+  const [giveawayResult, wormResult, countResult, customerResult, allGiveawayResult, eventResult, leadResult] = await Promise.all([
     db.from('sp_giveaway_entries')
       .select('id,full_name,email,phone,zip_code,garden_status,growing,growing_other,created_at')
       .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
@@ -349,16 +366,24 @@ export async function loadGiveawayLeadReportData({
       .order('id', { ascending: true })
       .range(0, entryEnd - 1),
     db.from('sp_worm_castings_redemptions')
-      .select('zip_code,garden_status,growing'),
+      .select('email,created_at,zip_code,garden_status,growing'),
     db.from('sp_giveaway_entries')
       .select('id', { count: 'exact', head: true })
       .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
       .eq('is_preview', false)
       .not('email', 'ilike', '%@example.com'),
+    db.from('sp_customers').select('email,created_at').gte('created_at', AUGUST_LEAD_START),
+    db.from('sp_giveaway_entries').select('email,created_at').eq('is_preview', false).gte('created_at', AUGUST_LEAD_START).not('email', 'ilike', '%@example.com'),
+    db.from('sp_event_registrations').select('email,created_at').gte('created_at', AUGUST_LEAD_START).not('email', 'ilike', '%@example.com'),
+    db.from('sp_leads').select('email,created_at').gte('created_at', AUGUST_LEAD_START).not('email', 'ilike', '%@example.com'),
   ]);
   if (giveawayResult.error) throw giveawayResult.error;
   if (wormResult.error) throw wormResult.error;
   if (countResult.error) throw countResult.error;
+  if (customerResult.error) throw customerResult.error;
+  if (allGiveawayResult.error) throw allGiveawayResult.error;
+  if (eventResult.error) throw eventResult.error;
+  if (leadResult.error) throw leadResult.error;
   if ((giveawayResult.data || []).length < entryEnd) throw new Error(`Batch ${batchNumber} is not complete yet.`);
   return {
     giveawayEntries: giveawayResult.data,
@@ -366,6 +391,14 @@ export async function loadGiveawayLeadReportData({
     entryStart,
     entryEnd,
     giveawayTotalCount: Number(countResult.count || 0),
+    allGiveawayRows: allGiveawayResult.data || [],
+    allLeadRows: [
+      ...(customerResult.data || []),
+      ...(wormResult.data || []),
+      ...(allGiveawayResult.data || []),
+      ...(eventResult.data || []),
+      ...(leadResult.data || []),
+    ],
   };
 }
 

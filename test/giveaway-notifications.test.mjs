@@ -92,9 +92,10 @@ test('email is a Lead Report with the map, all categories, and 30 contacts', asy
   const report = await buildGiveawayLeadReportEmail({ model, testing: true, generatedAt: new Date('2026-09-03T06:00:00.000Z') });
   assert.equal(report.subject, '[TEST] SSW Lead Report #1 — Big Garden Giveaway');
   assert.equal(report.attachment.contentId, 'giveaway-lead-map');
-  assert.match(report.html, /All 9 categories/);
+  assert.match(report.html, /all 9 categories/i);
   assert.match(report.html, /Where the latest 30 leads are/);
-  assert.match(report.html, /Total leads since launch \(August\): 60/);
+  assert.match(report.html, /Total leads since August: 60/);
+  assert.match(report.html, /Big Garden Giveaway leads since September: 60/);
   assert.match(report.html, /supported-color-schemes/);
   assert.match(report.html, /Garden Lead 30/);
   assert.match(report.html, /Live batching is not triggered by this test/);
