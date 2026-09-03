@@ -1,16 +1,30 @@
+import sharp from 'sharp';
+import zipcodes from 'zipcodes';
+
 import {
-  STAFF_ALERT_FROM,
-  STAFF_ALERT_REPLY_TO,
+  GIVEAWAY_CAMPAIGN_KEY,
+  GIVEAWAY_GROWING_OPTIONS,
+} from './giveawayEntries.js';
+import {
   getNewsletterAdminRecipients,
   staffAlertThreadingHeaders,
 } from './newsletterNotifications.js';
+import {
+  PHOENIX_METRO_BASEMAP_BASE64,
+  PHOENIX_METRO_MAP_VIEWPORT,
+} from './giveawayLeadReportBasemap.js';
 
-export const STAFF_GIVEAWAY_SUBJECT = 'SSW giveaway signup';
-export const STAFF_GIVEAWAY_THREAD_ID = '<ssw-staff-giveaway-signup@soilseedandwater.com>';
+export const GIVEAWAY_LEAD_REPORT_BATCH_SIZE = 30;
+export const GIVEAWAY_LEAD_REPORT_FROM = 'Lead Report <reports@bettersystems.ai>';
+export const GIVEAWAY_LEAD_REPORT_REPLY_TO = 'ralvarez@soilseedandwater.com';
+export const GIVEAWAY_LEAD_REPORT_THREAD_ID = '<ssw-giveaway-lead-report@bettersystems.ai>';
+export const GIVEAWAY_LEAD_REPORT_TABLE = 'sp_giveaway_lead_reports';
+export const GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH = 2;
 
-export function shouldSendGiveawayAdminNotification(result) {
-  return result?.status === 201 && result?.json?.success === true && result?.json?.alreadyEntered !== true;
-}
+const CATEGORY_LABELS = Object.fromEntries(GIVEAWAY_GROWING_OPTIONS);
+const CATEGORY_KEYS = GIVEAWAY_GROWING_OPTIONS.map(([key]) => key);
+const MAP_CONTENT_ID = 'giveaway-lead-map';
+const LOGO_URL = 'https://www.organicsoilwholesale.com/email-assets/ssw-logo-white.png';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -21,89 +35,468 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function label(value) {
-  return String(value || '')
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+function escapeXml(value) {
+  return escapeHtml(value);
 }
 
-function detailRow(name, value) {
-  return `<tr><td style="padding:11px 14px;border-bottom:1px solid #e8ece6;color:#758078;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:30%;">${escapeHtml(name)}</td><td style="padding:11px 14px;border-bottom:1px solid #e8ece6;font-size:14px;color:#243229;">${escapeHtml(value || 'Not provided')}</td></tr>`;
+function normalizeZip(value) {
+  return String(value || '').replace(/\D/g, '').slice(0, 5) || 'Unknown';
 }
 
-export function buildGiveawayAdminNotification({ entry, testing = true }) {
-  const name = String(entry?.fullName || '').trim() || 'Not provided';
-  const email = String(entry?.email || '').trim();
-  const phone = String(entry?.phone || '').trim() || 'Not provided';
-  const customerTypes = Array.isArray(entry?.customerTypes) ? entry.customerTypes.map(label).join(', ') : '';
-  const growing = Array.isArray(entry?.growing) ? entry.growing.map(label).join(', ') : '';
-  const followed = Object.entries(entry?.followed || {})
-    .filter(([, selected]) => selected === true)
-    .map(([channel]) => channel.toUpperCase())
-    .join(', ');
-  const submittedAt = entry?.submittedAt ? new Date(entry.submittedAt) : new Date();
-  const when = Number.isNaN(submittedAt.getTime())
-    ? 'Just now'
-    : submittedAt.toLocaleString('en-US', {
-        timeZone: 'America/Phoenix',
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      });
+export function isGiveawayLeadReportEligible(entry) {
+  const email = String(entry?.email || entry?.email_normalized || '').trim().toLowerCase();
+  return Boolean(email) && !email.endsWith('@example.com');
+}
 
+function percent(count, total) {
+  return total ? count / total * 100 : 0;
+}
+
+function deltaLabel(value) {
+  if (Math.abs(value) < 0.05) return '—';
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)} pts`;
+}
+
+function phoenixTime(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Phoenix',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function categoryCounts(rows) {
+  const counts = Object.fromEntries(CATEGORY_KEYS.map((key) => [key, 0]));
+  for (const row of rows) {
+    const growing = Array.isArray(row?.growing) ? [...new Set(row.growing)] : [];
+    for (const key of growing) {
+      if (Object.hasOwn(counts, key)) counts[key] += 1;
+    }
+  }
+  return counts;
+}
+
+function statusCounts(rows) {
+  return rows.reduce((counts, row) => {
+    const key = row?.garden_status;
+    if (key === 'brand-new' || key === 'existing') counts[key] += 1;
+    return counts;
+  }, { 'brand-new': 0, existing: 0 });
+}
+
+function validWormProfiles(rows) {
+  return (rows || []).filter((row) => {
+    const growing = Array.isArray(row?.growing) ? row.growing : [];
+    return normalizeZip(row?.zip_code) !== 'Unknown'
+      && (row?.garden_status === 'brand-new' || row?.garden_status === 'existing')
+      && growing.some((key) => CATEGORY_KEYS.includes(key));
+  });
+}
+
+function mergeCounts(left, right) {
+  return Object.fromEntries(CATEGORY_KEYS.map((key) => [key, (left[key] || 0) + (right[key] || 0)]));
+}
+
+function mergeStatus(left, right) {
   return {
-    subject: STAFF_GIVEAWAY_SUBJECT,
-    headers: staffAlertThreadingHeaders(STAFF_GIVEAWAY_THREAD_ID),
-    html: `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${STAFF_GIVEAWAY_SUBJECT}</title></head>
-<body bgcolor="#eef2ed" style="margin:0;background:#eef2ed;font-family:Arial,Helvetica,sans-serif;color:#243229;">
-  <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(name)} entered the Big Garden Giveaway.</div>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" style="padding:24px 12px;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dfe6dc;border-radius:16px;overflow:hidden;">
-      <tr><td style="padding:22px 26px;border-bottom:1px solid #e6ebe3;"><img src="https://www.organicsoilwholesale.com/email-assets/ssw-logo.png" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"></td></tr>
-      <tr><td bgcolor="#e8f1e6" style="padding:26px;background:#e8f1e6;"><div style="font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8a6a42;">Big Garden Giveaway</div><h1 style="margin:7px 0 6px;font-size:27px;line-height:1.2;color:#1e3824;">New giveaway entry</h1><p style="margin:0;font-size:15px;color:#4e6253;">${escapeHtml(name)} just entered.</p></td></tr>
-      <tr><td style="padding:24px 26px;">
-        ${testing ? '<div style="margin-bottom:16px;padding:10px 12px;background:#fff8e7;border:1px solid #ead8a8;border-radius:9px;color:#684e12;font-size:13px;"><strong>Internal test mode:</strong> delivered only to Rodolfo.</div>' : ''}
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8df;border-radius:12px;border-collapse:separate;overflow:hidden;">
-          ${detailRow('Name', name)}
-          ${detailRow('Email', email)}
-          ${detailRow('Phone', phone)}
-          ${detailRow('ZIP', entry?.zipCode)}
-          ${detailRow('Customer', customerTypes)}
-          ${detailRow('Garden', label(entry?.gardenStatus))}
-          ${detailRow('Growing', growing)}
-          ${detailRow('Other', entry?.growingOther)}
-          ${detailRow('Followed', followed)}
-          ${detailRow('Source', entry?.utmSource || entry?.attributionSource || 'direct')}
-          ${detailRow('Campaign', entry?.utmCampaign)}
-          ${detailRow('Notes', entry?.notes)}
-          ${detailRow('Entered', `${when} AZ`)}
-        </table>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;"><tr><td width="49%"><a href="mailto:${escapeHtml(email)}" style="display:block;padding:13px 10px;border-radius:9px;background:#264027;color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:800;">Email entrant</a></td><td width="2%">&nbsp;</td><td width="49%"><a href="tel:${escapeHtml(phone)}" style="display:block;padding:12px 10px;border:1px solid #cbd6c8;border-radius:9px;background:#ffffff;color:#264027;text-decoration:none;text-align:center;font-size:14px;font-weight:800;">Call entrant</a></td></tr></table>
-      </td></tr>
-      <tr><td bgcolor="#f7f8f5" style="padding:16px 26px;border-top:1px solid #e6ebe3;color:#748077;font-size:12px;">Organic Soil Wholesale · Phoenix, Arizona · (623) 263-3386</td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`,
+    'brand-new': (left['brand-new'] || 0) + (right['brand-new'] || 0),
+    existing: (left.existing || 0) + (right.existing || 0),
   };
 }
 
-export async function sendGiveawayAdminNotifications({
-  resend,
-  entry,
-  recipients = getNewsletterAdminRecipients(),
+function leadReportSubject(batchNumber) {
+  return `Lead Report #${batchNumber} — Big Garden Giveaway`;
+}
+
+export function giveawayLeadReportsEnabled(env = process.env) {
+  return String(env?.GIVEAWAY_LEAD_REPORTS_ACTIVE || '').trim().toLowerCase() === 'true';
+}
+
+export function shouldEvaluateGiveawayLeadReport(result) {
+  return result?.status === 201 && result?.json?.success === true && result?.json?.alreadyEntered !== true;
+}
+
+export function buildGiveawayLeadReportModel({
+  batchNumber,
+  batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
+  giveawayEntries,
+  wormProfiles,
 }) {
-  const testing = recipients.length === 1 && recipients[0]?.email === 'ralvarez@soilseedandwater.com';
-  const message = buildGiveawayAdminNotification({ entry, testing });
-  return Promise.allSettled(recipients.map(async (recipient) => {
-    const result = await resend.emails.send({
-      from: STAFF_ALERT_FROM,
-      replyTo: STAFF_ALERT_REPLY_TO,
-      to: recipient.email,
-      subject: message.subject,
-      html: message.html,
-      headers: message.headers,
+  const eligibleEntries = (giveawayEntries || []).filter(isGiveawayLeadReportEligible);
+  const start = (batchNumber - 1) * batchSize;
+  const end = batchNumber * batchSize;
+  if (!Number.isInteger(batchNumber) || batchNumber < 1) throw new Error('A positive batch number is required.');
+  if (eligibleEntries.length < end) throw new Error(`Batch ${batchNumber} needs ${end} valid giveaway entries.`);
+
+  const baseline = validWormProfiles(wormProfiles);
+  const beforeGiveaway = eligibleEntries.slice(0, start);
+  const afterGiveaway = eligibleEntries.slice(0, end);
+  const batch = eligibleEntries.slice(start, end);
+  const baselineCategories = categoryCounts(baseline);
+  const beforeCategories = mergeCounts(baselineCategories, categoryCounts(beforeGiveaway));
+  const afterCategories = mergeCounts(baselineCategories, categoryCounts(afterGiveaway));
+  const baselineStatus = statusCounts(baseline);
+  const beforeStatus = mergeStatus(baselineStatus, statusCounts(beforeGiveaway));
+  const afterStatus = mergeStatus(baselineStatus, statusCounts(afterGiveaway));
+  const beforeTotal = baseline.length + beforeGiveaway.length;
+  const afterTotal = baseline.length + afterGiveaway.length;
+  const categories = CATEGORY_KEYS.map((key) => {
+    const beforePercent = percent(beforeCategories[key], beforeTotal);
+    const afterPercent = percent(afterCategories[key], afterTotal);
+    return {
+      key,
+      label: CATEGORY_LABELS[key],
+      beforePercent,
+      afterPercent,
+      delta: afterPercent - beforePercent,
+    };
+  }).sort((a, b) => b.afterPercent - a.afterPercent || a.label.localeCompare(b.label));
+  const uniqueZips = new Set(batch.map((entry) => normalizeZip(entry.zip_code))).size;
+
+  return {
+    campaignKey: GIVEAWAY_CAMPAIGN_KEY,
+    batchNumber,
+    batchSize,
+    startOrdinal: start + 1,
+    endOrdinal: end,
+    batch,
+    baselineCount: baseline.length,
+    beforeTotal,
+    afterTotal,
+    uniqueZips,
+    categories,
+    beforeStatus,
+    afterStatus,
+  };
+}
+
+function projectZip(zip) {
+  const location = zipcodes.lookup(normalizeZip(zip));
+  if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) return null;
+  const { zoom, left, top } = PHOENIX_METRO_MAP_VIEWPORT;
+  const world = 256 * (2 ** zoom);
+  const x = ((location.longitude + 180) / 360) * world - left;
+  const latRadians = location.latitude * Math.PI / 180;
+  const y = ((1 - Math.asinh(Math.tan(latRadians)) / Math.PI) / 2) * world - top;
+  if (x < 0 || x > PHOENIX_METRO_MAP_VIEWPORT.width || y < 0 || y > PHOENIX_METRO_MAP_VIEWPORT.height) return null;
+  return { x, y, city: location.city, state: location.state };
+}
+
+function clusterMapPoints(points) {
+  const clusters = [];
+  for (const item of points) {
+    let cluster = clusters.find((candidate) => Math.hypot(candidate.x - item.x, candidate.y - item.y) < 27);
+    if (!cluster) {
+      cluster = { x: item.x, y: item.y, count: 0, zips: [], names: [] };
+      clusters.push(cluster);
+    }
+    const nextCount = cluster.count + item.count;
+    cluster.x = (cluster.x * cluster.count + item.x * item.count) / nextCount;
+    cluster.y = (cluster.y * cluster.count + item.y * item.count) / nextCount;
+    cluster.count = nextCount;
+    cluster.zips.push(item.zip);
+    cluster.names.push(...item.names);
+  }
+  return clusters;
+}
+
+export async function buildGiveawayLeadMap(batch) {
+  const grouped = new Map();
+  for (const entry of batch) {
+    const zip = normalizeZip(entry.zip_code);
+    const point = projectZip(zip);
+    if (!point) continue;
+    const current = grouped.get(zip) || { zip, count: 0, names: [], ...point };
+    current.count += 1;
+    current.names.push(entry.full_name || 'Unknown');
+    grouped.set(zip, current);
+  }
+  const points = [...grouped.values()];
+  const clusters = clusterMapPoints(points);
+  const mappedPeople = points.reduce((sum, item) => sum + item.count, 0);
+  const unmappedPeople = batch.length - mappedPeople;
+  const markerSvg = clusters.map((cluster) => `
+    <g aria-label="${escapeXml(`${cluster.count} people near ZIP ${cluster.zips.join(', ')}`)}">
+      <circle cx="${cluster.x.toFixed(1)}" cy="${cluster.y.toFixed(1)}" r="14" fill="#ffffff" fill-opacity=".95"/>
+      <circle cx="${cluster.x.toFixed(1)}" cy="${cluster.y.toFixed(1)}" r="11" fill="#efc269"/>
+      <text x="${cluster.x.toFixed(1)}" y="${(cluster.y + 4).toFixed(1)}" fill="#173d25" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" text-anchor="middle">${cluster.count}</text>
+    </g>`).join('');
+  const overlay = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="560" height="320" viewBox="0 0 560 320">
+    <rect width="560" height="320" fill="#0b2313" fill-opacity=".42"/>
+    ${markerSvg}
+    <rect x="352" y="294" width="208" height="26" fill="#102619" fill-opacity=".9"/>
+    <text x="550" y="312" fill="#ffffff" font-family="Arial,Helvetica,sans-serif" font-size="11" text-anchor="end">© OpenStreetMap contributors</text>
+  </svg>`);
+  const buffer = await sharp(Buffer.from(PHOENIX_METRO_BASEMAP_BASE64, 'base64'))
+    .composite([{ input: overlay, blend: 'over' }])
+    .png()
+    .toBuffer();
+  return { buffer, mappedPeople, unmappedPeople, mappedZipCount: points.length, clusterCount: clusters.length };
+}
+
+function categoryRows(model) {
+  return model.categories.map((category) => {
+    const beforeWidth = Math.max(1, category.beforePercent).toFixed(2);
+    const afterWidth = Math.max(1, category.afterPercent).toFixed(2);
+    return `<tr>
+      <td style="padding:7px 10px 7px 0;color:#edf7ef;font-size:12px;width:22%;">${escapeHtml(category.label)}</td>
+      <td style="padding:7px 10px;width:56%;">
+        <div style="height:7px;background:#34483a;border-radius:999px;width:${beforeWidth}%;margin-bottom:4px;"></div>
+        <div style="height:10px;background:#84c993;border-radius:999px;width:${afterWidth}%;"></div>
+      </td>
+      <td align="right" style="padding:7px 0;color:#c5d3c8;font-size:12px;white-space:nowrap;width:22%;"><strong style="color:#84c993;">${category.afterPercent.toFixed(0)}%</strong> ${deltaLabel(category.delta)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function stageBlock(label, status, total) {
+  const newPercent = percent(status['brand-new'], total);
+  const existingPercent = 100 - newPercent;
+  return `<td valign="top" width="50%" style="padding:0 8px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr><td style="padding-bottom:7px;color:#c5d3c8;font-size:12px;">${escapeHtml(label)}</td><td align="right" style="padding-bottom:7px;color:#c5d3c8;font-size:12px;">${total} profiles</td></tr>
+      <tr><td colspan="2"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+        <td align="center" bgcolor="#84c993" style="width:${newPercent.toFixed(2)}%;padding:9px 2px;color:#173d25;font-size:11px;font-weight:700;">${newPercent.toFixed(0)}%</td>
+        <td align="center" bgcolor="#ddb766" style="width:${existingPercent.toFixed(2)}%;padding:9px 2px;color:#173d25;font-size:11px;font-weight:700;">${existingPercent.toFixed(0)}%</td>
+      </tr></table></td></tr>
+    </table>
+  </td>`;
+}
+
+function quickView(entry) {
+  const status = entry.garden_status === 'brand-new' ? 'New gardener' : 'Existing garden';
+  const crops = (Array.isArray(entry.growing) ? entry.growing : [])
+    .slice(0, 3)
+    .map((key) => CATEGORY_LABELS[key] || key)
+    .join(', ');
+  return `${status} · ${crops || 'Not specified'}`;
+}
+
+function peopleRows(batch) {
+  return batch.map((entry) => `<tr class="person-row">
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;width:37%;overflow-wrap:anywhere;"><strong style="display:block;color:#edf7ef;font-size:13px;">${escapeHtml(entry.full_name)}</strong><span style="display:block;margin-top:3px;color:#c5d3c8;font-size:11px;">${escapeHtml(entry.email)}</span></td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;font-size:11px;width:20%;white-space:nowrap;">${escapeHtml(entry.phone || 'Not provided')}</td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;font-size:11px;width:10%;">${escapeHtml(normalizeZip(entry.zip_code))}</td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;font-size:11px;width:33%;">${escapeHtml(quickView(entry))}</td>
+  </tr>`).join('');
+}
+
+export async function buildGiveawayLeadReportEmail({ model, testing = false, generatedAt = new Date() }) {
+  const map = await buildGiveawayLeadMap(model.batch);
+  const mapCaption = `${map.mappedPeople} people mapped across ${map.mappedZipCount} ZIP codes${map.unmappedPeople ? ` · ${map.unmappedPeople} ZIP ${map.unmappedPeople === 1 ? 'needs' : 'need'} review` : ''}`;
+  const nextTotal = (model.batchNumber + 1) * model.batchSize;
+  const subject = `${testing ? '[TEST] ' : ''}${leadReportSubject(model.batchNumber)}`;
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title>
+<style>@media(max-width:560px){.email-pad{padding-left:16px!important;padding-right:16px!important}.kpi{display:block!important;width:100%!important;border-right:0!important;border-bottom:1px solid #34483a!important}.stage-cell{display:block!important;width:100%!important;padding:7px 0!important}.people-head{display:none!important}.person-row,.person-cell{display:block!important;width:100%!important}.person-row{padding:10px 0;border-top:1px solid #34483a}.person-cell{padding:3px 0!important;border:0!important;white-space:normal!important}}</style></head>
+<body bgcolor="#101612" style="margin:0;background:#101612;font-family:Arial,Helvetica,sans-serif;color:#edf7ef;">
+<div style="display:none;max-height:0;overflow:hidden;">${model.batchSize} new giveaway leads. Cumulative profiles: ${model.afterTotal}. Map and contact details inside.</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#101612"><tr><td align="center" style="padding:24px 10px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#17251b" style="width:100%;max-width:680px;background:#17251b;border:1px solid #34483a;border-radius:16px;overflow:hidden;">
+  <tr><td class="email-pad" style="padding:18px 24px;background:#102619;border-bottom:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><img src="${LOGO_URL}" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"></td><td align="right" style="color:#d8e6da;font-size:12px;">Lead Report</td></tr></table></td></tr>
+  ${testing ? '<tr><td class="email-pad" style="padding:11px 24px;background:#fff8e7;color:#684e12;font-size:12px;"><strong>Internal production test:</strong> delivered only to Rodolfo. Live batching is not triggered by this test.</td></tr>' : ''}
+  <tr><td class="email-pad" bgcolor="#d9efdd" style="padding:27px 24px 23px;background:#d9efdd;color:#132f1a;"><div style="color:#6b4809;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Big Garden Giveaway</div><h1 style="margin:7px 0 7px;color:#132f1a;font-size:29px;line-height:1.2;">Growth Pulse #${model.batchNumber}</h1><p style="margin:0;color:#294f34;font-size:15px;line-height:1.5;">${model.batchSize} new entrants joined. Giveaway total is now ${model.endOrdinal}.</p></td></tr>
+  <tr><td style="padding:0;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #34483a;"><span style="display:block;color:#c5d3c8;font-size:11px;">New in this pulse</span><strong style="display:block;margin-top:4px;color:#a5dfb0;font-size:18px;">+${model.batchSize}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #34483a;"><span style="display:block;color:#c5d3c8;font-size:11px;">Cumulative profiles</span><strong style="display:block;margin-top:4px;color:#a5dfb0;font-size:18px;">${model.afterTotal}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;"><span style="display:block;color:#c5d3c8;font-size:11px;">ZIPs in this pulse</span><strong style="display:block;margin-top:4px;color:#a5dfb0;font-size:18px;">${model.uniqueZips}</strong></td>
+  </tr></table></td></tr>
+  <tr><td class="email-pad" style="padding:24px;border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;font-size:20px;">What people are growing</h2></td><td align="right" style="color:#c5d3c8;font-size:11px;">All 9 categories · before → now</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:13px;">${categoryRows(model)}</table></td></tr>
+  <tr><td class="email-pad" style="padding:24px;border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;font-size:20px;">Gardening journey</h2></td><td align="right" style="color:#c5d3c8;font-size:11px;">${model.baselineCount} prior profiles + ${model.endOrdinal} giveaway entrants</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>${stageBlock('Before', model.beforeStatus, model.beforeTotal).replace('<td ', '<td class="stage-cell" ')}${stageBlock('Now', model.afterStatus, model.afterTotal).replace('<td ', '<td class="stage-cell" ')}</tr></table><p style="margin:11px 0 0;color:#c5d3c8;font-size:11px;"><span style="color:#84c993;">●</span> New or starting &nbsp;&nbsp; <span style="color:#ddb766;">●</span> Improving an existing garden</p></td></tr>
+  <tr><td class="email-pad" style="padding:24px;border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;font-size:20px;">Where the new people are</h2></td><td align="right" style="color:#c5d3c8;font-size:11px;">${escapeHtml(mapCaption)}</td></tr></table><img src="cid:${MAP_CONTENT_ID}" width="560" alt="Phoenix metro map showing the ${map.mappedPeople} new people in this report." style="display:block;width:100%;max-width:560px;height:auto;margin:15px auto 0;border:0;border-radius:12px;"></td></tr>
+  <tr><td class="email-pad" style="padding:24px;border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;font-size:20px;">The ${model.batchSize} new people</h2></td><td align="right" style="color:#c5d3c8;font-size:11px;">Contact details + quick context</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;table-layout:fixed;"><thead class="people-head"><tr><th align="left" style="padding:0 7px 9px;color:#c5d3c8;font-size:11px;width:37%;">Person</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;font-size:11px;width:20%;">Phone</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;font-size:11px;width:10%;">ZIP</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;font-size:11px;width:33%;">Quick view</th></tr></thead><tbody>${peopleRows(model.batch)}</tbody></table></td></tr>
+  <tr><td class="email-pad" align="center" style="padding:17px 24px;background:#1b2b20;border-top:1px solid #34483a;color:#c5d3c8;font-size:11px;line-height:1.5;">Generated ${escapeHtml(phoenixTime(generatedAt))} AZ · ${model.baselineCount} profiled worm-castings signups included · Next report at ${nextTotal} valid giveaway entrants</td></tr>
+</table></td></tr></table></body></html>`;
+  const text = `${subject}\n\n${model.batchSize} new entrants joined. Giveaway total: ${model.endOrdinal}. Cumulative profiles: ${model.afterTotal}. ZIPs in this pulse: ${model.uniqueZips}.\n\n${model.batch.map((entry, index) => `${index + 1}. ${entry.full_name} — ${entry.email} — ${entry.phone || 'No phone'} — ZIP ${normalizeZip(entry.zip_code)} — ${quickView(entry)}`).join('\n')}\n\nNext report at ${nextTotal} valid entrants.`;
+  return {
+    subject,
+    html,
+    text,
+    attachment: {
+      content: map.buffer,
+      filename: `giveaway-lead-report-${model.batchNumber}-map.png`,
+      contentId: MAP_CONTENT_ID,
+    },
+    map,
+  };
+}
+
+export async function loadGiveawayLeadReportData({ db, batchNumber, batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE }) {
+  const end = batchNumber * batchSize - 1;
+  const [giveawayResult, wormResult] = await Promise.all([
+    db.from('sp_giveaway_entries')
+      .select('id,full_name,email,phone,zip_code,garden_status,growing,growing_other,created_at')
+      .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
+      .eq('is_preview', false)
+      .not('email', 'ilike', '%@example.com')
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(0, end),
+    db.from('sp_worm_castings_redemptions')
+      .select('zip_code,garden_status,growing'),
+  ]);
+  if (giveawayResult.error) throw giveawayResult.error;
+  if (wormResult.error) throw wormResult.error;
+  if ((giveawayResult.data || []).length < end + 1) throw new Error(`Batch ${batchNumber} is not complete yet.`);
+  return { giveawayEntries: giveawayResult.data, wormProfiles: wormResult.data || [] };
+}
+
+function providerKey(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+export async function sendGiveawayLeadReport({
+  resend,
+  report,
+  model,
+  recipients,
+  scheduledAt = null,
+  priorProviderIds = {},
+  idempotencySuffix = '',
+}) {
+  const providerIds = { ...priorProviderIds };
+  const jobs = recipients
+    .filter((recipient) => !providerIds[providerKey(recipient.email)])
+    .map((recipient) => ({
+      recipient,
+      promise: resend.emails.send({
+        from: GIVEAWAY_LEAD_REPORT_FROM,
+        replyTo: GIVEAWAY_LEAD_REPORT_REPLY_TO,
+        to: recipient.email,
+        subject: report.subject,
+        html: report.html,
+        text: report.text,
+        attachments: [report.attachment],
+        headers: staffAlertThreadingHeaders(GIVEAWAY_LEAD_REPORT_THREAD_ID),
+        tags: [
+          { name: 'campaign', value: 'giveaway_lead_report' },
+          { name: 'batch', value: String(model.batchNumber) },
+        ],
+        ...(scheduledAt ? { scheduledAt } : {}),
+      }, {
+        idempotencyKey: `giveaway-lead-${model.batchNumber}-${providerKey(recipient.email).replace(/[^a-z0-9]+/g, '-')}${idempotencySuffix}`,
+      }),
+    }));
+  const settled = await Promise.allSettled(jobs.map((job) => job.promise));
+  const errors = [];
+  settled.forEach((result, index) => {
+    const email = providerKey(jobs[index].recipient.email);
+    if (result.status === 'fulfilled' && result.value?.data?.id) providerIds[email] = result.value.data.id;
+    else errors.push(`${email}: ${result.status === 'rejected' ? result.reason?.message : result.value?.error?.message || 'Provider did not return an id'}`);
+  });
+  return {
+    providerIds,
+    errors,
+    complete: recipients.every((recipient) => Boolean(providerIds[providerKey(recipient.email)])),
+  };
+}
+
+async function readReportRow(db, batchNumber) {
+  const { data, error } = await db.from(GIVEAWAY_LEAD_REPORT_TABLE)
+    .select('*')
+    .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
+    .eq('batch_number', batchNumber)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function claimGiveawayLeadReport({ db, batchNumber, batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE }) {
+  const now = new Date().toISOString();
+  const row = {
+    campaign_key: GIVEAWAY_CAMPAIGN_KEY,
+    batch_number: batchNumber,
+    batch_size: batchSize,
+    entry_start: (batchNumber - 1) * batchSize + 1,
+    entry_end: batchNumber * batchSize,
+    status: 'sending',
+    updated_at: now,
+  };
+  const inserted = await db.from(GIVEAWAY_LEAD_REPORT_TABLE).insert(row).select('*').single();
+  if (!inserted.error) return { claimed: true, row: inserted.data };
+  if (inserted.error.code !== '23505') throw inserted.error;
+  const existing = await readReportRow(db, batchNumber);
+  if (!existing || !['failed', 'partial'].includes(existing.status)) return { claimed: false, row: existing };
+  const retried = await db.from(GIVEAWAY_LEAD_REPORT_TABLE)
+    .update({ status: 'sending', last_error: null, updated_at: now })
+    .eq('id', existing.id)
+    .in('status', ['failed', 'partial'])
+    .select('*')
+    .maybeSingle();
+  if (retried.error) throw retried.error;
+  return { claimed: Boolean(retried.data), row: retried.data || existing };
+}
+
+async function finishGiveawayLeadReport({ db, row, delivery, scheduledAt = null }) {
+  const now = new Date().toISOString();
+  const status = delivery.complete ? (scheduledAt ? 'scheduled' : 'sent') : Object.keys(delivery.providerIds).length ? 'partial' : 'failed';
+  const updates = {
+    status,
+    recipient_provider_ids: delivery.providerIds,
+    scheduled_at: scheduledAt || null,
+    sent_at: delivery.complete && !scheduledAt ? now : null,
+    last_error: delivery.errors.length ? delivery.errors.join(' | ').slice(0, 4000) : null,
+    updated_at: now,
+  };
+  const { data, error } = await db.from(GIVEAWAY_LEAD_REPORT_TABLE).update(updates).eq('id', row.id).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deliverGiveawayLeadReportBatch({
+  db,
+  resend,
+  batchNumber,
+  batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
+  recipients = getNewsletterAdminRecipients(),
+  scheduledAt = null,
+}) {
+  const claim = await claimGiveawayLeadReport({ db, batchNumber, batchSize });
+  if (!claim.claimed) return { skipped: true, row: claim.row };
+  try {
+    const data = await loadGiveawayLeadReportData({ db, batchNumber, batchSize });
+    const model = buildGiveawayLeadReportModel({ batchNumber, batchSize, ...data });
+    const report = await buildGiveawayLeadReportEmail({ model });
+    const delivery = await sendGiveawayLeadReport({
+      resend,
+      report,
+      model,
+      recipients,
+      scheduledAt,
+      priorProviderIds: claim.row?.recipient_provider_ids || {},
     });
-    if (result?.error) throw new Error(result.error.message || JSON.stringify(result.error));
-    return { recipient, id: result?.data?.id || null, subject: message.subject };
-  }));
+    const row = await finishGiveawayLeadReport({ db, row: claim.row, delivery, scheduledAt });
+    return { skipped: false, row, model, delivery };
+  } catch (error) {
+    await db.from(GIVEAWAY_LEAD_REPORT_TABLE).update({
+      status: 'failed',
+      last_error: String(error?.message || error).slice(0, 4000),
+      updated_at: new Date().toISOString(),
+    }).eq('id', claim.row.id);
+    throw error;
+  }
+}
+
+export async function maybeSendGiveawayLeadReports({
+  db,
+  resend,
+  recipients = getNewsletterAdminRecipients(),
+  batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
+}) {
+  const { count, error } = await db.from('sp_giveaway_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
+    .eq('is_preview', false)
+    .not('email', 'ilike', '%@example.com');
+  if (error) throw error;
+  const completedBatches = Math.floor(Number(count || 0) / batchSize);
+  const results = [];
+  for (let batchNumber = GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH; batchNumber <= completedBatches; batchNumber += 1) {
+    results.push(await deliverGiveawayLeadReportBatch({ db, resend, batchNumber, batchSize, recipients }));
+  }
+  return { count: Number(count || 0), completedBatches, results };
 }

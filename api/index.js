@@ -4761,38 +4761,38 @@ ${pages}
 
     // POST /api/giveaway/enter — Phoenix Fall Garden Giveaway (/win).
     // Open by default. Set GIVEAWAY_ENTRIES_OPEN=false to pause. Never emails
-    // the customer from this path.
+    // the customer from this path. Staff receive one Lead Report per 30 valid
+    // entries when GIVEAWAY_LEAD_REPORTS_ACTIVE=true; individual alerts are off.
     if (path === '/api/giveaway/enter' && req.method === 'POST') {
       try {
-        const { normalizeGiveawayEntry, processGiveawayEntry } = await import('../shared/giveawayEntries.js');
+        const { processGiveawayEntry } = await import('../shared/giveawayEntries.js');
+        const giveawayDb = await getSupabase();
         const result = await processGiveawayEntry({
-          db: await getSupabase(),
+          db: giveawayDb,
           body: req.body || {},
           userAgent: String(req.headers['user-agent'] || ''),
         });
-        const { shouldSendGiveawayAdminNotification } = await import('../shared/giveawayNotifications.js');
-        if (shouldSendGiveawayAdminNotification(result)) {
+        const {
+          giveawayLeadReportsEnabled,
+          maybeSendGiveawayLeadReports,
+          shouldEvaluateGiveawayLeadReport,
+        } = await import('../shared/giveawayNotifications.js');
+        if (shouldEvaluateGiveawayLeadReport(result) && giveawayLeadReportsEnabled()) {
           try {
             const { getNewsletterAdminRecipients } = await import('../shared/newsletterNotifications.js');
-            const { sendGiveawayAdminNotifications } = await import('../shared/giveawayNotifications.js');
             const recipients = getNewsletterAdminRecipients();
-            const notificationResults = await sendGiveawayAdminNotifications({
+            const reportResult = await maybeSendGiveawayLeadReports({
+              db: giveawayDb,
               resend: await getResend(),
               recipients,
-              entry: {
-                ...normalizeGiveawayEntry(req.body || {}, {
-                  userAgent: String(req.headers['user-agent'] || ''),
-                }),
-                submittedAt: new Date().toISOString(),
-              },
             });
-            notificationResults.forEach((notificationResult, index) => {
-              if (notificationResult.status === 'rejected') {
-                console.error(`[Giveaway] Staff notification to ${recipients[index]?.email} failed:`, notificationResult.reason?.message || notificationResult.reason);
-              }
+            console.info('[Giveaway] Lead Report check:', {
+              count: reportResult.count,
+              completedBatches: reportResult.completedBatches,
+              processed: reportResult.results.filter((item) => !item.skipped).length,
             });
           } catch (notificationError) {
-            console.error('[Giveaway] Staff notification error:', notificationError?.message || notificationError);
+            console.error('[Giveaway] Lead Report error:', notificationError?.message || notificationError);
           }
         }
         return res.status(result.status).json(result.json);
