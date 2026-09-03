@@ -10,6 +10,7 @@ import {
   sendGiveawayLeadReport,
 } from '../shared/giveawayNotifications.js';
 import { getNewsletterAdminRecipients } from '../shared/newsletterNotifications.js';
+import { GIVEAWAY_CAMPAIGN_KEY } from '../shared/giveawayEntries.js';
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -47,10 +48,23 @@ function clients() {
   };
 }
 
+async function latestWindow(db, batchSize = 30) {
+  const { count, error } = await db.from('sp_giveaway_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_key', GIVEAWAY_CAMPAIGN_KEY)
+    .eq('is_preview', false)
+    .not('email', 'ilike', '%@example.com');
+  if (error) throw error;
+  const entryEnd = Number(count || 0);
+  if (entryEnd < batchSize) throw new Error(`At least ${batchSize} valid giveaway leads are required.`);
+  return { entryStart: entryEnd - batchSize + 1, entryEnd };
+}
+
 async function runTest({ db, resend }, args) {
   const batchNumber = Number(args.batch || 1);
   const recipient = String(args.to || 'ralvarez@soilseedandwater.com').trim().toLowerCase();
-  const data = await loadGiveawayLeadReportData({ db, batchNumber });
+  const window = await latestWindow(db);
+  const data = await loadGiveawayLeadReportData({ db, batchNumber, ...window });
   const model = buildGiveawayLeadReportModel({ batchNumber, ...data });
   const report = await buildGiveawayLeadReportEmail({ model, testing: true });
   const delivery = await sendGiveawayLeadReport({
@@ -78,6 +92,7 @@ async function runSchedule({ db, resend }, args) {
   const date = new Date(scheduledAt);
   if (Number.isNaN(date.getTime())) throw new Error('--scheduled-at must be a valid ISO date.');
   const batchNumber = Number(args.batch || 1);
+  const window = await latestWindow(db);
   const recipients = args.allAdmins
     ? getNewsletterAdminRecipients('true')
     : getNewsletterAdminRecipients('false');
@@ -85,6 +100,7 @@ async function runSchedule({ db, resend }, args) {
     db,
     resend,
     batchNumber,
+    ...window,
     recipients,
     scheduledAt: date.toISOString(),
   });

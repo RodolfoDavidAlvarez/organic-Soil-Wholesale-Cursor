@@ -40,7 +40,7 @@ const wormProfiles = [
 test('giveaway Lead Reports are enabled explicitly and use batches of 30', () => {
   assert.equal(GIVEAWAY_LEAD_REPORT_BATCH_SIZE, 30);
   assert.equal(GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH, 2);
-  assert.equal(GIVEAWAY_LEAD_REPORT_FROM, 'Lead Report <reports@bettersystems.ai>');
+  assert.equal(GIVEAWAY_LEAD_REPORT_FROM, 'SSW Lead Report <reports@bettersystems.ai>');
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'true' }), true);
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'false' }), false);
   assert.equal(giveawayLeadReportsEnabled({}), false);
@@ -58,13 +58,22 @@ test('production QA addresses never count toward a Lead Report batch', () => {
 });
 
 test('report model uses the exact batch, cumulative profiles, and all nine categories', () => {
-  const model = buildGiveawayLeadReportModel({ batchNumber: 1, giveawayEntries, wormProfiles });
+  const model = buildGiveawayLeadReportModel({
+    batchNumber: 1,
+    giveawayEntries,
+    wormProfiles,
+    entryStart: 31,
+    entryEnd: 60,
+    giveawayTotalCount: 63,
+  });
   assert.equal(model.batch.length, 30);
-  assert.equal(model.startOrdinal, 1);
-  assert.equal(model.endOrdinal, 30);
+  assert.equal(model.batch[0].full_name, 'Garden Lead 31');
+  assert.equal(model.startOrdinal, 31);
+  assert.equal(model.endOrdinal, 60);
+  assert.equal(model.giveawayTotalCount, 63);
   assert.equal(model.baselineCount, 2);
-  assert.equal(model.beforeTotal, 2);
-  assert.equal(model.afterTotal, 32);
+  assert.equal(model.beforeTotal, 32);
+  assert.equal(model.afterTotal, 62);
   assert.equal(model.uniqueZips, 10);
   assert.equal(model.categories.length, 9);
   assert.deepEqual(new Set(model.categories.map((category) => category.key)), new Set(categories));
@@ -81,10 +90,12 @@ test('map shows only the selected batch and returns a PNG attachment', async () 
 test('email is a Lead Report with the map, all categories, and 30 contacts', async () => {
   const model = buildGiveawayLeadReportModel({ batchNumber: 1, giveawayEntries, wormProfiles });
   const report = await buildGiveawayLeadReportEmail({ model, testing: true, generatedAt: new Date('2026-09-03T06:00:00.000Z') });
-  assert.equal(report.subject, '[TEST] Lead Report #1 — Big Garden Giveaway');
+  assert.equal(report.subject, '[TEST] SSW Lead Report #1 — Big Garden Giveaway');
   assert.equal(report.attachment.contentId, 'giveaway-lead-map');
   assert.match(report.html, /All 9 categories/);
-  assert.match(report.html, /Where the new people are/);
+  assert.match(report.html, /Where the latest 30 leads are/);
+  assert.match(report.html, /Total leads since launch \(August\): 60/);
+  assert.match(report.html, /supported-color-schemes/);
   assert.match(report.html, /Garden Lead 30/);
   assert.match(report.html, /Live batching is not triggered by this test/);
 });
