@@ -268,6 +268,18 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/win",
+    title: "September Big Garden Giveaway | Organic Soil Wholesale",
+    description: "Enter free in about 30 seconds for a chance to win a $5,000 garden — everything needed to set up two beds in the Phoenix Valley.",
+    keywords: "Phoenix garden giveaway, free garden giveaway, raised garden beds Phoenix, September garden giveaway",
+    canonical: absoluteUrl("/win"),
+    image: absoluteUrl("/images/giveaway/complete-fall-garden-hero-v9.png"),
+    imageType: "image/png",
+    imageWidth: "1536",
+    imageHeight: "1024",
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/careers",
     title: "Careers at Soil Seed & Water | Phoenix, Arizona",
     description: "Explore current career opportunities with Soil Seed & Water in Phoenix, Arizona. View open positions and apply online.",
