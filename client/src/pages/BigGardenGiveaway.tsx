@@ -484,9 +484,6 @@ export default function BigGardenGiveaway() {
 
                   <fieldset className="rounded-2xl border border-[#d7cebd] bg-white p-4">
                     <legend className="px-1 text-sm font-black">{GIVEAWAY_DRAFT.form.followCopy}</legend>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-[#6d756f]">
-                      We cannot follow accounts for you. Tap Follow, then check the box.
-                    </p>
                     <ul className="mt-3 space-y-2">
                       {GIVEAWAY_DRAFT.form.socialChannels.map((channel) => (
                         <li
