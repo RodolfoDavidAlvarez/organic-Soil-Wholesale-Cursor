@@ -115,7 +115,7 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/careers/sales">
+                  <Link href="/careers">
                     <div className="flex min-h-11 items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
                       <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

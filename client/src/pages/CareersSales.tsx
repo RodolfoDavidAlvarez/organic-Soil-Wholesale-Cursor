@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "wouter";
-import { CheckCircle2, ClipboardCheck, FileText, Laptop, Leaf, MapPin, Sprout, Upload, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, FileText, Laptop, Leaf, MapPin, Sprout, Upload, Users } from "lucide-react";
 import SEO from "@/components/layout/SEO";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
@@ -22,6 +22,12 @@ const FILE_CONTENT_TYPES: Record<string, string> = {
   jpeg: "image/jpeg",
   png: "image/png",
 };
+
+const APPLICATION_STEPS = [
+  { number: 1, title: "Basics", shortTitle: "Basics", icon: ClipboardCheck },
+  { number: 2, title: "Gardening experience", shortTitle: "Gardening", icon: Sprout },
+  { number: 3, title: "Computer & sales skills", shortTitle: "Skills", icon: Laptop },
+] as const;
 
 const gardeningFocusOptions = [
   "Home gardening",
@@ -130,12 +136,14 @@ const fileContentType = (file: File) => {
 };
 
 const CareersSales = () => {
+  const formRef = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [resume, setResume] = useState<File | null>(null);
   const [supportingDocuments, setSupportingDocuments] = useState<File[]>([]);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [website, setWebsite] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
 
   const update = (field: keyof ApplicationForm, value: string | boolean | string[]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -149,6 +157,63 @@ const CareersSales = () => {
         ? selected.filter((item) => item !== option)
         : [...selected, option],
     );
+  };
+
+  const scrollToApplication = () => {
+    window.requestAnimationFrame(() => {
+      document.getElementById("apply")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const validateCurrentStep = () => {
+    setErrorMessage("");
+
+    const stepContainer = formRef.current?.querySelector<HTMLElement>(`[data-application-step="${currentStep}"]`);
+    const fields = Array.from(
+      stepContainer?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        "input:not([type='hidden']), select, textarea",
+      ) ?? [],
+    );
+    const invalidField = fields.find((field) => !field.checkValidity());
+
+    if (invalidField) {
+      invalidField.reportValidity();
+      invalidField.focus();
+      return false;
+    }
+
+    if (currentStep === 1 && !resume) {
+      setErrorMessage("Please attach your resume before continuing.");
+      document.getElementById("resume")?.focus();
+      return false;
+    }
+    if (currentStep === 2 && form.gardeningFocus.length === 0) {
+      setErrorMessage("Please select at least one gardening focus area before continuing.");
+      return false;
+    }
+    if (currentStep === 3 && form.computerSkills.length === 0) {
+      setErrorMessage("Please select at least one computer skill.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const goToNextStep = () => {
+    if (!validateCurrentStep()) return;
+
+    trackEvent("Recruitment Application Step Completed", {
+      position: POSITION_SLUG,
+      step: currentStep,
+    });
+    setCurrentStep((step) => Math.min(step + 1, APPLICATION_STEPS.length));
+    scrollToApplication();
+  };
+
+  const goToPreviousStep = () => {
+    setErrorMessage("");
+    setCurrentStep((step) => Math.max(step - 1, 1));
+    scrollToApplication();
   };
 
   const handleResume = (file: File | null) => {
@@ -203,6 +268,12 @@ const CareersSales = () => {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+
+    if (currentStep < APPLICATION_STEPS.length) {
+      goToNextStep();
+      return;
+    }
+    if (!validateCurrentStep()) return;
 
     if (website) return;
     if (!resume) {
@@ -293,6 +364,7 @@ const CareersSales = () => {
       setForm(initialForm);
       setResume(null);
       setSupportingDocuments([]);
+      setCurrentStep(1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setStatus("error");
@@ -334,7 +406,10 @@ const CareersSales = () => {
       <section className="bg-[#183a23] py-14 text-white lg:py-20">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Join our team · Phoenix, Arizona</p>
+            <Link href="/careers" className="inline-flex min-h-11 items-center text-sm font-semibold text-white/80 underline-offset-4 transition hover:text-white hover:underline">
+              ← View all openings
+            </Link>
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-[#d9b879]">Join our team · Phoenix, Arizona</p>
             <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
               Sales Representative
             </h1>
@@ -391,21 +466,61 @@ const CareersSales = () => {
           <div className="mb-10">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a6a34]">Application</p>
             <h2 className="mt-3 font-heading text-3xl font-bold text-[#183a23] sm:text-4xl">Complete your application</h2>
-            <p className="mt-3 text-slate-600">Three parts · approximately 15–20 minutes. Required fields are marked with an asterisk.</p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <a href="#basics" className="flex min-h-16 items-center gap-3 rounded-2xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-bold text-[#183a23] shadow-sm">
-                <ClipboardCheck className="h-5 w-5 text-[#397854]" /> 1. Basics
-              </a>
-              <a href="#gardening-focus" className="flex min-h-16 items-center gap-3 rounded-2xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-bold text-[#183a23] shadow-sm">
-                <Sprout className="h-5 w-5 text-[#397854]" /> 2. Gardening Focus
-              </a>
-              <a href="#computer-skills" className="flex min-h-16 items-center gap-3 rounded-2xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-bold text-[#183a23] shadow-sm">
-                <Laptop className="h-5 w-5 text-[#397854]" /> 3. Computer Skills
-              </a>
+            <p className="mt-3 text-slate-600">One section at a time · approximately 15–20 minutes. Required fields are marked with an asterisk.</p>
+
+            <div className="mt-7" aria-label={`Application progress: step ${currentStep} of ${APPLICATION_STEPS.length}`}>
+              <div className="mb-3 flex items-center justify-between text-sm font-semibold text-[#183a23]">
+                <span>Step {currentStep} of {APPLICATION_STEPS.length}</span>
+                <span>{Math.round((currentStep / APPLICATION_STEPS.length) * 100)}% complete</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[#dfe7e1]">
+                <div
+                  className="h-full rounded-full bg-[#397854] transition-all duration-300"
+                  style={{ width: `${(currentStep / APPLICATION_STEPS.length) * 100}%` }}
+                />
+              </div>
             </div>
+
+            <ol className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+              {APPLICATION_STEPS.map((step) => {
+                const StepIcon = step.icon;
+                const isActive = currentStep === step.number;
+                const isComplete = currentStep > step.number;
+
+                return (
+                  <li key={step.number}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (step.number < currentStep) {
+                          setErrorMessage("");
+                          setCurrentStep(step.number);
+                          scrollToApplication();
+                        }
+                      }}
+                      disabled={step.number >= currentStep}
+                      aria-current={isActive ? "step" : undefined}
+                      className={[
+                        "flex min-h-16 w-full items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-sm font-bold shadow-sm transition sm:justify-start sm:px-4",
+                        isActive
+                          ? "border-[#397854] bg-[#183a23] text-white"
+                          : isComplete
+                            ? "border-[#b9cebe] bg-[#eef5f0] text-[#183a23] hover:border-[#397854]"
+                            : "border-[#dfe7e1] bg-white text-slate-400",
+                      ].join(" ")}
+                    >
+                      {isComplete ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <StepIcon className="h-5 w-5 shrink-0" />}
+                      <span className="hidden sm:inline">{step.number}. {step.title}</span>
+                      <span className="sm:hidden">{step.shortTitle}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="mt-4 text-sm text-slate-500">Your answers stay in place when you move between sections.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
             <input
               aria-hidden="true"
               tabIndex={-1}
@@ -416,7 +531,8 @@ const CareersSales = () => {
               className="absolute left-[-9999px] h-px w-px opacity-0"
             />
 
-            <fieldset id="basics" className={[cardClass, "scroll-mt-28"].join(" ")}>
+            {currentStep === 1 ? (
+            <fieldset id="basics" data-application-step="1" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 1 · Basics and employment readiness</legend>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">Contact details, availability, sales background, and application documents.</p>
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -505,7 +621,7 @@ const CareersSales = () => {
                     <span className="mt-3 text-sm font-semibold text-[#183a23]">{resume ? resume.name : "Choose your resume"}</span>
                     <span className="mt-1 text-xs text-slate-500">PDF, DOC, or DOCX · maximum 8 MB</span>
                   </label>
-                  <input id="resume" type="file" required accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="sr-only" onChange={(event) => handleResume(event.target.files?.[0] || null)} />
+                  <input id="resume" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="sr-only" onChange={(event) => handleResume(event.target.files?.[0] || null)} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="supportingDocuments">Supporting documents <span className="font-normal text-slate-500">(optional)</span></label>
@@ -528,8 +644,10 @@ const CareersSales = () => {
                 </div>
               </div>
             </fieldset>
+            ) : null}
 
-            <fieldset id="gardening-focus" className={[cardClass, "scroll-mt-28"].join(" ")}>
+            {currentStep === 2 ? (
+            <fieldset id="gardening-focus" data-application-step="2" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 2 · Gardening focus</legend>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">Professional credentials are welcome but not required. Personal gardening experience counts.</p>
               <div className="mt-6 space-y-6">
@@ -568,8 +686,10 @@ const CareersSales = () => {
                 </div>
               </div>
             </fieldset>
+            ) : null}
 
-            <fieldset id="computer-skills" className={[cardClass, "scroll-mt-28"].join(" ")}>
+            {currentStep === 3 ? (
+            <fieldset id="computer-skills" data-application-step="3" className={[cardClass, "scroll-mt-28"].join(" ")}>
               <legend className="px-2 font-heading text-xl font-bold text-[#183a23]">Part 3 · Computer literacy and sales skills</legend>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">We use everyday digital tools to serve customers, document conversations, and follow up reliably.</p>
               <div className="mt-6 space-y-6">
@@ -611,15 +731,40 @@ const CareersSales = () => {
                 </label>
               </div>
             </fieldset>
+            ) : null}
 
             {errorMessage ? (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</div>
             ) : null}
 
-            <button type="submit" disabled={status === "uploading" || status === "saving"} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#183a23] px-8 text-base font-bold text-white transition hover:bg-[#215330] disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-              <Leaf className="h-5 w-5" />
-              {status === "uploading" ? "Uploading documents…" : status === "saving" ? "Submitting application…" : "Submit application"}
-            </button>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={goToPreviousStep}
+                  className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-[#b9c9bd] bg-white px-8 text-base font-bold text-[#183a23] transition hover:border-[#397854] hover:bg-[#f4f8f5] sm:w-auto"
+                >
+                  <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                  Back
+                </button>
+              ) : <span aria-hidden="true" />}
+
+              {currentStep < APPLICATION_STEPS.length ? (
+                <button
+                  type="button"
+                  onClick={goToNextStep}
+                  className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#183a23] px-8 text-base font-bold text-white transition hover:bg-[#215330] sm:w-auto"
+                >
+                  Continue to {APPLICATION_STEPS[currentStep].shortTitle}
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+              ) : (
+                <button type="submit" disabled={status === "uploading" || status === "saving"} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#183a23] px-8 text-base font-bold text-white transition hover:bg-[#215330] disabled:cursor-wait disabled:opacity-60 sm:w-auto">
+                  <Leaf className="h-5 w-5" aria-hidden="true" />
+                  {status === "uploading" ? "Uploading documents…" : status === "saving" ? "Submitting application…" : "Submit application"}
+                </button>
+              )}
+            </div>
             {status === "error" ? (
               <p className="text-sm text-slate-600">You can also email <a className="font-semibold underline" href="mailto:info@soilseedandwater.com?subject=Sales%20Representative%20Application">info@soilseedandwater.com</a>.</p>
             ) : null}

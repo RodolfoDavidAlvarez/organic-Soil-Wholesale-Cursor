@@ -268,6 +268,18 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/careers",
+    title: "Careers at Soil Seed & Water | Phoenix, Arizona",
+    description: "Explore current career opportunities with Soil Seed & Water in Phoenix, Arizona. View open positions and apply online.",
+    keywords: "Soil Seed and Water careers, Phoenix jobs, gardening careers Phoenix, soil jobs Arizona",
+    canonical: "https://www.organicsoilwholesale.com/careers",
+    image: "https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png",
+    imageType: "image/png",
+    imageWidth: "1254",
+    imageHeight: "1254",
+    schemas: [localBusinessSchema],
+  },
+  {
     path: "/careers/sales",
     title: "Sales Representative Career | Soil Seed & Water",
     description: "Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and computer skills are preferred.",
