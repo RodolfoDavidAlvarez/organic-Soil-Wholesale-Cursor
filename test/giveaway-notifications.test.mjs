@@ -6,10 +6,12 @@ import {
   GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
   GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH,
   GIVEAWAY_LEAD_REPORT_FROM,
+  GIVEAWAY_LEAD_REPORT_RECIPIENTS,
   buildGiveawayLeadMap,
   buildGiveawayLeadReportEmail,
   buildGiveawayLeadReportModel,
   giveawayLeadReportsEnabled,
+  getGiveawayLeadReportRecipients,
   isGiveawayLeadReportEligible,
   sendGiveawayLeadReport,
   shouldEvaluateGiveawayLeadReport,
@@ -44,6 +46,17 @@ test('giveaway Lead Reports are enabled explicitly and use batches of 30', () =>
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'true' }), true);
   assert.equal(giveawayLeadReportsEnabled({ GIVEAWAY_LEAD_REPORTS_ACTIVE: 'false' }), false);
   assert.equal(giveawayLeadReportsEnabled({}), false);
+});
+
+test('Lead Reports go only to Rodolfo, Sabrina, and Mike', () => {
+  const expected = [
+    { name: 'Rodolfo Alvarez', email: 'ralvarez@soilseedandwater.com' },
+    { name: 'Sabrina Moses', email: 'sabrina@soilseedandwater.com' },
+    { name: 'Mike McMahon', email: 'mike.mcmahon@agave-inc.com' },
+  ];
+  assert.deepEqual(GIVEAWAY_LEAD_REPORT_RECIPIENTS, expected);
+  assert.deepEqual(getGiveawayLeadReportRecipients(), expected);
+  assert.equal(getGiveawayLeadReportRecipients().length, 3);
 });
 
 test('only a newly created giveaway entry evaluates the 30-person threshold', () => {
@@ -97,6 +110,9 @@ test('email is a Lead Report with the map, all categories, and 30 contacts', asy
   assert.match(report.html, /Total leads since August: 60/);
   assert.match(report.html, /Big Garden Giveaway leads since September: 60/);
   assert.match(report.html, /supported-color-schemes/);
+  assert.match(report.html, /color-scheme:dark only/);
+  assert.match(report.html, /background-image:linear-gradient\(#17251b,#17251b\)/);
+  assert.match(report.html, /ssw-logo-white\.png/);
   assert.match(report.html, /Garden Lead 30/);
   assert.match(report.html, /Live batching is not triggered by this test/);
 });
@@ -132,6 +148,7 @@ test('API no longer calls the one-email-per-entry giveaway sender and migration 
   const migration = await readFile(new URL('../supabase/migrations/20260903_giveaway_lead_reports.sql', import.meta.url), 'utf8');
   assert.doesNotMatch(api, /sendGiveawayAdminNotifications/);
   assert.match(api, /maybeSendGiveawayLeadReports/);
+  assert.match(api, /getGiveawayLeadReportRecipients/);
   assert.match(api, /GIVEAWAY_LEAD_REPORTS_ACTIVE/);
   assert.match(migration, /sp_giveaway_lead_reports/);
   assert.match(migration, /unique \(campaign_key, batch_number\)/);

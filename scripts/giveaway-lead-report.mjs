@@ -6,10 +6,10 @@ import {
   buildGiveawayLeadReportEmail,
   buildGiveawayLeadReportModel,
   deliverGiveawayLeadReportBatch,
+  getGiveawayLeadReportRecipients,
   loadGiveawayLeadReportData,
   sendGiveawayLeadReport,
 } from '../shared/giveawayNotifications.js';
-import { getNewsletterAdminRecipients } from '../shared/newsletterNotifications.js';
 import { GIVEAWAY_CAMPAIGN_KEY } from '../shared/giveawayEntries.js';
 
 function parseArgs(argv) {
@@ -93,9 +93,7 @@ async function runSchedule({ db, resend }, args) {
   if (Number.isNaN(date.getTime())) throw new Error('--scheduled-at must be a valid ISO date.');
   const batchNumber = Number(args.batch || 1);
   const window = await latestWindow(db);
-  const recipients = args.allAdmins
-    ? getNewsletterAdminRecipients('true')
-    : getNewsletterAdminRecipients('false');
+  const recipients = getGiveawayLeadReportRecipients();
   const result = await deliverGiveawayLeadReportBatch({
     db,
     resend,
@@ -121,7 +119,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const action = args._[0];
   if (!['test', 'schedule'].includes(action)) {
-    throw new Error('Usage: giveaway-lead-report.mjs test|schedule [--batch 1] [--to email] [--scheduled-at ISO] [--all-admins] [--approved]');
+    throw new Error('Usage: giveaway-lead-report.mjs test|schedule [--batch 1] [--to email] [--scheduled-at ISO] [--approved]');
   }
   const connected = clients();
   if (action === 'test') await runTest(connected, args);

@@ -6,7 +6,6 @@ import {
   GIVEAWAY_GROWING_OPTIONS,
 } from './giveawayEntries.js';
 import {
-  getNewsletterAdminRecipients,
   staffAlertThreadingHeaders,
 } from './newsletterNotifications.js';
 import {
@@ -20,11 +19,16 @@ export const GIVEAWAY_LEAD_REPORT_REPLY_TO = 'ralvarez@soilseedandwater.com';
 export const GIVEAWAY_LEAD_REPORT_THREAD_ID = '<ssw-giveaway-lead-report@bettersystems.ai>';
 export const GIVEAWAY_LEAD_REPORT_TABLE = 'sp_giveaway_lead_reports';
 export const GIVEAWAY_LEAD_REPORT_FIRST_AUTOMATED_BATCH = 2;
+export const GIVEAWAY_LEAD_REPORT_RECIPIENTS = Object.freeze([
+  { name: 'Rodolfo Alvarez', email: 'ralvarez@soilseedandwater.com' },
+  { name: 'Sabrina Moses', email: 'sabrina@soilseedandwater.com' },
+  { name: 'Mike McMahon', email: 'mike.mcmahon@agave-inc.com' },
+]);
 
 const CATEGORY_LABELS = Object.fromEntries(GIVEAWAY_GROWING_OPTIONS);
 const CATEGORY_KEYS = GIVEAWAY_GROWING_OPTIONS.map(([key]) => key);
 const MAP_CONTENT_ID = 'giveaway-lead-map';
-const LOGO_URL = 'https://www.organicsoilwholesale.com/email-assets/ssw-logo.png';
+const LOGO_URL = 'https://www.organicsoilwholesale.com/email-assets/ssw-logo-white.png';
 const AUGUST_LEAD_START = '2026-08-01T07:00:00.000Z';
 const SEPTEMBER_GIVEAWAY_START = '2026-09-01T07:00:00.000Z';
 
@@ -59,6 +63,10 @@ function uniqueLeadCount(rows, since = AUGUST_LEAD_START) {
 export function isGiveawayLeadReportEligible(entry) {
   const email = String(entry?.email || entry?.email_normalized || '').trim().toLowerCase();
   return Boolean(email) && !email.endsWith('@example.com');
+}
+
+export function getGiveawayLeadReportRecipients() {
+  return GIVEAWAY_LEAD_REPORT_RECIPIENTS.map((recipient) => ({ ...recipient }));
 }
 
 function percent(count, total) {
@@ -267,12 +275,12 @@ function categoryRows(model) {
     const beforeWidth = Math.max(1, category.beforePercent).toFixed(2);
     const afterWidth = Math.max(1, category.afterPercent).toFixed(2);
     return `<tr>
-      <td style="padding:7px 10px 7px 0;color:#1e3824;font-size:12px;width:22%;">${escapeHtml(category.label)}</td>
+      <td style="padding:7px 10px 7px 0;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:12px;width:22%;">${escapeHtml(category.label)}</td>
       <td style="padding:7px 10px;width:56%;">
-        <div style="height:7px;background:#d8e0d6;border-radius:999px;width:${beforeWidth}%;margin-bottom:4px;"></div>
-        <div style="height:10px;background:#3f7b49;border-radius:999px;width:${afterWidth}%;"></div>
+        <div style="height:7px;background:#34483a;background-image:linear-gradient(#34483a,#34483a);border-radius:999px;width:${beforeWidth}%;margin-bottom:4px;"></div>
+        <div style="height:10px;background:#84c993;background-image:linear-gradient(#84c993,#84c993);border-radius:999px;width:${afterWidth}%;"></div>
       </td>
-      <td align="right" style="padding:7px 0;color:#526759;font-size:12px;white-space:nowrap;width:22%;"><strong style="color:#2f6439;">${category.afterPercent.toFixed(0)}%</strong> ${deltaLabel(category.delta)}</td>
+      <td align="right" style="padding:7px 0;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:12px;white-space:nowrap;width:22%;"><strong style="color:#84c993;-webkit-text-fill-color:#84c993;">${category.afterPercent.toFixed(0)}%</strong> ${deltaLabel(category.delta)}</td>
     </tr>`;
   }).join('');
 }
@@ -282,7 +290,7 @@ function stageBlock(label, status, total) {
   const existingPercent = 100 - newPercent;
   return `<td valign="top" width="50%" style="padding:0 8px;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-      <tr><td style="padding-bottom:7px;color:#526759;font-size:12px;">${escapeHtml(label)}</td><td align="right" style="padding-bottom:7px;color:#526759;font-size:12px;">${total} profiles</td></tr>
+      <tr><td style="padding-bottom:7px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:12px;">${escapeHtml(label)}</td><td align="right" style="padding-bottom:7px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:12px;">${total} profiles</td></tr>
       <tr><td colspan="2"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
         <td align="center" bgcolor="#a5dfb0" style="width:${newPercent.toFixed(2)}%;padding:9px 2px;color:#173d25;font-size:11px;font-weight:700;">${newPercent.toFixed(0)}%</td>
         <td align="center" bgcolor="#efc269" style="width:${existingPercent.toFixed(2)}%;padding:9px 2px;color:#173d25;font-size:11px;font-weight:700;">${existingPercent.toFixed(0)}%</td>
@@ -302,10 +310,10 @@ function quickView(entry) {
 
 function peopleRows(batch) {
   return batch.map((entry) => `<tr class="person-row">
-    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #dce4da;width:37%;overflow-wrap:anywhere;"><strong style="display:block;color:#1e3824;font-size:13px;">${escapeHtml(entry.full_name)}</strong><span style="display:block;margin-top:3px;color:#526759;font-size:11px;">${escapeHtml(entry.email)}</span></td>
-    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #dce4da;color:#526759;font-size:11px;width:20%;white-space:nowrap;">${escapeHtml(entry.phone || 'Not provided')}</td>
-    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #dce4da;color:#526759;font-size:11px;width:10%;">${escapeHtml(normalizeZip(entry.zip_code))}</td>
-    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #dce4da;color:#526759;font-size:11px;width:33%;">${escapeHtml(quickView(entry))}</td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;width:37%;overflow-wrap:anywhere;"><strong style="display:block;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:13px;">${escapeHtml(entry.full_name)}</strong><span style="display:block;margin-top:3px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">${escapeHtml(entry.email)}</span></td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:20%;white-space:nowrap;">${escapeHtml(entry.phone || 'Not provided')}</td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:10%;">${escapeHtml(normalizeZip(entry.zip_code))}</td>
+    <td class="person-cell" valign="top" style="padding:11px 7px;border-top:1px solid #34483a;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:33%;">${escapeHtml(quickView(entry))}</td>
   </tr>`).join('');
 }
 
@@ -315,25 +323,25 @@ export async function buildGiveawayLeadReportEmail({ model, testing = false, gen
   const nextTotal = model.endOrdinal + model.batchSize;
   const subject = `${testing ? '[TEST] ' : ''}${leadReportSubject(model.batchNumber)}`;
   const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(subject)}</title>
-<style>:root{color-scheme:light only;supported-color-schemes:light}@media(max-width:560px){.email-pad{padding-left:16px!important;padding-right:16px!important}.kpi{display:block!important;width:100%!important;border-right:0!important;border-bottom:1px solid #dce4da!important}.stage-cell{display:block!important;width:100%!important;padding:7px 0!important}.people-head{display:none!important}.person-row,.person-cell{display:block!important;width:100%!important}.person-row{padding:10px 0;border-top:1px solid #dce4da}.person-cell{padding:3px 0!important;border:0!important;white-space:normal!important}}</style></head>
-<body bgcolor="#eef2ed" style="margin:0;background:#eef2ed;font-family:Arial,Helvetica,sans-serif;color:#1e3824;">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark"><title>${escapeHtml(subject)}</title>
+<style>:root{color-scheme:dark only;supported-color-schemes:dark}@media(max-width:560px){.email-pad{padding-left:16px!important;padding-right:16px!important}.kpi{display:block!important;width:100%!important;border-right:0!important;border-bottom:1px solid #34483a!important}.stage-cell{display:block!important;width:100%!important;padding:7px 0!important}.people-head{display:none!important}.person-row,.person-cell{display:block!important;width:100%!important}.person-row{padding:10px 0;border-top:1px solid #34483a}.person-cell{padding:3px 0!important;border:0!important;white-space:normal!important}}</style></head>
+<body bgcolor="#101612" style="margin:0;background:#101612;background-image:linear-gradient(#101612,#101612);font-family:Arial,Helvetica,sans-serif;color:#edf7ef;-webkit-text-fill-color:#edf7ef;">
 <div style="display:none;max-height:0;overflow:hidden;">Latest ${model.batchSize} giveaway leads. ${model.totalLeadsSinceAugust} total leads since August; ${model.giveawayLeadsSinceSeptember} Big Garden Giveaway leads since September.</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#eef2ed" style="background:#eef2ed;"><tr><td align="center" style="padding:24px 10px;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:680px;background:#ffffff;border:1px solid #d6e0d4;border-radius:16px;overflow:hidden;">
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:18px 24px;background:#ffffff;border-bottom:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><img src="${LOGO_URL}" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"></td><td align="right" style="color:#526759;font-size:12px;">SSW Lead Report</td></tr></table></td></tr>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#101612" style="background:#101612;background-image:linear-gradient(#101612,#101612);"><tr><td align="center" style="padding:24px 10px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#17251b" style="width:100%;max-width:680px;background:#17251b;background-image:linear-gradient(#17251b,#17251b);border:1px solid #34483a;border-radius:16px;overflow:hidden;">
+  <tr><td class="email-pad" bgcolor="#102619" style="padding:18px 24px;background:#102619;background-image:linear-gradient(#102619,#102619);border-bottom:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><img src="${LOGO_URL}" width="190" alt="Soil Seed &amp; Water" style="display:block;width:190px;max-width:100%;height:auto;border:0;"></td><td align="right" style="color:#d8e6da;-webkit-text-fill-color:#d8e6da;font-size:12px;">SSW Lead Report</td></tr></table></td></tr>
   ${testing ? '<tr><td class="email-pad" style="padding:11px 24px;background:#fff8e7;color:#684e12;font-size:12px;"><strong>Internal production test:</strong> delivered only to Rodolfo. Live batching is not triggered by this test.</td></tr>' : ''}
-  <tr><td class="email-pad" bgcolor="#d9efdd" style="padding:27px 24px 23px;background:#d9efdd;color:#132f1a;"><div style="color:#6b4809;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Big Garden Giveaway</div><h1 style="margin:7px 0 7px;color:#132f1a;font-size:29px;line-height:1.2;">SSW Lead Report #${model.batchNumber}</h1><p style="margin:0;color:#294f34;font-size:15px;line-height:1.5;"><strong>This report covers the latest ${model.batchSize} giveaway lead submissions.</strong><br>Total leads since August: ${model.totalLeadsSinceAugust}.<br>Big Garden Giveaway leads since September: ${model.giveawayLeadsSinceSeptember}.</p></td></tr>
-  <tr><td bgcolor="#f4f8f2" style="padding:0;background:#f4f8f2;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
-    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #dce4da;"><span style="display:block;color:#526759;font-size:11px;">Leads in this report</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.batchSize}</strong></td>
-    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #dce4da;"><span style="display:block;color:#526759;font-size:11px;">Total leads since August</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.totalLeadsSinceAugust}</strong></td>
-    <td class="kpi" width="33.33%" style="padding:17px 20px;"><span style="display:block;color:#526759;font-size:11px;">Giveaway since September</span><strong style="display:block;margin-top:4px;color:#2f6439;font-size:18px;">${model.giveawayLeadsSinceSeptember}</strong></td>
+  <tr><td class="email-pad" bgcolor="#23452c" style="padding:27px 24px 23px;background:#23452c;background-image:linear-gradient(#23452c,#23452c);color:#edf7ef;-webkit-text-fill-color:#edf7ef;"><div style="color:#efc269;-webkit-text-fill-color:#efc269;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Big Garden Giveaway</div><h1 style="margin:7px 0 7px;color:#ffffff;-webkit-text-fill-color:#ffffff;font-size:29px;line-height:1.2;">SSW Lead Report #${model.batchNumber}</h1><p style="margin:0;color:#d8e6da;-webkit-text-fill-color:#d8e6da;font-size:15px;line-height:1.5;"><strong style="color:#ffffff;-webkit-text-fill-color:#ffffff;">This report covers the latest ${model.batchSize} giveaway lead submissions.</strong><br>Total leads since August: ${model.totalLeadsSinceAugust}.<br>Big Garden Giveaway leads since September: ${model.giveawayLeadsSinceSeptember}.</p></td></tr>
+  <tr><td bgcolor="#1b2b20" style="padding:0;background:#1b2b20;background-image:linear-gradient(#1b2b20,#1b2b20);"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #34483a;"><span style="display:block;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">Leads in this report</span><strong style="display:block;margin-top:4px;color:#a5dfb0;-webkit-text-fill-color:#a5dfb0;font-size:18px;">${model.batchSize}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;border-right:1px solid #34483a;"><span style="display:block;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">Total leads since August</span><strong style="display:block;margin-top:4px;color:#a5dfb0;-webkit-text-fill-color:#a5dfb0;font-size:18px;">${model.totalLeadsSinceAugust}</strong></td>
+    <td class="kpi" width="33.33%" style="padding:17px 20px;"><span style="display:block;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">Giveaway since September</span><strong style="display:block;margin-top:4px;color:#a5dfb0;-webkit-text-fill-color:#a5dfb0;font-size:18px;">${model.giveawayLeadsSinceSeptember}</strong></td>
   </tr></table></td></tr>
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">What profiled leads are growing</h2></td><td align="right" style="color:#526759;font-size:11px;">${model.afterTotal} categorized profiles · all 9 categories</td></tr></table><p style="margin:8px 0 0;color:#526759;font-size:11px;line-height:1.45;">Category insights use only leads who answered the growing questions; earlier leads are included in the headline total but not assumed here.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:13px;">${categoryRows(model)}</table></td></tr>
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Gardening journey</h2></td><td align="right" style="color:#526759;font-size:11px;">${model.baselineCount} prior profiles + ${model.endOrdinal} giveaway entrants</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>${stageBlock('Before', model.beforeStatus, model.beforeTotal).replace('<td ', '<td class="stage-cell" ')}${stageBlock('Now', model.afterStatus, model.afterTotal).replace('<td ', '<td class="stage-cell" ')}</tr></table><p style="margin:11px 0 0;color:#526759;font-size:11px;"><span style="color:#3f7b49;">●</span> New or starting &nbsp;&nbsp; <span style="color:#b47a0b;">●</span> Improving an existing garden</p></td></tr>
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Where the latest 30 leads are</h2></td><td align="right" style="color:#526759;font-size:11px;">${escapeHtml(mapCaption)}</td></tr></table><img src="cid:${MAP_CONTENT_ID}" width="560" alt="Phoenix metro map showing the ${map.mappedPeople} leads in this report." style="display:block;width:100%;max-width:560px;height:auto;margin:15px auto 0;border:0;border-radius:12px;"></td></tr>
-  <tr><td class="email-pad" bgcolor="#ffffff" style="padding:24px;background:#ffffff;border-top:1px solid #dce4da;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#1e3824;font-size:20px;">Latest ${model.batchSize} lead submissions</h2></td><td align="right" style="color:#526759;font-size:11px;">Contact details + quick context</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;table-layout:fixed;"><thead class="people-head"><tr><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:37%;">Person</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:20%;">Phone</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:10%;">ZIP</th><th align="left" style="padding:0 7px 9px;color:#526759;font-size:11px;width:33%;">Quick view</th></tr></thead><tbody>${peopleRows(model.batch)}</tbody></table></td></tr>
-  <tr><td class="email-pad" align="center" bgcolor="#f7f8f5" style="padding:17px 24px;background:#f7f8f5;border-top:1px solid #dce4da;color:#526759;font-size:11px;line-height:1.5;">Generated ${escapeHtml(phoenixTime(generatedAt))} AZ · ${model.baselineCount} profiled worm-castings signups included · Next report after lead ${nextTotal}</td></tr>
+  <tr><td class="email-pad" bgcolor="#17251b" style="padding:24px;background:#17251b;background-image:linear-gradient(#17251b,#17251b);border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:20px;">What profiled leads are growing</h2></td><td align="right" style="color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">${model.afterTotal} categorized profiles · all 9 categories</td></tr></table><p style="margin:8px 0 0;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;line-height:1.45;">Category insights use only leads who answered the growing questions; earlier leads are included in the headline total but not assumed here.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:13px;">${categoryRows(model)}</table></td></tr>
+  <tr><td class="email-pad" bgcolor="#17251b" style="padding:24px;background:#17251b;background-image:linear-gradient(#17251b,#17251b);border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:20px;">Gardening journey</h2></td><td align="right" style="color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">${model.baselineCount} prior profiles + ${model.endOrdinal} giveaway entrants</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>${stageBlock('Before', model.beforeStatus, model.beforeTotal).replace('<td ', '<td class="stage-cell" ')}${stageBlock('Now', model.afterStatus, model.afterTotal).replace('<td ', '<td class="stage-cell" ')}</tr></table><p style="margin:11px 0 0;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;"><span style="color:#a5dfb0;-webkit-text-fill-color:#a5dfb0;">●</span> New or starting &nbsp;&nbsp; <span style="color:#efc269;-webkit-text-fill-color:#efc269;">●</span> Improving an existing garden</p></td></tr>
+  <tr><td class="email-pad" bgcolor="#17251b" style="padding:24px;background:#17251b;background-image:linear-gradient(#17251b,#17251b);border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:20px;">Where the latest 30 leads are</h2></td><td align="right" style="color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">${escapeHtml(mapCaption)}</td></tr></table><img src="cid:${MAP_CONTENT_ID}" width="560" alt="Phoenix metro map showing the ${map.mappedPeople} leads in this report." style="display:block;width:100%;max-width:560px;height:auto;margin:15px auto 0;border:0;border-radius:12px;"></td></tr>
+  <tr><td class="email-pad" bgcolor="#17251b" style="padding:24px;background:#17251b;background-image:linear-gradient(#17251b,#17251b);border-top:1px solid #34483a;"><table role="presentation" width="100%"><tr><td><h2 style="margin:0;color:#edf7ef;-webkit-text-fill-color:#edf7ef;font-size:20px;">Latest ${model.batchSize} lead submissions</h2></td><td align="right" style="color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;">Contact details + quick context</td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;table-layout:fixed;"><thead class="people-head"><tr><th align="left" style="padding:0 7px 9px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:37%;">Person</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:20%;">Phone</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:10%;">ZIP</th><th align="left" style="padding:0 7px 9px;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;width:33%;">Quick view</th></tr></thead><tbody>${peopleRows(model.batch)}</tbody></table></td></tr>
+  <tr><td class="email-pad" align="center" bgcolor="#1b2b20" style="padding:17px 24px;background:#1b2b20;background-image:linear-gradient(#1b2b20,#1b2b20);border-top:1px solid #34483a;color:#c5d3c8;-webkit-text-fill-color:#c5d3c8;font-size:11px;line-height:1.5;">Generated ${escapeHtml(phoenixTime(generatedAt))} AZ · ${model.baselineCount} profiled worm-castings signups included · Next report after lead ${nextTotal}</td></tr>
 </table></td></tr></table></body></html>`;
   const text = `${subject}\n\nThis report covers the latest ${model.batchSize} giveaway lead submissions. Total leads since August: ${model.totalLeadsSinceAugust}. Big Garden Giveaway leads since September: ${model.giveawayLeadsSinceSeptember}. Category insights use ${model.afterTotal} profiled responses. ZIPs in this report: ${model.uniqueZips}.\n\n${model.batch.map((entry, index) => `${index + 1}. ${entry.full_name} — ${entry.email} — ${entry.phone || 'No phone'} — ZIP ${normalizeZip(entry.zip_code)} — ${quickView(entry)}`).join('\n')}\n\nNext report after lead ${nextTotal}.`;
   return {
@@ -524,7 +532,7 @@ export async function deliverGiveawayLeadReportBatch({
   batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
   entryStart = (batchNumber - 1) * batchSize + 1,
   entryEnd = entryStart + batchSize - 1,
-  recipients = getNewsletterAdminRecipients(),
+  recipients = getGiveawayLeadReportRecipients(),
   scheduledAt = null,
   idempotencySuffix = '',
 }) {
@@ -558,7 +566,7 @@ export async function deliverGiveawayLeadReportBatch({
 export async function maybeSendGiveawayLeadReports({
   db,
   resend,
-  recipients = getNewsletterAdminRecipients(),
+  recipients = getGiveawayLeadReportRecipients(),
   batchSize = GIVEAWAY_LEAD_REPORT_BATCH_SIZE,
 }) {
   const { count, error } = await db.from('sp_giveaway_entries')

@@ -4776,15 +4776,14 @@ ${pages}
           giveawayLeadReportsEnabled,
           maybeSendGiveawayLeadReports,
           shouldEvaluateGiveawayLeadReport,
+          getGiveawayLeadReportRecipients,
         } = await import('../shared/giveawayNotifications.js');
         if (shouldEvaluateGiveawayLeadReport(result) && giveawayLeadReportsEnabled()) {
           try {
-            const { getNewsletterAdminRecipients } = await import('../shared/newsletterNotifications.js');
-            const recipients = getNewsletterAdminRecipients();
             const reportResult = await maybeSendGiveawayLeadReports({
               db: giveawayDb,
               resend: await getResend(),
-              recipients,
+              recipients: getGiveawayLeadReportRecipients(),
             });
             console.info('[Giveaway] Lead Report check:', {
               count: reportResult.count,
