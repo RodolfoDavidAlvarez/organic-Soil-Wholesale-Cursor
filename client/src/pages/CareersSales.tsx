@@ -243,6 +243,34 @@ const CareersSales = () => {
   const goToNextStep = () => {
     if (!validateCurrentStep()) return;
 
+    // Some mobile/native controls (especially date inputs) can update their
+    // displayed value before React receives the final change event. Capture
+    // every basic field directly before this step unmounts.
+    if (currentStep === 1 && formRef.current) {
+      const value = (id: string) => formRef.current?.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${id}`)?.value ?? "";
+      setForm((current) => ({
+        ...current,
+        firstName: value("firstName"),
+        lastName: value("lastName"),
+        preferredName: value("preferredName"),
+        email: value("email"),
+        phone: value("phone"),
+        city: value("city"),
+        state: value("state"),
+        linkedInUrl: value("linkedInUrl"),
+        employmentInterest: value("employmentInterest"),
+        phoenixAvailability: value("phoenixAvailability"),
+        reliableTransportation: value("reliableTransportation"),
+        workAuthorization: value("workAuthorization"),
+        earliestStartDate: value("earliestStartDate"),
+        compensationExpectation: value("compensationExpectation"),
+        salesExperienceYears: value("salesExperienceYears"),
+        salesBackground: value("salesBackground"),
+        whySsw: value("whySsw"),
+        referralSource: value("referralSource"),
+      }));
+    }
+
     trackEvent("Recruitment Application Step Completed", {
       position: POSITION_SLUG,
       step: currentStep,
@@ -576,11 +604,11 @@ const CareersSales = () => {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="email">Email *</label>
-                  <input id="email" type="email" required maxLength={254} autoComplete="email" className={inputClass} value={form.email} onChange={(event) => update("email", event.target.value)} />
+                  <input id="email" type="email" required maxLength={254} autoComplete="email" className={inputClass} value={form.email} onInput={(event) => update("email", event.currentTarget.value)} onChange={(event) => update("email", event.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="phone">Phone *</label>
-                  <input id="phone" type="tel" required maxLength={40} autoComplete="tel" className={inputClass} value={form.phone} onChange={(event) => update("phone", event.target.value)} />
+                  <input id="phone" type="tel" required maxLength={40} autoComplete="tel" className={inputClass} value={form.phone} onInput={(event) => update("phone", event.currentTarget.value)} onChange={(event) => update("phone", event.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="city">City *</label>
@@ -616,7 +644,7 @@ const CareersSales = () => {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="earliestStartDate">Earliest start date *</label>
-                  <input id="earliestStartDate" type="date" required className={inputClass} value={form.earliestStartDate} onChange={(event) => update("earliestStartDate", event.target.value)} />
+                  <input id="earliestStartDate" type="date" required className={inputClass} value={form.earliestStartDate} onInput={(event) => update("earliestStartDate", event.currentTarget.value)} onChange={(event) => update("earliestStartDate", event.target.value)} />
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="salesExperienceYears">Sales or customer-service experience *</label>
