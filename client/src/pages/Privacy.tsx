@@ -28,6 +28,7 @@ const Privacy = () => {
                 <li>Submit order forms or requests for quotes</li>
                 <li>Contact us via phone, email, or contact forms</li>
                 <li>Subscribe to our communications</li>
+                <li>Apply for a position with Soil Seed &amp; Water</li>
                 <li>Visit our website (automatic collection)</li>
               </ul>
             </section>
@@ -41,6 +42,7 @@ const Privacy = () => {
                 <li>Contact information (name, email, phone, address)</li>
                 <li>Business information (company name, type of operation)</li>
                 <li>Order details and product preferences</li>
+                <li>Recruitment information, including resumes, supporting documents, work history, availability, and application answers</li>
                 <li>Website usage data (IP address, browser type, pages visited)</li>
               </ul>
             </section>
@@ -55,6 +57,7 @@ const Privacy = () => {
                 <li>Provide customer service and support</li>
                 <li>Send you order confirmations and updates</li>
                 <li>Improve our products and services</li>
+                <li>Evaluate job applications and communicate with candidates</li>
                 <li>Comply with legal obligations</li>
               </ul>
             </section>

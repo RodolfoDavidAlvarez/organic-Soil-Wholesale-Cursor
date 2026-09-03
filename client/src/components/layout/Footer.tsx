@@ -114,6 +114,16 @@ const Footer = () => {
                     </div>
                   </Link>
                 </li>
+                <li>
+                  <Link href="/careers/sales">
+                    <div className="flex min-h-11 items-center gap-1 text-white/70 transition-colors duration-200 hover:text-white">
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Careers
+                    </div>
+                  </Link>
+                </li>
               </ul>
 
               <h3 className="font-semibold text-lg mb-4 mt-8 text-white">Who We Serve</h3>

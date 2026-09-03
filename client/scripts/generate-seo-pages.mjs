@@ -268,6 +268,42 @@ const routes = [
     schemas: [localBusinessSchema],
   },
   {
+    path: "/careers/sales",
+    title: "Sales Representative Career | Soil Seed & Water",
+    description: "Apply for the Sales Representative position with Soil Seed & Water in Phoenix, Arizona. Gardening, organic growing, soil biology, and computer skills are preferred.",
+    keywords: "Phoenix sales job, gardening job Phoenix, soil sales representative, organic growing careers",
+    canonical: "https://www.organicsoilwholesale.com/careers/sales",
+    image: "https://www.organicsoilwholesale.com/images/recruitment/sales-representative-hiring-square-2026.png",
+    imageType: "image/png",
+    imageWidth: "1254",
+    imageHeight: "1254",
+    schemas: [
+      {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        title: "Sales Representative",
+        description: "Help gardeners and growers choose products that build healthier soil. Gardening, organic growing, soil biology, customer service, and computer skills are preferred.",
+        datePosted: "2026-09-02",
+        employmentType: ["FULL_TIME", "PART_TIME"],
+        directApply: true,
+        hiringOrganization: {
+          "@type": "Organization",
+          name: "Soil Seed & Water",
+          sameAs: "https://www.organicsoilwholesale.com",
+        },
+        jobLocation: {
+          "@type": "Place",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Phoenix",
+            addressRegion: "AZ",
+            addressCountry: "US",
+          },
+        },
+      },
+    ],
+  },
+  {
     path: "/free-worm-castings",
     title: "This offer is no longer available | Organic Soil Wholesale",
     description: "The August free worm castings community gift has ended. Browse current Phoenix pickup deals or products.",

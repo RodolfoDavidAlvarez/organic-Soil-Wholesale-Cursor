@@ -40,6 +40,7 @@ const Distributors = lazy(() => import("@/pages/Distributors"));
 const Nurseries = lazy(() => import("@/pages/Nurseries"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
+const CareersSales = lazy(() => import("@/pages/CareersSales"));
 const StoreLocatorEnhanced = lazy(() => import("@/pages/StoreLocatorEnhanced"));
 const YardMap = lazy(() => import("@/pages/YardMap"));
 const PayAndPickup = lazy(() => import("@/pages/PayAndPickup"));
@@ -199,6 +200,9 @@ function Router() {
         <Route path="/nurseries" component={Nurseries} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
+        <Route path="/careers/sales" component={CareersSales} />
+        <Route path="/careers">{() => <RedirectTo href="/careers/sales" />}</Route>
+        <Route path="/jobs">{() => <RedirectTo href="/careers/sales" />}</Route>
         <Route path="/store-locator" component={StoreLocatorEnhanced} />
         <Route path="/yard-map" component={YardMap} />
         <Route path="/pay-and-pickup/:step?" component={PayAndPickup} />
@@ -317,6 +321,7 @@ function App() {
     "/youtube", "/yt", "/links/youtube",
   ].includes(location);
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
+  const isCareers = location.startsWith("/careers") || location === "/jobs";
   const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
   useEffect(() => {
@@ -364,7 +369,7 @@ function App() {
                     <ScrollToTop />
                     <CallTrackingRouteSync />
                     <Analytics />
-                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && <FloatingCTA />}
+                    {showStandardLayout && !isQuoteFlow && !isProductFlow && !isOfferFlow && !isCareers && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
                     {GROK_ASSISTANT_ENABLED && <GrokWidget />}
                   </div>
