@@ -110,8 +110,9 @@ test('email is a Lead Report with the map, all categories, and 30 contacts', asy
   assert.match(report.html, /Total leads since August: 60/);
   assert.match(report.html, /Big Garden Giveaway leads since September: 60/);
   assert.match(report.html, /supported-color-schemes/);
-  assert.match(report.html, /color-scheme:dark only/);
-  assert.match(report.html, /background-image:linear-gradient\(#17251b,#17251b\)/);
+  assert.match(report.html, /color-scheme:light only/);
+  assert.match(report.html, /background-image:linear-gradient\(#ffffff,#ffffff\)/);
+  assert.doesNotMatch(report.html, /background:#17251b/);
   assert.match(report.html, /ssw-logo-white\.png/);
   assert.match(report.html, /Garden Lead 30/);
   assert.match(report.html, /Live batching is not triggered by this test/);
