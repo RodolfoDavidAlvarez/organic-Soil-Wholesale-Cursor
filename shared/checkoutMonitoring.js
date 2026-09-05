@@ -18,7 +18,13 @@ export function checkoutAlertFollowUpFromOrder(order) {
   };
 }
 
-const KNOWN_SCANNER_INPUT_PATHS = new Set(['/api/graphql']);
+const KNOWN_SCANNER_INPUT_PATHS = new Set([
+  '/api/graphql',
+  '/api/mcp',
+  '/api/mcp/mcp',
+  '/api/mcp/v1',
+  '/api/v1/mcp',
+]);
 
 export function shouldAlertUnmatchedInput(path, method) {
   return ['POST', 'PUT', 'PATCH'].includes(method)

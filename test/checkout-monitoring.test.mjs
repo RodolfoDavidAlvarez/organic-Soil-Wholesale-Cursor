@@ -18,6 +18,10 @@ test('abandonment digest excludes failures that already receive immediate alerts
 
 test('known GraphQL scanner probes do not trigger customer-input alerts', () => {
   assert.equal(shouldAlertUnmatchedInput('/api/graphql', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/mcp', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/mcp/mcp', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/mcp/v1', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/v1/mcp', 'POST'), false);
   assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'POST'), true);
   assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'GET'), false);
 });

@@ -1279,9 +1279,9 @@ export default async function handler(req, res) {
         from: process.env.CHECKOUT_ALERT_FROM || 'OSW Alerts <info@soilseedandwater.com>',
         replyTo: 'developer@bettersystems.ai',
         to: [CHECKOUT_ALERT_TO],
-        subject: `[OSW checkout digest] ${stale.length} incomplete checkout${stale.length === 1 ? '' : 's'}`,
-        html: `<h2>Incomplete checkout digest</h2><p>These checkout journeys stopped for at least one hour. This is a customer-behavior signal, not a website outage alert.</p>
-          <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Last step</th><th>Type</th><th>Items</th><th>Cart</th><th>Order</th><th>Last activity</th></tr></thead><tbody>${rows}</tbody></table>
+        subject: `[OSW checkout] ${stale.length} shopper${stale.length === 1 ? '' : 's'} did not complete purchase`,
+        html: `<h2>${stale.length} shopper${stale.length === 1 ? '' : 's'} did not complete purchase</h2><p>This is normal customer behavior, not a website error. Each shopper left checkout before payment and had no completed order.</p>
+          <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Last checkout step</th><th>Type</th><th>Items</th><th>Cart value</th><th>Order</th><th>Last activity</th></tr></thead><tbody>${rows}</tbody></table>
           <p>This monitor does not collect IP addresses, browser fingerprints, emails, phones, or addresses.</p>`,
       });
       if (emailResult?.error) throw new Error(emailResult.error.message || 'Digest email failed');
@@ -1409,9 +1409,9 @@ export default async function handler(req, res) {
           await notifyCheckoutIssue(
             db,
             monitor,
-            'Customer returned from Stripe without paying',
-            'Stripe checkout was canceled',
-            'The customer reached Stripe Checkout and returned without a completed payment.',
+            'Shopper did not complete purchase',
+            'Shopper left Stripe before paying',
+            'This is not a website error. The shopper reached Stripe Checkout and returned without completing payment.',
           );
         }
         console.log(JSON.stringify({
@@ -1473,7 +1473,13 @@ export default async function handler(req, res) {
             errorCode: 'stripe_session_expired',
             errorMessage: 'Stripe Checkout session expired before payment.',
           });
-          await notifyCheckoutIssue(db, monitor, 'Stripe session expired', 'Checkout expired before payment', monitor?.error_message);
+          await notifyCheckoutIssue(
+            db,
+            monitor,
+            'Shopper did not complete purchase',
+            'Shopper did not complete payment before checkout expired',
+            'This is not a website error. The Stripe Checkout session expired before the shopper completed payment.',
+          );
         }
       } else if (event.type === 'payment_intent.payment_failed') {
         const orderId = parseInt(String(session?.metadata?.order_id || ''), 10);
