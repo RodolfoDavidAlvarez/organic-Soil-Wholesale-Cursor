@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const postcss=require('postcss');
+const source=process.argv[2];
+if(!source)throw new Error('Pass the approved Representative Profiles project directory.');
+const people=JSON.parse(fs.readFileSync(source+'/app/people.json','utf8'));
+fs.writeFileSync('client/src/pages/representative-card-data.json',JSON.stringify({rodolfo:people.rodolfo,sabrina:people.sabrina},null,2)+'\n');
+const root=postcss.parse(fs.readFileSync(source+'/app/globals.css','utf8').replaceAll('/assets/','/representative-assets/').replaceAll('Inter','RepresentativeInter'));
+root.walkRules(rule=>{rule.selectors=rule.selectors.map(s=>s==='body'?'.representative-profile-page':s==='.standalone'?'.representative-profile-page':s.startsWith('.standalone ')?'.representative-profile-page '+s.slice(12):'.representative-profile-page '+s)});
+root.append({selector:'.representative-profile-page',nodes:[{prop:'min-height',value:'100vh'},{prop:'padding',value:'24px 16px'},{prop:'font-family',value:'RepresentativeInter, Arial, sans-serif'}]});
+fs.writeFileSync('client/src/pages/representative-card.css',root.toString());

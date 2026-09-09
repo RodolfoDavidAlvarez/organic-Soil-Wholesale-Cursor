@@ -164,6 +164,14 @@ const itemListSchema = {
 };
 
 const routes = [
+  ...Object.entries(JSON.parse(await readFile(path.join(clientRoot, 'src/pages/representative-card-data.json'), 'utf8'))).map(([slug, rep]) => ({
+    path: '/rep/' + slug,
+    title: rep.name + ' | Soil Seed & Water',
+    description: 'Connect with ' + rep.name + ' at Soil Seed & Water. Local soil sales, online shopping, and direct contact details.',
+    canonical: 'https://www.organicsoilwholesale.com/rep/' + slug,
+    image: 'https://www.organicsoilwholesale.com/representative-assets/ssw-logo.png',
+    schemas: [{ '@context': 'https://schema.org', '@type': 'Person', name: rep.name, jobTitle: rep.role, telephone: rep.tel, email: rep.email, url: 'https://www.organicsoilwholesale.com/rep/' + slug, worksFor: { '@type': 'Organization', name: 'Soil Seed & Water' } }],
+  })),
   {
     path: "/",
     title: "Organic Soil Wholesale | Phoenix Compost, Soil & Mulch Pickup",

@@ -1,0 +1,20 @@
+{
+  "rodolfo": {
+    "name": "Rodolfo Alvarez",
+    "short": "Rodolfo",
+    "role": "Owner",
+    "phone": "(602) 833-0615",
+    "tel": "+16028330615",
+    "email": "ralvarez@soilseedandwater.com",
+    "initials": "RA"
+  },
+  "sabrina": {
+    "name": "Sabrina Moses",
+    "short": "Sabrina",
+    "role": "Soil Health & Sales",
+    "phone": "(602) 975-3224",
+    "tel": "+16029753224",
+    "email": "sabrina@soilseedandwater.com",
+    "initials": "SM"
+  }
+}

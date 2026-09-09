@@ -103,6 +103,7 @@ const AdminTaskBoard = lazy(() => import("@/pages/admin/TaskBoard"));
 const AdminSettings = lazy(() => import("@/pages/admin/Settings"));
 const AcceptInvitation = lazy(() => import("@/pages/admin/AcceptInvitation"));
 const RepresentativeLanding = lazy(() => import("@/pages/RepresentativeLanding"));
+const RepresentativeCardLanding = lazy(() => import("@/pages/RepresentativeCardLanding"));
 const CRMCapture = lazy(() => import("@/pages/CRMCapture"));
 const AdminLayout = lazy(() => import("@/components/admin/AdminLayout"));
 const ProtectedAdminRoute = lazy(() => import("@/components/admin/ProtectedAdminRoute"));
@@ -223,6 +224,8 @@ function Router() {
         <Route path="/order-confirmation" component={OrderConfirmation} />
         {GROK_ASSISTANT_ENABLED && <Route path="/grok" component={GrokAssistant} />}
         <Route path="/video-demo" component={VideoDemo} />
+        <Route path="/rep/rodolfo" component={RepresentativeCardLanding} />
+        <Route path="/rep/sabrina" component={RepresentativeCardLanding} />
         <Route path="/rep/:slug" component={RepresentativeLanding} />
         {/* CRM routes: /crm/:org/:user or /crm/:org */}
         <Route path="/crm/ssw/:user" component={CRMCapture} />
