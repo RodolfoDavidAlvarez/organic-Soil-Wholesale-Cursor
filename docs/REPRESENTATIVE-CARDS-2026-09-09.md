@@ -3,10 +3,10 @@
 Approved public pages: /rep/rodolfo, /rep/sabrina, /rep/jonathan, /rep/astrid, and /rep/vanessa. These permanent URLs are encoded in the printed QR codes. Keep them working when designs change.
 
 Rodolfo Alvarez — Chief Operating Officer — (602) 833-0615 — ralvarez@soilseedandwater.com.
-Sabrina Moses — Soil Health — (602) 975-3224 — sabrina@soilseedandwater.com.
+Sabrina Moses — Soil Health & Sales — (602) 975-3224 — sabrina@soilseedandwater.com.
 Jonathan Carrasco — Logistics Coordinator & Product Developer — (928) 232-4022 — jcarrasco@soilseedandwater.com.
-Astrid Lopez — Sales — (602) 584-1535 — astrid@soilseedandwater.com.
-Vanessa Martinez — Sales — (480) 771-9889 — vanessa@soilseedandwater.com.
+Astrid Lopez — Soil Health & Sales — (602) 584-1535 — astrid@soilseedandwater.com.
+Vanessa Martinez — Soil Health & Sales — (480) 771-9889 — vanessa@soilseedandwater.com.
 Sabrina Kills Bugs uses her separate personal/product line (520) 479-6360.
 
 These direct numbers were explicitly approved by Rodolfo. The general OSW support number remains (623) 263-3386. Existing /rep/ CallRail exclusions are retained.
