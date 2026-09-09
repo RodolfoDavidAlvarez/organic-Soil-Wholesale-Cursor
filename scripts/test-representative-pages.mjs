@@ -8,7 +8,7 @@ try{
   const page=await browser.newPage();
   for(const width of [390,1440]){
     await page.setViewport({width,height:844,deviceScaleFactor:1});
-    for(const [id,name,phone,email] of [['rodolfo','Rodolfo Alvarez','+16028330615','ralvarez@soilseedandwater.com'],['sabrina','Sabrina Moses','+16029753224','sabrina@soilseedandwater.com']]){
+    for(const [id,name,phone,email] of [['rodolfo','Rodolfo Alvarez','+16028330615','ralvarez@soilseedandwater.com'],['sabrina','Sabrina Moses','+16029753224','sabrina@soilseedandwater.com'],['jonathan','Jonathan Carrasco','+19282324022','jcarrasco@soilseedandwater.com'],['astrid','Astrid Lopez','+16025841535','astrid@soilseedandwater.com'],['vanessa','Vanessa Martinez','+14807719889','vanessa@soilseedandwater.com']]){
       await page.goto(base+'/rep/'+id,{waitUntil:'networkidle2'});
       await page.waitForSelector('.representative-profile-page .identity h1');
       const state=await page.evaluate(()=>({name:document.querySelector('.identity h1').textContent,text:document.body.innerText,links:[...document.querySelectorAll('.representative-profile-page a')].map(a=>a.getAttribute('href')),overflow:document.documentElement.scrollWidth>innerWidth,broken:[...document.querySelectorAll('.representative-profile-page img')].filter(i=>!i.complete||!i.naturalWidth).map(i=>i.src),canonical:document.querySelector('link[rel=canonical]')?.href,excluded:document.documentElement.getAttribute('data-callrail-ignore'),smallTargets:[...document.querySelectorAll('.contact-actions a,.socials a,.save,.skb-shop,.skb-phone')].filter(a=>a.getBoundingClientRect().height<44).map(a=>a.textContent)}));

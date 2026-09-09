@@ -2,7 +2,7 @@
   "rodolfo": {
     "name": "Rodolfo Alvarez",
     "short": "Rodolfo",
-    "role": "Owner",
+    "role": "Chief Operating Officer",
     "phone": "(602) 833-0615",
     "tel": "+16028330615",
     "email": "ralvarez@soilseedandwater.com",
@@ -11,10 +11,37 @@
   "sabrina": {
     "name": "Sabrina Moses",
     "short": "Sabrina",
-    "role": "Soil Health & Sales",
+    "role": "Soil Health",
     "phone": "(602) 975-3224",
     "tel": "+16029753224",
     "email": "sabrina@soilseedandwater.com",
     "initials": "SM"
+  },
+  "jonathan": {
+    "name": "Jonathan Carrasco",
+    "short": "Jonathan",
+    "role": "Logistics Coordinator & Product Developer",
+    "phone": "(928) 232-4022",
+    "tel": "+19282324022",
+    "email": "jcarrasco@soilseedandwater.com",
+    "initials": "JC"
+  },
+  "astrid": {
+    "name": "Astrid Lopez",
+    "short": "Astrid",
+    "role": "Sales",
+    "phone": "(602) 584-1535",
+    "tel": "+16025841535",
+    "email": "astrid@soilseedandwater.com",
+    "initials": "AL"
+  },
+  "vanessa": {
+    "name": "Vanessa Martinez",
+    "short": "Vanessa",
+    "role": "Sales",
+    "phone": "(480) 771-9889",
+    "tel": "+14807719889",
+    "email": "vanessa@soilseedandwater.com",
+    "initials": "VM"
   }
 }

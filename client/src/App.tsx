@@ -226,6 +226,9 @@ function Router() {
         <Route path="/video-demo" component={VideoDemo} />
         <Route path="/rep/rodolfo" component={RepresentativeCardLanding} />
         <Route path="/rep/sabrina" component={RepresentativeCardLanding} />
+        <Route path="/rep/jonathan" component={RepresentativeCardLanding} />
+        <Route path="/rep/astrid" component={RepresentativeCardLanding} />
+        <Route path="/rep/vanessa" component={RepresentativeCardLanding} />
         <Route path="/rep/:slug" component={RepresentativeLanding} />
         {/* CRM routes: /crm/:org/:user or /crm/:org */}
         <Route path="/crm/ssw/:user" component={CRMCapture} />
