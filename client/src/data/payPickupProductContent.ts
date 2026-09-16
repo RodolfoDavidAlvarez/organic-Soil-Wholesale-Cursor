@@ -39,7 +39,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     includes: ["Premium worm castings"],
     benefits: ["Feeds root zones naturally", "Helps retain moisture", "Supports stronger soil biology"],
     startingPriceContext: "for a 9 lb bag",
-    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "bulk pickup (per ton)"],
+    sizeSummaries: ["9 lb bag", "40 lb bag (1 cu ft)", "super sack (~2,000 lb)", "truckload (~24 tons)"],
   },
   111: {
     displayType: "All-Stage Potting Mix",
@@ -81,7 +81,7 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     ],
     benefits: ["All-stage potting mix", "Balanced organic nutrition", "Ready out of the bag"],
     startingPriceContext: "for a 1.5 cu ft bag (~50 lb)",
-    sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~60 cu yd)"],
+    sizeSummaries: ["1.5 cu ft bag (~50 lb)", "super sack (2.2 cu yd)", "truckload (~60 cu yd)"],
     specSheetUrl: "/documents/specsheets/PlantPal-All-Stage-Nursery-Mix-Spec-Sheet.pdf",
     specSheetLabel: "Download PlantPal spec sheet",
   },
@@ -97,6 +97,20 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     ],
     startingPriceContext: "for a 2 cu ft bag (~60 lb)",
     sizeSummaries: ["2 cu ft bag (~60 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~60 cu yd)"],
+  },
+  134: {
+    displayType: "Organic Mulch",
+    description:
+      "Wood fiber mulch with dairy compost for weed suppression, moisture retention, and a clean landscape finish.",
+    includes: ["Wood fiber", "Dairy compost"],
+    benefits: [
+      "Suppresses weeds",
+      "Retains soil moisture",
+      "Slow-release soil feeding",
+      "Clean finished look",
+    ],
+    startingPriceContext: "for a 2 cu ft bag",
+    sizeSummaries: ["2 cu ft bag", "super sack (2.2 cu yd)"],
   },
 };
 

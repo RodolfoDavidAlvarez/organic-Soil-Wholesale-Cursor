@@ -36,6 +36,7 @@ export type PromoBundle = {
   idealFor: string;
   result: string;
   pickupNote: string;
+  phoenixYardPickup: boolean;
   items: PromoBundleItem[];
 };
 

@@ -1,7 +1,8 @@
 /**
  * OSW pickup schedule — single source of truth (America/Phoenix).
- * Bulk pickup rules: Congress can be ready in about 30 minutes. Phoenix is
- * appointment-only and must be scheduled about 1 week ahead.
+ * Bulk pickup rules: Congress can be ready in about 30 minutes. Phoenix loose
+ * bulk is appointment-only (~1 week) and only for products the yard can load
+ * (Simon's Gold and Nature's Blanket). See shared/phoenixYardPickup.js.
  */
 
 export const PICKUP_TIMEZONE = 'America/Phoenix';
@@ -55,7 +56,7 @@ export const PICKUP_LOCATIONS = [
     pickupLocationLabel: 'Phoenix Yard',
     // Exact customer entrance pin: 33°28'02.4"N 112°06'04.5"W.
     directionsUrl: pickupDirectionsUrl('33.467333,-112.101250'),
-    pickupNote: 'Bags, pallets & totes · loose bulk by appointment',
+    pickupNote: "Simon's Gold & Nature's Blanket · loose bulk by appointment",
     minLeadDays: 0,
     allowAsap: true,
     bulkMinLeadDays: 7,

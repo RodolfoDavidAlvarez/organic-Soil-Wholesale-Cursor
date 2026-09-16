@@ -4,23 +4,22 @@ import { Loader2 } from "lucide-react";
 import { PayPickupCard, type PayPickupProduct } from "@/components/PayPickupCard";
 import { CUSTOMER_SUPPORT_PHONE_DISPLAY } from "@/config/contact";
 import { getPayPickupProductType } from "@/data/payPickupProductContent";
+import { PHOENIX_YARD_PICKUP_GRID_IDS, shouldHidePhoenixYardBulkSize } from "@shared/phoenixYardPickup.js";
 
-/** MOS product ids for the 4 mains. Mirrors myorganicsoil.com lib/products.ts. */
-const MAIN_PRODUCT_IDS = [111, 1001, 1000, 3000] as const;
+/** Phoenix yard loadable SKUs only — see shared/phoenixYardPickup.js. */
+const MAIN_PRODUCT_IDS = PHOENIX_YARD_PICKUP_GRID_IDS;
 
 /** Graphic 3 / bag-in-context heroes — bag with soil & produce, white background. */
 const HERO_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg", // Simon's Gold
-  1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg", // Mikey's Worm Poop
-  111: "/images/optimized/plantpal-with-veggies.jpg", // PlantPal (bag + vegetables)
-  3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Nature's Blanket 2 CF bag
+  134: "/images/optimized/natures-blanket-bag-context.jpg", // Nature's Blanket
+  3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Nature's Blanket Premium
 };
 
 /** Bestfor collage backdrops — fills the photo area behind the bag. */
 const BACKDROP_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bestfor.jpg",
-  1001: "/images/optimized/mikeys-worm-poop-bestfor.jpg",
-  111: "/images/optimized/plantpal-bestfor.jpg",
+  134: "/images/optimized/natures-blanket-bestfor.jpg",
   3000: "/images/optimized/natures-blanket-premium-bestfor.jpg",
 };
 
@@ -57,7 +56,7 @@ const fetchPublicProducts = async (): Promise<ApiProduct[]> => {
 
 function normalize(record: ApiProduct): PayPickupProduct | null {
   const sizes = (record.sizePriceOptions ?? record.size_price_options ?? []).filter(
-    (s) => s.isActive !== false
+    (s) => s.isActive !== false && !shouldHidePhoenixYardBulkSize(record.id, s.key ?? s.label ?? ""),
   );
   if (sizes.length === 0) return null;
   return {
@@ -87,7 +86,7 @@ interface PayPickupGridProps {
 
 export function PayPickupGrid({ className }: PayPickupGridProps) {
   const { data, isLoading, error } = useQuery<ApiProduct[]>({
-    queryKey: ["publicProducts"],
+    queryKey: ["publicProducts", MAIN_PRODUCT_IDS.join(",")],
     queryFn: fetchPublicProducts,
     staleTime: 60 * 1000,
   });

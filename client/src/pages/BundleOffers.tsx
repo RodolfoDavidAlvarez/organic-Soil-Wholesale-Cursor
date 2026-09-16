@@ -26,10 +26,12 @@ export default function BundleOffers() {
   return <OfferPage offer={offer} />;
 }
 
-function PickupStrip() {
+function PickupStrip({ showPhoenixAddress = true }: { showPhoenixAddress?: boolean }) {
   return (
     <p className="text-center text-sm leading-6 text-[#5f6c62]">
-      Tue–Sat 8–1 and 2–4 · {PHOENIX_YARD_ADDRESS.replace(", AZ 85009", "")} ·{" "}
+      Tue–Sat 8–1 and 2–4
+      {showPhoenixAddress ? ` · ${PHOENIX_YARD_ADDRESS.replace(", AZ 85009", "")}` : " · Congress pickup or delivery"}
+      {" · "}
       <a href={CUSTOMER_SUPPORT_PHONE_TEL} className="font-semibold text-[#183a23] underline-offset-2 hover:underline">
         {CUSTOMER_SUPPORT_PHONE_DISPLAY}
       </a>
@@ -44,7 +46,7 @@ function OffersIndex() {
         <title>Deals | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Phoenix pickup deals from Organic Soil Wholesale. Garden Refresh $99, Garden Refresh Plus $149, and Big Garden Setup $399."
+          content="Garden Refresh $99 Phoenix yard pickup. Garden Refresh Plus $149 and Big Garden Setup $399 check out as Congress pickup or delivery until Phoenix can load PlantPal."
         />
         <link rel="canonical" href="https://organicsoilwholesale.com/offers" />
       </Helmet>
@@ -52,7 +54,7 @@ function OffersIndex() {
         <div className="mb-6 max-w-2xl sm:mb-8">
           <h1 id="deals-heading" className="font-heading text-4xl font-black leading-tight sm:text-5xl">Garden bundles</h1>
           <p className="mt-3 text-base leading-7 text-[#5f6c62]">
-            Three ready-priced Phoenix pickup offers for refreshing, filling, or building garden beds.
+            Garden Refresh is Phoenix yard pickup. Bundles with PlantPal use Congress pickup or delivery until the Phoenix yard can load that mix.
           </p>
         </div>
 
@@ -73,6 +75,9 @@ function OffersIndex() {
                         <p className="shrink-0 text-2xl font-black text-[#27703f]">{fmtDealPrice(deal.salePrice)}</p>
                       </div>
                       <p className="mt-3 flex-1 text-sm font-semibold leading-6 text-[#4f5f54]">{deal.listCaption}</p>
+                      <p className="mt-2 text-xs font-semibold text-[#5f6c62]">
+                        {deal.phoenixYardPickup ? "Phoenix yard pickup" : "Congress pickup or delivery"}
+                      </p>
                     <Link href={`/offers/${deal.slug}`}>
                       <a
                         onClick={() => trackEvent("Deal Card CTA Clicked", { bundle: deal.slug, source: "offers-index" })}
@@ -103,7 +108,7 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
     <main className="bg-[#f4f1ea] pb-28 text-[#183a23] lg:pb-12">
       <Helmet>
         <title>{offer.title} | Organic Soil Wholesale</title>
-        <meta name="description" content={`${offer.title}: ${offer.lpLine} Phoenix pickup for ${fmtDealPrice(offer.salePrice)}.`} />
+        <meta name="description" content={`${offer.title}: ${offer.lpLine} ${offer.phoenixYardPickup ? "Phoenix yard pickup" : "Congress pickup or delivery"} for ${fmtDealPrice(offer.salePrice)}.`} />
         <link rel="canonical" href={`https://organicsoilwholesale.com/offers/${offer.slug}`} />
       </Helmet>
 
@@ -155,7 +160,10 @@ function OfferPage({ offer }: { offer: PromoBundle }) {
         </button>
 
         <div className="mt-8 pb-4">
-          <PickupStrip />
+          <p className="text-center text-sm leading-6 text-[#5f6c62]">{offer.pickupNote}</p>
+          <div className="mt-2">
+            <PickupStrip showPhoenixAddress={offer.phoenixYardPickup} />
+          </div>
         </div>
       </div>
 

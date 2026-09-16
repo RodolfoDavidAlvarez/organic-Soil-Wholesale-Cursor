@@ -5,6 +5,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { CheckCircle2, Flame, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription } from "@/data/payPickupProductContent";
+import { shouldHidePhoenixYardBulkSize } from "@shared/phoenixYardPickup.js";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 
 export interface PayPickupProductSize {
@@ -100,6 +101,7 @@ const getSizeCategories = (product: PayPickupProduct) => {
 
   const categories = product.sizes
     .filter((size) => !(size.key ?? "").startsWith("Pallet"))
+    .filter((size) => !shouldHidePhoenixYardBulkSize(product.id, size.key ?? size.label ?? ""))
     .map((size) => sizeCategoryLabel(size.key ?? size.label ?? ""))
     .filter(Boolean);
 

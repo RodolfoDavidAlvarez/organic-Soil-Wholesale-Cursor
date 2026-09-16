@@ -118,7 +118,7 @@ export default function InstagramLinks() {
             className="group grid min-h-36 grid-cols-[1fr_112px] overflow-hidden rounded-3xl bg-[#133d2a] text-white shadow-[0_12px_32px_rgba(19,61,42,0.18)] transition-transform active:scale-[0.99] sm:grid-cols-[1fr_155px]"
           >
             <span className="flex flex-col justify-center p-5 sm:p-6">
-              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]"><Gift className="h-4 w-4" /> Phoenix pickup deals</span>
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#f0d498]"><Gift className="h-4 w-4" /> Fall garden bundles</span>
               <span className="mt-2 font-heading text-2xl font-bold leading-tight">Fall garden bundles $99 / $149 / $399</span>
               <span className="mt-3 flex items-center gap-2 text-sm font-bold text-[#f8edcf]">See deals <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
             </span>

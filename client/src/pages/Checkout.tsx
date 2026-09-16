@@ -27,6 +27,10 @@ import { getCheckoutMonitorId, recordCheckoutMonitorEvent } from "@/lib/checkout
 import { PICKUP_LOCATIONS, PHOENIX_BULK_MAX_TONS, TONS_PER_CU_YD } from "@shared/pickupSchedule.js";
 import { nonBundleProductSubtotal, getPromoBundleByProductId } from "@shared/promoBundles.js";
 import {
+  cartAllowsPhoenixYardPickup,
+  PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
+} from "@shared/phoenixYardPickup.js";
+import {
   CART_LOAD_GROUP_HINTS,
   CART_LOAD_GROUP_LABELS,
   partitionPayCartItems,
@@ -158,6 +162,10 @@ const Checkout: React.FC = () => {
   );
   const hasBulkItem = bulkPickupTons > 0;
   const pickupNeedsHeadsUp = useMemo(() => requiresPickupHeadsUp(payItems), [payItems]);
+  const phoenixPickupBlocked = useMemo(
+    () => !cartAllowsPhoenixYardPickup(payItems),
+    [payItems],
+  );
 
   // One boot read: honor PDP Pick up / Deliver seed; walking-floor alone forces delivery.
   const [checkoutBoot] = useState(() => {
@@ -216,7 +224,9 @@ const Checkout: React.FC = () => {
 
   const [fulfillment, setFulfillment] = useState<Fulfillment>(checkoutBoot.fulfillment);
   const [fulfillmentSeeded] = useState(checkoutBoot.seeded);
-  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>("phoenix");
+  const [pickupSiteId, setPickupSiteId] = useState<PickupSiteId>(
+    phoenixPickupBlocked ? "congress" : "phoenix",
+  );
   const selectedPickupSite = useMemo(
     () => PICKUP_LOCATIONS.find((loc) => loc.id === pickupSiteId) ?? PICKUP_LOCATIONS[0],
     [pickupSiteId],
@@ -316,6 +326,13 @@ const Checkout: React.FC = () => {
       setFulfillment("pickup");
     }
   }, [checkoutBoot.pickupBlockedByWalkingFloor, fulfillment, hasWalkingFloorDelivery]);
+
+  useEffect(() => {
+    if (phoenixPickupBlocked && pickupSiteId === "phoenix") {
+      setPickupSiteId("congress");
+      setPickupReady(null);
+    }
+  }, [phoenixPickupBlocked, pickupSiteId]);
 
   // Keep city/state congruent with the delivery ZIP (fixes stale city from drafts/cache).
   useEffect(() => {
@@ -495,6 +512,12 @@ const Checkout: React.FC = () => {
     }
     if (phoenixBulkOverLimit) {
       setError(`Phoenix bulk pickup is limited to ${PHOENIX_BULK_MAX_TONS} tons. Choose Congress pickup or delivery.`);
+      setActiveStep("fulfillment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (fulfillment === "pickup" && pickupSiteId === "phoenix" && phoenixPickupBlocked) {
+      setError(PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE);
       setActiveStep("fulfillment");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -944,23 +967,34 @@ const Checkout: React.FC = () => {
                 </div>
                 {fulfillment === "pickup" && !hasWalkingFloorDelivery && (
                   <div className="mt-3 space-y-2">
+                    {phoenixPickupBlocked && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-snug text-amber-900">
+                        {PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE}
+                      </div>
+                    )}
                     <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                       Pickup location
                     </p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {PICKUP_LOCATIONS.map((loc) => (
+                      {PICKUP_LOCATIONS.map((loc) => {
+                        const phoenixDisabled = loc.id === "phoenix" && phoenixPickupBlocked;
+                        return (
                         <div
                           key={loc.id}
                           className={cn(
                             "overflow-hidden rounded-xl border transition",
-                            pickupSiteId === loc.id
+                            phoenixDisabled
+                              ? "border-stone-200 bg-stone-50 opacity-70"
+                              : pickupSiteId === loc.id
                               ? "border-[#264027] bg-[#264027]/10 shadow-[inset_0_0_0_1px_#264027]"
                               : "border-stone-200 bg-white hover:border-stone-400",
                           )}
                         >
                           <button
                             type="button"
+                            disabled={phoenixDisabled}
                             onClick={() => {
+                              if (phoenixDisabled) return;
                               setPickupSiteId(loc.id);
                               setPickupReady(null);
                               trackEvent("Checkout Pickup Location Selected", {
@@ -1004,7 +1038,8 @@ const Checkout: React.FC = () => {
                             Directions &amp; distance
                           </a>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1170,7 +1205,8 @@ const Checkout: React.FC = () => {
                   )}
                   {!hasBulkItem && selectedPickupSite.id === "phoenix" && (
                     <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm leading-snug text-emerald-950">
-                      <span className="font-bold">Phoenix pickup</span> is available for bags, pallets, and totes.
+                      <span className="font-bold">Phoenix pickup</span> is Simon’s Gold and Nature’s Blanket right now
+                      (bags, pallets, totes, and compost/mulch bulk by appointment).
                       {pickupNeedsHeadsUp
                         ? " Pallet or more needs a scheduled slot."
                         : " Bags can be ready in about 30 minutes."}

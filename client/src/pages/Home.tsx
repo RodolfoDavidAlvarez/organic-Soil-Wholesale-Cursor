@@ -329,7 +329,7 @@ const Home = () => {
       <section aria-labelledby="garden-bundles-heading" className="bg-[#f7f5ef] px-4 pb-10 pt-8 sm:pb-12 sm:pt-10 lg:pt-12">
         <div className="container mx-auto max-w-5xl">
           <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Phoenix pickup · already priced</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6f39]">Already priced · pickup or delivery</p>
             <h2 id="garden-bundles-heading" className="mt-2 font-heading text-2xl font-extrabold leading-tight text-[#183a23] sm:text-3xl">
               Fall garden bundles.
             </h2>

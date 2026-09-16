@@ -27,20 +27,6 @@ import { HOURS_LABEL } from "@shared/pickupSchedule.js";
 
 const PICKUP_PRODUCTS = [
   {
-    id: 111,
-    anchor: "potting-soil",
-    intent: "Potting soil",
-    searchIntent: "garden soil pickup",
-    image: "/images/optimized/plantpal-with-veggies.jpg",
-  },
-  {
-    id: 1001,
-    anchor: "worm-castings",
-    intent: "Worm castings",
-    searchIntent: "worm castings phoenix",
-    image: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-  },
-  {
     id: 1000,
     anchor: "compost",
     intent: "Compost",
@@ -48,10 +34,17 @@ const PICKUP_PRODUCTS = [
     image: "/images/optimized/simons-gold-bag-context.jpg",
   },
   {
-    id: 3000,
+    id: 134,
     anchor: "mulch",
     intent: "Mulch",
     searchIntent: "mulch pickup phoenix",
+    image: "/images/optimized/natures-blanket-bag-context.jpg",
+  },
+  {
+    id: 3000,
+    anchor: "premium-mulch",
+    intent: "Premium mulch",
+    searchIntent: "premium mulch pickup phoenix",
     image: "/images/optimized/natures-blanket-bag-studio.jpg",
   },
 ] as const;
@@ -305,8 +298,8 @@ export default function Pickup() {
     <>
       <SEO
         title="Organic Soil Pickup in Arizona"
-        description="Buy organic soil, compost, worm castings, and mulch online. Pick up at the Organic Soil Wholesale Congress Processing Plant, 18980 Stanton Rd, Congress, AZ."
-        keywords="organic soil pickup phoenix, compost near me, worm castings phoenix, mulch pickup phoenix, potting soil pickup"
+        description="Buy Simon's Gold dairy compost and Nature's Blanket mulch online. Phoenix yard pickup for what the yard can load now, plus Congress plant pickup."
+        keywords="organic soil pickup phoenix, compost near me, mulch pickup phoenix, dairy compost pickup, natures blanket pickup"
         canonical={absoluteUrl("/pickup")}
         structuredData={[buildLocalBusinessSchema(), buildProductsItemListSchema()]}
       />
@@ -320,10 +313,10 @@ export default function Pickup() {
                 Organic Soil Pickup in Arizona
               </p>
               <h1 className="mt-4 max-w-4xl font-heading text-4xl font-black leading-[1.05] text-stone-950 md:text-6xl">
-                Buy organic soil, compost, worm castings, and mulch online. Pick up at our Congress, AZ plant.
+                Buy organic compost and mulch online. Phoenix yard loads Simon’s Gold and Nature’s Blanket.
               </h1>
               <p className="mt-4 max-w-2xl text-lg font-medium leading-relaxed text-stone-700">
-                Pay online. Same-day pickup at our Congress, AZ plant (18980 Stanton Rd, {HOURS_LABEL}), or Phoenix by appointment. Choose bags, pallets, super sacks, or bulk pickup.
+                Pay online. Phoenix yard pickup for Simon’s Gold and Nature’s Blanket. Congress handles other bulk by scale ({HOURS_LABEL}). Bags, pallets, and super sacks still check out — we will not advertise cubic-yard pickup the Phoenix yard cannot load.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Button asChild className="h-12 rounded-lg bg-[#264027] px-6 text-base font-black hover:bg-[#1f3320]">
@@ -362,8 +355,8 @@ export default function Pickup() {
               <div className="mt-5 grid gap-2 text-sm font-semibold text-stone-700">
                 {[
                   "Order online before arriving",
-                  "Bags, pallets, super sacks, bulk pickup",
-                  "Call for large orders",
+                  "Phoenix: Simon's Gold & Nature's Blanket",
+                  "Call for PlantPal or worm-castings bulk",
                 ].map((line) => (
                   <div key={line} className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#264027]" />
@@ -394,7 +387,7 @@ export default function Pickup() {
         <div className="container mx-auto px-4">
           <div className="mb-5 max-w-2xl">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#7a5a2e]">
-              4 pickup products only
+              3 Phoenix yard products right now
             </p>
             <h2 className="mt-2 font-heading text-3xl font-black leading-tight text-stone-950">
               Pick the product, choose the size, pay online.

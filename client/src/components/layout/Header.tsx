@@ -12,24 +12,24 @@ import { isCallTrackingExcludedPath } from "@/lib/callTracking";
 
 const MENU_PRODUCTS = [
   {
-    name: "PlantPal",
-    type: "All-Stage Potting Mix",
-    path: "/products/plantpal",
-  },
-  {
-    name: "Mikey's Worm Poop",
-    type: "Worm Castings",
-    path: "/products/mikeys-worm-poop",
-  },
-  {
     name: "Simon's Gold",
     type: "Dairy Compost",
     path: "/products/simons-gold",
   },
   {
+    name: "Nature's Blanket",
+    type: "Organic Mulch",
+    path: "/products/natures-blanket",
+  },
+  {
     name: "Nature's Blanket Premium",
     type: "Premium Dark Mulch",
     path: "/products/natures-blanket-premium",
+  },
+  {
+    name: "Mikey's Worm Poop",
+    type: "Worm Castings",
+    path: "/products/mikeys-worm-poop",
   },
 ];
 

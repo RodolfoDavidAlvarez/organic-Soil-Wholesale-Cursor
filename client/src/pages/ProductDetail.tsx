@@ -23,6 +23,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { getPayPickupProductContent, getPayPickupProductDescription, getPayPickupProductType } from "@/data/payPickupProductContent";
+import {
+  cartItemAllowsPhoenixYardPickup,
+  isPayOnlineProduct,
+  shouldHidePhoenixYardBulkSize,
+} from "@shared/phoenixYardPickup.js";
 import { PayPickupProductFacts } from "@/components/PayPickupProductFacts";
 import TrustStrip from "@/components/TrustStrip";
 import { ProductCertificationMarks } from "@/components/ProductCertificationMarks";
@@ -198,6 +203,7 @@ const HERO_BAG_PHOTO: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
   111: "/images/optimized/plantpal-with-veggies.jpg",
+  134: "/images/optimized/natures-blanket-bag-context.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
@@ -535,9 +541,6 @@ const imageForChoice = (choice: SizeChoice, fallback: string) => {
   return SIZE_CATEGORY_PHOTO[choice.size] || fallback;
 };
 
-/** Intentionally empty — Mikey's loose truckload is offered again (V4 $4,800). */
-const HIDDEN_PAY_PICKUP_TIER_TERMS: Record<number, string[]> = {};
-
 /** Flatbed isn't a product SKU — customers pick bag/pallet/tote and fill the load. */
 const isRetiredFlatbedSkuTier = (size: string) => {
   const normalized = size.toLowerCase();
@@ -550,9 +553,7 @@ const isRetiredFlatbedSkuTier = (size: string) => {
 
 const shouldHidePayPickupTier = (productId: number | string, size: string) => {
   if (isRetiredFlatbedSkuTier(size)) return true;
-  const hiddenTerms = HIDDEN_PAY_PICKUP_TIER_TERMS[normalizeProductId(productId)] ?? [];
-  const normalized = size.toLowerCase();
-  return hiddenTerms.some((term) => normalized.includes(term));
+  return shouldHidePhoenixYardBulkSize(productId, size);
 };
 
 const schemaTierLabel = (size: string, productId?: number | string) => {
@@ -1049,8 +1050,6 @@ const fetchProduct = async (identifier: string): Promise<Product> => {
   return normalizeProduct(await response.json());
 };
 
-const PAY_PICKUP_PRODUCT_IDS = new Set([1000, 1001, 111, 3000]);
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -1339,7 +1338,13 @@ const ProductDetail = () => {
             : "yard_pickup";
 
   const selectedTotal = (selectedChoice?.displayPrice ?? 0) * quantity;
-  const canPayOnline = product ? PAY_PICKUP_PRODUCT_IDS.has(product.id) : false;
+  const canPayOnline = product ? isPayOnlineProduct(product.id) : false;
+  const phoenixYardPickupOk = product
+    ? cartItemAllowsPhoenixYardPickup({
+        productId: product.id,
+        format: selectedChoice?.cartLabel || selectedCategory?.key || "",
+      })
+    : false;
   const pendingFlatbedSpots = selectedChoice ? spotsForFormat(selectedChoice.cartLabel, quantity) : 0;
 
   const scrollBuyIntoView = useCallback(() => {
@@ -2028,14 +2033,20 @@ const ProductDetail = () => {
                                   ? "24-ton walking-floor delivery"
                                   : fulfillmentMode === "bulk_pickup"
                                   ? "Yard pickup · loose bulk"
-                                  : "Yard pickup"}
+                                  : phoenixYardPickupOk
+                                    ? "Yard pickup"
+                                    : "Pay online"}
                               </p>
                               <p className="mt-0.5 text-xs leading-snug text-stone-600">
                                 {fulfillmentMode === "loose_truckload"
                                   ? "Standardized semi load. Enter ZIP below for delivery pricing."
                                   : fulfillmentMode === "bulk_pickup"
-                                  ? "Load at the yard — pick Phoenix or Congress at checkout."
-                                  : "Pay online, then pick up at the yard."}
+                                  ? phoenixYardPickupOk
+                                    ? "Load at the yard — pick Phoenix or Congress at checkout."
+                                    : "Loose bulk is not loading at Phoenix. Choose Congress pickup or delivery at checkout."
+                                  : phoenixYardPickupOk
+                                    ? "Pay online, then pick up at the Phoenix yard."
+                                    : "Phoenix yard is not loading this product right now. Choose delivery or Congress pickup at checkout."}
                               </p>
                             </div>
                           )}
@@ -2278,7 +2289,9 @@ const ProductDetail = () => {
                                 </p>
                               </div>
                               <div className="grid gap-2 sm:grid-cols-2">
-                                {PICKUP_LOCATIONS.map((loc) => {
+                                {PICKUP_LOCATIONS.filter((loc) =>
+                                  phoenixYardPickupOk || loc.id === "congress",
+                                ).map((loc) => {
                                   const isCongress = loc.id === "congress";
                                   return (
                                     <div
@@ -2547,8 +2560,12 @@ const ProductDetail = () => {
                                   </div>
                                   <p className="text-center text-[11px] text-stone-500">
                                     {isBulkPickupSelected
-                                      ? "Choose Congress or Phoenix at checkout."
-                                      : "Bags ready in about 30 min · need delivery? Choose it at checkout."}
+                                      ? phoenixYardPickupOk
+                                        ? "Choose Congress or Phoenix at checkout."
+                                        : "Congress pickup or delivery — Phoenix is not loading this bulk."
+                                      : phoenixYardPickupOk
+                                        ? "Bags ready in about 30 min · need delivery? Choose it at checkout."
+                                        : "Delivery or Congress pickup at checkout. Phoenix yard is not loading this product right now."}
                                   </p>
                                 </div>
                               )}
