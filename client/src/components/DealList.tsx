@@ -20,7 +20,7 @@ export function useAddDeal() {
     trackEvent("Garden Bundle Added", { bundle: offer.slug, value: offer.salePrice, source: "deals-hub" });
     toast({
       title: "Added to your order",
-      description: `${offer.title} · ${fmtDealPrice(offer.salePrice)} Phoenix pickup.`,
+      description: `${offer.title} · ${fmtDealPrice(offer.salePrice)} ${offer.phoenixYardPickup ? "Phoenix pickup" : "Congress pickup or delivery"}.`,
       duration: 4500,
       action: (
         <ToastAction

@@ -64,7 +64,7 @@ const SIZE_FORMATS = [
   {
     eyebrow: "Bulk pickup",
     title: "Loose material",
-    description: "Bulk cubic-yard pickup when loose loading fits the job.",
+    description: "Loose compost and mulch at Phoenix. PlantPal and worm-castings bulk are not loaded there.",
     image: "/images/size-formats/bulk-yard-pickup.webp",
   },
   {
@@ -437,8 +437,9 @@ const Products = () => {
                 Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
               </h2>
               <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2 md:block">
-                Buy online. Bulk pickup asks Congress or Phoenix at checkout. Pallets,
-                super sacks, mixed loads, and truckloads can also be quoted.
+                Buy online. Phoenix yard pickup is Simon’s Gold and Nature’s Blanket right now.
+                PlantPal and worm-castings bulk are not loaded at Phoenix. Pallets, super
+                sacks, mixed loads, and truckloads can still be quoted or delivered.
               </p>
             </div>
           </div>
@@ -460,7 +461,7 @@ const Products = () => {
             </a>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#264027]/30 bg-white px-3 py-1.5 text-xs font-bold text-[#264027] shadow-sm">
               <MapPin className="h-3.5 w-3.5" />
-              Phoenix bags, pallets & totes · bulk by appointment
+              Phoenix: Simon’s Gold & Nature’s Blanket
             </span>
             <Link
               href="/pickup"

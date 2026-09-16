@@ -44,7 +44,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     ],
     blurb:
       "All-stage potting mix with dairy compost, worm castings, clean wood fiber, calcium, and zinc sulfate. Seed starter, propagation, containers, and patio planters.",
-    sizes: ["1.5 cu ft bag", "Tote / Super Sack", "Bulk pickup", "Truckload"],
+    sizes: ["1.5 cu ft bag", "Tote / Super Sack", "Truckload"],
     badge: "Potting mix",
   },
   {
@@ -61,7 +61,7 @@ export const MAIN_PRODUCTS: FeaturedProductSlot[] = [
     ],
     blurb:
       "Castings from our own worm farm. Add to any blend for a microbial boost, or apply straight as a top-dress. OMRI-eligible.",
-    sizes: ["9 lb bag", "1 CF bag", "Tote / Super Sack", "Bulk pickup", "Truckload"],
+    sizes: ["9 lb bag", "1 CF bag", "Tote / Super Sack", "Truckload"],
     badge: "Microbe boost",
   },
   {
@@ -147,6 +147,20 @@ export const SPECIALTY_BLENDS: FeaturedProductSlot[] = [
 
 /** Mulch row */
 export const MULCH_PRODUCTS: FeaturedProductSlot[] = [
+  {
+    productId: 134,
+    slug: "natures-blanket",
+    displayTitle: "Nature's Blanket",
+    productName: "Organic Mulch",
+    tagline: "Wood fiber + dairy compost.",
+    heroImage: "/images/optimized/natures-blanket-lifestyle.jpg",
+    thumbnailImage: "/images/optimized/natures-blanket-bestfor.jpg",
+    bagImage: "/images/optimized/natures-blanket-bag-context.jpg",
+    textureImage: "/images/optimized/mulch-texture-hand.jpg",
+    blurb:
+      "Wood fiber mulch enhanced with Simon's Gold dairy compost. Suppresses weeds, holds moisture, and slowly feeds the soil.",
+    sizes: ["2 CF bag", "Tote", "Flatbed (22 pallets)"],
+  },
   {
     productId: 3000,
     slug: "natures-blanket-premium",

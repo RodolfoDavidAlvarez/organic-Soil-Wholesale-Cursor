@@ -7,6 +7,7 @@
  */
 
 import { applyPromoBundlePricing, resolvePromoBundle } from "./promoBundles.js";
+import { shouldHidePhoenixYardBulkSize } from "./phoenixYardPickup.js";
 
 export const PALLET_VOLUME_DISCOUNT = 0.2;
 
@@ -44,6 +45,16 @@ export const V5_PRODUCT_PRICING = Object.freeze({
       option("Tote", "Tote", 247.28, "per tote"),
       option("Bulk Pickup", "Bulk Pickup", 80, "per cu yd"),
       option("Truckload (~60 cu yd)", "Truckload (~60 cu yd)", 2160, "per truckload"),
+    ],
+  },
+  134: {
+    name: "Nature's Blanket",
+    aliases: ["nature's blanket", "natures blanket"],
+    options: [
+      option("2CF Bag", "2CF Bag", 8.99, "per bag"),
+      option("Pallet (25 x 2CF)", "Pallet (25 x 2CF)", 179.8, "per pallet", { listPrice: 224.75, unitsPerPallet: 25, discountPercent: 20 }),
+      option("Tote", "Tote", 112.38, "per tote"),
+      option("Truckload (22 pallets)", "Truckload (22 pallets)", 2224.72, "per truckload"),
     ],
   },
   3000: {
@@ -187,13 +198,17 @@ export function normalizeV5ProductRecord(product) {
   const productId = resolveV5ProductId(product?.id, product?.name);
   if (!productId) return product;
   const pricing = V5_PRODUCT_PRICING[productId];
+  const options = pricing.options.map((entry) => ({
+    ...entry,
+    isActive: shouldHidePhoenixYardBulkSize(productId, entry.label) ? false : entry.isActive !== false,
+  }));
   return {
     ...product,
     name: pricing.name,
     display_title: product?.display_title || pricing.name,
     displayTitle: product?.displayTitle || product?.display_title || pricing.name,
-    size_price_options: pricing.options.map((entry) => ({ ...entry })),
-    sizePriceOptions: pricing.options.map((entry) => ({ ...entry })),
+    size_price_options: options.map((entry) => ({ ...entry })),
+    sizePriceOptions: options.map((entry) => ({ ...entry })),
   };
 }
 

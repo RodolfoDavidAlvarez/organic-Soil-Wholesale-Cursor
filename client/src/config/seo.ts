@@ -27,35 +27,6 @@ export const SEO_OPENING_HOURS = [
 
 export const PAY_PICKUP_PRODUCT_SEO = [
   {
-    id: 111,
-    name: "PlantPal",
-    category: "All-Stage Potting Mix",
-    slug: "plantpal",
-    description: "All-stage potting mix for seed starts, propagation, containers, nurseries, and patio planters.",
-    image: "/images/optimized/plantpal-with-veggies.jpg",
-    offers: [
-      { name: "1.5 cu ft Bag (~50 lb)", price: 10.99 },
-      { name: "Super Sack (2.2 cu yd)", price: 247.28 },
-      { name: "Bulk Pickup (per cu yd)", price: 36 },
-      { name: "Truckload (24 tons · ~60 cu yd)", price: 2160 },
-    ],
-  },
-  {
-    id: 1001,
-    name: "Mikey's Worm Poop",
-    category: "Worm Castings",
-    slug: "mikeys-worm-poop",
-    description: "Nutrient-rich worm castings for root zones, top dressing, seed starts, garden beds, and soil biology support.",
-    image: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
-    offers: [
-      { name: "9 lb Bag", price: 18.1 },
-      { name: "40 lb Bag (1 cu ft)", price: 34.9 },
-      { name: "Super Sack (~2,000 lb)", price: 399 },
-      { name: "Bulk Pickup (per ton)", price: 300 },
-      { name: "Truckload (24 tons)", price: 4800 },
-    ],
-  },
-  {
     id: 1000,
     name: "Simon's Gold",
     category: "Dairy Compost",
@@ -66,7 +37,21 @@ export const PAY_PICKUP_PRODUCT_SEO = [
       { name: "9 lb Bag", price: 12.46 },
       { name: "40 lb Bag (1 cu ft)", price: 24.9 },
       { name: "Super Sack (~2,000 lb)", price: 150 },
+      { name: "Bulk Pickup (per ton)", price: 45 },
       { name: "Truckload (24 tons)", price: 720 },
+    ],
+  },
+  {
+    id: 134,
+    name: "Nature's Blanket",
+    category: "Organic Mulch",
+    slug: "natures-blanket",
+    description: "Wood fiber mulch with dairy compost for weed suppression, moisture retention, and a clean landscape finish.",
+    image: "/images/optimized/natures-blanket-bag-context.jpg",
+    offers: [
+      { name: "2 cu ft Bag", price: 8.99 },
+      { name: "Super Sack (2.2 cu yd)", price: 112.38 },
+      { name: "Flatbed (22 pallets)", price: 2224.72 },
     ],
   },
   {
@@ -79,7 +64,7 @@ export const PAY_PICKUP_PRODUCT_SEO = [
     offers: [
       { name: "2 cu ft Bag (~60 lb)", price: 10.99 },
       { name: "Super Sack (2.2 cu yd)", price: 137.5 },
-      { name: "Bulk Pickup (per cu yd)", price: 24 },
+      { name: "Bulk Pickup (per cu yd)", price: 44 },
       { name: "Truckload (24 tons · ~60 cu yd)", price: 1440 },
       { name: "Flatbed (22 pallets)", price: 2700 },
     ],

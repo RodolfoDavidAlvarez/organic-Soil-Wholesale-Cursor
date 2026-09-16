@@ -902,9 +902,9 @@ export default function PayAndPickup() {
         description={
           isDirectCheckIn
             ? "At the Phoenix yard? Notify a Soil Seed & Water representative, check in for an existing order, or order and pick up."
-            : "Scan, order online, and pick up. Bulk pickup will ask Congress or Phoenix at checkout."
+            : "Scan, order online, and pick up. Phoenix yard is loading Simon's Gold and Nature's Blanket right now."
         }
-        keywords="pay and pickup soil, organic soil pickup, dairy compost pickup, worm castings pickup, plantpal pickup"
+        keywords="pay and pickup soil, organic soil pickup, dairy compost pickup, natures blanket pickup, phoenix yard pickup"
         canonical={isDirectCheckIn ? "https://organicsoilwholesale.com/check-in" : "https://organicsoilwholesale.com/qr"}
         robots="noindex, nofollow"
       />

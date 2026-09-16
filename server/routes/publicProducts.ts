@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { loadProductData } from '../loadProducts.js';
+import { shouldHidePhoenixYardBulkSize } from '../../shared/phoenixYardPickup.js';
 
 const router = Router();
 
@@ -452,11 +453,14 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
       : 'active';
   const isDraft = normalizedStatus === 'draft';
 
-  const primarySizePriceOptions = normalizeSizePriceOptions(record.size_price_options);
-  const sizePriceOptions =
+  const primarySizePriceOptions = normalizeSizePriceOptions(record.size_price_options).filter(
+    (option) => !shouldHidePhoenixYardBulkSize(record.id ?? fallbackId, option.label || option.key),
+  );
+  const sizePriceOptions = (
     primarySizePriceOptions.length > 0
       ? primarySizePriceOptions
-      : normalizeSizePriceOptions(fallbackProduct?.sizePriceOptions);
+      : normalizeSizePriceOptions(fallbackProduct?.sizePriceOptions)
+  ).filter((option) => !shouldHidePhoenixYardBulkSize(record.id ?? fallbackId, option.label || option.key));
 
   return {
     id: record.id ?? fallbackId ?? 0,

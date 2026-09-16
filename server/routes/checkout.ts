@@ -15,6 +15,10 @@ import {
 import { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } from '../../shared/flatbedSpots.js';
 import { normalizeV5CheckoutItems } from '../../shared/oswPricing.js';
 import { nonBundleProductSubtotal, resolvePromoBundle } from '../../shared/promoBundles.js';
+import {
+  cartAllowsPhoenixYardPickup,
+  PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
+} from '../../shared/phoenixYardPickup.js';
 
 const router = Router();
 
@@ -77,6 +81,11 @@ router.post('/create-session', async (req, res) => {
     const isPhoenixBulkPickup = pickupSite?.id === 'phoenix' && bulkPickupTons > 0;
 
     if (!isDelivery) {
+      if (pickupSite?.id === 'phoenix' && !cartAllowsPhoenixYardPickup(items)) {
+        return res.status(400).json({
+          error: PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
+        });
+      }
       if (isPhoenixBulkPickup && bulkPickupTons > PHOENIX_BULK_MAX_TONS) {
         return res.status(400).json({
           error: `Phoenix bulk pickup is limited to ${PHOENIX_BULK_MAX_TONS} tons. Choose Congress pickup or delivery.`,

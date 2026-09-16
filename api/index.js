@@ -6830,6 +6830,10 @@ ${pages}
         }
 
         const { applyFullFlatbedProductDiscount, requiresPickupHeadsUp } = await import('../shared/flatbedSpots.js');
+        const {
+          cartAllowsPhoenixYardPickup,
+          PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE,
+        } = await import('../shared/phoenixYardPickup.js');
         let canonicalItems;
         try {
           canonicalItems = normalizeV5CheckoutItems(rawItems);
@@ -6859,6 +6863,9 @@ ${pages}
             return sum + (unit.includes('ton') || size.includes('ton') ? qty : qty * (schedule.TONS_PER_CU_YD || 0.675));
           }, 0);
           const isPhoenixBulkPickup = pickupSite?.id === 'phoenix' && bulkPickupTons > 0;
+          if (pickupSite?.id === 'phoenix' && !cartAllowsPhoenixYardPickup(items)) {
+            return res.status(400).json({ error: PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE });
+          }
           const hasBulkPickup = bulkPickupTons > 0;
           const needsHeadsUp = requiresPickupHeadsUp(items);
           const resolved = schedule.resolveCheckoutPickupTime({
