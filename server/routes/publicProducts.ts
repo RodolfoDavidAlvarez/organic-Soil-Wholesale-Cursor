@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { loadProductData } from '../loadProducts.js';
 import { shouldHidePhoenixYardBulkSize } from '../../shared/phoenixYardPickup.js';
+import { normalizeV5ProductRecord, V5_PRODUCT_PRICING } from '../../shared/oswPricing.js';
 
 const router = Router();
 
@@ -462,7 +463,7 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
       : normalizeSizePriceOptions(fallbackProduct?.sizePriceOptions)
   ).filter((option) => !shouldHidePhoenixYardBulkSize(record.id ?? fallbackId, option.label || option.key));
 
-  return {
+  const publicProduct = {
     id: record.id ?? fallbackId ?? 0,
     name: record.name ?? fallbackProduct?.name ?? '',
     description: record.description ?? fallbackProduct?.description ?? undefined,
@@ -530,6 +531,7 @@ const toPublicProduct = (record: RawProduct, fallbackId?: number) => {
     sortOrder: record.sort_order ?? undefined,
     isHidden: Boolean(record.is_hidden),
   };
+  return normalizeV5ProductRecord(publicProduct);
 };
 
 async function getProductsFromDatabase(params: {
@@ -713,6 +715,34 @@ const filterProductsByIds = <T extends { id?: number }>(products: T[], ids?: str
   return products.filter((product) => product.id !== undefined && allowed.has(product.id));
 };
 
+const parseRequestedIds = (ids?: string | string[]) =>
+  (Array.isArray(ids) ? ids.join(',') : ids)
+    ?.split(',')
+    .map((id) => Number(id.trim()))
+    .filter((id) => Number.isInteger(id) && id > 0) ?? [];
+
+/** Keep V5 pay-online SKUs available when a list request asks for them by id. */
+const ensureV5ProductsForIds = (products, ids?: string | string[]) => {
+  const parsedIds = parseRequestedIds(ids);
+  const byId = new Map((products || []).map((product) => [Number(product.id), product]));
+  if (parsedIds.length === 0) {
+    return products;
+  }
+  for (const id of parsedIds) {
+    if (byId.has(id) || !V5_PRODUCT_PRICING[id]) continue;
+    byId.set(
+      id,
+      normalizeV5ProductRecord({
+        id,
+        name: V5_PRODUCT_PRICING[id].name,
+        size_price_options: [],
+        sizePriceOptions: [],
+      }),
+    );
+  }
+  return parsedIds.map((id) => byId.get(id)).filter(Boolean);
+};
+
 const asQueryValue = (value: unknown): string | string[] | undefined => {
   if (typeof value === 'string') return value;
   if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
@@ -741,10 +771,13 @@ router.get('/', async (req, res) => {
 
     if (productsFromDatabase !== undefined) {
       res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-      return res.json({ products: productsFromDatabase });
+      return res.json({ products: ensureV5ProductsForIds(productsFromDatabase, ids) });
     }
 
-    const fallbackProducts = filterProductsByIds(getProductsFromFallback(category), ids);
+    const fallbackProducts = ensureV5ProductsForIds(
+      filterProductsByIds(getProductsFromFallback(category), ids),
+      ids,
+    );
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     return res.json({ products: fallbackProducts });
   } catch (error) {
