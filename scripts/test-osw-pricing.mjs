@@ -127,9 +127,9 @@ assert.equal(tamperedBundle[0].price, 99);
 assert.equal(tamperedBundle[0].format, "10-bag Phoenix pickup bundle");
 assert.equal(tamperedBundle[1].price, 149);
 assert.equal(tamperedBundle[1].quantity, 2);
-assert.equal(tamperedBundle[1].format, "16-bag Congress or delivery bundle");
+assert.equal(tamperedBundle[1].format, "16-bag Phoenix pickup bundle");
 assert.equal(tamperedBundle[2].price, 399);
-assert.equal(tamperedBundle[2].format, "40-bag Congress or delivery bundle");
+assert.equal(tamperedBundle[2].format, "40-bag Phoenix pickup bundle");
 assert.doesNotMatch(JSON.stringify(tamperedBundle), /tote/i);
 assert.doesNotMatch(JSON.stringify(tamperedBundle), /coupon/i);
 
@@ -150,8 +150,8 @@ assert.equal(CART_LOAD_GROUP_LABELS.bags, "Bags & small items");
 
 const groupedCart = partitionPayCartItems([
   { productId: 4100, format: "10-bag Phoenix pickup bundle", quantity: 1 },
-  { productId: 4101, format: "16-bag Congress or delivery bundle", quantity: 1 },
-  { productId: 4102, format: "40-bag Congress or delivery bundle", quantity: 1 },
+  { productId: 4101, format: "16-bag Phoenix pickup bundle", quantity: 1 },
+  { productId: 4102, format: "40-bag Phoenix pickup bundle", quantity: 1 },
   { productId: 1000, format: "1CF Bag", quantity: 2 },
   { productId: 111, format: "Pallet (30 x 1.5CF)", quantity: 1 },
   { productId: 1000, format: "Truckload 24 ton walking floor", quantity: 1 },
@@ -247,18 +247,19 @@ assert.equal(getPromoBundleBySlug("garden-refresh")?.includedLabel, "5 Nature's 
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.includedLabel, "10 PlantPal, 3 Nature's Blanket free, 3 Mikey's Worm Poop");
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.includedLabel, "30 PlantPal, 4 Simon's Gold, 3 Mikey's Worm Poop, 3 Nature's Blanket");
 assert.equal(getPromoBundleBySlug("garden-refresh")?.phoenixYardPickup, true);
-assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.phoenixYardPickup, false);
-assert.equal(getPromoBundleBySlug("big-garden-setup")?.phoenixYardPickup, false);
+assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.phoenixYardPickup, true);
+assert.equal(getPromoBundleBySlug("big-garden-setup")?.phoenixYardPickup, true);
 
-assert.deepEqual([...PHOENIX_YARD_PICKUP_GRID_IDS], [1000, 134, 3000]);
+assert.deepEqual([...PHOENIX_YARD_PICKUP_GRID_IDS], [111, 1001, 1000, 3000]);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(1000, "Simon's Gold", "9lb Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(134, "Nature's Blanket", "2CF Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(3000, "Nature's Blanket Premium", "Bulk Pickup")), true);
-assert.equal(cartItemAllowsPhoenixYardPickup(line(111, "PlantPal", "1.5CF Bag")), false);
+assert.equal(cartItemAllowsPhoenixYardPickup(line(111, "PlantPal", "1.5CF Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(1001, "Mikey's Worm Poop", "9lb Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(1001, "Mikey's Worm Poop", "Bulk Pickup")), false);
 assert.equal(cartAllowsPhoenixYardPickup([line(4100, "Garden Refresh", "10-bag Phoenix pickup bundle")]), true);
-assert.equal(cartAllowsPhoenixYardPickup([line(4101, "Garden Refresh Plus", "16-bag Congress or delivery bundle")]), false);
+assert.equal(cartAllowsPhoenixYardPickup([line(4101, "Garden Refresh Plus", "16-bag Phoenix pickup bundle")]), true);
+assert.equal(cartAllowsPhoenixYardPickup([line(4102, "Big Garden Setup", "40-bag Phoenix pickup bundle")]), true);
 assert.equal(shouldHidePhoenixYardBulkSize(111, "Bulk Pickup"), true);
 assert.equal(shouldHidePhoenixYardBulkSize(1001, "Bulk Pickup"), true);
 assert.equal(shouldHidePhoenixYardBulkSize(137, "Bulk Pickup"), true);
@@ -274,9 +275,8 @@ assert.equal(resolveV5CartPricing(line(134, "Nature's Blanket", "2CF Bag"))?.uni
 
 const payPickupGridSource = readFileSync(new URL("../client/src/components/PayPickupGrid.tsx", import.meta.url), "utf8");
 assert.match(payPickupGridSource, /PHOENIX_YARD_PICKUP_GRID_IDS/);
-assert.doesNotMatch(payPickupGridSource, /111, 1001, 1000, 3000/);
-assert.doesNotMatch(payPickupGridSource, /plantpal-with-veggies/);
-
+assert.match(payPickupGridSource, /plantpal-with-veggies/);
+assert.match(payPickupGridSource, /mikeys-worm-poop-bag-context/);
 
 for (const slug of ["garden-refresh", "garden-refresh-plus", "big-garden-setup"]) {
   const flyer = statSync(new URL(`../client/public/images/offers/flyers/${slug}.webp`, import.meta.url));

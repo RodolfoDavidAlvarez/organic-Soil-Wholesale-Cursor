@@ -11,13 +11,17 @@ const MAIN_PRODUCT_IDS = PHOENIX_YARD_PICKUP_GRID_IDS;
 
 /** Graphic 3 / bag-in-context heroes — bag with soil & produce, white background. */
 const HERO_OVERRIDES: Record<number, string> = {
-  1000: "/images/optimized/simons-gold-bag-context.jpg", // Simon's Gold
-  134: "/images/optimized/natures-blanket-bag-context.jpg", // Nature's Blanket
-  3000: "/images/optimized/natures-blanket-bag-studio.jpg", // Nature's Blanket Premium
+  111: "/images/optimized/plantpal-with-veggies.jpg",
+  1001: "/images/optimized/mikeys-worm-poop-bag-context.jpg",
+  1000: "/images/optimized/simons-gold-bag-context.jpg",
+  134: "/images/optimized/natures-blanket-bag-context.jpg",
+  3000: "/images/optimized/natures-blanket-bag-studio.jpg",
 };
 
 /** Bestfor collage backdrops — fills the photo area behind the bag. */
 const BACKDROP_OVERRIDES: Record<number, string> = {
+  111: "/images/optimized/plantpal-bestfor.jpg",
+  1001: "/images/optimized/mikeys-worm-poop-bestfor.jpg",
   1000: "/images/optimized/simons-gold-bestfor.jpg",
   134: "/images/optimized/natures-blanket-bestfor.jpg",
   3000: "/images/optimized/natures-blanket-premium-bestfor.jpg",

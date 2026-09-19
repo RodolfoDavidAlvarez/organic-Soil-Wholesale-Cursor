@@ -235,6 +235,13 @@ const GALLERY_DUPLICATE_GROUPS: Record<number, Record<string, string>> = {
 };
 
 const BLOCKED_GALLERY_IMAGES: Record<number, Set<string>> = {
+  111: new Set([
+    "ppl-7-5qt-texture.jpg",
+    "/ppl-7-5qt-texture.jpg",
+    "/images/optimized/ppl-7-5qt-texture.jpg",
+    "/images/optimized/compost-texture-look.jpg",
+    "/images/optimized/default-potting-soil-texture.jpg",
+  ]),
   3000: new Set(["/uploads/products/3000/gallery-1/1764113182186-ohei8u.webp"]),
 };
 
@@ -253,7 +260,18 @@ const normalizedGalleryUrl = (url: string) => {
 };
 
 const isBlockedGalleryImage = (productId: number, url: string) => {
-  return BLOCKED_GALLERY_IMAGES[productId]?.has(normalizedGalleryUrl(url)) ?? false;
+  const blocked = BLOCKED_GALLERY_IMAGES[productId];
+  if (!blocked) return false;
+  const normalized = normalizedGalleryUrl(url);
+  if (blocked.has(normalized)) return true;
+  const base = normalized.split("/").pop() ?? "";
+  if (!base) return false;
+  if (blocked.has(base) || blocked.has(`/${base}`)) return true;
+  for (const entry of blocked) {
+    const entryBase = entry.split("/").pop() ?? "";
+    if (entryBase && entryBase === base) return true;
+  }
+  return false;
 };
 
 const guideImageDedupeKey = (url: string) => {
@@ -374,6 +392,8 @@ const SIZE_CATEGORY_PHOTO: Record<string, string> = {
   "9lb Bag": "/images/sizes/9lb-bag-single.jpg",
   "Pallet (144 x 9lb)": "/images/sizes/9lb-pallet.jpg",
   "1CF Bag": "/images/sizes/1cf-bag-single.png",
+  "1.5CF Bag": "/images/sizes/1cf-bag-single.png",
+  "1.5 cu ft Bag (~50 lb)": "/images/sizes/1cf-bag-single.png",
   "Pallet (50 x 1CF)": "/images/sizes/1cf-pallet.jpg",
   "Pallet (30 x 1.5CF)": "/images/sizes/1cf-pallet.jpg",
   "2CF Bag": "/images/sizes/2cf-bag-single.png",
@@ -731,7 +751,7 @@ const buildSizeCategories = (product: Product): SizeCategory[] => {
     if (!category) return;
 
     const palletMeta = palletSizeForBag(tier.size, product.id);
-    const qty = tier.qty ?? palletMeta?.qty;
+    const qty = palletMeta?.qty ?? tier.qty;
     if (!qty) return;
 
     attachPalletChoice(

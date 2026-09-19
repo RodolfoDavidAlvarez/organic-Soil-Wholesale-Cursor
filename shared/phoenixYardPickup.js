@@ -1,31 +1,32 @@
 /**
  * Phoenix yard loadability — single source of truth.
  *
- * The Phoenix yard (1634 N 19th Ave) only loads what is on the ground right now.
- * Do not advertise cubic-yard / loose bulk pickup for SKUs the yard cannot load.
+ * The Phoenix yard (1634 N 19th Ave) only loads loose material that is on the
+ * ground right now. Bagged SKUs (PlantPal, Mikey's, compost, mulch) can check
+ * out for Phoenix pickup. Loose cubic-yard / bulk pickup stays limited.
  *
- * Keep list (Rodo / SSW fulfillment, 2026-09):
+ * Loose bulk the yard can load:
  *   - Simon's Gold (dairy compost) — 1000
- *   - Nature's Blanket — 134
  *   - Nature's Blanket Premium (mulch) — 3000
  *
- * PlantPal / plant power is not available at Phoenix (machine capacity may exist later).
- * Mikey's worm castings bulk / cy-style yard options are off; bagged Mikey's can still
- * check out for Phoenix pickup until the yard says otherwise.
+ * Garden promo bundles (4100–4102) are Phoenix yard pickup when marked
+ * phoenixYardPickup: true on the bundle record.
  *
- * Delivery, bags, pallets, totes, and Congress pickup stay unless they imply Phoenix
- * loose-yard loading.
+ * Delivery, bags, pallets, totes, and Congress pickup stay available.
  */
 import { resolvePromoBundle } from "./promoBundles.js";
 
-export const PHOENIX_YARD_PICKUP_PRODUCT_IDS = Object.freeze([1000, 134, 3000]);
+/** Products shown on /products + /qr pay-and-pickup grid (bagged lineup). */
+export const PHOENIX_YARD_PICKUP_GRID_IDS = Object.freeze([111, 1001, 1000, 3000]);
 
-/** /products + /qr pay-and-pickup grid order. */
-export const PHOENIX_YARD_PICKUP_GRID_IDS = PHOENIX_YARD_PICKUP_PRODUCT_IDS;
+/**
+ * Products whose bagged / pallet / tote lines may use Phoenix yard pickup.
+ * (Loose bulk is gated separately below.)
+ */
+export const PHOENIX_YARD_PICKUP_PRODUCT_IDS = Object.freeze([111, 1001, 1000, 134, 3000]);
 
 /**
  * Products that can still be paid online (bags, pallets, totes, delivery, Congress).
- * Includes SKUs the Phoenix yard is not loading so delivery/Congress still work.
  */
 export const PAY_ONLINE_PRODUCT_IDS = Object.freeze([1000, 134, 3000, 1001, 111]);
 
@@ -33,7 +34,7 @@ export const PAY_ONLINE_PRODUCT_IDS = Object.freeze([1000, 134, 3000, 1001, 111]
 const PHOENIX_YARD_LOOSE_BULK_PRODUCT_IDS = Object.freeze([1000, 3000]);
 
 export const PHOENIX_YARD_PICKUP_BLOCKED_MESSAGE =
-  "Phoenix yard is only loading Simon's Gold and Nature's Blanket right now. Choose Congress pickup or delivery.";
+  "One or more items in this cart cannot pick up at the Phoenix yard. Choose Congress pickup or delivery, or remove the blocked items.";
 
 export function isPhoenixYardPickupProduct(productId) {
   return PHOENIX_YARD_PICKUP_PRODUCT_IDS.includes(Number(productId));
@@ -78,9 +79,7 @@ export function cartItemAllowsPhoenixYardPickup(item) {
   const productId = lineProductId(item);
   if (!Number.isInteger(productId) || productId <= 0) return false;
   if (shouldHidePhoenixYardBulkSize(productId, lineFormat(item))) return false;
-  if (isPhoenixYardPickupProduct(productId)) return true;
-  // Bagged / pallet / tote Mikey's only — bulk already rejected above.
-  return productId === 1001;
+  return isPhoenixYardPickupProduct(productId);
 }
 
 export function cartAllowsPhoenixYardPickup(items) {
