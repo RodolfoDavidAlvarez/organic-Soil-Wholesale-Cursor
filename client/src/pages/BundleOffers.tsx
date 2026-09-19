@@ -46,7 +46,7 @@ function OffersIndex() {
         <title>Deals | Organic Soil Wholesale</title>
         <meta
           name="description"
-          content="Garden Refresh $99 Phoenix yard pickup. Garden Refresh Plus $149 and Big Garden Setup $399 check out as Congress pickup or delivery until Phoenix can load PlantPal."
+          content="Phoenix pickup deals from Organic Soil Wholesale. Garden Refresh $99, Garden Refresh Plus $149, and Big Garden Setup $399."
         />
         <link rel="canonical" href="https://organicsoilwholesale.com/offers" />
       </Helmet>
@@ -54,7 +54,7 @@ function OffersIndex() {
         <div className="mb-6 max-w-2xl sm:mb-8">
           <h1 id="deals-heading" className="font-heading text-4xl font-black leading-tight sm:text-5xl">Garden bundles</h1>
           <p className="mt-3 text-base leading-7 text-[#5f6c62]">
-            Garden Refresh is Phoenix yard pickup. Bundles with PlantPal use Congress pickup or delivery until the Phoenix yard can load that mix.
+            Three ready-priced Phoenix pickup offers for refreshing, filling, or building garden beds.
           </p>
         </div>
 

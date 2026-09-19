@@ -355,8 +355,8 @@ export default function Pickup() {
               <div className="mt-5 grid gap-2 text-sm font-semibold text-stone-700">
                 {[
                   "Order online before arriving",
-                  "Phoenix: Simon's Gold & Nature's Blanket",
-                  "Call for PlantPal or worm-castings bulk",
+                  "Phoenix: bags of PlantPal, castings, compost & mulch",
+                  "Loose bulk: Simon's Gold & Nature's Blanket",
                 ].map((line) => (
                   <div key={line} className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#264027]" />

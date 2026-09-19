@@ -64,7 +64,7 @@ const SIZE_FORMATS = [
   {
     eyebrow: "Bulk pickup",
     title: "Loose material",
-    description: "Loose compost and mulch at Phoenix. PlantPal and worm-castings bulk are not loaded there.",
+    description: "Bagged PlantPal, worm castings, compost, and mulch for Phoenix pickup. Loose bulk stays compost and mulch only.",
     image: "/images/size-formats/bulk-yard-pickup.webp",
   },
   {
@@ -437,9 +437,9 @@ const Products = () => {
                 Wholesale compost, soil amendments &amp; mulch for Arizona jobs.
               </h2>
               <p className="mt-1 hidden max-w-xl text-sm leading-relaxed text-stone-600 md:mt-2 md:block">
-                Buy online. Phoenix yard pickup is Simon’s Gold and Nature’s Blanket right now.
-                PlantPal and worm-castings bulk are not loaded at Phoenix. Pallets, super
-                sacks, mixed loads, and truckloads can still be quoted or delivered.
+                Buy online. Phoenix pickup covers bagged PlantPal, worm castings, compost, and mulch.
+                Loose bulk at the yard stays compost and mulch. Pallets, super sacks, mixed loads,
+                and truckloads can still be quoted or delivered.
               </p>
             </div>
           </div>

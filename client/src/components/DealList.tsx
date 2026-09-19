@@ -20,7 +20,7 @@ export function useAddDeal() {
     trackEvent("Garden Bundle Added", { bundle: offer.slug, value: offer.salePrice, source: "deals-hub" });
     toast({
       title: "Added to your order",
-      description: `${offer.title} · ${fmtDealPrice(offer.salePrice)} ${offer.phoenixYardPickup ? "Phoenix pickup" : "Congress pickup or delivery"}.`,
+      description: `${offer.title} · ${fmtDealPrice(offer.salePrice)} Phoenix pickup.`,
       duration: 4500,
       action: (
         <ToastAction
@@ -136,25 +136,12 @@ function DealHubCarousel({ cards }: { cards: ReactNode[] }) {
   const [api, setApi] = useState<CarouselApi>();
   const [manualPause, setManualPause] = useState(false);
   const [temporaryPause, setTemporaryPause] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
-  useEffect(() => {
-    if (!api || reducedMotion || manualPause || temporaryPause) return;
+    if (!api || manualPause || temporaryPause) return;
     const timer = window.setInterval(() => api.scrollNext(), 6500);
     return () => window.clearInterval(timer);
-  }, [api, manualPause, reducedMotion, temporaryPause]);
-
-  const isPaused = reducedMotion || manualPause;
+  }, [api, manualPause, temporaryPause]);
 
   return (
     <div
@@ -164,7 +151,6 @@ function DealHubCarousel({ cards }: { cards: ReactNode[] }) {
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTemporaryPause(false);
       }}
-      onPointerDown={() => setManualPause(true)}
     >
       <Carousel setApi={setApi} opts={{ align: "start", loop: true, duration: 35 }} className="w-full" aria-label="Fall garden bundle offers">
         <CarouselContent className="-ml-3 sm:-ml-4">
@@ -174,26 +160,18 @@ function DealHubCarousel({ cards }: { cards: ReactNode[] }) {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold leading-5 text-[#667168]">
-            {reducedMotion ? "Automatic movement is off for reduced motion." : manualPause ? "Automatic movement paused." : "Moves gently. Hover or interact to pause."}
-          </p>
-          <div className="flex shrink-0 gap-2">
-            {!reducedMotion && (
-              <button
-                type="button"
-                aria-label={manualPause ? "Resume automatic carousel movement" : "Pause automatic carousel movement"}
-                aria-pressed={manualPause}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => setManualPause((current) => !current)}
-                className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-[#183a23]/20 bg-white px-3 text-[#183a23] shadow-sm transition hover:bg-[#f3f5f1]"
-              >
-                {manualPause ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              </button>
-            )}
-            <CarouselPrevious className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
-            <CarouselNext className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
-          </div>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            aria-label={manualPause ? "Resume automatic carousel movement" : "Pause automatic carousel movement"}
+            aria-pressed={manualPause}
+            onClick={() => setManualPause((current) => !current)}
+            className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-[#183a23]/20 bg-white px-3 text-[#183a23] shadow-sm transition hover:bg-[#f3f5f1]"
+          >
+            {manualPause ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+          </button>
+          <CarouselPrevious className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
+          <CarouselNext className="static h-11 w-11 translate-y-0 border-[#183a23]/20 bg-white text-[#183a23]" />
         </div>
       </Carousel>
     </div>
