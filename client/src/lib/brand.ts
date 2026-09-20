@@ -19,10 +19,12 @@ function currentSearch() {
 }
 
 export function resolveClientBrand(pathname?: string, hostname?: string, search?: string): BrandIdentity {
+  const envBrand = String(import.meta.env.VITE_DEFAULT_BRAND || "").trim().toLowerCase();
   return resolveBrand({
     hostname: hostname ?? currentHostname(),
     pathname: pathname ?? (typeof window !== "undefined" ? window.location.pathname : "/"),
     search: search ?? currentSearch(),
+    brand: envBrand === "osw" || envBrand === "mos" || envBrand === "rls" ? envBrand : undefined,
   });
 }
 

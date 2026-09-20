@@ -132,7 +132,13 @@ export function getBrand(id) {
 }
 
 export function isDedicatedRlsHost(hostname) {
-  return BRANDS.rls.hosts.includes(normalizeHost(hostname));
+  const host = normalizeHost(hostname);
+  if (BRANDS.rls.hosts.includes(host)) return true;
+  // Dedicated RLS Vercel project / preview hosts (not organicsoilwholesale.com).
+  return (
+    host.includes("regenerative-landscape-supply") ||
+    host.includes("regenerativelandscapesupply")
+  );
 }
 
 /**
@@ -144,7 +150,7 @@ export function resolveBrand(input = {}) {
   if (isBrandId(explicit)) return getBrand(explicit);
 
   const host = normalizeHost(input.hostname);
-  if (BRANDS.rls.hosts.includes(host)) return BRANDS.rls;
+  if (isDedicatedRlsHost(host)) return BRANDS.rls;
   if (BRANDS.mos.hosts.includes(host)) return BRANDS.mos;
   if (BRANDS.osw.hosts.includes(host)) {
     const path = normalizePathname(input.pathname);

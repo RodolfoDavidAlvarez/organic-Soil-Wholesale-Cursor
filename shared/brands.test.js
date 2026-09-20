@@ -44,6 +44,9 @@ describe("resolveBrand", () => {
     assert.equal(resolveBrand({ hostname: "regenerativelandscapesupply.com" }).id, "rls");
     assert.equal(resolveBrand({ hostname: "www.regenerativelandscapesupply.com:443" }).id, "rls");
     assert.equal(isDedicatedRlsHost("www.regenerativelandscapesupply.com"), true);
+    assert.equal(resolveBrand({ hostname: "regenerative-landscape-supply.vercel.app" }).id, "rls");
+    assert.equal(isDedicatedRlsHost("regenerative-landscape-supply-abc123.vercel.app"), true);
+    assert.equal(isDedicatedRlsHost("organic-soil-wholesale.vercel.app"), false);
   });
 
   it("uses /rls preview paths on the OSW host without stealing /products", () => {
