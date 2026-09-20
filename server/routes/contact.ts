@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { sendAdminContactFormNotification } from '../services/email.js';
-import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
+import { forwardToMosLeads, type MosLeadSource } from '../services/forwardToMosLeads.js';
+import { defaultSourceUrl, leadSourceForBrand, resolveBrandFromRequest } from '../../shared/brands.js';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.post('/submit', async (req, res) => {
   try {
     const { name, email, phone, company, subject, message, source_url } = req.body;
+    const brand = resolveBrandFromRequest(req);
 
     // Validate required fields
     if (!name || !email || !message) {
@@ -24,7 +26,10 @@ router.post('/submit', async (req, res) => {
     const submittedAt = new Date().toISOString();
     const pageUrl = typeof source_url === 'string' && source_url.trim()
       ? source_url.trim()
-      : 'https://organicsoilwholesale.com/contact';
+      : defaultSourceUrl(brand.id, '/contact');
+    const subjectLine = brand.id === 'rls' && subject && !String(subject).startsWith('[RLS]')
+      ? `[RLS] ${subject}`
+      : subject;
     const utm: Record<string, string> = {};
     try {
       const u = new URL(pageUrl);
@@ -44,7 +49,7 @@ router.post('/submit', async (req, res) => {
         email,
         phone,
         company,
-        subject,
+        subject: subjectLine,
         message,
         status: 'new',
         created_at: submittedAt
@@ -64,7 +69,7 @@ router.post('/submit', async (req, res) => {
         email,
         phone,
         company,
-        subject,
+        subject: subjectLine,
         message,
         submittedAt
       });
@@ -79,10 +84,10 @@ router.post('/submit', async (req, res) => {
       email,
       phone: phone || undefined,
       company: company || undefined,
-      message: subject ? `${subject}\n\n${message}` : message,
-      source: 'osw_contact_form',
+      message: subjectLine ? `${subjectLine}\n\n${message}` : message,
+      source: leadSourceForBrand(brand.id, 'contact') as MosLeadSource,
       source_url: pageUrl,
-      source_data: { osw_contact_submission_id: data.id, subject, ...utm },
+      source_data: { osw_contact_submission_id: data.id, subject: subjectLine, brand: brand.id, ...utm },
     });
 
     res.json({ 

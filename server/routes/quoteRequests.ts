@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { supabase } from '../db/supabase.js';
 import { sendAdminQuoteRequestNotification } from '../services/email.js';
-import { forwardToMosLeads } from '../services/forwardToMosLeads.js';
+import { forwardToMosLeads, type MosLeadSource } from '../services/forwardToMosLeads.js';
+import { defaultSourceUrl, leadSourceForBrand, resolveBrandFromRequest } from '../../shared/brands.js';
 
 const router = Router();
 
@@ -329,6 +330,7 @@ router.get('/trucking', async (req, res) => {
 router.post('/submit', async (req, res) => {
   try {
     const { name, email, phone, company, products, quantities, deliveryLocation, notes } = req.body;
+    const brand = resolveBrandFromRequest(req);
 
     // Validate required fields
     if (!name || !email || !products || !quantities) {
@@ -397,9 +399,11 @@ router.post('/submit', async (req, res) => {
         `Quote request:\n${productSummary}` +
         (deliveryLocation ? `\nDelivery: ${deliveryLocation}` : '') +
         (notes ? `\nNotes: ${notes}` : ''),
-      source: 'osw_quote_request',
-      source_url: 'https://organicsoilwholesale.com/quote',
-      source_data: { osw_quote_request_id: data.id, products, quantities, deliveryLocation },
+      source: leadSourceForBrand(brand.id, 'quote') as MosLeadSource,
+      source_url: typeof req.body?.source_url === 'string' && req.body.source_url.trim()
+        ? req.body.source_url.trim()
+        : defaultSourceUrl(brand.id, brand.id === 'rls' ? '/consult' : '/quote'),
+      source_data: { osw_quote_request_id: data.id, products, quantities, deliveryLocation, brand: brand.id },
     });
 
     res.json({ 

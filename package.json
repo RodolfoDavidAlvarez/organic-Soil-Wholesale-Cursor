@@ -11,6 +11,7 @@
     "build": "npm run --prefix client build",
     "start": "NODE_ENV=production node dist/server/index.js",
     "check": "tsc",
+    "test": "node --test shared/*.test.js",
     "db:push": "drizzle-kit push",
     "vercel-build": "npm install --prefix client && npm run --prefix client build",
     "grok": "node scripts/grok-cli.js"

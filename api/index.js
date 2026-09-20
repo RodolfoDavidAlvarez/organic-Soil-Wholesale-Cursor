@@ -54,6 +54,14 @@ async function getDeveloperMode() {
   return developerModeModule;
 }
 
+let brandsModule = null;
+async function getBrands() {
+  if (!brandsModule) {
+    brandsModule = await import('../shared/brands.js');
+  }
+  return brandsModule;
+}
+
 let pickupNotificationsModule = null;
 async function getPickupNotifications() {
   if (!pickupNotificationsModule) {
@@ -945,7 +953,17 @@ export default async function handler(req, res) {
     // Public site flags (developer mode banner on checkout, etc.)
     if (path === '/api/site-config' && req.method === 'GET') {
       const dev = await getDeveloperMode();
-      return res.json(dev.getDevSiteConfig());
+      const brands = await getBrands();
+      const brand = brands.resolveBrandFromRequest(req);
+      return res.json({
+        ...dev.getDevSiteConfig(),
+        brand: brands.publicBrandPayload(brand),
+        brands: {
+          osw: brands.publicBrandPayload(brands.BRANDS.osw),
+          rls: brands.publicBrandPayload(brands.BRANDS.rls),
+          mos: brands.publicBrandPayload(brands.BRANDS.mos),
+        },
+      });
     }
 
     const db = await getSupabase();
@@ -955,7 +973,9 @@ export default async function handler(req, res) {
     // sales portal as a lead so the rep team sees/claims it. (Was missing in prod —
     // the route only existed in the dev Express server, so submissions 404'd.)
     if (path === '/api/contact/submit' && req.method === 'POST') {
-      const { name, email, phone, company, subject, message } = req.body || {};
+      const { name, email, phone, company, subject, message, source_url } = req.body || {};
+      const brands = await getBrands();
+      const brand = brands.resolveBrandFromRequest(req);
       if (!name || !email || !message) {
         return res.status(400).json({ error: 'Name, email, and message are required' });
       }
@@ -963,9 +983,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
       const submittedAt = new Date().toISOString();
+      const subjectLine = brand.id === 'rls' && subject && !String(subject).startsWith('[RLS]')
+        ? `[RLS] ${subject}`
+        : subject;
+      const pageUrl = typeof source_url === 'string' && source_url.trim()
+        ? source_url.trim()
+        : brands.defaultSourceUrl(brand.id, '/contact');
       const { data: sub, error: subErr } = await db
         .from('contact_submissions')
-        .insert({ name, email, phone, company, subject, message, status: 'new', created_at: submittedAt })
+        .insert({ name, email, phone, company, subject: subjectLine, message, status: 'new', created_at: submittedAt })
         .select()
         .single();
       if (subErr) {
@@ -985,10 +1011,10 @@ export default async function handler(req, res) {
               email,
               phone: phone || undefined,
               company: company || undefined,
-              message: subject ? `${subject}\n\n${message}` : message,
-              source: 'osw_contact_form',
-              source_url: 'https://organicsoilwholesale.com/contact',
-              source_data: { osw_contact_submission_id: sub.id, subject },
+              message: subjectLine ? `${subjectLine}\n\n${message}` : message,
+              source: brands.leadSourceForBrand(brand.id, 'contact'),
+              source_url: pageUrl,
+              source_data: { osw_contact_submission_id: sub.id, subject: subjectLine, brand: brand.id },
             }),
           });
           if (!r.ok) console.error('[contact/submit] MOS forward', r.status, (await r.text().catch(() => '')).slice(0, 200));
@@ -4978,9 +5004,13 @@ ${pages}
     // POST /api/leads/submit
     if (path === '/api/leads/submit' && req.method === 'POST') {
       const body = req.body || {};
+      const brands = await getBrands();
+      const brand = brands.resolveBrandFromRequest({ headers: req.headers, body });
       const {
         name, phone, notes, preferred_date, order, source_url,
       } = body;
+      const isConsult =
+        body.lead_type === 'landscape_consult' || body.source === 'rls_consult_request' || brand.id === 'rls';
       const isOrderCallback =
         body.lead_type === 'order_callback' || body.source === 'osw_order_callback';
       const emailRaw = String(body.email || '').trim();
@@ -5051,7 +5081,9 @@ ${pages}
       const estimated = order?.estimated_total != null ? Number(order.estimated_total) : null;
       const subject = isOrderCallback
         ? `Callback requested — ${itemCount} line item${itemCount === 1 ? '' : 's'}${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}`
-        : 'Lead Form Submission';
+        : isConsult
+          ? '[RLS] Landscape consult'
+          : 'Lead Form Submission';
 
       const sb = await getSupabase();
       const insertData = {
@@ -5082,7 +5114,12 @@ ${pages}
       try {
         const secret = process.env.MOS_LEAD_INGEST_SECRET;
         if (secret) {
-          const mosSource = isOrderCallback ? 'osw_order_callback' : 'osw_lead_form';
+          const mosSource = isOrderCallback
+            ? brands.leadSourceForBrand(brand.id, 'callback')
+            : isConsult
+              ? brands.leadSourceForBrand(brand.id, 'consult')
+              : brands.leadSourceForBrand(brand.id, 'lead');
+          const fallbackSourceUrl = brands.defaultSourceUrl(brand.id, brand.id === 'rls' ? '/consult' : '/');
           const mosMessage = isOrderCallback
             ? `Callback requested — ${itemCount} line items${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}\n\n${orderNotes}`
             : (notes || undefined);
@@ -5098,10 +5135,11 @@ ${pages}
               phone,
               message: mosMessage,
               source: mosSource,
-              source_url: source_url || 'https://organicsoilwholesale.com/',
+              source_url: source_url || fallbackSourceUrl,
               source_data: {
                 osw_contact_message_id: data.id,
-                lead_type: isOrderCallback ? 'order_callback' : 'lead_form',
+                brand: brand.id,
+                lead_type: isOrderCallback ? 'order_callback' : isConsult ? 'landscape_consult' : 'lead_form',
                 ...(isOrderCallback && order ? { order } : {}),
               },
             }),
@@ -5785,6 +5823,78 @@ ${pages}
         console.error('[address/zip]', err);
         return res.status(500).json({ error: 'ZIP lookup failed' });
       }
+    }
+
+    // POST /api/quote/submit — landscape / wholesale quote request (OSW + RLS)
+    if (path === '/api/quote/submit' && req.method === 'POST') {
+      const body = req.body || {};
+      const { name, email, phone, company, products, quantities, deliveryLocation, notes, source_url } = body;
+      const brands = await getBrands();
+      const brand = brands.resolveBrandFromRequest({ headers: req.headers, body });
+      if (!name || !email || !products || !quantities) {
+        return res.status(400).json({ error: 'Name, email, products, and quantities are required' });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      const submittedAt = new Date().toISOString();
+      const { data, error } = await db
+        .from('quote_requests')
+        .insert({
+          name,
+          email,
+          phone,
+          company,
+          products: Array.isArray(products) ? products.join(', ') : String(products),
+          quantities: Array.isArray(quantities) ? quantities.join(', ') : String(quantities),
+          delivery_location: deliveryLocation,
+          notes: brand.id === 'rls' && notes && !String(notes).includes('Brand: Regenerative Landscape Supply')
+            ? `Brand: Regenerative Landscape Supply\n${notes}`
+            : notes,
+          status: 'new',
+          created_at: submittedAt,
+        })
+        .select()
+        .single();
+      if (error) {
+        console.error('[quote/submit] insert failed:', error);
+        return res.status(500).json({ error: 'Failed to submit quote request' });
+      }
+      const productSummary = Array.isArray(products)
+        ? products.map((p, i) => `${p} x ${Array.isArray(quantities) ? quantities[i] : ''}`).join(', ')
+        : String(products);
+      try {
+        const secret = process.env.MOS_LEAD_INGEST_SECRET;
+        if (secret) {
+          const r = await fetch(process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Lead-Source-Key': secret },
+            body: JSON.stringify({
+              full_name: name,
+              email,
+              phone: phone || undefined,
+              company: company || undefined,
+              message:
+                `Quote request:\n${productSummary}` +
+                (deliveryLocation ? `\nDelivery: ${deliveryLocation}` : '') +
+                (notes ? `\nNotes: ${notes}` : ''),
+              source: brands.leadSourceForBrand(brand.id, 'quote'),
+              source_url: typeof source_url === 'string' && source_url.trim()
+                ? source_url.trim()
+                : brands.defaultSourceUrl(brand.id, brand.id === 'rls' ? '/consult' : '/quote'),
+              source_data: { osw_quote_request_id: data.id, products, quantities, deliveryLocation, brand: brand.id },
+            }),
+          });
+          if (!r.ok) console.error('[quote/submit] MOS forward', r.status, (await r.text().catch(() => '')).slice(0, 200));
+        }
+      } catch (e) {
+        console.error('[quote/submit] MOS forward error:', e?.message || e);
+      }
+      return res.json({
+        success: true,
+        message: "Your quote request has been received. We'll prepare your quote and contact you soon!",
+        requestId: data.id,
+      });
     }
 
     // POST /api/quote/trucking — body { items: [{sizeOption, quantity}], zip, roughAccess?, originKey? }

@@ -58,9 +58,19 @@ export function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  app.get("/api/site-config", async (_req, res) => {
+  app.get("/api/site-config", async (req, res) => {
     const { getDevSiteConfig } = await import("../../shared/developerMode.js");
-    res.json(getDevSiteConfig());
+    const { resolveBrandFromRequest, publicBrandPayload, BRANDS } = await import("../../shared/brands.js");
+    const brand = resolveBrandFromRequest(req);
+    res.json({
+      ...getDevSiteConfig(),
+      brand: publicBrandPayload(brand),
+      brands: {
+        osw: publicBrandPayload(BRANDS.osw),
+        rls: publicBrandPayload(BRANDS.rls),
+        mos: publicBrandPayload(BRANDS.mos),
+      },
+    });
   });
 
   app.use("/r", campaignRedirectRoutes);
