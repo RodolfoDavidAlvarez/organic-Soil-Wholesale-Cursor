@@ -21,13 +21,13 @@ export default function RlsConsult() {
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8A6B3D]">Shared SSW lead desk</p>
           <h1 className="mt-3 font-heading text-3xl font-bold text-[#1B2E1F] sm:text-5xl">Request a consult</h1>
           <p className="mt-4 text-base leading-relaxed text-[#1B2E1F]/75">
-            Tell us what the landscape is trying to do. We will not open with a product pitch. This form writes the same
-            tables the Organic Soil Wholesale quote and contact flows already use, tagged as Regenerative Landscape Supply.
+            Tell us what the landscape is trying to do. We will not open with a product pitch. The request goes to the
+            same Soil Seed &amp; Water desk that handles Organic Soil Wholesale quotes.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-[#1B2E1F]/70">
-            <li>contact_messages / contact_submissions / quote_requests</li>
-            <li>MOS fan-out to sp_leads when MOS_LEAD_INGEST_SECRET is set</li>
-            <li>Yard pickup and paid card checkout stay on organicsoilwholesale.com</li>
+            <li>A rep follows up by phone or email</li>
+            <li>Diagnosis first — products only if the site needs them</li>
+            <li>Paid yard pickup stays at the Phoenix Organic Soil Wholesale gate</li>
           </ul>
         </div>
         <RlsLeadForm intent="consult" presetProduct={presetProduct} heading="Landscape consult" />

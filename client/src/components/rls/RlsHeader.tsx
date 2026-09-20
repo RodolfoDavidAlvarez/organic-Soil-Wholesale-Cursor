@@ -19,11 +19,11 @@ export function RlsHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-[#1B2E1F]/10 bg-[#F4EFE6]/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href={href("/")} className="min-h-[44px] min-w-0 py-1">
+        <Link href={href("/")} className="min-h-[44px] min-w-0 flex-1 py-1 pr-2">
           <span className="block font-heading text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A6B3D]">
             Soil Seed &amp; Water
           </span>
-          <span className="block truncate font-heading text-base font-bold leading-tight text-[#1B2E1F] sm:text-lg">
+          <span className="block font-heading text-[15px] font-bold leading-tight text-[#1B2E1F] sm:text-lg">
             {brand.name}
           </span>
         </Link>
@@ -45,9 +45,8 @@ export function RlsHeader() {
             href={brand.phoneTel}
             className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#1B2E1F] px-4 text-sm font-semibold text-[#F4EFE6]"
           >
-            <Phone className="h-4 w-4" />
-            <span className="hidden sm:inline">{brand.phoneDisplay}</span>
-            <span className="sm:hidden">Call</span>
+            <Phone className="h-4 w-4 shrink-0" />
+            <span className="whitespace-nowrap text-xs sm:text-sm">{brand.phoneDisplay}</span>
           </a>
           <button
             type="button"

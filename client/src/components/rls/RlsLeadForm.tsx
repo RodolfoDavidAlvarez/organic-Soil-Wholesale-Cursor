@@ -241,7 +241,7 @@ export function RlsLeadForm({ intent = "consult", presetProduct = "", heading }:
         {submitting ? "Sending…" : "Request a soil consult"}
       </button>
       <p className="mt-3 text-xs leading-relaxed text-[#1B2E1F]/60">
-        Routed into the shared SSW lead desk (`contact_submissions`, `contact_messages` / `quote_requests`, and MOS `sp_leads`).
+        Routed to the shared Soil Seed &amp; Water lead desk used by Organic Soil Wholesale.
       </p>
     </form>
   );

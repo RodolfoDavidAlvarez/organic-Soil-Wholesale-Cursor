@@ -74,6 +74,8 @@ Product names used on the site (do not rename):
 
 The four card-pay mains remain PlantPal, Mikey's Worm Poop, Simon's Gold, and Nature's Blanket Premium. Soil Craft and Turf Daddy are quote / protocol products.
 
+The React source always uses **(623) 263-3386**. GTM / CallRail may replace the visible number in the browser (same as OSW). Do not hardcode tracking numbers.
+
 ## Local preview
 
 ```bash
