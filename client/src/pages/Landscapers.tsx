@@ -42,6 +42,20 @@ const Landscapers = () => {
       />
 
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+        <section className="border-b border-[#1B2E1F]/10 bg-[#F4EFE6]">
+          <div className="container mx-auto flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[#1B2E1F]/80">
+              Looking for a soil-first landscape program?{" "}
+              <span className="font-semibold">Regenerative Landscape Supply</span> is the professional front door — same SSW yard and inventory.
+            </p>
+            <a
+              href="/rls"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-[#1B2E1F] px-4 text-sm font-semibold text-[#F4EFE6]"
+            >
+              Open Regenerative Landscape Supply
+            </a>
+          </div>
+        </section>
         {/* Hero — Phoenix / Arizona landscapers */}
         <section className="bg-[#264027] text-white py-12 sm:py-16 md:py-20 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">

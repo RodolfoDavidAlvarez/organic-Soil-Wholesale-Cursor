@@ -103,6 +103,7 @@ export default defineConfig({
    ```
 2. **Check the output URL** and verify your site is live and working.
 3. **If using a custom domain:** Point it to the latest deployment in the Vercel dashboard.
+4. **Regenerative Landscape Supply:** attach `regenerativelandscapesupply.com` to the same Vercel project (`organic-soil-wholesale`). Do not create a second project. Cutover steps and env placeholders: `docs/REGENERATIVE_LANDSCAPE_SUPPLY.md`.
 
 ---
 

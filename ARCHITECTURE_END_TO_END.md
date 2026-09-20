@@ -14,6 +14,8 @@
 
 All five share one SSW Supabase database (`govktyrtmwzbzqkmzmrf`). Same Stripe account (`acct_1LW3cXG0O2r9Aau4`).
 
+**Regenerative Landscape Supply** (`regenerativelandscapesupply.com`) is a sixth public surface hosted in this same OSW repo. It is a landscape-pro storefront, not a separate inventory or payment stack. See `docs/REGENERATIVE_LANDSCAPE_SUPPLY.md`.
+
 ---
 
 ## The five flows that matter
@@ -199,7 +201,7 @@ Inside `sp_orders` the `subtotal`, `delivery_fee`, `tax_cents` columns are all C
 2. **Send money in CENTS** (integer, no decimals)
 3. **Include the `X-Lead-Source-Key` header** with the shared `LEAD_INGEST_SECRET`
 4. **Set `osw_order_id` uniquely** on every pickup POST so retries are idempotent
-5. **Use `source` values that MOS already recognizes**: `osw_lead_form`, `osw_contact_form`, `osw_quote_request`, `osw_pay_pickup`
+5. **Use `source` values that MOS already recognizes**: `osw_lead_form`, `osw_contact_form`, `osw_quote_request`, `osw_pay_pickup`. Regenerative Landscape Supply adds `rls_*` sources (`rls_consult_request`, `rls_contact_form`, `rls_quote_request`) plus `source_data.brand = "rls"`. OSW sources are unchanged.
 6. **Test the round trip** — submit a real test lead/order, verify it appears in mobile app + shop dashboard within 5 seconds
 7. **Use small `customer_email` test values** like `test+osw@example.com` so they're easy to filter out later
 
@@ -247,4 +249,4 @@ Plus on MOS (Vercel) — already set, don't change without knowing what you're d
 
 ---
 
-_Last updated: 2026-05-22_
+_Last updated: 2026-09-20_

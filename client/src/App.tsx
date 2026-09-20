@@ -17,6 +17,8 @@ import { GrokWidget } from "@/components/GrokWidget";
 import { QuoteCartDrawer } from "@/components/QuoteCartDrawer";
 import { GROK_ASSISTANT_ENABLED } from "@/config/featureFlags";
 import { trackEvent, trackPhoneClick } from "@/lib/analytics";
+import { useIsRlsSurface } from "@/lib/brand";
+import { RlsApp } from "@/pages/rls/RlsApp";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
@@ -197,6 +199,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
+  const isRlsSurface = useIsRlsSurface();
   // /qr is the printed-signage URL at the OSW yard main entrance — no global chrome.
   const isPayAndPickup =
     location.startsWith("/pay-and-pickup") ||
@@ -214,7 +217,7 @@ function App() {
   const isCRMCapture = location.startsWith("/crm");
   const isUnsubscribe = location.startsWith("/unsubscribe");
   const isOperationsCalendar = location.startsWith("/operations-calendar");
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar;
+  const showStandardLayout = !isRlsSurface && !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar;
 
   useEffect(() => {
     trackEvent("Route Viewed", {
@@ -252,17 +255,23 @@ function App() {
               <AdminAuthProvider>
                 <TooltipProvider>
                   <div className="min-h-screen flex flex-col">
-                    {showStandardLayout && <Header />}
-                    <main className="flex-grow" style={showStandardLayout ? { paddingTop: "var(--app-header-height, 6.5rem)" } : undefined}>
-                      <Router />
-                    </main>
-                    {showStandardLayout && <Footer />}
+                    {isRlsSurface ? (
+                      <RlsApp />
+                    ) : (
+                      <>
+                        {showStandardLayout && <Header />}
+                        <main className="flex-grow" style={showStandardLayout ? { paddingTop: "var(--app-header-height, 6.5rem)" } : undefined}>
+                          <Router />
+                        </main>
+                        {showStandardLayout && <Footer />}
+                      </>
+                    )}
                     <Toaster />
                     <ScrollToTop />
                     <Analytics />
                     {showStandardLayout && !isQuoteFlow && !isProductFlow && <FloatingCTA />}
                     {showStandardLayout && <QuoteCartDrawer />}
-                    {GROK_ASSISTANT_ENABLED && <GrokWidget />}
+                    {GROK_ASSISTANT_ENABLED && !isRlsSurface && <GrokWidget />}
                   </div>
                 </TooltipProvider>
               </AdminAuthProvider>

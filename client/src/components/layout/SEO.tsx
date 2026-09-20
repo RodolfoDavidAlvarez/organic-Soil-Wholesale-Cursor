@@ -9,6 +9,7 @@ interface SEOProps {
   ogType?: string;
   twitterCard?: string;
   robots?: string;
+  siteName?: string;
   structuredData?: any | any[];
   children?: React.ReactNode;
 }
@@ -26,11 +27,12 @@ const SEO = ({
   ogType = 'website',
   twitterCard = 'summary_large_image',
   robots,
+  siteName,
   structuredData,
   children,
 }: SEOProps) => {
   // Base title for the website
-  const baseTitle = 'Organic Soil Wholesale';
+  const baseTitle = siteName || 'Organic Soil Wholesale';
   
   // Format the page title
   const pageTitle = title 

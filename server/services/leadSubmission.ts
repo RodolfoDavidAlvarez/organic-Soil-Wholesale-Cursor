@@ -2,6 +2,7 @@ import { supabase } from "../db/supabase.js";
 import { sendAdminLeadNotification, sendCustomerQuoteConfirmation } from "./emailNotifications.js";
 import { forwardToMosLeads, type MosLeadSource } from "./forwardToMosLeads.js";
 import { sendLeadSmsAlert } from "./smsNotifications.js";
+import { defaultSourceUrl, leadSourceForBrand, resolveBrand } from "../../shared/brands.js";
 
 export interface OrderCallbackLineItem {
   product_id?: number;
@@ -37,6 +38,8 @@ export interface LeadSubmissionPayload {
   lead_type?: string;
   source?: string;
   source_url?: string;
+  source_path?: string;
+  brand?: string;
   order?: OrderCallbackOrder;
 }
 
@@ -107,6 +110,13 @@ export async function processLeadSubmission(
   payload: LeadSubmissionPayload
 ): Promise<LeadSubmissionResult> {
   const { name, phone, notes, preferred_date, order, source_url } = payload;
+  const brand = resolveBrand({
+    brand: payload.brand,
+    pathname: payload.source_path,
+  });
+  const isRls = brand.id === "rls";
+  const isConsult =
+    payload.lead_type === "landscape_consult" || payload.source === "rls_consult_request";
   const isOrderCallback =
     payload.lead_type === "order_callback" || payload.source === "osw_order_callback";
 
@@ -147,7 +157,9 @@ export async function processLeadSubmission(
     ? `Callback requested — ${itemCount} line item${itemCount === 1 ? "" : "s"}${
         estimated != null ? ` · ~$${estimated.toFixed(0)}` : ""
       }`
-    : "Lead Form Submission";
+    : isConsult || isRls
+      ? `[RLS] Landscape consult`
+      : "Lead Form Submission";
 
   const insertData: Record<string, unknown> = {
     name,
@@ -196,9 +208,12 @@ export async function processLeadSubmission(
     console.error("Failed to send notifications:", notificationError);
   }
 
-  const mosSource: MosLeadSource = isOrderCallback
-    ? "osw_order_callback"
-    : "osw_lead_form";
+  const mosSource = (isOrderCallback
+    ? leadSourceForBrand(brand.id, "callback")
+    : isConsult || isRls
+      ? leadSourceForBrand(brand.id, "consult")
+      : leadSourceForBrand(brand.id, "lead")) as MosLeadSource;
+  const fallbackSourceUrl = defaultSourceUrl(brand.id, isRls ? "/consult" : "/");
 
   forwardToMosLeads({
     full_name: name,
@@ -210,15 +225,16 @@ export async function processLeadSubmission(
         }\n\n${orderNotes}`
       : notes || undefined,
     source: mosSource,
-    source_url: source_url || "https://organicsoilwholesale.com/",
+    source_url: source_url || fallbackSourceUrl,
     source_data: {
       osw_contact_message_id: data.id,
-      lead_type: isOrderCallback ? "order_callback" : "lead_form",
+      brand: brand.id,
+      lead_type: isOrderCallback ? "order_callback" : isConsult || isRls ? "landscape_consult" : "lead_form",
       ...(isOrderCallback && order ? { order } : {}),
       ...(() => {
         const utm: Record<string, string> = {};
         try {
-          const u = new URL(source_url || "https://organicsoilwholesale.com/");
+          const u = new URL(source_url || fallbackSourceUrl);
           for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "campaign_link_code"] as const) {
             const v = u.searchParams.get(key);
             if (v) utm[key] = v;
