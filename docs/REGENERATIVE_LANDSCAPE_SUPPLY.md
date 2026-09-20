@@ -14,6 +14,7 @@ This is not a second inventory, Stripe account, or admin portal. It shares OSW /
 | Surface | URL | What renders |
 |---|---|---|
 | Dedicated domain | `https://regenerativelandscapesupply.com/` | RLS marketing pages at `/`, `/soil-dashboard`, `/products`, `/programs`, `/professionals`, `/consult`, `/contact` |
+| Dedicated Vercel project | `https://regenerative-landscape-supply.vercel.app` | Same RLS app at `/` (hostname contains `regenerative-landscape-supply`) |
 | OSW preview (no DNS yet) | `https://organicsoilwholesale.com/rls` | Same RLS app under a `/rls` prefix |
 | OSW catalog / checkout / QR | `https://organicsoilwholesale.com/products`, `/qr`, `/checkout` | Unchanged Organic Soil Wholesale paths |
 | MOS | `https://myorganicsoil.com` | Sales portal / admin — not a storefront in this repo |
@@ -23,7 +24,7 @@ Brand resolution lives in `shared/brands.js` and is used by the Vite app, Expres
 Order of resolution:
 
 1. Explicit `brand` on the API body (`"rls"` / `"osw"`)
-2. Dedicated hostname `regenerativelandscapesupply.com` (and `www`)
+2. Dedicated hostname `regenerativelandscapesupply.com` (and `www`), or a Vercel host containing `regenerative-landscape-supply`
 3. Path prefix `/rls` on the OSW host
 4. Query `?brand=rls` on `/` for local preview
 5. Default: Organic Soil Wholesale
@@ -111,6 +112,7 @@ Optional later (placeholders only until Rodo sets them):
 |---|---|---|
 | `RLS_GTM_ID` | not wired | Separate GTM if Ads should not share `GTM-MRVDQ73P` |
 | `RLS_GA4_ID` | not wired | Separate GA4 if `G-RFRTHKGL0X` should stay OSW-only |
+| `VITE_DEFAULT_BRAND` | optional | Set to `rls` on the dedicated Vercel project so `/` is RLS even on unknown hosts |
 | `RLS_FROM_EMAIL` | not wired | Branded Resend From if not `info@soilseedandwater.com` |
 | `RESEND_API_KEY` rotate / domain | existing | Confirm `regenerativelandscapesupply.com` SPF/DKIM if sending from that domain |
 
