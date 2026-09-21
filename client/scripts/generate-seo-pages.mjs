@@ -97,6 +97,22 @@ const products = [
       ["Truckload (~90 cu yd)", 2700],
     ],
   },
+  {
+    name: "Sabrina Kills Bugs",
+    category: "All-Organic Insecticide",
+    slug: "sabrina-kills-bugs",
+    title: "Sabrina Kills Bugs",
+    description: "32 oz plant-based insecticide spray. 3-in-1 fungicide, insecticide, and miticide. No neem oil or soap.",
+    image: "/images/products/sabrina-kills-bugs-share.jpg",
+    imageType: "image/jpeg",
+    imageWidth: "1200",
+    imageHeight: "1200",
+    keywords: "Sabrina Kills Bugs, organic insecticide, plant based insecticide Phoenix, garden spray",
+    offers: [
+      ["32 oz Bottle", 18.99],
+      ["1 Gallon", 89.99],
+    ],
+  },
 ];
 
 const localBusinessSchema = {
@@ -203,6 +219,9 @@ const routes = [
     keywords: product.keywords,
     canonical: absoluteUrl(`/products/${product.slug}`),
     image: absoluteUrl(product.image),
+    imageType: product.imageType,
+    imageWidth: product.imageWidth,
+    imageHeight: product.imageHeight,
     schemas: [
       localBusinessSchema,
       productSchema(product),
