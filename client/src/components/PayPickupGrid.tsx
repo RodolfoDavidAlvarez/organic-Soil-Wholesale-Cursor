@@ -16,6 +16,7 @@ const HERO_OVERRIDES: Record<number, string> = {
   1000: "/images/optimized/simons-gold-bag-context.jpg",
   134: "/images/optimized/natures-blanket-bag-context.jpg",
   3000: "/images/optimized/natures-blanket-bag-studio.jpg",
+  1034: "/images/products/sabrina-kills-bugs.png",
 };
 
 /** Bestfor collage backdrops — fills the photo area behind the bag. */

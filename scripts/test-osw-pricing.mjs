@@ -250,7 +250,11 @@ assert.equal(getPromoBundleBySlug("garden-refresh")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("garden-refresh-plus")?.phoenixYardPickup, true);
 assert.equal(getPromoBundleBySlug("big-garden-setup")?.phoenixYardPickup, true);
 
-assert.deepEqual([...PHOENIX_YARD_PICKUP_GRID_IDS], [111, 1001, 1000, 3000]);
+assert.deepEqual([...PHOENIX_YARD_PICKUP_GRID_IDS], [111, 1001, 1000, 3000, 1034]);
+assert.equal(resolveV5CartPricing(line(1034, "Sabrina Kills Bugs", "32 oz Bottle"))?.unitPrice, 18.99);
+assert.equal(resolveV5CartPricing(line(1034, "Sabrina Kills Bugs", "1 Gallon"))?.unitPrice, 89.99);
+assert.equal(cartItemAllowsPhoenixYardPickup(line(1034, "Sabrina Kills Bugs", "32 oz Bottle")), true);
+assert.equal(cartItemAllowsPhoenixYardPickup(line(1034, "Sabrina Kills Bugs", "1 Gallon")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(1000, "Simon's Gold", "9lb Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(134, "Nature's Blanket", "2CF Bag")), true);
 assert.equal(cartItemAllowsPhoenixYardPickup(line(3000, "Nature's Blanket Premium", "Bulk Pickup")), true);

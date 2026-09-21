@@ -69,6 +69,18 @@ export const PAY_PICKUP_PRODUCT_SEO = [
       { name: "Flatbed (22 pallets)", price: 2700 },
     ],
   },
+  {
+    id: 1034,
+    name: "Sabrina Kills Bugs",
+    category: "All-Organic Insecticide",
+    slug: "sabrina-kills-bugs",
+    description: "32 oz plant-based insecticide spray. 3-in-1 fungicide, insecticide, and miticide. No neem oil or soap.",
+    image: "/images/products/sabrina-kills-bugs.png",
+    offers: [
+      { name: "32 oz bottle", price: 18.99 },
+      { name: "1 gallon", price: 89.99 },
+    ],
+  },
 ] as const;
 
 export const absoluteUrl = (path = "") => {

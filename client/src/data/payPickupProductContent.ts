@@ -98,6 +98,28 @@ export const PAY_PICKUP_PRODUCT_CONTENT: Record<number, PayPickupProductContent>
     startingPriceContext: "for a 2 cu ft bag (~60 lb)",
     sizeSummaries: ["2 cu ft bag (~60 lb)", "super sack (2.2 cu yd)", "bulk pickup (per cu yd)", "truckload (~60 cu yd)"],
   },
+  1034: {
+    displayType: "All-Organic Insecticide",
+    description:
+      "32 oz ready-to-use spray. Plant-based essential oils. 3-in-1 fungicide, insecticide, and miticide. No neem oil, soap, or synthetic chemicals.",
+    includes: [
+      "Bergamot",
+      "Cinnamon bark",
+      "Cedarwood",
+      "Clove",
+      "Oregano",
+      "Peppermint",
+      "Rosemary",
+      "White thyme",
+    ],
+    benefits: [
+      "Pet friendly, bee friendly, and bird safe",
+      "For vegetables, citrus, herbs, and ornamentals",
+      "Also labeled for aquaponics, ponds, and indoor plants",
+    ],
+    startingPriceContext: "for a 32 oz bottle",
+    sizeSummaries: ["32 oz bottle", "1 gallon"],
+  },
   134: {
     displayType: "Organic Mulch",
     description:

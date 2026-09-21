@@ -81,6 +81,14 @@ export const V5_PRODUCT_PRICING = Object.freeze({
       option("Truckload (~24 tons)", "Truckload (~24 tons)", 720, "per truckload"),
     ],
   },
+  1034: {
+    name: "Sabrina Kills Bugs",
+    aliases: ["sabrina kills bugs"],
+    options: [
+      option("32 oz Bottle", "32 oz Bottle", 18.99, "per bottle", { msrp: "$18.99" }),
+      option("1 Gallon", "1 Gallon", 89.99, "per gallon", { msrp: "$89.99" }),
+    ],
+  },
   1001: {
     name: "Mikey's Worm Poop",
     aliases: ["mikey's worm poop", "mikeys worm poop"],
@@ -133,6 +141,12 @@ function matchOption(productId, format) {
   }
   if (value.includes("tote") || value.includes("super sack") || value.includes("supersack")) {
     return product.options.find((entry) => entry.label === "Tote") || null;
+  }
+  if (value.includes("bottle")) {
+    return product.options.find((entry) => entry.label.toLowerCase().includes("bottle")) || null;
+  }
+  if (value.includes("gallon")) {
+    return product.options.find((entry) => entry.label.toLowerCase().includes("gallon")) || null;
   }
   if (isNinePound) return product.options.find((entry) => entry.label === "9lb Bag") || null;
   if (isTwoCf) return product.options.find((entry) => entry.label === "2CF Bag") || null;
