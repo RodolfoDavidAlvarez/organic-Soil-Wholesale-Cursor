@@ -47,6 +47,13 @@ const PICKUP_PRODUCTS = [
     searchIntent: "premium mulch pickup phoenix",
     image: "/images/optimized/natures-blanket-bag-studio.jpg",
   },
+  {
+    id: 1034,
+    anchor: "sabrina-kills-bugs",
+    intent: "Insecticide",
+    searchIntent: "organic insecticide spray phoenix",
+    image: "/images/products/sabrina-kills-bugs.png",
+  },
 ] as const;
 
 type ApiProduct = {

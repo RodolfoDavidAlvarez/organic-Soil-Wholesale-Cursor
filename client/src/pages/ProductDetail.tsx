@@ -978,6 +978,31 @@ const PRODUCT_DETAIL_CONTENT: Record<number, {
       "/images/product-guides/natures-blanket-premium-04.webp",
     ],
   },
+  1034: {
+    usageSteps: [
+      "Shake well before use.",
+      "Spray plants and surrounding areas.",
+      "Use up to twice daily, or until the end of the pest life cycle. Store in a cool, dry area.",
+    ],
+    bestFor: [
+      "Home gardens",
+      "Indoor plants",
+      "Vegetables",
+      "Citrus",
+      "Herbs",
+      "Ornamentals",
+      "Nurseries",
+      "Landscapers",
+    ],
+    note: "32 oz plant-based spray for garden and household pests, including ants and roaches. Pet friendly, bee friendly, and bird safe. No neem oil or soap.",
+    seoKeywords: [
+      "sabrina kills bugs",
+      "organic insecticide",
+      "garden pest spray",
+      "fungicide insecticide miticide",
+    ],
+    guideImages: [],
+  },
 };
 
 const mergeUnique = (items: string[]) => Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));

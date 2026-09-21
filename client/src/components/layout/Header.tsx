@@ -31,6 +31,11 @@ const MENU_PRODUCTS = [
     type: "Worm Castings",
     path: "/products/mikeys-worm-poop",
   },
+  {
+    name: "Sabrina Kills Bugs",
+    type: "All-Organic Insecticide",
+    path: "/products/sabrina-kills-bugs",
+  },
 ];
 
 const Header = () => {

@@ -16,19 +16,19 @@
  */
 import { resolvePromoBundle } from "./promoBundles.js";
 
-/** Products shown on /products + /qr pay-and-pickup grid (bagged lineup). */
-export const PHOENIX_YARD_PICKUP_GRID_IDS = Object.freeze([111, 1001, 1000, 3000]);
+/** Products shown on /products + /qr pay-and-pickup grid (bagged lineup + Sabrina Kills Bugs bottle). */
+export const PHOENIX_YARD_PICKUP_GRID_IDS = Object.freeze([111, 1001, 1000, 3000, 1034]);
 
 /**
  * Products whose bagged / pallet / tote lines may use Phoenix yard pickup.
  * (Loose bulk is gated separately below.)
  */
-export const PHOENIX_YARD_PICKUP_PRODUCT_IDS = Object.freeze([111, 1001, 1000, 134, 3000]);
+export const PHOENIX_YARD_PICKUP_PRODUCT_IDS = Object.freeze([111, 1001, 1000, 134, 3000, 1034]);
 
 /**
  * Products that can still be paid online (bags, pallets, totes, delivery, Congress).
  */
-export const PAY_ONLINE_PRODUCT_IDS = Object.freeze([1000, 134, 3000, 1001, 111]);
+export const PAY_ONLINE_PRODUCT_IDS = Object.freeze([1000, 134, 3000, 1001, 111, 1034]);
 
 /** Loose bulk the Phoenix yard can actually load (priced SKUs only). */
 const PHOENIX_YARD_LOOSE_BULK_PRODUCT_IDS = Object.freeze([1000, 3000]);
