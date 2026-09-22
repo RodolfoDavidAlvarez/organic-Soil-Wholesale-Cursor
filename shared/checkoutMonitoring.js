@@ -31,10 +31,15 @@ const KNOWN_SCANNER_INPUT_PATHS = new Set([
   '/api/checkout/create',
   '/api/orders/create',
   '/api/pay-and-pickup/checkout',
+  '/api/pay-and-pickup/create-checkout-session',
+  '/api/pay-and-pickup/check-in-by-phone',
   '/api/pickup/checkout',
+  '/api/pickup-orders/check-in-by-phone',
+  '/api/pickup-orders/checkin-by-phone',
   '/api/payments/create',
   '/api/stripe/payment-intent',
   '/api/create-payment-intent',
+  '/api/scheduling/create',
 ]);
 
 export function shouldAlertUnmatchedInput(path, method) {
