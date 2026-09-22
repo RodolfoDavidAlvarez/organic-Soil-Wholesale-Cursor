@@ -40,13 +40,47 @@ const KNOWN_SCANNER_INPUT_PATHS = new Set([
   '/api/stripe/payment-intent',
   '/api/create-payment-intent',
   '/api/scheduling/create',
+  '/api/site-config',
+  '/api/public/products',
 ]);
 
+const GUESSED_CHECKOUT_PATH = /create-checkout-session|payment-intent|create-payment-intent/;
+
+// Only page unmatched_input when the missing path looks like a live customer write.
+// Admin/portal/voice-agent probe spellings stay quiet.
+const CUSTOMER_WRITE_PREFIXES = [
+  '/api/checkout/',
+  '/api/leads/',
+  '/api/quote/',
+  '/api/contact/',
+  '/api/newsletter/',
+  '/api/survey/',
+  '/api/giveaway/',
+  '/api/account-form/',
+  '/api/credit-application',
+  '/api/pay-and-pickup/notify-arrival',
+  '/api/special-request/',
+  '/api/job-applications/',
+  '/api/crm-leads',
+  '/api/unsubscribe',
+  '/api/auth/',
+  '/api/grok/',
+  '/api/voice-agent/signed-url',
+  '/api/voice-agent/handoff/',
+  '/api/scheduling/available-dates',
+  '/api/scheduling/time-slots',
+];
+
+function isCustomerWritePath(path) {
+  return CUSTOMER_WRITE_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix));
+}
+
 export function shouldAlertUnmatchedInput(path, method) {
-  return ['POST', 'PUT', 'PATCH'].includes(method)
-    && typeof path === 'string'
-    && path.startsWith('/api/')
-    && !KNOWN_SCANNER_INPUT_PATHS.has(path);
+  if (!['POST', 'PUT', 'PATCH'].includes(method)) return false;
+  if (typeof path !== 'string' || !path.startsWith('/api/')) return false;
+  if (KNOWN_SCANNER_INPUT_PATHS.has(path)) return false;
+  if (path !== '/api/checkout/create-session' && GUESSED_CHECKOUT_PATH.test(path)) return false;
+  return isCustomerWritePath(path);
 }
 
 export const CHECKOUT_EVENT_STATE = {
