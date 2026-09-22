@@ -29,6 +29,10 @@ test('known GraphQL scanner probes do not trigger customer-input alerts', () => 
   assert.equal(shouldAlertUnmatchedInput('/api/stripe/payment-intent', 'POST'), false);
   assert.equal(shouldAlertUnmatchedInput('/api/pickup-orders/check-in-by-phone', 'POST'), false);
   assert.equal(shouldAlertUnmatchedInput('/api/scheduling/create', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/scheduling/available-dates', 'POST'), true);
+  assert.equal(shouldAlertUnmatchedInput('/api/voice-agent/create-checkout-session/test', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/site-config', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/address/suggest', 'POST'), false);
   assert.equal(shouldAlertUnmatchedInput('/api/checkout/create-session', 'POST'), true);
   assert.equal(shouldAlertUnmatchedInput('/api/pay-and-pickup/notify-arrival', 'POST'), true);
 });
