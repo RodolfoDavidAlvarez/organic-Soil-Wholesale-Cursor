@@ -2079,6 +2079,11 @@ Use "" for fields you cannot clearly read. NEVER guess.`
         customer_name: customerInfo.name,
         customer_phone: customerInfo.phone,
         customer_email: customerInfo.email || null,
+        business_name: customerInfo.company || customerInfo.name || 'Pay & Pickup Customer',
+        phone: customerInfo.phone,
+        email: customerInfo.email || null,
+        delivery_type: pickupType || 'pickup',
+        order_items: orderItems,
         pickup_type: pickupType || 'pickup',
         location_id: locationId,
         subtotal, tax, total,
@@ -5987,7 +5992,7 @@ ${pages}
     // ========== SCHEDULING ENDPOINTS ==========
 
     // POST /api/portal/scheduling/available-dates — returns earliest pickup date based on cart items
-    if (path === '/api/portal/scheduling/available-dates' && req.method === 'POST') {
+    if ((path === '/api/portal/scheduling/available-dates' || path === '/api/scheduling/available-dates') && req.method === 'POST') {
       const sb = await getSupabase();
       const body = req.body || {};
       const productSlugs = body.product_slugs || [];
@@ -6023,7 +6028,7 @@ ${pages}
     }
 
     // POST /api/portal/scheduling/time-slots — returns hourly pickup slots for a date
-    if (path === '/api/portal/scheduling/time-slots' && req.method === 'POST') {
+    if ((path === '/api/portal/scheduling/time-slots' || path === '/api/scheduling/time-slots') && req.method === 'POST') {
       const body = req.body || {};
       const date = body.date;
       const { getTimeSlotsForDate } = await getPickupSchedule();
@@ -6819,6 +6824,14 @@ ${pages}
           return res.status(400).json({ error: 'No items to check out' });
         }
 
+        const displayName = String(
+          customerInfo?.company || customerInfo?.businessName || customerInfo?.name || '',
+        ).trim();
+        const checkoutPhone = String(customerInfo?.phone || '').trim();
+        if (!displayName || !checkoutPhone) {
+          return res.status(400).json({ error: 'Name and phone are required' });
+        }
+
         if (isCheckoutMonitorSessionId(monitorSessionId)) {
           await safeRecordCheckoutEvent(db, {
             sessionId: monitorSessionId,
@@ -6952,7 +6965,7 @@ ${pages}
         // Create order
         const orderData = {
           email: customerInfo?.email || null,
-          phone: customerInfo?.phone,
+          phone: checkoutPhone,
           status: isFreeOrder ? 'paid' : 'pending_payment',
           payment_status: isFreeOrder ? 'paid' : 'pending',
           delivery_type: isDelivery ? 'delivery' : 'pickup',
@@ -6963,9 +6976,10 @@ ${pages}
           total_amount: totalDollars,
           location_id: checkoutLocationId,
           pickup_location: !isDelivery ? (pickupLocation || null) : null,
-          customer_name: customerInfo?.name || null,
+          customer_name: String(customerInfo?.name || '').trim() || displayName,
           customer_email: customerInfo?.email || null,
-          business_name: customerInfo?.company || customerInfo?.name || null,
+          // orders.business_name is NOT NULL — never insert null for residential checkouts
+          business_name: displayName,
           order_type: isDelivery ? 'delivery' : 'pickup',
           notes: customerNotes || null,
           paid_at: isFreeOrder ? new Date().toISOString() : null,

@@ -107,6 +107,26 @@
       "source": "/deals/:path*",
       "destination": "/offers/:path*",
       "permanent": false
+    },
+    {
+      "source": "/garden-refresh",
+      "destination": "/offers/garden-refresh",
+      "permanent": false
+    },
+    {
+      "source": "/garden-refresh-plus",
+      "destination": "/offers/garden-refresh-plus",
+      "permanent": false
+    },
+    {
+      "source": "/reservations",
+      "destination": "/qr",
+      "permanent": false
+    },
+    {
+      "source": "/book",
+      "destination": "/qr",
+      "permanent": false
     }
   ],
   "rewrites": [

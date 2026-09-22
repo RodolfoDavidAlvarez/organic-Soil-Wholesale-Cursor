@@ -215,6 +215,8 @@ function Router() {
         <Route path="/drive-through/:step?" component={PayAndPickup} />
         <Route path="/qr" component={PayAndPickup} />
         <Route path="/check-in" component={PayAndPickup} />
+        <Route path="/reservations">{() => <RedirectTo href="/qr" />}</Route>
+        <Route path="/book">{() => <RedirectTo href="/qr" />}</Route>
         <Route path="/operations-calendar" component={PublicOperationsCalendar} />
         <Route path="/classes" component={Classes} />
         <Route path="/garden-classes" component={Classes} />
@@ -242,6 +244,8 @@ function Router() {
         <Route path="/survey" component={SurveyEntry} />
         <Route path="/offers/:slug" component={BundleOffers} />
         <Route path="/offers" component={BundleOffers} />
+        <Route path="/garden-refresh">{() => <RedirectTo href="/offers/garden-refresh" />}</Route>
+        <Route path="/garden-refresh-plus">{() => <RedirectTo href="/offers/garden-refresh-plus" />}</Route>
         <Route path="/deals/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
         <Route path="/deals">{() => <RedirectTo href="/offers" />}</Route>
         <Route path="/promos/:slug">{(params: { slug: string }) => <RedirectTo href={`/offers/${params.slug}`} />}</Route>
