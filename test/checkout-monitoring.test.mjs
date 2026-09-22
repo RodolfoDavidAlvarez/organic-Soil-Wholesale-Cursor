@@ -24,6 +24,10 @@ test('known GraphQL scanner probes do not trigger customer-input alerts', () => 
   assert.equal(shouldAlertUnmatchedInput('/api/v1/mcp', 'POST'), false);
   assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'POST'), true);
   assert.equal(shouldAlertUnmatchedInput('/api/leads/submiit', 'GET'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/create-checkout-session', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/pay-and-pickup/checkout', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/stripe/payment-intent', 'POST'), false);
+  assert.equal(shouldAlertUnmatchedInput('/api/checkout/create-session', 'POST'), true);
 });
 
 test('order enrichment returns only bounded follow-up fields', () => {

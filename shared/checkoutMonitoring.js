@@ -24,6 +24,17 @@ const KNOWN_SCANNER_INPUT_PATHS = new Set([
   '/api/mcp/mcp',
   '/api/mcp/v1',
   '/api/v1/mcp',
+  // Guessed checkout/payment paths. Live checkout uses POST /api/checkout/create-session.
+  '/api/create-checkout-session',
+  '/api/stripe/create-checkout-session',
+  '/api/checkout/session',
+  '/api/checkout/create',
+  '/api/orders/create',
+  '/api/pay-and-pickup/checkout',
+  '/api/pickup/checkout',
+  '/api/payments/create',
+  '/api/stripe/payment-intent',
+  '/api/create-payment-intent',
 ]);
 
 export function shouldAlertUnmatchedInput(path, method) {
