@@ -80,6 +80,7 @@ export function isCallTrackingExcludedPath(
   const source = new URLSearchParams(search).get("source");
 
   return (
+    import.meta.env.VITE_DEFAULT_BRAND === "rls" ||
     path.startsWith("/rep/") ||
     path.startsWith("/landscaper-supply") ||
     path === "/free-worm-castings" ||

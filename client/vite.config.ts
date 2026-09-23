@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react(), ...(standaloneBrand ? [{
     name: "rls-document-metadata",
     transformIndexHtml(html) {
-      return html
+      return html.replace(/<html\b/, '<html data-site-brand="rls"')
         .replace(/<title>[^<]*<\/title>/, '<title>Regenerative Landscaper Supply | Landscape Materials for the Job</title>')
         .replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/>/, '<meta name="description" content="Build a material list with current Arizona compost, soil, worm castings and mulch prices for landscape crews. Pickup and delivery through Organic Soil Wholesale." />')
         .replace(/<meta name="keywords"[^>]*\/>/, '<meta name="keywords" content="landscape materials Arizona, landscaper supply Phoenix, bulk compost, mulch, soil amendments, contractor soil" />')
