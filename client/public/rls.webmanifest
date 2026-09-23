@@ -1,0 +1,10 @@
+{
+  "name": "Regenerative Landscaper Supply",
+  "short_name": "RLS Supply",
+  "description": "Landscape materials for professional crews in Phoenix and across Arizona.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf7ed",
+  "theme_color": "#31543d",
+  "icons": [{ "src": "/rls-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

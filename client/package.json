@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/generate-seo-pages.mjs",
+    "build": "vite build && node scripts/generate-seo-pages.mjs && if [ \"$VITE_DEFAULT_BRAND\" = \"rls\" ]; then node scripts/test-rls-seo-output.mjs; fi",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
