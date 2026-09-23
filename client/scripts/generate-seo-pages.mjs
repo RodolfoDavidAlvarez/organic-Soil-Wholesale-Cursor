@@ -453,6 +453,174 @@ const headForRoute = (route) => {
   `;
 };
 
+const rlsFaqs = [
+  {
+    question: "What materials can I order?",
+    answer: "Browse Turf Daddy Blend, Artemis Root Boost Blend, Nature's Blanket Premium, Simon's Gold, Mikey's Worm Poop, and PlantPal. Formats, current pricing, and availability are shown in the live catalog.",
+  },
+  {
+    question: "Can I order online?",
+    answer: "Eligible products and formats can be purchased through checkout. Specialty materials, topsoil, and delivery planning can be sent to the supply team for confirmation.",
+  },
+  {
+    question: "Where is Phoenix pickup?",
+    answer: "Pickup is fulfilled by Organic Soil Wholesale at 1634 N 19th Ave, Phoenix, AZ 85009. Choose an eligible pickup option and available time during checkout. Confirm loose-bulk arrangements before traveling.",
+  },
+  {
+    question: "Can you deliver to my jobsite?",
+    answer: "Delivery depends on the material, order size, destination, truck access, and schedule. Request a job quote to confirm availability and the delivered price.",
+  },
+  {
+    question: "How do I estimate cubic yards?",
+    answer: "Multiply the area in square feet by depth in inches, then divide by 324. This estimate excludes compaction and waste. Materials sold by weight need a supplier conversion.",
+  },
+];
+
+const rlsGuides = JSON.parse(await readFile(path.join(clientRoot, "src/features/landscaper-supply/material-guides.json"), "utf8"));
+const rlsProducts = rlsGuides.map((guide) => [guide.name, guide.summary]);
+
+const rlsLocalBusinessSchema = {
+  "@context": "https://schema.org",
+  "@type": "Store",
+  "@id": "https://regenerativelandscapersupply.com/#business",
+  name: "Regenerative Landscaper Supply",
+  alternateName: "Regenerative Landscape Supply",
+  url: "https://regenerativelandscapersupply.com/",
+  logo: "https://regenerativelandscapersupply.com/rls-mark.svg",
+  image: "https://regenerativelandscapersupply.com/images/optimized/mulch-texture-hand.jpg",
+  description: "Landscape materials for professional crews in Phoenix and across Arizona, including compost, worm castings, turf blends, planting amendments, potting mix, and mulch. Ordering and fulfillment through Soil Seed & Water's Organic Soil Wholesale.",
+  telephone: "+1-623-263-3386",
+  address: { "@type": "PostalAddress", ...ADDRESS },
+  parentOrganization: {
+    "@type": "Organization",
+    name: "Soil Seed & Water",
+    url: "https://soilseedandwater.com/",
+  },
+  areaServed: [
+    { "@type": "City", name: "Phoenix", containedInPlace: { "@type": "State", name: "Arizona" } },
+    { "@type": "State", name: "Arizona" },
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    telephone: "+1-623-263-3386",
+    contactType: "customer service",
+    areaServed: "US-AZ",
+    availableLanguage: "English",
+  },
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Landscape materials",
+    itemListElement: rlsProducts.map(([name, description]) => ({ "@type": "OfferCatalog", name, description })),
+  },
+};
+
+const rlsFaqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: rlsFaqs.map(({ question, answer }) => ({
+    "@type": "Question",
+    name: question,
+    acceptedAnswer: { "@type": "Answer", text: answer },
+  })),
+};
+
+const rlsStaticContent = `
+  <main id="main-content" class="rls-seo-fallback">
+    <header><a href="/" aria-label="Regenerative Landscaper Supply home">Regenerative Landscaper Supply</a></header>
+    <h1>Landscape materials for the job ahead</h1>
+    <p>Regenerative Landscaper Supply helps professional landscape crews source compost, soil blends, worm castings, planting amendments, potting mix, and mulch in Phoenix and across Arizona. Build a material list with current catalog pricing, purchase eligible items online, or request a job quote for specialty materials and delivery planning.</p>
+    <p><a href="#materials">Browse landscape materials</a> · <a href="tel:+16232633386">Call (623) 263-3386</a></p>
+    <section id="materials"><h2>Materials for landscape crews</h2><ul>${rlsGuides.map((guide) => `<li><a href="/materials/${guide.slug}"><strong>${guide.name}</strong></a> — ${guide.summary}</li>`).join("")}</ul></section>
+    <section><h2>Phoenix pickup and Arizona jobsite delivery</h2><p>Phoenix pickup is fulfilled at Organic Soil Wholesale, 1634 N 19th Ave, Phoenix, AZ 85009. Select an eligible pickup option and available time during checkout. Jobsite delivery is confirmed based on material, load size, destination, truck access, and schedule. Specialty blends, topsoil, and delivery planning are available by quote.</p></section>
+    <section><h2>Landscape material planning</h2><p>Estimate loose volume in cubic yards with: area in square feet × depth in inches ÷ 324. This estimate excludes compaction and waste. Materials sold by weight require a supplier conversion.</p></section>
+    <section><h2>Frequently asked questions</h2>${rlsFaqs.map(({ question, answer }) => `<article><h3>${question}</h3><p>${answer}</p></article>`).join("")}</section>
+    <p>Regenerative Landscaper Supply is a Soil Seed &amp; Water brand. Ordering and fulfillment are supported by Organic Soil Wholesale.</p>
+  </main>`;
+
+const writeRlsSeoSite = async (template) => {
+  const canonical = "https://regenerativelandscapersupply.com/";
+  const title = "Landscape Materials for Contractors in Phoenix, AZ | Regenerative Landscaper Supply";
+  const description = "Order compost, turf blends, worm castings, planting amendments, potting mix, and mulch for landscape jobs in Phoenix and across Arizona. Live pricing, Phoenix pickup, and jobsite delivery quotes.";
+  const image = "https://regenerativelandscapersupply.com/images/optimized/mulch-texture-hand.jpg";
+  const graph = [
+    { "@context": "https://schema.org", "@type": "WebSite", "@id": `${canonical}#website`, url: canonical, name: "Regenerative Landscaper Supply", publisher: { "@id": "https://soilseedandwater.com/#organization" }, inLanguage: "en-US" },
+    { "@context": "https://schema.org", "@type": "WebPage", "@id": `${canonical}#webpage`, url: canonical, name: title, description, isPartOf: { "@id": `${canonical}#website` }, about: { "@id": "https://regenerativelandscapersupply.com/#business" }, inLanguage: "en-US" },
+    rlsLocalBusinessSchema,
+    rlsFaqSchema,
+  ];
+  const head = `
+    <title>${escapeAttr(title)}</title>
+    <meta name="description" content="${escapeAttr(description)}" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="author" content="Regenerative Landscaper Supply" />
+    <meta name="theme-color" content="#31543d" />
+    <link rel="canonical" href="${canonical}" />
+    <link rel="icon" type="image/svg+xml" href="/rls-mark.svg" />
+    <meta property="og:type" content="website" /><meta property="og:site_name" content="Regenerative Landscaper Supply" />
+    <meta property="og:url" content="${canonical}" /><meta property="og:title" content="${escapeAttr(title)}" />
+    <meta property="og:description" content="${escapeAttr(description)}" /><meta property="og:image" content="${image}" />
+    <meta property="og:image:alt" content="Landscape mulch material supplied by Regenerative Landscaper Supply" />
+    <meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="${escapeAttr(title)}" />
+    <meta name="twitter:description" content="${escapeAttr(description)}" /><meta name="twitter:image" content="${image}" />
+    ${graph.map((schema) => `<script type="application/ld+json">${JSON.stringify(schema)}</script>`).join("\n")}
+  `;
+  const rlsHtml = cleanHead(template)
+    .replace(/<!-- Each route preloads exactly[\s\S]*?<\/script>/, '<link rel="preload" as="image" href="/images/optimized/mulch-texture-hand.jpg" fetchpriority="high" />')
+    .replace(/<div id="root"><\/div>/, `<div id="root">${rlsStaticContent}</div>`)
+    .replaceAll('href="/favicon.ico"', 'href="/rls-mark.svg"')
+    .replaceAll('href="/favicon-16x16.png"', 'href="/rls-mark.svg"')
+    .replaceAll('href="/favicon-32x32.png"', 'href="/rls-mark.svg"')
+    .replaceAll('href="/favicon.png"', 'href="/rls-mark.svg"')
+    .replace('href="/site.webmanifest"', 'href="/rls.webmanifest"')
+    .replace('<meta name="author" content="Organic Soil Wholesale" />', '<meta name="author" content="Regenerative Landscaper Supply" />')
+    .replace('<meta name="msapplication-TileColor" content="#7BA05B" />', '<meta name="msapplication-TileColor" content="#31543D" />')
+    .replace('<meta name="theme-color" content="#7BA05B" />', '<meta name="theme-color" content="#31543D" />')
+    .replace("</head>", `${head}\n  </head>`);
+  await writeFile(path.join(distRoot, "index.html"), rlsHtml);
+  const materialPages = await Promise.all(rlsGuides.map(async (guide) => {
+    const url = `https://regenerativelandscapersupply.com/materials/${guide.slug}`;
+    const pageTitle = guide.title;
+    const pageHead = `
+      <title>${escapeAttr(pageTitle)}</title><meta name="description" content="${escapeAttr(guide.description)}" />
+      <meta name="robots" content="index, follow, max-image-preview:large" /><link rel="canonical" href="${url}" />
+      <meta property="og:type" content="product" /><meta property="og:site_name" content="Regenerative Landscaper Supply" />
+      <meta property="og:url" content="${url}" /><meta property="og:title" content="${escapeAttr(pageTitle)}" />
+      <meta property="og:description" content="${escapeAttr(guide.description)}" /><meta property="og:image" content="https://regenerativelandscapersupply.com${guide.image}" />
+      <meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="${escapeAttr(pageTitle)}" />
+      <meta name="twitter:description" content="${escapeAttr(guide.description)}" /><meta name="twitter:image" content="https://regenerativelandscapersupply.com${guide.image}" />
+      <script type="application/ld+json">${JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: guide.name,
+        category: guide.category,
+        description: guide.details,
+        image: `https://regenerativelandscapersupply.com${guide.image}`,
+        url,
+        brand: { "@type": "Brand", name: "Soil Seed & Water" },
+        manufacturer: { "@type": "Organization", name: "Soil Seed & Water", url: "https://soilseedandwater.com/" },
+      })}</script>
+      <script type="application/ld+json">${JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: canonical },
+          { "@type": "ListItem", position: 2, name: "Landscape materials", item: `${canonical}#materials` },
+          { "@type": "ListItem", position: 3, name: guide.name, item: url },
+        ],
+      })}</script>
+    `;
+    const body = `<main id="main-content" class="rls-seo-fallback"><p><a href="/">Regenerative Landscaper Supply</a> / <a href="/#materials">Landscape materials</a> / ${guide.name}</p><h1>${guide.name}</h1><p>${guide.summary}</p><p>${guide.details}</p><img src="${guide.image}" alt="${escapeAttr(`${guide.name} for landscape projects`)}"/><h2>Where it fits on the job</h2><ul>${guide.uses.map((use) => `<li>${use}</li>`).join("")}</ul><p>Application rates and coverage vary with the material and site conditions. Confirm the recommended quantity and current availability before you schedule the crew.</p><h2>Phoenix pickup and Arizona delivery</h2><p>Pickup is fulfilled through Organic Soil Wholesale at 1634 N 19th Ave, Phoenix, AZ 85009. Jobsite delivery depends on the material, load size, destination, truck access, and schedule.</p><p><a href="/#materials">See live formats and prices</a> · <a href="/quote?product=${encodeURIComponent(guide.name)}">Request a job quote</a></p></main>`;
+    const html = cleanHead(template).replace(/<!-- Each route preloads exactly[\s\S]*?<\/script>/, `<link rel="preload" as="image" href="${guide.image}" fetchpriority="high" />`).replace(/<div id="root"><\/div>/, `<div id="root">${body}</div>`).replaceAll('href="/favicon.ico"', 'href="/rls-mark.svg"').replaceAll('href="/favicon-16x16.png"', 'href="/rls-mark.svg"').replaceAll('href="/favicon-32x32.png"', 'href="/rls-mark.svg"').replaceAll('href="/favicon.png"', 'href="/rls-mark.svg"').replace('href="/site.webmanifest"', 'href="/rls.webmanifest"').replace('<meta name="author" content="Organic Soil Wholesale" />', '<meta name="author" content="Regenerative Landscaper Supply" />').replace('<meta name="msapplication-TileColor" content="#7BA05B" />', '<meta name="msapplication-TileColor" content="#31543D" />').replace('<meta name="theme-color" content="#7BA05B" />', '<meta name="theme-color" content="#31543D" />').replace("</head>", `${pageHead}\n  </head>`);
+    const target = path.join(distRoot, "materials", guide.slug, "index.html");
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, html);
+    return { url, slug: guide.slug };
+  }));
+  await writeFile(path.join(distRoot, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /cart\nDisallow: /checkout\nDisallow: /quote\nDisallow: /order-confirmation\nDisallow: /admin/\nDisallow: /portal/\n\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: ChatGPT-User\nAllow: /\n\nSitemap: ${canonical}sitemap.xml\n`);
+  await writeFile(path.join(distRoot, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[canonical, ...materialPages.map((page) => page.url)].map((url) => `<url><loc>${url}</loc><changefreq>weekly</changefreq><priority>${url === canonical ? "1.0" : "0.8"}</priority></url>`).join("")}</urlset>\n`);
+  await writeFile(path.join(distRoot, "llms.txt"), `# Regenerative Landscaper Supply\n\n> Landscape materials for professional crews in Phoenix and across Arizona. A Soil Seed &amp; Water brand, with ordering and fulfillment supported by Organic Soil Wholesale.\n\n## Main site\n- https://regenerativelandscapersupply.com/ — Current materials, formats, live catalog pricing, material-list builder, volume calculator, pickup details, and quote requests.\n\n## Material guides\n${rlsGuides.map((guide) => `- https://regenerativelandscapersupply.com/materials/${guide.slug} — ${guide.name}: ${guide.summary}`).join("\n")}\n\n## Ordering and service\n- Eligible products and formats can be purchased online; specialty materials, topsoil, and delivery planning can be requested by quote.\n- Phoenix pickup is fulfilled by Organic Soil Wholesale at 1634 N 19th Ave, Phoenix, AZ 85009. Confirm loose-bulk pickup arrangements before traveling.\n- Jobsite delivery is confirmed by material, load size, destination, truck access, and schedule.\n- Volume estimate: area in square feet × depth in inches ÷ 324 = estimated cubic yards; excludes compaction and waste.\n- Customer support: (623) 263-3386.\n\n## Parent brand and fulfillment\n- Soil Seed &amp; Water: https://soilseedandwater.com/\n- Organic Soil Wholesale: https://organicsoilwholesale.com/\n`);
+};
+
 const writeRoute = async (template, route) => {
   const html = cleanHead(template).replace("</head>", () => `${headForRoute(route)}\n  </head>`);
   const target =
@@ -464,5 +632,10 @@ const writeRoute = async (template, route) => {
 };
 
 const template = await readFile(templatePath, "utf8");
-await Promise.all(routes.map((route) => writeRoute(template, route)));
-console.log(`Generated SEO HTML for ${routes.length} routes.`);
+if (process.env.VITE_DEFAULT_BRAND === "rls") {
+  await writeRlsSeoSite(template);
+  console.log("Generated Regenerative Landscaper Supply SEO, AI crawler, sitemap, and static content files.");
+} else {
+  await Promise.all(routes.map((route) => writeRoute(template, route)));
+  console.log(`Generated SEO HTML for ${routes.length} routes.`);
+}

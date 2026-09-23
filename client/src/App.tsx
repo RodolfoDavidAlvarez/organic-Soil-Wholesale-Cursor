@@ -25,6 +25,7 @@ import {
 } from "@/lib/callTracking";
 
 const LandscaperSupply = lazy(() => import("@/pages/LandscaperSupply"));
+const RlsMaterialGuide = lazy(() => import("@/pages/RlsMaterialGuide"));
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
 const Products = lazy(() => import("@/pages/Products"));
@@ -188,6 +189,7 @@ function Router() {
         <Route path="/yt" component={InstagramLinks} />
         <Route path="/links/youtube" component={InstagramLinks} />
         <Route path="/landscaper-supply/:step?" component={LandscaperSupply} />
+        {useLandscaperSupplyAsDefault && <Route path="/materials/:slug" component={RlsMaterialGuide} />}
         <Route path="/" component={useLandscaperSupplyAsDefault ? LandscaperSupply : Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />

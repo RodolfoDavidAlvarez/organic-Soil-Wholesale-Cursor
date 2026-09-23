@@ -1,0 +1,74 @@
+[
+  {
+    "slug": "turf-daddy-blend",
+    "productId": 1004,
+    "name": "Turf Daddy Blend",
+    "category": "Turf topdress blend",
+    "title": "Turf Daddy Blend for Overseeding & Aeration | Regenerative Landscaper Supply",
+    "description": "Plan Arizona overseeding, aeration, and turf installation work with Turf Daddy Blend, a dairy compost, worm castings, and zeolite topdress blend.",
+    "summary": "A topdress blend for overseeding, aeration, and turf installation work in Arizona.",
+    "details": "Turf Daddy Blend combines dairy compost, worm castings, and zeolite for turf and lawn projects. It is offered for overseeding, aeration, and before new turf is laid. Ask the supply team to confirm the recommended amount, current format, and timing for your project.",
+    "uses": ["Overseeding projects", "After lawn aeration", "Preparing soil before turf installation"],
+    "image": "/images/optimized/turf-daddy-blend-bestfor.jpg"
+  },
+  {
+    "slug": "artemis-root-boost-blend",
+    "productId": 1005,
+    "name": "Artemis Root Boost Blend",
+    "category": "Tree and shrub planting amendment",
+    "title": "Artemis Root Boost Blend for Trees & Shrubs | Regenerative Landscaper Supply",
+    "description": "Explore Artemis Root Boost Blend, a dairy compost based soil amendment for tree and shrub installations by Phoenix landscape crews.",
+    "summary": "A planting amendment for tree and shrub installation projects.",
+    "details": "Artemis Root Boost Blend is made for tree and shrub planting work. Use it as part of a planned soil-amendment approach, and confirm the appropriate blend, application rate, and available format with the supply team for your site conditions.",
+    "uses": ["Tree installation", "Shrub planting", "Landscape planting projects"],
+    "image": "/images/optimized/artemis-root-boost-blend-bestfor.jpg"
+  },
+  {
+    "slug": "natures-blanket-premium",
+    "productId": 3000,
+    "name": "Nature's Blanket Premium",
+    "category": "Premium landscape mulch",
+    "title": "Nature's Blanket Premium Mulch for Landscape Beds | Regenerative Landscaper Supply",
+    "description": "Specify Nature's Blanket Premium, a dark mulch with wood fiber, dairy compost, and worm castings for landscape beds and Arizona properties.",
+    "summary": "A dark mulch for landscape beds and a finished look around established plantings.",
+    "details": "Nature's Blanket Premium combines wood fiber with dairy compost and worm castings. Landscape crews use it as a protective, finished surface for beds and established plantings. Confirm coverage depth, quantities, and the current format for your project before ordering.",
+    "uses": ["Landscape beds", "Finishing around established plantings", "Commercial property maintenance"],
+    "image": "/images/optimized/natures-blanket-premium-lifestyle.jpg"
+  },
+  {
+    "slug": "simons-gold",
+    "productId": 1000,
+    "name": "Simon's Gold",
+    "category": "Dairy compost",
+    "title": "Simon's Gold Dairy Compost for Landscape Projects | Regenerative Landscaper Supply",
+    "description": "Source Simon's Gold dairy compost for Phoenix landscape beds, tree installations, planted areas, and soil amendment work.",
+    "summary": "Dairy compost for soil amendment work across landscape beds and planted areas.",
+    "details": "Simon's Gold is a dairy compost used for soil-building and landscape amendment projects. Landscape crews can review live bag, pallet, tote, and eligible bulk formats in the material catalog. Confirm quantities and pickup or delivery details for the job.",
+    "uses": ["Landscape bed preparation", "Tree and shrub planting projects", "Amending planted areas"],
+    "image": "/images/optimized/simons-gold-bestfor.jpg"
+  },
+  {
+    "slug": "mikeys-worm-poop",
+    "productId": 1001,
+    "name": "Mikey's Worm Poop",
+    "category": "Worm castings",
+    "title": "Mikey's Worm Poop Worm Castings for Landscape Crews | Regenerative Landscaper Supply",
+    "description": "Use Mikey's Worm Poop worm castings in landscape planting mixes and soil amendment work. Check current Phoenix-area formats and availability.",
+    "summary": "Worm castings for planting mixes and soil amendment work.",
+    "details": "Mikey's Worm Poop is vermicompost made from worm castings. It is used in planting mixes and soil amendment work. Landscape contractors can check current formats and pricing in the live catalog, then confirm the right quantity for their site.",
+    "uses": ["Planting mixes", "Landscape soil amendment", "Tree and shrub projects"],
+    "image": "/images/optimized/mikeys-worm-poop-bestfor.jpg"
+  },
+  {
+    "slug": "plantpal",
+    "productId": 111,
+    "name": "PlantPal",
+    "category": "All-stage potting mix",
+    "title": "PlantPal All-Stage Potting Mix for Nurseries & Containers | Regenerative Landscaper Supply",
+    "description": "Plan container, nursery, and patio planting work with PlantPal all-stage potting mix from Regenerative Landscaper Supply.",
+    "summary": "Potting mix for container planting, nursery work, and patio planters.",
+    "details": "PlantPal is an all-stage potting mix for container planting and nursery work. Landscape crews can use it for pots, planters, and other container projects. Review live formats and prices, and confirm quantities for the job.",
+    "uses": ["Container planting", "Nursery production", "Patio planters"],
+    "image": "/images/optimized/plantpal-bestfor.jpg"
+  }
+]
