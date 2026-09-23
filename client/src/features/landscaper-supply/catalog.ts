@@ -1,5 +1,11 @@
-import { isPayOnlineProduct, shouldHidePhoenixYardBulkSize } from '@shared/phoenixYardPickup.js';
-import type { CartItem } from '@/contexts/QuoteCartContext';
+export type MaterialLine = { productId: number; productName: string; productSlug: string; format: string; quantity: number; unitPrice: number; unit: string; mode: 'pay' | 'quote'; imageUrl?: string };
+const PAY_ONLINE_PRODUCT_IDS = new Set([1000, 134, 3000, 1001, 111]);
+const isPayOnlineProduct = (productId: number) => PAY_ONLINE_PRODUCT_IDS.has(Number(productId));
+const shouldHidePhoenixYardBulkSize = (productId: number, format: string) => {
+  const key = String(format || '').toLowerCase();
+  const looseBulk = key.includes('bulk') && !key.includes('truckload') && !key.includes('walking') && !key.includes('pallet') && !key.includes('tote') && !key.includes('super');
+  return looseBulk && ![1000, 3000].includes(Number(productId));
+};
 export const JOBS = ['All materials', 'Turf', 'Trees & shrubs', 'Beds & mulch'] as const;
 export const selections: Record<number, { job: string; use: string }> = {
   1004: { job: 'Turf', use: 'A topdress blend for overseeding and aeration jobs. Request quantities and scheduling for your site.' },
@@ -12,7 +18,7 @@ export const selections: Record<number, { job: string; use: string }> = {
 export type Size = { key: string; label: string; price: number; unit: string; isActive?: boolean; is_active?: boolean };
 export type Product = { id: number; name: string; slug: string; texturePhotoUrl?: string; imageUrl?: string; sizePriceOptions: Size[]; product_status?: string; is_catalog_enabled?: boolean };
 export const availableSizes = (p: Product) => (p.sizePriceOptions || []).filter(s => s.isActive !== false && s.is_active !== false && Number.isFinite(s.price) && s.price > 0 && !shouldHidePhoenixYardBulkSize(p.id, s.key));
-export function lineFor(p: Product, s: Size, quantity: number): CartItem {
+export function lineFor(p: Product, s: Size, quantity: number): MaterialLine {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999) throw new Error('Enter a whole quantity from 1 to 9,999.');
   return { productId: p.id, productName: p.name, productSlug: p.slug, format: s.key, quantity, unitPrice: s.price, unit: s.unit, mode: isPayOnlineProduct(p.id) ? 'pay' : 'quote', imageUrl: p.texturePhotoUrl || p.imageUrl };
 }

@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const standaloneBrand = process.env.VITE_DEFAULT_BRAND === "rls";
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -10,6 +12,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "../shared"),
+      "@app-entry": path.resolve(__dirname, standaloneBrand ? "./src/RlsStandalone.tsx" : "./src/AppEntry.tsx"),
     },
   },
   build: {
