@@ -34,6 +34,8 @@ export interface MosPickupOrderPayload {
   total_cents: number;
   payment_status: 'paid';
   source: 'osw_pay_pickup' | 'osw_pay_delivery';
+  brand_id?: string;
+  brand_name?: string;
 }
 
 const MOS_PICKUP_ENDPOINT =

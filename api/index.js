@@ -384,6 +384,7 @@ function buildPickupOrderEmail({ order, orderItems, pickupLabel, testing = false
     : 'pickup order';
   const readyLabel = pickupLabel || 'Confirm ready time';
   const statusLabel = String(order?.payment_status || order?.status || 'paid').replace(/_/g, ' ').toUpperCase();
+  const isRlsBrand = String(order?.notes || '').includes('Source brand: Regenerative Landscaper Supply');
 
   const itemRows = formattedItems.length
     ? formattedItems.map((item) => `
@@ -407,7 +408,7 @@ function buildPickupOrderEmail({ order, orderItems, pickupLabel, testing = false
             <tr>
               <td style="background:#b8dabc;padding:28px 28px 24px;">
                 <img src="https://organicsoilwholesale.com/email-assets/ssw-logo.png" alt="Soil Seed & Water" width="150" style="display:block;width:150px;max-width:150px;height:auto;margin:0 0 18px 0;">
-                <div style="font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#394b38;font-weight:900;">Organic Soil Wholesale</div>
+                <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#394b38;font-weight:900;">${isRlsBrand ? 'Regenerative Landscaper Supply · Organic Soil Wholesale' : 'Organic Soil Wholesale'}</div>
                 <div style="font-size:38px;line-height:1.05;color:#172318;font-weight:900;margin-top:12px;">New paid pickup order</div>
                 <div style="font-size:20px;line-height:1.35;color:#394b38;margin-top:12px;">Order #${escapeHtml(orderRef)} · ${escapeHtml(location.name)} · Ready ${escapeHtml(readyLabel)}</div>
               </td>
@@ -734,7 +735,8 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
     const adminEmails = notify.getPickupNotifyEmails(locId);
     const customerName = order?.customer_name || order?.business_name || 'Customer';
     const location = pickupLocationDetails(order);
-    const subject = dev.devModeSubject(`New Pick Order | ${customerName} | ${location.name} pickup ${pickupLabel || ''}`.trim());
+    const isRlsBrand = String(order?.notes || '').includes('Source brand: Regenerative Landscaper Supply');
+    const subject = dev.devModeSubject(`${isRlsBrand ? '[RLS] ' : ''}New Pick Order | ${customerName} | ${location.name} pickup ${pickupLabel || ''}`.trim());
     const html = buildPickupOrderEmail({
       order,
       orderItems,
@@ -751,7 +753,7 @@ async function sendNewPickupOrderAlerts({ order, orderItems, pickupLabel, locati
           subject,
           html,
           attachments: [{
-            filename: `OSW-Pickup-Receipt-${orderRef}.pdf`,
+            filename: `${isRlsBrand ? 'RLS' : 'OSW'}-Pickup-Receipt-${orderRef}.pdf`,
             content: receiptPdf.toString('base64'),
           }],
         });
@@ -910,9 +912,10 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
         customerNumber,
         pickupLabel,
         location: order?.pickup_location,
+        brandName: order?.brand_id === 'regenerative_landscaper_supply' ? 'Regenerative Landscaper Supply' : undefined,
       });
       const custResult = await r.emails.send({
-        from: PURCHASE_THANK_YOU_FROM,
+        from: thankYou.from || PURCHASE_THANK_YOU_FROM,
         replyTo: 'ralvarez@soilseedandwater.com',
         to: dev.resolveCustomerEmail(customerEmail),
         subject: dev.devModeSubject(thankYou.subject),
@@ -968,6 +971,8 @@ async function fulfillOswCheckoutOrder(orderId, session = null) {
     total_cents: Math.round(((order?.total_amount) || (order?.total) || 0) * 100),
     payment_status: 'paid',
     source: isDeliveryOrder ? 'osw_pay_delivery' : 'osw_pay_pickup',
+    brand_id: order?.brand_id || 'organic_soil_wholesale',
+    brand_name: order?.brand_id === 'regenerative_landscaper_supply' ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale',
   });
 
   if (isDeliveryOrder) {
@@ -5829,8 +5834,10 @@ ${pages}
       console.info(JSON.stringify({ event: 'lead_submission_started', requestId }));
       const body = req.body || {};
       const {
-        name, phone, notes, preferred_date, order, source_url,
+        name, phone, notes, preferred_date, order, source_url, brand_id,
       } = body;
+      const isRlsBrand = brand_id === 'regenerative_landscaper_supply';
+      const leadBrand = isRlsBrand ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale';
       const isOrderCallback =
         body.lead_type === 'order_callback' || body.source === 'osw_order_callback';
       const emailRaw = String(body.email || '').trim();
@@ -5904,8 +5911,8 @@ ${pages}
       const itemCount = orderLines.length;
       const estimated = order?.estimated_total != null ? Number(order.estimated_total) : null;
       const subject = isOrderCallback
-        ? `Callback requested — ${itemCount} line item${itemCount === 1 ? '' : 's'}${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}`
-        : 'Lead Form Submission';
+        ? `${isRlsBrand ? '[RLS] ' : ''}Callback requested — ${itemCount} line item${itemCount === 1 ? '' : 's'}${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}`
+        : `${isRlsBrand ? '[RLS] ' : ''}Lead Form Submission`;
 
       const sb = await getSupabase();
       const insertData = {
@@ -5913,6 +5920,7 @@ ${pages}
         email,
         subject,
         message: `Phone: ${phone}\n\n${orderNotes}`,
+        brand_id: isRlsBrand ? 'regenerative_landscaper_supply' : null,
         created_at: new Date().toISOString(),
       };
       if (preferred_date) insertData.preferred_date = preferred_date;
@@ -5924,15 +5932,28 @@ ${pages}
 
       try {
         const r = await getResend();
-        await r.emails.send({
-          from: 'Organic Soil Wholesale <info@soilseedandwater.com>',
+        const notifyFlag = isOrderCallback ? 'notify_new_orders' : 'notify_quote_requests';
+        const adminResult = await sb.from('admin_notifications').select('email').eq('active', true).eq(notifyFlag, true);
+        const adminEmails = (adminResult.data || []).map((row) => row.email).filter(Boolean);
+        if (!adminEmails.length) adminEmails.push('ralvarez@soilseedandwater.com');
+        await Promise.all(adminEmails.map((to) => r.emails.send({
+          from: `${isRlsBrand ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale'} <info@soilseedandwater.com>`,
           replyTo: 'ralvarez@soilseedandwater.com',
-          to: 'ralvarez@soilseedandwater.com',
+          to,
           subject: isOrderCallback
-            ? `Callback about order from ${name}`
-            : `New quote request from ${name}`,
-          html: `<p><strong>${isOrderCallback ? 'Callback requested about an order' : 'New lead from the website'}</strong></p><ul><li><strong>Name:</strong> ${name}</li><li><strong>Email:</strong> ${emailRaw || '(none — phone callback)'}</li><li><strong>Phone:</strong> ${phone}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${preferred_date}</li>` : ''}</ul><pre style="white-space:pre-wrap;font-family:inherit">${String(orderNotes).replace(/</g, '&lt;')}</pre>`,
-        });
+            ? `${isRlsBrand ? '[RLS] ' : ''}Callback about order from ${name}`
+            : `${isRlsBrand ? '[RLS] ' : ''}New quote request from ${name}`,
+          html: `<p><strong>${isOrderCallback ? 'Callback requested about an order' : 'New lead from the website'}${isRlsBrand ? ' · Regenerative Landscaper Supply' : ''}</strong></p><ul><li><strong>Name:</strong> ${escapeHtml(name)}</li><li><strong>Email:</strong> ${escapeHtml(emailRaw || '(none — phone callback)')}</li><li><strong>Phone:</strong> ${escapeHtml(phone)}</li>${preferred_date ? `<li><strong>Preferred Date:</strong> ${escapeHtml(preferred_date)}</li>` : ''}</ul><pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(orderNotes)}</pre>`,
+        })));
+        if (isRlsBrand && emailRaw) {
+          await r.emails.send({
+            from: 'Regenerative Landscaper Supply <info@soilseedandwater.com>',
+            replyTo: 'ralvarez@soilseedandwater.com',
+            to: emailRaw,
+            subject: 'We received your request | Regenerative Landscaper Supply',
+            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#24382d"><h1>Regenerative Landscaper Supply</h1><p>Thanks, ${escapeHtml(String(name).split(' ')[0])}. We received your material request and our Organic Soil Wholesale team will review availability, pricing, and fulfillment.</p><p>We’ll follow up using the contact information you provided.</p><p>— Organic Soil Wholesale<br>Soil Seed &amp; Water</p></div>`,
+          });
+        }
       } catch (e) { console.error('Lead notification error:', e); }
 
       // Forward to MOS sales portal (production path previously skipped this).
@@ -5940,9 +5961,9 @@ ${pages}
         const secret = process.env.MOS_LEAD_INGEST_SECRET;
         if (secret) {
           const mosSource = isOrderCallback ? 'osw_order_callback' : 'osw_lead_form';
-          const mosMessage = isOrderCallback
+          const mosMessage = `${isRlsBrand ? 'Regenerative Landscaper Supply lead. ' : ''}${isOrderCallback
             ? `Callback requested — ${itemCount} line items${estimated != null ? ` · ~$${estimated.toFixed(0)}` : ''}\n\n${orderNotes}`
-            : (notes || undefined);
+            : (notes || undefined)}`;
           const r = await fetch(process.env.MOS_LEAD_INGEST_URL || 'https://myorganicsoil.com/api/leads', {
             method: 'POST',
             headers: {
@@ -5958,6 +5979,8 @@ ${pages}
               source_url: source_url || 'https://organicsoilwholesale.com/',
               source_data: {
                 osw_contact_message_id: data.id,
+                brand_id: isRlsBrand ? 'regenerative_landscaper_supply' : 'organic_soil_wholesale',
+                brand_name: leadBrand,
                 lead_type: isOrderCallback ? 'order_callback' : 'lead_form',
                 ...(isOrderCallback && order ? { order } : {}),
               },
@@ -6811,8 +6834,9 @@ ${pages}
       try {
         const {
           items: rawItems, customerInfo, locationId, discountCode,
-          fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation,
+          fulfillmentType, deliveryAddress, deliveryQuote, pickupLocation, brand_id,
         } = req.body || {};
+        const orderBrandId = brand_id === 'regenerative_landscaper_supply' ? brand_id : 'organic_soil_wholesale';
         let { pickupTime, pickupMode } = req.body || {};
 
         if (!Array.isArray(rawItems) || rawItems.length === 0) {
@@ -6916,6 +6940,7 @@ ${pages}
           : (preferredDeliveryDate || '');
 
         const customerNotes = [
+          orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
           customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
           customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
           typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
@@ -6951,6 +6976,7 @@ ${pages}
 
         // Create order
         const orderData = {
+          brand_id: orderBrandId,
           email: customerInfo?.email || null,
           phone: customerInfo?.phone,
           status: isFreeOrder ? 'paid' : 'pending_payment',
@@ -7186,6 +7212,7 @@ ${pages}
           cancel_url: `${origin}/checkout?canceled=true${isCheckoutMonitorSessionId(monitorSessionId) ? `&monitor_id=${encodeURIComponent(monitorSessionId)}` : ''}`,
           metadata: {
             order_id: String(order.id),
+            brand_id: orderBrandId,
             checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
             pickup_time: pickupTime || '',
             fulfillment_type: isDelivery ? 'delivery' : 'pickup',
@@ -7198,6 +7225,7 @@ ${pages}
           payment_intent_data: {
             metadata: {
               order_id: String(order.id),
+              brand_id: orderBrandId,
               checkout_monitor_id: isCheckoutMonitorSessionId(monitorSessionId) ? monitorSessionId : '',
               fulfillment_type: isDelivery ? 'delivery' : 'pickup',
             },

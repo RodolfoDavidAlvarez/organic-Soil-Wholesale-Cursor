@@ -50,7 +50,9 @@ router.post('/create-session', async (req, res) => {
       fulfillmentType,
       deliveryAddress,
       pickupLocation,
+      brand_id,
     } = req.body;
+    const orderBrandId = brand_id === 'regenerative_landscaper_supply' ? brand_id : 'organic_soil_wholesale';
     let { pickupTime, pickupMode } = req.body;
 
     if (!Array.isArray(rawItems) || rawItems.length === 0) {
@@ -152,6 +154,7 @@ router.post('/create-session', async (req, res) => {
     }
 
     const customerNotes = [
+      orderBrandId === 'regenerative_landscaper_supply' ? 'Source brand: Regenerative Landscaper Supply (regenerativelandscapersupply.com)' : null,
       customerInfo?.customerCategory ? `Customer type: ${customerInfo.customerCategory}` : null,
       customerInfo?.company ? `Company/farm: ${customerInfo.company}` : null,
       typeof customerInfo?.marketingOptIn === 'boolean' ? `Marketing contact list: ${customerInfo.marketingOptIn ? 'yes' : 'no'}` : null,
@@ -227,6 +230,7 @@ router.post('/create-session', async (req, res) => {
 
     // Create order in database with pending status
     const orderData: any = {
+      brand_id: orderBrandId,
       email: customerInfo.email || null,
       phone: customerInfo.phone,
       status: 'pending_payment',
@@ -347,6 +351,8 @@ router.post('/create-session', async (req, res) => {
         total_cents: 0,
         payment_status: 'paid',
         source: isDelivery ? 'osw_pay_delivery' : 'osw_pay_pickup',
+        brand_id: orderBrandId,
+        brand_name: orderBrandId === 'regenerative_landscaper_supply' ? 'Regenerative Landscaper Supply' : 'Organic Soil Wholesale',
       });
 
       if (isDelivery) {

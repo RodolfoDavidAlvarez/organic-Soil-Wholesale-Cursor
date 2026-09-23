@@ -37,6 +37,7 @@ export interface LeadSubmissionPayload {
   lead_type?: string;
   source?: string;
   source_url?: string;
+  brand_id?: string;
   order?: OrderCallbackOrder;
 }
 
@@ -107,6 +108,8 @@ export async function processLeadSubmission(
   payload: LeadSubmissionPayload
 ): Promise<LeadSubmissionResult> {
   const { name, phone, notes, preferred_date, order, source_url } = payload;
+  const brandName = payload.brand_id === "regenerative_landscaper_supply" ? "Regenerative Landscaper Supply" : undefined;
+  const brandId = brandName ? "regenerative_landscaper_supply" : "organic_soil_wholesale";
   const isOrderCallback =
     payload.lead_type === "order_callback" || payload.source === "osw_order_callback";
 
@@ -143,17 +146,19 @@ export async function processLeadSubmission(
   const orderNotes = isOrderCallback ? formatOrderNotes(order, notes) : notes || "No additional notes";
   const itemCount = order?.line_items?.length ?? 0;
   const estimated = order?.estimated_total != null ? Number(order.estimated_total) : null;
+  const brandPrefix = brandName ? "[RLS] " : "";
   const subject = isOrderCallback
-    ? `Callback requested — ${itemCount} line item${itemCount === 1 ? "" : "s"}${
+    ? `${brandPrefix}Callback requested — ${itemCount} line item${itemCount === 1 ? "" : "s"}${
         estimated != null ? ` · ~$${estimated.toFixed(0)}` : ""
       }`
-    : "Lead Form Submission";
+    : `${brandPrefix}Lead Form Submission`;
 
   const insertData: Record<string, unknown> = {
     name,
     email,
     subject,
     message: `Phone: ${phone}\n\n${orderNotes}`,
+      brand_id: brandName ? brandId : null,
     created_at: submittedAt,
   };
   if (preferred_date) insertData.preferred_date = preferred_date;
@@ -180,6 +185,7 @@ export async function processLeadSubmission(
         phone,
         notes: notifyNotes,
         submittedAt,
+        brandName,
       }),
       emailRaw
         ? sendCustomerQuoteConfirmation({
@@ -188,6 +194,7 @@ export async function processLeadSubmission(
             phone,
             notes: notifyNotes,
             submittedAt,
+            brandName,
           })
         : Promise.resolve(),
       sendLeadSmsAlert({ name, phone, notes: notifyNotes }),
@@ -204,15 +211,16 @@ export async function processLeadSubmission(
     full_name: name,
     email,
     phone,
-    message: isOrderCallback
+    message: `${brandName ? `${brandName} lead. ` : ""}${isOrderCallback
       ? `Callback requested — ${itemCount} line items${
           estimated != null ? ` · ~$${estimated.toFixed(0)}` : ""
         }\n\n${orderNotes}`
-      : notes || undefined,
+      : notes || undefined}`,
     source: mosSource,
     source_url: source_url || "https://organicsoilwholesale.com/",
     source_data: {
       osw_contact_message_id: data.id,
+      brand_id: brandId,
       lead_type: isOrderCallback ? "order_callback" : "lead_form",
       ...(isOrderCallback && order ? { order } : {}),
     },

@@ -158,8 +158,10 @@ export async function createDeliveryWorkOrderFromOswOrder(orderId) {
   }));
 
   const primary = lineItems[0] || null;
-  const productName =
-    lineItems.length > 1 ? `OSW Order Bundle (${lineItems.length} lines)` : primary?.product_name || "OSW Delivery";
+  const isRlsBrand = order.brand_id === "regenerative_landscaper_supply";
+  const productName = `${isRlsBrand ? "Regenerative Landscaper Supply · " : ""}${
+    lineItems.length > 1 ? `OSW Order Bundle (${lineItems.length} lines)` : primary?.product_name || "OSW Delivery"
+  }`;
   const sizeCategory = primary?.size_option || "Truckload";
   const totalQuantity = lineItems.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
 
@@ -191,7 +193,7 @@ export async function createDeliveryWorkOrderFromOswOrder(orderId) {
       quantity: totalQuantity,
       quantity_type: "unit",
       custom_notes: [
-        `OSW Order: ${order.order_number || order.id}`,
+        `${isRlsBrand ? "Regenerative Landscaper Supply" : "OSW"} Order: ${order.order_number || order.id}`,
         `Customer availability: ${rangeLabel}${windowLabel ? ` · ${windowLabel}` : ""}`,
         order.notes ? `Notes: ${order.notes}` : "",
         order.payment_status ? `Payment: ${order.payment_status}` : "",
@@ -213,6 +215,7 @@ export async function createDeliveryWorkOrderFromOswOrder(orderId) {
       client_name: order.customer_name || order.business_name || "OSW Customer",
       created_by: order.customer_name || "OSW Customer",
       source_channel: "osw",
+      brand_id: order.brand_id || null,
       source_order_id: order.id,
       source_order_number: order.order_number || String(order.id),
       accept_deadline: acceptDeadline,

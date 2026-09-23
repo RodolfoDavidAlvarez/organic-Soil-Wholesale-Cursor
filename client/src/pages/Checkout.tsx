@@ -568,6 +568,7 @@ const Checkout: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          brand_id: import.meta.env.VITE_DEFAULT_BRAND === "rls" ? "regenerative_landscaper_supply" : undefined,
           items: payItems.map((i) => ({
             productId: i.productId,
             name: i.productName,
