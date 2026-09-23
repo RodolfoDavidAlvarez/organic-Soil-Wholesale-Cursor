@@ -147,7 +147,7 @@ export const SimpleOrderForm: React.FC = () => {
         cartSummary ? `--- QUOTE CART ---\n${cartSummary}\nEstimated Total: ${fmt(totalPrice)}\n--- END CART ---` : "",
         leadInfo.notes.trim(),
       ].filter(Boolean);
-      result = await submitLeadPayload({ ...leadInfo, marketing_opt_in: true, notes: sections.join("\n\n"), preferred_date: leadInfo.preferred_date || null, source_url: window.location.href });
+      result = await submitLeadPayload({ ...leadInfo, marketing_opt_in: true, notes: sections.join("\n\n"), preferred_date: leadInfo.preferred_date || null, source_url: window.location.href, brand_id: import.meta.env.VITE_DEFAULT_BRAND === "rls" ? "regenerative_landscaper_supply" : undefined });
     } catch (error) {
       const requestError = error instanceof LeadSubmissionRequestError ? error : null;
       console.error("Error submitting form:", {

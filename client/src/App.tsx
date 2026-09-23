@@ -24,6 +24,7 @@ import {
   synchronizeTrackedSupportPhones,
 } from "@/lib/callTracking";
 
+const LandscaperSupply = lazy(() => import("@/pages/LandscaperSupply"));
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
 const Products = lazy(() => import("@/pages/Products"));
@@ -171,6 +172,7 @@ const RedirectTo = ({ href }: { href: string }) => {
 };
 
 function Router() {
+  const useLandscaperSupplyAsDefault = import.meta.env.VITE_DEFAULT_BRAND === "rls";
   return (
     <Suspense fallback={<div className="flex min-h-[calc(100vh-var(--app-header-height,5rem))] items-center justify-center text-muted-foreground">Loading...</div>}>
       <Switch>
@@ -185,7 +187,8 @@ function Router() {
         <Route path="/youtube" component={InstagramLinks} />
         <Route path="/yt" component={InstagramLinks} />
         <Route path="/links/youtube" component={InstagramLinks} />
-        <Route path="/" component={Home} />
+        <Route path="/landscaper-supply/:step?" component={LandscaperSupply} />
+        <Route path="/" component={useLandscaperSupplyAsDefault ? LandscaperSupply : Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
         <Route path="/products/:slug" component={ProductDetail} />
@@ -305,6 +308,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
+  const isLandscaperSupplyProject = import.meta.env.VITE_DEFAULT_BRAND === "rls";
   // /qr is the printed-signage URL at the OSW yard main entrance — no global chrome.
   const isPayAndPickup =
     location.startsWith("/pay-and-pickup") ||
@@ -337,7 +341,8 @@ function App() {
   ].includes(location);
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
   const isCareers = location.startsWith("/careers") || location === "/jobs";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
+  const isLandscaperSupply = isLandscaperSupplyProject || location.startsWith("/landscaper-supply");
+  const showStandardLayout = !isLandscaperSupply && !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {

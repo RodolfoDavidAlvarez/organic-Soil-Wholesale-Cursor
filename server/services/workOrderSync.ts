@@ -14,6 +14,7 @@ import { notifyIntakeTeam } from "./intakeNotify.js";
 
 interface OswOrderRow {
   id: number;
+  brand_id: string | null;
   order_number: string | null;
   business_name: string | null;
   customer_name: string | null;
@@ -127,8 +128,10 @@ export async function createWorkOrderFromOswOrder(orderId: number): Promise<numb
       : []);
 
   const primary = pickPrimary(lineItems);
-  const productName =
-    lineItems.length > 1 ? `OSW Order Bundle (${lineItems.length} lines)` : primary?.product_name || "OSW Order";
+  const isRlsBrand = order.brand_id === "regenerative_landscaper_supply" || (order.notes || "").includes("Source brand: Regenerative Landscaper Supply");
+  const productName = `${isRlsBrand ? "Regenerative Landscaper Supply · " : ""}${
+    lineItems.length > 1 ? `OSW Order Bundle (${lineItems.length} lines)` : primary?.product_name || "OSW Order"
+  }`;
   const sizeCategory = primary?.size_option || "other";
   const totalQuantity = lineItems.reduce((sum, i) => sum + (i.quantity || 0), 0) || 1;
 
@@ -136,7 +139,6 @@ export async function createWorkOrderFromOswOrder(orderId: number): Promise<numb
 
   const deliveryJson = order.delivery_address_json || {};
   const isPickup = (order.delivery_type || "").toLowerCase() === "pickup";
-
   const woNumber = generateWoNumber();
   const acceptDeadline = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
@@ -153,7 +155,7 @@ export async function createWorkOrderFromOswOrder(orderId: number): Promise<numb
       quantity: totalQuantity,
       quantity_type: "unit",
       custom_notes: [
-        `OSW Order: ${order.order_number || order.id}`,
+        `${isRlsBrand ? "Regenerative Landscaper Supply" : "OSW"} Order: ${order.order_number || order.id}`,
         order.notes ? `Notes: ${order.notes}` : "",
         order.special_instructions ? `Special instructions: ${order.special_instructions}` : "",
         order.payment_status ? `Payment: ${order.payment_status}` : "",
@@ -178,6 +180,7 @@ export async function createWorkOrderFromOswOrder(orderId: number): Promise<numb
       client_name: clientName,
       created_by: order.customer_name || order.business_name || "OSW Customer",
       source_channel: "osw",
+      brand_id: order.brand_id || null,
       source_order_id: order.id,
       source_order_number: order.order_number || String(order.id),
       accept_deadline: acceptDeadline,

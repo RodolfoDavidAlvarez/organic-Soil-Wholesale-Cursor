@@ -599,7 +599,7 @@ function buildCartTableHtml(cartItems: { qty: string; format: string; product: s
 }
 
 // Admin notification for lead submissions (with cart items support)
-export async function sendAdminLeadNotification(leadDetails: { name: string; email: string; phone: string; notes?: string; submittedAt: string }) {
+export async function sendAdminLeadNotification(leadDetails: { name: string; email: string; phone: string; notes?: string; submittedAt: string; brandName?: string }) {
   const { cartItems, estimatedTotal, customerNotes } = parseCartFromNotes(leadDetails.notes);
   const hasCart = cartItems.length > 0;
   const badgeText = hasCart ? "QUOTE REQUEST" : "NEW LEAD";
@@ -607,6 +607,8 @@ export async function sendAdminLeadNotification(leadDetails: { name: string; ema
   const badgeColor = hasCart ? "#059669" : "#7c3aed";
   const accentColor = hasCart ? "#059669" : "#8b5cf6";
   const subjectPrefix = hasCart ? "[QUOTE]" : "[LEAD]";
+  const senderBrand = leadDetails.brandName || "Organic Soil Wholesale";
+  const brandSubject = leadDetails.brandName ? `[RLS ${hasCart ? "QUOTE" : "LEAD"}]` : subjectPrefix;
   const cartTableHtml = buildCartTableHtml(cartItems, estimatedTotal);
 
   const html = `
@@ -621,7 +623,8 @@ export async function sendAdminLeadNotification(leadDetails: { name: string; ema
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
           <div style="background: ${headerGradient}; color: white; padding: 32px; text-align: center;">
             <div style="background-color: white; color: ${badgeColor}; padding: 6px 16px; border-radius: 20px; display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px;">${badgeText}</div>
-            <h1 style="margin: 0; font-size: 24px; font-weight: 300;">Organic Soil Wholesale</h1>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${senderBrand}</h1>
+            ${leadDetails.brandName ? '<p style="margin:8px 0 0;font-size:13px;opacity:.9">by Organic Soil Wholesale · Soil Seed &amp; Water</p>' : ''}
           </div>
           <div style="padding: 40px 32px;">
             <h2 style="color: #1a1a1a; font-size: 22px; margin: 0 0 24px 0; font-weight: 600;">${hasCart ? "New Quote Request" : "New Lead Submission"}</h2>
@@ -646,7 +649,7 @@ export async function sendAdminLeadNotification(leadDetails: { name: string; ema
             </p>
           </div>
           <div style="text-align: center; padding: 24px 32px; color: #9ca3af; font-size: 13px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 4px 0;">Organic Soil Wholesale Lead Management</p>
+            <p style="margin: 4px 0;">${senderBrand} Lead Management</p>
           </div>
         </div>
       </div>
@@ -663,7 +666,7 @@ export async function sendAdminLeadNotification(leadDetails: { name: string; ema
   const emailPromises = adminEmails.map((email: string) =>
     sendEmail({
       to: email,
-      subject: `${subjectPrefix} ${leadDetails.name}${hasCart ? ` — ${cartItems.length} product${cartItems.length > 1 ? "s" : ""} (${estimatedTotal})` : " — New Lead"}`,
+      subject: `${brandSubject} ${leadDetails.name}${hasCart ? ` — ${cartItems.length} product${cartItems.length > 1 ? "s" : ""} (${estimatedTotal})` : " — New Lead"}`,
       html,
     })
   );
@@ -672,11 +675,12 @@ export async function sendAdminLeadNotification(leadDetails: { name: string; ema
 }
 
 // Customer confirmation email after quote submission
-export async function sendCustomerQuoteConfirmation(leadDetails: { name: string; email: string; phone: string; notes?: string; submittedAt: string }) {
+export async function sendCustomerQuoteConfirmation(leadDetails: { name: string; email: string; phone: string; notes?: string; submittedAt: string; brandName?: string }) {
   const { cartItems, estimatedTotal } = parseCartFromNotes(leadDetails.notes);
   const hasCart = cartItems.length > 0;
   const cartTableHtml = hasCart ? buildCartTableHtml(cartItems, estimatedTotal) : "";
   const firstName = leadDetails.name.split(" ")[0];
+  const senderBrand = leadDetails.brandName || "Organic Soil Wholesale";
 
   const html = `
     <!DOCTYPE html>
@@ -689,8 +693,8 @@ export async function sendCustomerQuoteConfirmation(leadDetails: { name: string;
       <div style="background-color: #f5f5f5; padding: 40px 20px;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
           <div style="background: linear-gradient(135deg, #264027 0%, #3c5233 100%); color: white; padding: 32px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">Organic <span style="color: #8fbc8f;">Soil</span> <span style="color: #c9a227; font-style: italic;">Wholesale</span></h1>
-            <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">by Soil Seed & Water</p>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${senderBrand}</h1>
+            <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">${leadDetails.brandName ? 'by Organic Soil Wholesale · Soil Seed &amp; Water' : 'by Soil Seed &amp; Water'}</p>
           </div>
           <div style="padding: 40px 32px;">
             <h2 style="color: #264027; font-size: 22px; margin: 0 0 16px 0; font-weight: 600;">Thanks, ${firstName}!</h2>
@@ -728,8 +732,8 @@ export async function sendCustomerQuoteConfirmation(leadDetails: { name: string;
   return sendEmail({
     to: leadDetails.email,
     subject: hasCart
-      ? `Your Quote Request — ${cartItems.length} product${cartItems.length > 1 ? "s" : ""} | Organic Soil Wholesale`
-      : `We received your inquiry | Organic Soil Wholesale`,
+      ? `Your Quote Request — ${cartItems.length} product${cartItems.length > 1 ? "s" : ""} | ${senderBrand}`
+      : `We received your inquiry | ${senderBrand}`,
     html,
   });
 }

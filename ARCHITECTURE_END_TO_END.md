@@ -7,12 +7,17 @@
 | System | Repo | What it is | Audience |
 |---|---|---|---|
 | **OSW** | `Organic Soil Wholesale Website/` | Customer-facing wholesale site — products, quote form, pickup checkout, contact form | Customers |
+| **RLS** | `regenerativelandscapersupply.com` (Vercel project `regenerative-landscape-supply`) | Landscaper-specific brand and catalog using the OSW catalog, checkout, quotes, and fulfillment API | Landscapers + contractors |
 | **MOS backend + web admin** | `myorganicsoil.com/` (Vercel) | Express API + Vite/React admin panel. All `sp_*` tables live in SSW Supabase. | Reps + admins (web) |
 | **MOS mobile (Sales Portal)** | `myorganicsoil-mobile/` (Expo/iOS) | Native rep app — leads, contacts, orders, earnings, yard pickups | Sales reps in the field |
 | **Shop dashboard** | `myorganicsoil.com/client/public/shop-dashboard.html` | HDMI kiosk in the SSW shop — live pickups, leads, recent orders, product photos | Whoever's in the shop |
 | **Print server** | `myorganicsoil.com/print-server/` (runs on Raspberry Pi) | Express service that takes JSON receipts and prints to Star TSP100IIIU thermal printer | Auto-print on shop floor |
 
 All five share one SSW Supabase database (`govktyrtmwzbzqkmzmrf`). Same Stripe account (`acct_1LW3cXG0O2r9Aau4`).
+
+### Regenerative Landscaper Supply brand routing
+
+Regenerative Landscaper Supply is a separate public brand under Soil Seed & Water, not a separate commerce or operations system. It uses the OSW API and Resend sender, and writes to the same SSW Supabase database. Its stable `brand_id` is `regenerative_landscaper_supply`; OSW records keep their own `organic_soil_wholesale` identity. Paid orders retain `source_channel='osw'` for existing fulfillment logic while the brand id travels with `orders`, `ops_work_orders`, and MOS `sp_pickup_orders`. Leads carry the brand id in `contact_messages` and `sp_leads.source_data`. Admin, yard, MOS, and customer email notifications label the RLS brand. SSW retail Shopify remains a separate pricing and checkout authority; RLS wholesale transactions never enter Shopify retail orders.
 
 ---
 

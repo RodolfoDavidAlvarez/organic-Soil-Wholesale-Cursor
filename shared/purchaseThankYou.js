@@ -8,7 +8,10 @@ export function buildPurchaseThankYouEmail({
   customerNumber,
   pickupLabel,
   location,
+  brandName,
 } = {}) {
+  const customerBrand = brandName || 'Soil Seed and Water';
+  const isRlsBrand = brandName === 'Regenerative Landscaper Supply';
   const name = escapeHtml(normalizeCouponGreetingName(fullName));
   const number = escapeHtml(normalizeSswNumber(customerNumber) || String(customerNumber || '').trim());
   const ready = escapeHtml(String(pickupLabel || '').trim());
@@ -26,8 +29,8 @@ export function buildPurchaseThankYouEmail({
   </td></tr>`;
 
   return {
-    subject: number ? `Thank you. Your number is ${number}` : 'Thank you for buying from us',
-    from: PURCHASE_THANK_YOU_FROM,
+    subject: number ? `Thank you. Your ${customerBrand} number is ${number}` : `Thank you for buying from ${customerBrand}`,
+    from: isRlsBrand ? 'Regenerative Landscaper Supply <info@soilseedandwater.com>' : PURCHASE_THANK_YOU_FROM,
     html: `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thank you for buying</title></head>
 <body style="margin:0;background:#264027;font-family:Arial,Helvetica,sans-serif;color:#263527;">
@@ -35,13 +38,13 @@ export function buildPurchaseThankYouEmail({
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#264027;"><tr><td align="center" style="padding:28px 12px;">
 <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#fff;border-radius:16px;overflow:hidden;">
   <tr><td style="background:#f7f3e5;padding:32px 28px 22px;text-align:center;">
-    <p style="margin:0 0 10px;color:#96703f;font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;">Soil Seed and Water</p>
+    <p style="margin:0 0 10px;color:#96703f;font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;">${customerBrand}</p>
     <h1 style="margin:0;color:#264027;font-size:31px;line-height:1.16;">Thank you for buying</h1>
     <p style="margin:14px auto 0;max-width:480px;color:#4d5c4d;font-size:16px;line-height:1.55;">Hi ${name}, here is your customer number. Call us with it and we will pull you up.</p>
   </td></tr>
   ${numberBlock}
   ${pickupBlock}
-  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; Soil Seed &amp; Water</td></tr>
+  <tr><td style="padding:22px 28px;background:#264027;text-align:center;color:#dce8d8;font-size:12px;line-height:1.6;">Questions? (623) 263-3386 &nbsp;·&nbsp; ${isRlsBrand ? 'Fulfilled by Organic Soil Wholesale · Soil Seed &amp; Water' : 'Soil Seed &amp; Water'}</td></tr>
 </table></td></tr></table></body></html>`,
   };
 }

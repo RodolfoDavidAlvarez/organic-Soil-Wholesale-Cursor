@@ -205,8 +205,10 @@
         const path = window.location.pathname;
         const source = new URLSearchParams(window.location.search).get('source');
         const excludeFromCallTracking =
+          document.documentElement.dataset.siteBrand === 'rls' ||
           path.startsWith('/rep/') ||
           path === '/free-worm-castings' ||
+          path.startsWith('/landscaper-supply') ||
           path === '/survey' ||
           path.startsWith('/survey/') ||
           (path === '/newsletter' && source === 'july-community-gift') ||

@@ -1,0 +1,21 @@
+type Props = { size?: number; className?: string };
+
+export default function RlsBrandMark({ size = 32, className }: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M24 28V13" stroke="#31543D" strokeWidth="3" strokeLinecap="round" />
+      <path d="M23 19C15 19 11 15 11 8c8 0 12 4 12 11Z" fill="#55754E" />
+      <path d="M25 16c0-7 4-11 12-12 0 8-4 12-12 12Z" fill="#B9653D" />
+      <path d="M6 31c10-4 26-4 36 0M9 37c8-3 22-3 30 0M14 43c6-2 14-2 20 0" stroke="#31543D" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="24" cy="27" r="2.1" fill="#E0B64D" />
+    </svg>
+  );
+}
