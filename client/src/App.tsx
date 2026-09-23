@@ -24,6 +24,7 @@ import {
   synchronizeTrackedSupportPhones,
 } from "@/lib/callTracking";
 
+const LandscaperSupply = lazy(() => import("@/pages/LandscaperSupply"));
 const Home = lazy(() => import("@/pages/Home"));
 const Pickup = lazy(() => import("@/pages/Pickup"));
 const Products = lazy(() => import("@/pages/Products"));
@@ -185,6 +186,7 @@ function Router() {
         <Route path="/youtube" component={InstagramLinks} />
         <Route path="/yt" component={InstagramLinks} />
         <Route path="/links/youtube" component={InstagramLinks} />
+        <Route path="/landscaper-supply/:step?" component={LandscaperSupply} />
         <Route path="/" component={Home} />
         <Route path="/pickup" component={Pickup} />
         <Route path="/products/mulch/:id" component={MulchDetail} />
@@ -333,7 +335,7 @@ function App() {
   ].includes(location);
   const isGiveawayCampaign = location === "/win" || location === "/big-garden-giveaway";
   const isCareers = location.startsWith("/careers") || location === "/jobs";
-  const showStandardLayout = !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
+  const showStandardLayout = !location.startsWith("/landscaper-supply") && !isPayAndPickup && !isTriviaGame && !isCheckoutFlow && !isDriveThruAdmin && !isAdminPanel && !isRepresentativeLanding && !isCRMCapture && !isUnsubscribe && !isOperationsCalendar && !isClientSurvey && !isSocialLinks && !isGiveawayCampaign;
 
   useEffect(() => {
     trackEvent("Route Viewed", {
