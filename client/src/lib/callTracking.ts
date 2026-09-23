@@ -50,6 +50,10 @@ export function synchronizeTrackedSupportPhones(root: ParentNode = document): vo
   const official = { dial: CUSTOMER_SUPPORT_PHONE_DIAL, display: CUSTOMER_SUPPORT_PHONE_DISPLAY };
 
   root.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]').forEach((link) => {
+    if (link.hasAttribute("data-official-support-phone")) {
+      applyPhoneLink(link, official, true);
+      return;
+    }
     const textNode = link.querySelector<HTMLElement>("[data-official-support-phone-text]");
     const textPhone = normalizeUsPhone(textNode?.textContent);
     const hrefPhone = normalizeUsPhone(link.getAttribute("href"));
@@ -77,6 +81,7 @@ export function isCallTrackingExcludedPath(
 
   return (
     path.startsWith("/rep/") ||
+    path.startsWith("/landscaper-supply") ||
     path === "/free-worm-castings" ||
     path === "/survey" ||
     path.startsWith("/survey/") ||
