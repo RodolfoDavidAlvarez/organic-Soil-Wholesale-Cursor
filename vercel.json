@@ -25,11 +25,33 @@
     }
   ],
   "images": {
-    "sizes": [256, 384, 480, 640, 750, 828, 1080, 1200, 1600],
+    "sizes": [
+      256,
+      384,
+      480,
+      640,
+      750,
+      828,
+      1080,
+      1200,
+      1600
+    ],
     "domains": [],
-    "formats": ["image/avif", "image/webp"]
+    "formats": [
+      "image/avif",
+      "image/webp"
+    ]
   },
   "headers": [
+    {
+      "source": "/documents/specsheets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [

@@ -1,0 +1,9 @@
+{
+  "reviewedOn": "2026-09-24",
+  "source": "Specsheets/PlantPal - Spec Sheet.pdf (SSW shared library)",
+  "sha256": "31b2ecb9fd87da42ce163d064be39d9222c70e7df5c2b693e420190de7ee7518",
+  "retiredSha256": [
+    "ab4d1668345760dbd57147a5b1d857b8c77f8baef5b40b9119a5a663e649bfb0"
+  ],
+  "publicPath": "documents/specsheets/PlantPal-All-Stage-Nursery-Mix-Spec-Sheet.pdf"
+}
